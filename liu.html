@@ -46,9 +46,37 @@
       .lead { margin-top: 1.2rem; color: var(--ink-soft); line-height: 1.9; font-size: 1.04rem; }
       .meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 1.6rem; }
       .pill { border: 1px solid var(--line); background: rgba(123,91,178,0.08); border-radius: 999px; padding: 0.55rem 0.8rem; color: var(--purple-2); font-size: 0.75rem; font-weight: 600; }
+      .profile-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+        margin-top: 2rem;
+      }
+      .info-block {
+        background: rgba(255,255,255,0.6);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 1.3rem 1.2rem;
+      }
+      .info-block h2 {
+        font-size: clamp(1.8rem, 2.4vw, 2.5rem);
+        margin-bottom: 0.8rem;
+      }
+      .info-block p, .info-block li {
+        color: var(--ink-soft);
+        line-height: 1.8;
+      }
+      .info-block ul {
+        margin: 0.8rem 0 0 1.2rem;
+        padding: 0;
+      }
+      .info-block li + li { margin-top: 0.5rem; }
       footer { background: #120e1d; color: rgba(242,236,255,0.72); }
       .footer-inner { padding: 1rem 0; text-align: center; font-size: 0.8rem; }
-      @media (max-width: 760px) { .nav { display: none; } }
+      @media (max-width: 760px) {
+        .nav { display: none; }
+        .profile-grid { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
@@ -74,13 +102,31 @@
           <p class="eyebrow">Liu Ming</p>
           <h1>Clinician, methodologist, and evidence translator.</h1>
           <p class="lead">
-            Liu Ming works at the interface of clinical practice, systematic evidence synthesis, and digital innovation. The focus is on building stronger evidence-to-decision pathways that are transparent, reproducible, and applicable in real healthcare settings.
+            Liu Ming works at the interface of clinical practice, evidence synthesis, and digital innovation. The focus is on building stronger evidence-to-decision pathways that are transparent, reproducible, and applicable in real healthcare settings.
           </p>
           <div class="meta">
             <span class="pill">Evidence synthesis</span>
             <span class="pill">Clinical AI</span>
             <span class="pill">Systematic review</span>
             <span class="pill">Decision support</span>
+          </div>
+
+          <div class="profile-grid">
+            <div class="info-block">
+              <h2>Professional profile</h2>
+              <p>
+                Liu Ming is engaged in clinical research and methodological work that connects evidence generation with practical patient care. The emphasis is on building rigorous, transparent, and clinically relevant frameworks for evaluating medical evidence and informing decision making.
+              </p>
+            </div>
+
+            <div class="info-block">
+              <h2>Research focus</h2>
+              <ul>
+                <li>Evidence-based practice and evidence synthesis for clinical decision support.</li>
+                <li>Methodological rigor in screening, extraction, appraisal, and synthesis.</li>
+                <li>Digital health and AI approaches that are clinically grounded and explainable.</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
