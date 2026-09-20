@@ -10,20 +10,20 @@
     <title>AIM-STEP | Living Evidence</title>
     <style>
       :root {
-        --bg: #f4f2ed;
-        --bg-strong: #edf2ea;
+        --bg: #f4f2f8;
+        --bg-strong: #efeaf5;
         --panel: rgba(255, 255, 255, 0.8);
         --panel-strong: #ffffff;
-        --ink: #18382d;
-        --ink-soft: #3f564d;
-        --muted: #6b7f76;
-        --line: rgba(24, 56, 45, 0.12);
-        --green: #2c5547;
-        --green-2: #406d59;
-        --green-3: #7ca17f;
+        --ink: #1c1733;
+        --ink-soft: #493f65;
+        --muted: #6f6783;
+        --line: rgba(28, 23, 51, 0.12);
+        --green: #2e1f4a;
+        --green-2: #4b346d;
+        --green-3: #7b5bb2;
         --gold: #d8b57d;
-        --sand: #eae1cf;
-        --shadow: 0 26px 60px rgba(24, 56, 45, 0.12);
+        --sand: #eee4ff;
+        --shadow: 0 26px 60px rgba(34, 22, 58, 0.14);
       }
 
       * { box-sizing: border-box; }
@@ -32,8 +32,8 @@
         margin: 0;
         font-family: Inter, "Segoe UI", sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(124, 161, 127, 0.22), transparent 25%),
-          linear-gradient(180deg, #f7f5f1 0%, #f3f1ed 100%);
+          radial-gradient(circle at top left, rgba(123, 91, 178, 0.18), transparent 25%),
+          linear-gradient(180deg, #f8f5fb 0%, #f3f0f8 100%);
         color: var(--ink);
       }
 
@@ -166,6 +166,10 @@
         color: var(--ink);
         padding: 0.7rem 1rem;
         font-size: 0.75rem;
+      }
+
+      body[data-lang="zh"] .lang-btn {
+        background: rgba(44, 85, 71, 0.08);
       }
 
       .primary-btn,
@@ -730,15 +734,15 @@
         </a>
 
         <nav class="nav" id="siteNav" aria-label="Main navigation">
-          <a href="#home">Home</a>
-          <a href="#about-aimstep">AIM-STEP</a>
-          <a href="#about-liu">Workgroup</a>
-          <a href="#workflow">Workflow</a>
-          <a href="#contact">Contact</a>
+          <a href="#about-aimstep" data-i18n="nav.aimstep">AIM-STEP</a>
+          <a href="team.html" data-i18n="nav.workgroup">Team</a>
+          <a href="liu.html" data-i18n="nav.liu">Liu Ming</a>
+          <a href="workflow.html" data-i18n="nav.workflow">Workflow</a>
+          <a href="contact.html" data-i18n="nav.contact">Contact</a>
         </nav>
 
         <div class="header-actions">
-          <button class="lang-btn" type="button" aria-label="Switch language">中文</button>
+          <button class="lang-btn" id="langToggle" type="button" aria-label="Switch language">中文</button>
           <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu">☰</button>
         </div>
       </div>
@@ -748,11 +752,12 @@
       <section class="hero" id="home">
         <div class="container hero-grid">
           <div>
-            <p class="eyebrow">AI Medicine • Simple · Transparent · Exact · Prompt</p>
+            <p class="eyebrow" data-i18n="hero.eyebrow">AI Medicine • Simple · Transparent · Exact · Prompt</p>
             <h1>
-              AIM-STEP for <span class="highlight">clearer evidence.</span>
+              <span data-i18n="hero.titlePrefix">AIM-STEP for</span>
+              <span class="highlight" data-i18n="hero.titleHighlight">clearer evidence.</span>
             </h1>
-            <p class="lead">
+            <p class="lead" data-i18n="hero.lead">
               AIM stands for AI Medicine, and STEP represents Simple · Transparent · Exact · Prompt.
               It is a framework for transforming scattered literature into trusted clinical guidance,
               integrating systematic searching, screening, extraction, analysis, appraisal, and recommendation
@@ -760,22 +765,22 @@
             </p>
 
             <div class="hero-actions">
-              <a class="primary-btn" href="#workflow">Explore workflow</a>
-              <a class="secondary-btn" href="#about-liu">About Workgroup</a>
+              <a class="primary-btn" href="#workflow" data-i18n="hero.primaryCta">Explore workflow</a>
+              <a class="secondary-btn" href="#about-liu" data-i18n="hero.secondaryCta">Team</a>
             </div>
 
             <div class="hero-meta">
               <div class="metric">
                 <strong>5</strong>
-                <span>Core evidence steps</span>
+                <span data-i18n="metric.steps">Core evidence steps</span>
               </div>
               <div class="metric">
                 <strong>1</strong>
-                <span>Transparent pathway</span>
+                <span data-i18n="metric.pathway">Transparent pathway</span>
               </div>
               <div class="metric">
                 <strong>AI</strong>
-                <span>Clinical decision support</span>
+                <span data-i18n="metric.support">Clinical decision support</span>
               </div>
             </div>
           </div>
@@ -845,7 +850,7 @@
         <div class="container">
           <div class="section-head">
             <div>
-              <p class="eyebrow">About Workgroup</p>
+              <p class="eyebrow">Team</p>
               <h2>Interdisciplinary team with evidence and AI in focus.</h2>
             </div>
             <p>
@@ -985,6 +990,59 @@
     <script>
       const nav = document.getElementById('siteNav');
       const menuToggle = document.getElementById('menuToggle');
+      const langToggle = document.getElementById('langToggle');
+      const translations = {
+        en: {
+          'nav.aimstep': 'AIM-STEP',
+          'nav.workgroup': 'Team',
+          'nav.liu': 'Liu Ming',
+          'nav.workflow': 'Workflow',
+          'nav.contact': 'Contact',
+          'hero.eyebrow': 'AI Medicine • Simple · Transparent · Exact · Prompt',
+          'hero.titlePrefix': 'AIM-STEP for',
+          'hero.titleHighlight': 'clearer evidence.',
+          'hero.lead': 'AIM stands for AI Medicine, and STEP represents Simple · Transparent · Exact · Prompt. It is a framework for transforming scattered literature into trusted clinical guidance, integrating systematic searching, screening, extraction, analysis, appraisal, and recommendation into a transparent evidence pipeline for real-world decision making.',
+          'hero.primaryCta': 'Explore workflow',
+          'hero.secondaryCta': 'About Workgroup',
+          'metric.steps': 'Core evidence steps',
+          'metric.pathway': 'Transparent pathway',
+          'metric.support': 'Clinical decision support',
+        },
+        zh: {
+          'nav.aimstep': 'AIM-STEP',
+          'nav.workgroup': 'Team',
+          'nav.liu': 'Liu Ming',
+          'nav.workflow': '流程',
+          'nav.contact': '联系',
+          'hero.eyebrow': 'AI Medicine • 简洁 · 透明 · 精准 · 提示',
+          'hero.titlePrefix': '让证据更',
+          'hero.titleHighlight': '清晰可用。',
+          'hero.lead': 'AIM 代表 AI Medicine，STEP 代表 Simple · Transparent · Exact · Prompt。该框架将零散文献转化为可信临床决策依据，贯穿系统检索、筛选、提取、分析、评价与推荐的全过程，用于支持真实世界中的医疗决策。',
+          'hero.primaryCta': '查看流程',
+          'hero.secondaryCta': '了解团队',
+          'metric.steps': '核心证据步骤',
+          'metric.pathway': '透明化路径',
+          'metric.support': '临床决策支持',
+        }
+      };
+
+      const updateLanguage = (lang) => {
+        document.body.setAttribute('data-lang', lang);
+        document.querySelectorAll('[data-i18n]').forEach((element) => {
+          const key = element.getAttribute('data-i18n');
+          if (translations[lang][key]) {
+            element.textContent = translations[lang][key];
+          }
+        });
+        langToggle.textContent = lang === 'en' ? '中文' : 'EN';
+        langToggle.setAttribute('aria-label', lang === 'en' ? '切换到中文' : 'Switch to English');
+      };
+
+      let currentLang = 'en';
+      langToggle.addEventListener('click', () => {
+        currentLang = currentLang === 'en' ? 'zh' : 'en';
+        updateLanguage(currentLang);
+      });
 
       menuToggle.addEventListener('click', () => {
         nav.classList.toggle('open');
@@ -993,6 +1051,8 @@
       nav.querySelectorAll('a').forEach((link) => {
         link.addEventListener('click', () => nav.classList.remove('open'));
       });
+
+      updateLanguage(currentLang);
     </script>
   </body>
 </html>
