@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="AIM-STEP overview: Purpose, AI for evidence-based medicine, and the STEP framework." />
     <meta name="theme-color" content="#f5f5f7" />
-    <title>AIM-STEP | Living Evidence</title>
+    <title>AIM-STEP | Overview</title>
     <style>
       :root {
         --bg: #f5f5f7;
-        --panel: rgba(255,255,255,0.8);
         --text: #1d1d1f;
         --text-soft: #5f6368;
         --border: rgba(0,0,0,0.08);
@@ -100,124 +99,27 @@
 
       .nav a:hover::after { transform: scaleX(1); }
 
-      .hero {
-        padding: 4.5rem 0 2rem;
-      }
-
-      .hero-grid {
-        display: grid;
-        grid-template-columns: 1.15fr 0.85fr;
-        gap: 42px;
-        align-items: center;
-      }
-
-      .eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 0.72rem;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: var(--text-soft);
-        font-weight: 700;
-      }
-
-      .eyebrow::before {
-        content: "";
-        display: inline-block;
-        width: 22px;
-        height: 1px;
-        background: var(--text-soft);
-      }
-
-      h1, h2, h3 {
+      h1, h3 {
         margin: 0;
         letter-spacing: -0.06em;
         font-weight: 600;
       }
 
-      .hero h1 {
-        margin-top: 1.2rem;
-        font-size: clamp(2.9rem, 5vw, 5rem);
-        line-height: 0.94;
+      .intro {
+        padding: 4.5rem 0 2.5rem;
       }
 
-      .hero h1 span {
+      .intro h1 {
+        font-size: clamp(2.6rem, 5vw, 4.2rem);
+        line-height: 1;
+      }
+
+      .intro h1 span {
         color: var(--blue);
-      }
-
-      .lead {
-        max-width: 620px;
-        margin-top: 1.5rem;
-        font-size: 1.08rem;
-        line-height: 1.8;
-        color: var(--text-soft);
-      }
-
-      .hero-panel {
-        position: relative;
-        min-height: 360px;
-        padding: 1.25rem;
-        background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(240,242,245,0.9));
-        border: 1px solid var(--border);
-        border-radius: 30px;
-        box-shadow: var(--shadow);
-      }
-
-      .hero-panel::before {
-        content: "";
-        position: absolute;
-        inset: auto -20% -22% 18%;
-        height: 220px;
-        background: radial-gradient(circle, rgba(0,113,227,0.16), transparent 62%);
-        filter: blur(20px);
-      }
-
-      .panel-head {
-        position: relative;
-        z-index: 1;
-        display: inline-block;
-        padding: 0.45rem 0.72rem;
-        border-radius: 999px;
-        background: rgba(0,113,227,0.08);
-        color: var(--blue);
-        font-size: 0.7rem;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-
-      .panel-body {
-        position: relative;
-        z-index: 1;
-        margin-top: 1.4rem;
-        display: grid;
-        gap: 16px;
-      }
-
-      .mini-block {
-        padding: 1rem 1.1rem;
-        background: rgba(255,255,255,0.72);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-      }
-
-      .mini-block strong {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-size: 0.72rem;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--blue);
-      }
-
-      .mini-block span {
-        color: var(--text-soft);
-        line-height: 1.65;
       }
 
       .section {
-        padding: 1rem 0 4rem;
+        padding: 0 0 4.5rem;
       }
 
       .overview-grid {
@@ -246,7 +148,8 @@
 
       .overview-card h3 {
         margin-bottom: 0.8rem;
-        font-size: clamp(1.6rem, 2vw, 2.1rem);
+        font-size: clamp(1.5rem, 2vw, 2rem);
+        line-height: 1.1;
       }
 
       .overview-card p {
@@ -269,7 +172,6 @@
       }
 
       @media (max-width: 900px) {
-        .hero-grid,
         .overview-grid {
           grid-template-columns: 1fr;
         }
@@ -296,33 +198,9 @@
     </header>
 
     <main>
-      <section class="hero">
-        <div class="container hero-grid">
-          <div>
-            <div class="eyebrow">AI Medicine</div>
-            <h1>AIM-STEP<br /><span>for living evidence</span></h1>
-            <p class="lead">
-              AIM-STEP is a structured, transparent approach that helps transform fragmented research into clear and actionable clinical understanding.
-            </p>
-          </div>
-
-          <div class="hero-panel" aria-label="AIM-STEP overview panel">
-            <div class="panel-head">AI for Medicine</div>
-            <div class="panel-body">
-              <div class="mini-block">
-                <strong>Purpose</strong>
-                <span>Clarify the clinical question and make complex evidence easier to interpret.</span>
-              </div>
-              <div class="mini-block">
-                <strong>AI for evidence based medicine</strong>
-                <span>Support trustworthy synthesis by combining human reasoning with AI-assisted evidence analysis.</span>
-              </div>
-              <div class="mini-block">
-                <strong>STEP</strong>
-                <span>Simple, transparent, exact, and prompt — a clear pathway from evidence to recommendation.</span>
-              </div>
-            </div>
-          </div>
+      <section class="intro">
+        <div class="container">
+          <h1>AIM-STEP <span>overview</span></h1>
         </div>
       </section>
 
@@ -333,7 +211,7 @@
               <span class="kicker">1. Purpose</span>
               <h3>Clarify what matters.</h3>
               <p>
-                AIM-STEP helps researchers and clinicians move from scattered literature to focused, clinically relevant questions so decisions are grounded in evidence rather than uncertainty.
+                AIM-STEP helps researchers and clinicians move from scattered literature to focused, clinically relevant questions, so decisions are grounded in evidence rather than uncertainty.
               </p>
             </article>
 
@@ -341,13 +219,13 @@
               <span class="kicker">2. AI for evidence based medicine</span>
               <h3>Support trustworthy synthesis.</h3>
               <p>
-                By combining clinical reasoning with AI-assisted analysis, AIM-STEP helps identify high-quality evidence, reduce noise, and improve how findings are interpreted in medical practice.
+                By combining clinical reasoning with AI-assisted evidence analysis, AIM-STEP helps identify high-quality evidence, reduce noise, and improve how findings are interpreted in medical practice.
               </p>
             </article>
 
             <article class="overview-card">
               <span class="kicker">3. STEP</span>
-              <h3>Simple, transparent, exact, prompt.</h3>
+              <h3>Simple · Transparent · Exact · Prompt (STEP)</h3>
               <p>
                 The STEP framework organizes the pathway from searching and screening to extraction, appraisal, and recommendation, making evidence-based decisions more structured and easier to trust.
               </p>
