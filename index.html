@@ -205,6 +205,42 @@
         margin-top: 2rem;
       }
 
+      .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+        margin-top: 2.5rem;
+      }
+
+      .overview-card {
+        padding: 1.5rem 1.3rem;
+        background: rgba(255,255,255,0.78);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        box-shadow: 0 18px 32px rgba(0, 0, 0, 0.04);
+      }
+
+      .overview-card .kicker {
+        display: inline-block;
+        margin-bottom: 0.9rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--blue);
+        font-weight: 700;
+      }
+
+      .overview-card h3 {
+        margin-bottom: 0.8rem;
+        font-size: clamp(1.5rem, 2vw, 2.2rem);
+      }
+
+      .overview-card p {
+        margin: 0;
+        color: var(--text-soft);
+        line-height: 1.8;
+      }
+
       .hero-stats {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1136,19 +1172,13 @@
           <div>
             <p class="eyebrow" data-i18n="hero.eyebrow">AI Medicine • Simple · Transparent · Exact · Prompt</p>
             <h1>
-              <span data-i18n="hero.titlePrefix">AIM-STEP for</span>
-              <span class="highlight" data-i18n="hero.titleHighlight">living evidence</span>
+              <span data-i18n="hero.titlePrefix">AIM-STEP</span>
+              <span class="highlight" data-i18n="hero.titleHighlight">for living evidence</span>
             </h1>
             <p class="lead" data-i18n="hero.lead">
-              AI for Medicine is the foundation of AIM-STEP: turning fragmented evidence into timely,
-              transparent, and clinically useful guidance. By combining systematic review logic with
-              AI-assisted evidence synthesis, we aim to support more precise and trustworthy decisions.
+              AIM-STEP is a structured approach designed to turn fragmented research into clear clinical understanding.
+              It supports evidence-based decision making through a transparent, reproducible, and clinically grounded process.
             </p>
-
-            <div class="hero-actions">
-              <a class="primary-btn" href="workflow.html">Explore workflow</a>
-              <a class="secondary-btn" href="contact.html">Get in touch</a>
-            </div>
           </div>
 
           <div class="hero-visual" aria-label="AI for Medicine overview visual">
@@ -1159,6 +1189,39 @@
                 <strong>Evidence → Appraisal → Recommendation</strong>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top: 0;">
+        <div class="container">
+          <div class="overview-grid">
+            <article class="overview-card">
+              <span class="kicker">1. Purpose</span>
+              <h3>Clarify what matters.</h3>
+              <p>
+                AIM-STEP helps researchers and clinicians move from scattered literature to focused, clinically relevant questions,
+                enabling better decisions under uncertainty.
+              </p>
+            </article>
+
+            <article class="overview-card">
+              <span class="kicker">2. AI for evidence based medicine</span>
+              <h3>Support trustworthy synthesis.</h3>
+              <p>
+                By combining medical reasoning with AI-assisted analysis, AIM-STEP helps identify high-quality evidence,
+                summarize findings, and reduce noise in evidence interpretation.
+              </p>
+            </article>
+
+            <article class="overview-card">
+              <span class="kicker">3. STEP</span>
+              <h3>Simple, transparent, exact, prompt.</h3>
+              <p>
+                The STEP framework organizes the pathway from searching and screening to extraction, appraisal, and recommendation,
+                making the evidence process more structured and easier to trust.
+              </p>
+            </article>
           </div>
         </div>
       </section>
