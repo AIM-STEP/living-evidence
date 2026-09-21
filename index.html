@@ -256,15 +256,18 @@
 
       .step-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 20px;
       }
 
       .tile {
         position: relative;
-        display: flex;
-        flex-direction: column;
-        padding: 16px 18px 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 160px;
+        gap: 16px;
+        align-items: center;
+        container-type: inline-size;
+        padding: 20px 22px;
         border-radius: 12px;
         overflow: hidden;
         background: rgba(255,255,255,0.55);
@@ -277,11 +280,8 @@
 
       .tile > svg {
         display: block;
-        width: 100%;
-        height: auto;
-        aspect-ratio: 3 / 2;
-        margin-top: auto;            /* pictures sit on the same baseline whatever the caption length */
-        padding-top: 6px;
+        width: 160px;
+        height: 160px;
       }
 
 
@@ -299,8 +299,10 @@
 
       .tile-text p {
         margin-top: 4px;
-        font-size: 28px;
-        line-height: 34px;
+        /* one line always: shrinks with the card, 28px on a full-width desktop */
+        font-size: clamp(16px, calc((100cqw - 180px) / 13.1), 28px);
+        line-height: 1.2;
+        white-space: nowrap;
         font-weight: 700;
         letter-spacing: -0.01em;
         color: var(--ink);
@@ -326,8 +328,8 @@
         color: var(--ink);
       }
 
-      @media (max-width: 1000px) {
-        .step-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      @media (max-width: 900px) {
+        .step-grid { grid-template-columns: 1fr; }
       }
 
       @media (max-width: 900px) {
@@ -348,14 +350,12 @@
         .nav a { font-size: 15px; padding: 6px 9px; }
         .lang { margin-right: -10px; }
         .step-grid { gap: 14px; }
-        .tile { padding: 12px 14px 0; }
-        .tile-text h2 { font-size: 1rem; }
-        .tile-text p { font-size: 22px; line-height: 28px; }
       }
 
       @media (max-width: 560px) {
-        .step-grid { grid-template-columns: 1fr; }
-        .tile > svg { max-width: 300px; margin-inline: auto; }
+        .tile { grid-template-columns: 1fr; padding: 16px 18px 10px; }
+        .tile > svg { width: min(100%, 240px); height: auto; aspect-ratio: 3 / 2; margin: 0 auto; }
+        .tile-text p { font-size: 22px; white-space: normal; }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -492,7 +492,7 @@
                 <p data-i18n="s_d">Easy to use</p>
               </div>
               <!-- Simple: one switch, already on -->
-              <svg viewBox="0 0 600 400" aria-hidden="true" focusable="false">
+              <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
                 <ellipse cx="300" cy="302" rx="150" ry="20" fill="#171a20" opacity="0.16" filter="url(#blur14)" />
                 <rect x="180" y="160" width="240" height="110" rx="55" fill="url(#plum-body)" />
                 <rect x="180" y="160" width="240" height="110" rx="55" fill="url(#sheen)" />
@@ -510,7 +510,7 @@
                 <p data-i18n="t_d">Clear sources and methods</p>
               </div>
               <!-- Transparent: sources on a glass sheet, read through the lens -->
-              <svg viewBox="0 0 600 400" aria-hidden="true" focusable="false">
+              <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
                 <g transform="translate(-28 16)">
                   <ellipse cx="300" cy="326" rx="130" ry="14" fill="#171a20" opacity="0.14" filter="url(#blur14)" />
                   <rect x="210" y="80" width="180" height="230" rx="16" fill="#ffffff" fill-opacity="0.72" stroke="#171a20" stroke-opacity="0.14" stroke-width="1.5" />
@@ -537,7 +537,7 @@
                 <p data-i18n="e_d">Accurate data and results</p>
               </div>
               <!-- Exact: the needle sits on the mark -->
-              <svg viewBox="0 0 600 400" aria-hidden="true" focusable="false">
+              <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
                 <ellipse cx="300" cy="352" rx="140" ry="16" fill="#171a20" opacity="0.16" filter="url(#blur14)" />
                 <circle cx="300" cy="238" r="122" fill="#171a20" opacity="0.2" filter="url(#blur6)" />
                 <circle cx="300" cy="230" r="122" fill="url(#metal)" />
@@ -559,7 +559,7 @@
                 <p data-i18n="p_d">Timely evidence updates</p>
               </div>
               <!-- Prompt: a clock that keeps refreshing -->
-              <svg viewBox="0 0 600 400" aria-hidden="true" focusable="false">
+              <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
                 <g transform="translate(0 18)">
                   <ellipse cx="300" cy="338" rx="120" ry="14" fill="#171a20" opacity="0.16" filter="url(#blur14)" />
                   <g fill="none" stroke="#5C004D" stroke-width="14" stroke-linecap="round" opacity="0.22" filter="url(#blur6)">
