@@ -308,6 +308,21 @@
         color: var(--ink);
       }
 
+      /* Clock hands in the Prompt card: minute hand one turn per 6s, hour hand twelve times slower */
+      .hand {
+        transform-box: view-box;
+        transform-origin: 300px 233px;
+        transform: rotate(var(--from));
+      }
+
+      .hand-h { --from: -60deg; animation: clock-spin 72s linear infinite; }
+      .hand-m { --from: 60deg; animation: clock-spin 6s linear infinite; }
+
+      @keyframes clock-spin {
+        from { transform: rotate(var(--from)); }
+        to { transform: rotate(calc(var(--from) + 360deg)); }
+      }
+
       footer {
         padding: 2rem 0 2.5rem;
         background: var(--canvas);
@@ -363,6 +378,7 @@
         .nav a, .lang { transition: none; }
         .hero h1 .w { animation: none; opacity: 1; transform: none; }
         .hero h1 .k { color: var(--ink); }
+        .hand { animation: none; }
       }
     </style>
   </head>
@@ -579,11 +595,11 @@
                   <circle cx="300" cy="215" r="90" fill="#5f6168" />
                   <circle cx="300" cy="215" r="84" fill="url(#face)" />
                   <path d="M366 215h10M357.2 248l8.6 5M333 272.2l5 8.6M300 281v10M267 272.2l-5 8.6M242.8 248l-8.6 5M234 215h-10M242.8 182l-8.6-5M267 157.8l-5-8.6M300 149v-10M333 157.8l5-8.6M357.2 182l8.6-5" stroke="#171a20" stroke-width="3" stroke-linecap="round" />
-                  <path d="M300 215L261.9 193" stroke="#171a20" stroke-width="8" stroke-linecap="round" />
-                  <path d="M300 215L353.7 184" stroke="#171a20" stroke-width="5" stroke-linecap="round" />
-                  <circle cx="300" cy="215" r="6" fill="#5C004D" />
-                  <path d="M234.2 191.1A70 70 0 0 1 276.1 149.2" stroke="#fff" stroke-opacity="0.9" stroke-width="5" stroke-linecap="round" fill="none" />
                 </g>
+                <g class="hand hand-h"><path d="M300 233V189" stroke="#171a20" stroke-width="8" stroke-linecap="round" /></g>
+                <g class="hand hand-m"><path d="M300 233V171" stroke="#171a20" stroke-width="5" stroke-linecap="round" /></g>
+                <circle cx="300" cy="233" r="6" fill="#5C004D" />
+                <path d="M234.2 209.1A70 70 0 0 1 276.1 167.2" stroke="#fff" stroke-opacity="0.9" stroke-width="5" stroke-linecap="round" fill="none" />
               </svg>
             </article>
 
@@ -596,7 +612,7 @@
       <div class="container footer-inner">
         <span>AIM-STEP © 2026</span>
         <span data-i18n="foot_tag">Living evidence for better clinical decisions</span>
-        <span><span data-i18n="visitors">Visitors</span> <b id="busuanzi_value_site_uv">—</b></span>
+        <span><span data-i18n="visitors">Visitors</span> <b id="visitor-count" aria-live="polite">—</b></span>
       </div>
     </footer>
     <script>
@@ -680,7 +696,59 @@
         });
       })();
     </script>
-    <!-- Visitor counter for a static site (不蒜子). Fills #busuanzi_value_site_uv; the dash stays if it cannot load. -->
-    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <!--
+      Visitor counter.
+      A GitHub Pages site is static and cannot count visitors itself, so the number comes from a service:
+        1. GoatCounter (recommended, free for non-commercial use, real unique-visitor analytics).
+           Create a site at https://www.goatcounter.com, tick "Allow adding visitor counts on your website"
+           in Settings, then put your site code below (the part before .goatcounter.com).
+        2. Until then, a keyless public counter (countapi.mileshilliard.com) is used so the number works
+           right away. Each browser is counted once. Keys on that service are public.
+    -->
+    <script>
+      (function () {
+        var VISITOR_COUNTER = {
+          goatcounter: "",                                  // e.g. "aim-step"
+          fallbackKey: "aim-step-living-evidence-visitors"  // Count API key
+        };
+        var out = document.getElementById("visitor-count");
+        var lang = function () { return document.documentElement.getAttribute("data-lang") === "zh" ? "zh-CN" : "en"; };
+        function show(n) {
+          if (typeof n !== "number" || !isFinite(n)) return;
+          out.textContent = n.toLocaleString(lang());
+          out.setAttribute("data-count", String(n));
+        }
+        document.getElementById("lang-toggle").addEventListener("click", function () {
+          var n = Number(out.getAttribute("data-count"));
+          if (n) setTimeout(function () { show(n); }, 0);
+        });
+        function seen() {
+          try { if (localStorage.getItem("aimstep-visited")) return true; localStorage.setItem("aimstep-visited", "1"); } catch (e) {}
+          return false;
+        }
+        var visited = seen();
+
+        if (VISITOR_COUNTER.goatcounter) {
+          var base = "https://" + VISITOR_COUNTER.goatcounter + ".goatcounter.com";
+          var tag = document.createElement("script");
+          tag.async = true;
+          tag.src = "https://gc.zgo.at/count.js";
+          tag.setAttribute("data-goatcounter", base + "/count");
+          document.body.appendChild(tag);
+          setTimeout(function () {
+            fetch(base + "/counter/TOTAL.json", { cache: "no-store" })
+              .then(function (r) { return r.json(); })
+              .then(function (d) { show(parseInt(String(d.count_unique || d.count || "").replace(/\D/g, ""), 10)); })
+              .catch(function () {});
+          }, 1200);
+        } else if (VISITOR_COUNTER.fallbackKey) {
+          var api = "https://countapi.mileshilliard.com/api/v1/" + (visited ? "get" : "hit") + "/" + encodeURIComponent(VISITOR_COUNTER.fallbackKey);
+          fetch(api, { cache: "no-store" })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { show(Number(d.value)); })
+            .catch(function () {});
+        }
+      })();
+    </script>
   </body>
 </html>
