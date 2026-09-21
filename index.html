@@ -173,12 +173,39 @@
       }
 
       .hero h1 {
-        max-width: 30ch;
-        font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+        font-size: clamp(1.5rem, 2.7vw, 2.25rem);
         font-weight: 500;
-        line-height: 1.25;
+        line-height: 1.3;
         letter-spacing: -0.01em;
         color: var(--ink);
+      }
+
+      /* One orchestrated moment: words rise in one after another (about 1.4s in total),
+         then Simple / Transparent / Exact / Prompt take turns in plum, one every 2s. */
+      .hero h1 .w {
+        display: inline-block;
+        opacity: 0;
+        transform: translateY(0.45em);
+        animation: word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+        animation-delay: calc(0.15s + var(--i) * 55ms);
+      }
+
+      .hero h1 .k {
+        animation:
+          word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards,
+          word-plum 8s ease-in-out infinite;
+        animation-delay:
+          calc(0.15s + var(--i) * 55ms),
+          calc(1.6s + var(--k) * 2s);
+      }
+
+      @keyframes word-in {
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes word-plum {
+        0%, 25%, 100% { color: var(--ink); }
+        4%, 20% { color: var(--plum); }
       }
 
 
@@ -263,6 +290,7 @@
 
       @media (max-width: 900px) {
         .hero-inner { padding: 4rem 0 3rem; }
+        .hero h1 br { display: none; }
       }
 
       @media (max-width: 720px) {
@@ -283,6 +311,8 @@
       @media (prefers-reduced-motion: reduce) {
         html { scroll-behavior: auto; }
         .nav a { transition: none; }
+        .hero h1 .w { animation: none; opacity: 1; transform: none; }
+        .hero h1 .k { color: var(--ink); }
       }
     </style>
   </head>
@@ -373,7 +403,25 @@
       <!-- 上部：一句话简介 -->
       <section class="hero">
         <div class="container hero-inner">
-          <h1>AIM-STEP: A Simple, Transparent, Exact, and Prompt tool for living evidence that supports better clinical decisions.</h1>
+          <h1 class="hero-title">
+            <span class="w" style="--i:0">AIM-STEP:</span>
+            <span class="w" style="--i:1">A</span>
+            <span class="w k" style="--i:2;--k:0">Simple,</span>
+            <span class="w k" style="--i:3;--k:1">Transparent,</span>
+            <span class="w k" style="--i:4;--k:2">Exact,</span>
+            <span class="w" style="--i:5">and</span>
+            <span class="w k" style="--i:6;--k:3">Prompt</span>
+            <span class="w" style="--i:7">tool</span>
+            <br />
+            <span class="w" style="--i:8">for</span>
+            <span class="w" style="--i:9">living</span>
+            <span class="w" style="--i:10">evidence</span>
+            <span class="w" style="--i:11">that</span>
+            <span class="w" style="--i:12">supports</span>
+            <span class="w" style="--i:13">better</span>
+            <span class="w" style="--i:14">clinical</span>
+            <span class="w" style="--i:15">decisions.</span>
+          </h1>
         </div>
       </section>
 
