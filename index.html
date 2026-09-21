@@ -289,16 +289,17 @@
         letter-spacing: -0.01em;
       }
 
-      .tile-text h2 span {
+      .tile-text h2 .abbr {
         color: var(--plum);
         font-weight: 700;
       }
 
       .tile-text p {
-        margin-top: 2px;
-        font-size: 13px;
-        line-height: 18px;
-        color: var(--ink-3);
+        margin-top: 4px;
+        font-size: 17px;
+        line-height: 24px;
+        font-weight: 500;
+        color: var(--ink);
       }
 
       footer {
@@ -345,6 +346,7 @@
         .step-grid { gap: 14px; }
         .tile { padding: 12px 14px 0; }
         .tile-text h2 { font-size: 1rem; }
+        .tile-text p { font-size: 15px; line-height: 21px; }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -477,7 +479,7 @@
 
             <article class="tile">
               <div class="tile-text">
-                <h2><span data-i18n="s_t">Simple</span> <span>(S)</span></h2>
+                <h2><span data-i18n="s_t">Simple</span> <span class="abbr">(S)</span></h2>
                 <p data-i18n="s_d">Easy to use</p>
               </div>
               <!-- Simple: one switch, already on -->
@@ -495,7 +497,7 @@
 
             <article class="tile">
               <div class="tile-text">
-                <h2><span data-i18n="t_t">Transparent</span> <span>(T)</span></h2>
+                <h2><span data-i18n="t_t">Transparent</span> <span class="abbr">(T)</span></h2>
                 <p data-i18n="t_d">Clear sources and methods</p>
               </div>
               <!-- Transparent: sources on a glass sheet, read through the lens -->
@@ -522,7 +524,7 @@
 
             <article class="tile">
               <div class="tile-text">
-                <h2><span data-i18n="e_t">Exact</span> <span>(E)</span></h2>
+                <h2><span data-i18n="e_t">Exact</span> <span class="abbr">(E)</span></h2>
                 <p data-i18n="e_d">Accurate data and results</p>
               </div>
               <!-- Exact: the needle sits on the mark -->
@@ -544,7 +546,7 @@
 
             <article class="tile">
               <div class="tile-text">
-                <h2><span data-i18n="p_t">Prompt</span> <span>(P)</span></h2>
+                <h2><span data-i18n="p_t">Prompt</span> <span class="abbr">(P)</span></h2>
                 <p data-i18n="p_d">Timely evidence updates</p>
               </div>
               <!-- Prompt: a clock that keeps refreshing -->
