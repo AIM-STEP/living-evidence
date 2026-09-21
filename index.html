@@ -262,6 +262,8 @@
 
       .tile {
         position: relative;
+        display: flex;
+        flex-direction: column;
         padding: 16px 18px 0;
         border-radius: 12px;
         overflow: hidden;
@@ -278,7 +280,8 @@
         width: 100%;
         height: auto;
         aspect-ratio: 3 / 2;
-        margin-top: 4px;
+        margin-top: auto;            /* pictures sit on the same baseline whatever the caption length */
+        padding-top: 6px;
       }
 
 
@@ -296,9 +299,10 @@
 
       .tile-text p {
         margin-top: 4px;
-        font-size: 17px;
-        line-height: 24px;
-        font-weight: 500;
+        font-size: 28px;
+        line-height: 34px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
         color: var(--ink);
       }
 
@@ -346,7 +350,12 @@
         .step-grid { gap: 14px; }
         .tile { padding: 12px 14px 0; }
         .tile-text h2 { font-size: 1rem; }
-        .tile-text p { font-size: 15px; line-height: 21px; }
+        .tile-text p { font-size: 22px; line-height: 28px; }
+      }
+
+      @media (max-width: 560px) {
+        .step-grid { grid-template-columns: 1fr; }
+        .tile > svg { max-width: 300px; margin-inline: auto; }
       }
 
       @media (prefers-reduced-motion: reduce) {
