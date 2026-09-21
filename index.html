@@ -472,11 +472,24 @@
       .footer-inner {
         display: flex;
         flex-wrap: wrap;
-        justify-content: center;
+        justify-content: space-between;
+        align-items: center;
         gap: 8px 28px;
         font-size: 12px;
         line-height: 16px;
         color: var(--ink-3);
+      }
+
+      .footer-left {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 28px;
+      }
+
+      .clock {
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
       }
 
       .footer-inner b {
@@ -511,6 +524,9 @@
       }
 
       @media (max-width: 560px) {
+        .footer-inner { flex-direction: column; align-items: flex-start; }
+        .footer-left { flex-direction: column; gap: 6px; }
+        .clock { align-self: flex-end; }
         .tile { grid-template-columns: 1fr; padding: 16px 18px 10px; }
         .tile > svg { width: min(100%, 240px); height: auto; aspect-ratio: 3 / 2; margin: 0 auto; }
         .tile-text p { font-size: 22px; white-space: normal; }
@@ -704,20 +720,20 @@
                 <h2><span data-i18n="e_t">Exact</span> <span class="abbr">(E)</span></h2>
                 <p data-i18n="e_d">Accurate data and results</p>
               </div>
-              <!-- Exact: the needle sits on the mark -->
+              <!-- Exact: the AIM-STEP mark -->
               <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-                <ellipse cx="300" cy="352" rx="140" ry="16" fill="#171a20" opacity="0.16" filter="url(#blur14)" />
-                <circle cx="300" cy="238" r="122" fill="#171a20" opacity="0.2" filter="url(#blur6)" />
-                <circle cx="300" cy="230" r="122" fill="url(#metal)" />
-                <circle cx="300" cy="230" r="114" fill="#ffffff" />
-                <circle cx="300" cy="230" r="110" fill="url(#face)" />
-                <path d="M198 230h18M205.8 191l9.2 3.8M227.9 157.9l12.7 12.7M261 135.8l3.8 9.2M300 128v18M339 135.8l-3.8 9.2M394.2 191l-9.2 3.8M402 230h-18" stroke="#171a20" stroke-opacity="0.8" stroke-width="3" stroke-linecap="round" />
-                <path d="M372.1 157.9l-12.7 12.7" stroke="#5C004D" stroke-width="10" stroke-linecap="round" opacity="0.3" filter="url(#blur3)" />
-                <path d="M372.1 157.9l-12.7 12.7" stroke="#5C004D" stroke-width="4" stroke-linecap="round" />
-                <path d="M303 235L359.6 178.4" stroke="#171a20" stroke-opacity="0.3" stroke-width="8" stroke-linecap="round" filter="url(#blur3)" />
-                <path d="M300 230L356.6 173.4" stroke="#5C004D" stroke-width="5" stroke-linecap="round" />
-                <circle cx="300" cy="230" r="13" fill="#25262b" />
-                <circle cx="300" cy="230" r="5" fill="url(#knob)" />
+                <!-- the AIM-STEP mark, finished like the magnifier (dark base + brushed-metal face), plum centre -->
+                <g transform="translate(300 228) scale(0.62) translate(-500 -360)" fill="none" stroke-linecap="round">
+                  <g stroke="#171a20" opacity="0.18" filter="url(#blur6)" transform="translate(0 16)">
+                    <path d="M621.72 399.56A128 128 0 0 1 539.56 481.72M460.44 481.72A128 128 0 0 1 378.28 399.56M378.28 320.44A128 128 0 0 1 460.44 238.28M539.56 238.28A128 128 0 0 1 621.72 320.44" stroke-width="26" />
+                    <path d="M500 180L500 264M500 456L500 540M320 360L404 360M596 360L680 360" stroke-width="30" />
+                  </g>
+                  <path d="M621.72 399.56A128 128 0 0 1 539.56 481.72M460.44 481.72A128 128 0 0 1 378.28 399.56M378.28 320.44A128 128 0 0 1 460.44 238.28M539.56 238.28A128 128 0 0 1 621.72 320.44" stroke="#5f6168" stroke-width="26" />
+                  <path d="M500 180L500 264M500 456L500 540M320 360L404 360M596 360L680 360" stroke="#5f6168" stroke-width="30" />
+                  <path d="M621.72 399.56A128 128 0 0 1 539.56 481.72M460.44 481.72A128 128 0 0 1 378.28 399.56M378.28 320.44A128 128 0 0 1 460.44 238.28M539.56 238.28A128 128 0 0 1 621.72 320.44" stroke="url(#metal)" stroke-width="15" />
+                  <path d="M500 180L500 264M500 456L500 540M320 360L404 360M596 360L680 360" stroke="url(#metal)" stroke-width="19" />
+                  <circle cx="500" cy="360" r="26" fill="#5C004D" stroke="none" />
+                </g>
               </svg>
             </article>
 
@@ -762,9 +778,12 @@
 
     <footer>
       <div class="container footer-inner">
-        <span>AIM-STEP © 2026</span>
-        <span data-i18n="foot_tag">Living evidence for better clinical decisions</span>
-        <span><span data-i18n="visitors">Visitors</span> <b id="visitor-count" aria-live="polite">—</b></span>
+        <div class="footer-left">
+          <span>AIM-STEP © 2026</span>
+          <span data-i18n="foot_tag">Living evidence for better clinical decisions</span>
+          <span><span data-i18n="visitors">Visitors</span> <b id="visitor-count" aria-live="polite">—</b></span>
+        </div>
+        <time class="clock" id="clock"></time>
       </div>
     </footer>
     <dialog class="login-dialog" id="login-dialog" aria-labelledby="login-title">
@@ -1000,6 +1019,28 @@
         }
 
         render();
+      })();
+    </script>
+    <script>
+      (function () {
+        var el = document.getElementById("clock");
+        var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        function two(n) { return (n < 10 ? "0" : "") + n; }
+        function render() {
+          var d = new Date();
+          var zh = window.AIMSTEP.lang() === "zh";
+          var hm = two(d.getHours()) + ":" + two(d.getMinutes());
+          el.textContent = zh
+            ? d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日 " + hm
+            : d.getDate() + " " + MON[d.getMonth()] + " " + d.getFullYear() + ", " + hm;
+          el.setAttribute("datetime", d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()) + "T" + hm);
+        }
+        function schedule() {
+          render();
+          setTimeout(schedule, 60000 - (Date.now() % 60000) + 50);
+        }
+        document.addEventListener("aimstep:lang", render);
+        schedule();
       })();
     </script>
     <!--
