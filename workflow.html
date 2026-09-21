@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="AIM-STEP: A Simple, Transparent, Exact, and Prompt tool for living evidence that supports better clinical decisions." />
+    <meta name="description" content="AIM-STEP workflow: start a project and work through the evidence-based research toolkit." />
     <meta name="theme-color" content="#ffffff" />
-    <title>AIM-STEP | Overview</title>
+    <title>AIM-STEP | Workflow</title>
     <style>
       /* Tesla's own typeface is Universal Sans (Family Type, commercial licence).
          If you license it, drop the files into fonts/ with these names and it is used automatically;
@@ -334,134 +334,316 @@
 
       .login-close:hover { background: rgba(23,26,32,0.06); color: var(--ink); }
 
-      /* Upper part: hero with the one-line introduction */
-      .hero {
-        background: var(--canvas);
+
+      /* ---------- Workflow page ---------- */
+      [hidden] { display: none !important; }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 264px;
+        height: 40px;
+        padding: 0 24px;
+        border: 0;
+        border-radius: 4px;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
       }
 
-      .hero-inner {
+      .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+      .btn-primary { background: var(--plum); color: #fff; }
+      .btn-primary:hover { background: var(--plum-dark); }
+      .btn-secondary { background: rgba(23,26,32,0.08); color: var(--ink-2); }
+      .btn-secondary:hover { background: rgba(23,26,32,0.13); }
+
+      .start { padding: 5rem 0 3.5rem; }
+
+      .start-inner {
         display: flex;
         flex-direction: column;
         align-items: center;
         text-align: center;
-        padding: 6.5rem 0 4.5rem;
       }
 
-      .hero h1 {
-        font-size: clamp(1.5rem, 2.7vw, 2.25rem);
+      .start h1 {
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
         font-weight: 500;
-        line-height: 1.3;
+        line-height: 1.2;
         letter-spacing: -0.01em;
+      }
+
+      .start .lead {
+        max-width: 46ch;
+        margin: 10px 0 28px;
+        font-size: 16px;
+        line-height: 24px;
+        color: var(--ink-3);
+      }
+
+      .card {
+        width: min(720px, 100%);
+        margin-top: 28px;
+        scroll-margin-top: 90px;
+        padding: 28px 28px 24px;
+        text-align: left;
+        background: rgba(255,255,255,0.7);
+        -webkit-backdrop-filter: blur(24px);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(255,255,255,0.9);
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(23,26,32,0.04), 0 16px 40px rgba(23,26,32,0.06);
+      }
+
+      .card h2 {
+        font-size: 1.25rem;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        margin-bottom: 20px;
+      }
+
+      .field { margin-bottom: 22px; }
+
+      .field label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 15px;
+        line-height: 20px;
+      }
+
+      .field input,
+      .field select {
+        width: 100%;
+        height: 46px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        font: inherit;
+        font-size: 15px;
         color: var(--ink);
       }
 
-      /* One orchestrated moment: words rise in one after another (about 1.4s in total),
-         then Simple / Transparent / Exact / Prompt take turns in plum, one every 2s. */
-      .hero h1 .w {
+      .field select {
+        -webkit-appearance: none;
+        appearance: none;
+        padding-right: 42px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23171a20' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        background-size: 18px;
+      }
+
+      .field select:invalid,
+      .field select.is-empty { color: #8e8e8e; }
+      .field input::placeholder { color: #8e8e8e; }
+
+      .field input:focus,
+      .field select:focus {
+        outline: 2px solid var(--plum);
+        outline-offset: 1px;
+        border-color: transparent;
+      }
+
+      .field.is-invalid input,
+      .field.is-invalid select {
+        border: 2px solid #d93a1b;
+        padding-left: 13px;
+      }
+
+      .field .hint,
+      .field .error {
+        margin-top: 8px;
+        font-size: 13px;
+        line-height: 18px;
+        color: var(--ink-3);
+      }
+
+      .field .error { color: #d93a1b; }
+      .field .error[hidden] { display: none; }
+
+      .learn {
         display: inline-block;
-        opacity: 0;
-        transform: translateY(0.45em);
-        animation: word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-        animation-delay: calc(0.15s + var(--i) * 55ms);
+        margin-top: 8px;
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--plum);
+        text-decoration: underline;
+        text-underline-offset: 3px;
       }
 
-      .hero h1 .k {
-        animation:
-          word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards,
-          word-plum 8s ease-in-out infinite;
-        animation-delay:
-          calc(0.15s + var(--i) * 55ms),
-          calc(1.6s + var(--k) * 2s);
+      .learn svg { width: 14px; height: 14px; margin-left: 5px; vertical-align: -2px; }
+
+      .form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 6px;
       }
 
-      @keyframes word-in {
-        to { opacity: 1; transform: translateY(0); }
+      .form-actions .btn { min-width: 0; flex: 1 1 200px; }
+
+      .project-done h2, .project-current h2 { margin-bottom: 6px; }
+      .project-done .lead-sm, .project-current .lead-sm { color: var(--ink-3); margin-bottom: 16px; }
+
+      .project-done dl,
+      .project-current dl {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        gap: 8px 20px;
+        margin: 0 0 20px;
       }
 
-      @keyframes word-plum {
-        0%, 25%, 100% { color: var(--ink); }
-        4%, 20% { color: var(--plum); }
-      }
+      .project-done dt, .project-current dt { color: var(--ink-3); }
+      .project-done dd, .project-current dd { margin: 0; font-weight: 500; }
 
-
-
-
-      /* Middle part: four STEP tiles, photographic style with text over the image */
-      .step {
-        padding: 3rem 0 5rem;
+      /* toolkit */
+      .toolkit {
+        padding: 4rem 0 6rem;
+        scroll-margin-top: 64px;
         background:
           radial-gradient(48% 42% at 14% 22%, #f2f2f3 0%, rgba(242,242,243,0) 100%),
           radial-gradient(44% 46% at 86% 78%, #ececee 0%, rgba(236,236,238,0) 100%),
           var(--canvas);
       }
 
-      .step-grid {
+      .toolkit h2 {
+        text-align: center;
+        font-size: clamp(1.5rem, 2.4vw, 2rem);
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+
+      .section-lead {
+        max-width: 60ch;
+        margin: 10px auto 36px;
+        text-align: center;
+        font-size: 15px;
+        line-height: 22px;
+        color: var(--ink-3);
+      }
+
+      .tool-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 20px;
       }
 
-      .tile {
+      .tool {
         position: relative;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 160px;
-        gap: 16px;
+        display: flex;
+        flex-direction: column;
         align-items: center;
-        container-type: inline-size;
-        padding: 20px 22px;
-        border-radius: 12px;
-        overflow: hidden;
-        background: rgba(255,255,255,0.55);
+        padding: 30px 22px 26px;
+        background: rgba(255,255,255,0.7);
         -webkit-backdrop-filter: blur(24px);
         backdrop-filter: blur(24px);
         border: 1px solid rgba(255,255,255,0.9);
+        border-radius: 12px;
         box-shadow: 0 1px 2px rgba(23,26,32,0.04), 0 16px 40px rgba(23,26,32,0.06);
         color: var(--ink);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
 
-      .tile > svg {
-        display: block;
-        width: 160px;
-        height: 160px;
+      .tool:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 1px 2px rgba(23,26,32,0.04), 0 22px 48px rgba(23,26,32,0.1);
       }
 
+      .tool:focus-visible { outline: 2px solid var(--plum); outline-offset: 3px; }
 
-      .tile-text h2 {
+      .tool-arrow {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(92,0,77,0.08);
+        color: var(--plum);
+      }
+
+      .tool-arrow svg { width: 14px; height: 14px; }
+
+      .tool-icon {
+        display: grid;
+        place-items: center;
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        border-radius: 20px;
+        background: rgba(92,0,77,0.06);
+      }
+
+      .tool-icon svg {
+        width: 44px;
+        height: 44px;
+        fill: none;
+        stroke: var(--ink);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .tool-icon .accent { stroke: var(--plum); }
+      .tool-icon .accent-fill { fill: var(--plum); stroke: none; }
+
+      .tool h3 {
+        margin: 0 0 10px;
         font-size: 1.125rem;
         font-weight: 500;
         line-height: 1.3;
-        letter-spacing: -0.01em;
+        text-align: center;
       }
 
-      .tile-text h2 .abbr {
-        color: var(--plum);
-        font-weight: 700;
+      .tool p {
+        align-self: stretch;
+        font-size: 14px;
+        line-height: 21px;
+        color: var(--ink-3);
       }
 
-      .tile-text p {
-        margin-top: 4px;
-        /* one line always: shrinks with the card, 28px on a full-width desktop */
-        font-size: clamp(16px, calc((100cqw - 180px) / 13.1), 28px);
-        line-height: 1.2;
-        white-space: nowrap;
-        font-weight: 700;
-        letter-spacing: -0.01em;
-        color: var(--ink);
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        z-index: 20;
+        padding: 10px 16px;
+        border-radius: 6px;
+        background: var(--ink);
+        color: #fff;
+        font-size: 14px;
+        line-height: 20px;
+        opacity: 0;
+        transform: translate(-50%, 12px);
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
       }
 
-      /* Clock hands in the Prompt card: minute hand one turn per 6s, hour hand twelve times slower */
-      .hand {
-        transform-box: view-box;
-        transform-origin: 300px 233px;
-        transform: rotate(var(--from));
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      @media (max-width: 1000px) {
+        .tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
-      .hand-h { --from: -60deg; animation: clock-spin 72s linear infinite; }
-      .hand-m { --from: 60deg; animation: clock-spin 6s linear infinite; }
+      @media (max-width: 720px) {
+        .start { padding: 3.5rem 0 2.5rem; }
+        .card { padding: 22px 18px 18px; }
+        .btn { width: 100%; max-width: 320px; }
+      }
 
-      @keyframes clock-spin {
-        from { transform: rotate(var(--from)); }
-        to { transform: rotate(calc(var(--from) + 360deg)); }
+      @media (max-width: 560px) {
+        .tool-grid { grid-template-columns: 1fr; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .btn, .tool, .toast { transition: none; }
+        .tool:hover { transform: none; }
       }
 
       footer {
@@ -615,8 +797,8 @@
         </a>
 
         <nav class="nav" aria-label="Main navigation">
-          <a href="index.html" aria-current="page" data-i18n="nav_overview">Overview</a>
-          <a href="workflow.html" data-i18n="nav_workflow">Workflow</a>
+          <a href="index.html" data-i18n="nav_overview">Overview</a>
+          <a href="workflow.html" aria-current="page" data-i18n="nav_workflow">Workflow</a>
           <a href="team.html" data-i18n="nav_team">Team</a>
           <a href="contact.html" data-i18n="nav_contact">Contact</a>
         </nav>
@@ -641,141 +823,172 @@
     </header>
 
     <main>
-      <!-- 上部：一句话简介 -->
-      <section class="hero">
-        <div class="container hero-inner">
-          <h1 class="hero-title">
-            <span class="w" style="--i:0">AIM-STEP:</span>
-            <span class="w" style="--i:1">A</span>
-            <span class="w k" style="--i:2;--k:0">Simple,</span>
-            <span class="w k" style="--i:3;--k:1">Transparent,</span>
-            <span class="w k" style="--i:4;--k:2">Exact,</span>
-            <span class="w" style="--i:5">and</span>
-            <span class="w k" style="--i:6;--k:3">Prompt</span>
-            <span class="w" style="--i:7">tool</span>
-            <br />
-            <span class="w" style="--i:8">for</span>
-            <span class="w" style="--i:9">living</span>
-            <span class="w" style="--i:10">evidence</span>
-            <span class="w" style="--i:11">that</span>
-            <span class="w" style="--i:12">supports</span>
-            <span class="w" style="--i:13">better</span>
-            <span class="w" style="--i:14">clinical</span>
-            <span class="w" style="--i:15">decisions.</span>
-          </h1>
+      <!-- Part 1: start a project -->
+      <section class="start">
+        <div class="container start-inner">
+          <h1 data-i18n="wf_title">Workflow</h1>
+          <p class="lead" data-i18n="wf_lead">Create a project, then work through the toolkit below step by step.</p>
+          <button type="button" class="btn btn-primary" id="start-btn" data-i18n="wf_start">Start a new project</button>
+
+          <div class="card project-current" id="project-current" hidden>
+            <h2 data-i18n="wf_current">Current project</h2>
+            <dl>
+              <dt data-i18n="pf_name">Project name</dt><dd data-field="name"></dd>
+              <dt data-i18n="pf_type">Project type</dt><dd data-field="type"></dd>
+              <dt data-i18n="pf_q">Question type</dt><dd data-field="question"></dd>
+              <dt data-i18n="pf_area">Area of research</dt><dd data-field="area"></dd>
+            </dl>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="edit-btn" data-i18n="wf_edit">Edit</button>
+            </div>
+          </div>
+
+          <form class="card project-form" id="project-form" hidden novalidate>
+            <h2 data-i18n="pf_about">About your project</h2>
+
+            <div class="field" data-key="name">
+              <label for="pf-name" data-i18n="pf_name">Project name</label>
+              <input type="text" id="pf-name" name="name" autocomplete="off" placeholder="Enter name" data-i18n-ph="pf_name_ph" />
+              <p class="hint" data-i18n="pf_name_hint">Use the full working title or an informal working title. You can change this later.</p>
+              <p class="error" data-i18n="pf_name_err" hidden>Please enter a project name</p>
+            </div>
+
+            <div class="field" data-key="type">
+              <label for="pf-type" data-i18n="pf_type">Project type</label>
+              <select id="pf-type" name="type" class="is-empty">
+                <option value="" data-i18n="pf_select">Select...</option>
+                <option value="systematic" data-i18n="opt_pt_systematic">Systematic review</option>
+                <option value="scoping" data-i18n="opt_pt_scoping">Scoping review</option>
+                <option value="rapid" data-i18n="opt_pt_rapid">Rapid review</option>
+                <option value="umbrella" data-i18n="opt_pt_umbrella">Umbrella review</option>
+                <option value="narrative" data-i18n="opt_pt_narrative">Narrative literature review</option>
+                <option value="integrative" data-i18n="opt_pt_integrative">Integrative review</option>
+                <option value="other" data-i18n="opt_pt_other">Other</option>
+              </select>
+              <p class="error" data-i18n="pf_type_err" hidden>Please select the project type</p>
+              <a class="learn" href="https://guides.library.cornell.edu/evidence-synthesis/types" target="_blank" rel="noopener"><span data-i18n="pf_type_learn">Learn about the different types of projects</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg></a>
+            </div>
+
+            <div class="field" data-key="question">
+              <label for="pf-question" data-i18n="pf_q">Question type</label>
+              <select id="pf-question" name="question" class="is-empty">
+                <option value="" data-i18n="pf_select">Select...</option>
+                <option value="effectiveness" data-i18n="opt_qt_effectiveness">Effectiveness (intervention / treatment)</option>
+                <option value="mapping" data-i18n="opt_qt_mapping">Evidence mapping</option>
+                <option value="prevention" data-i18n="opt_qt_prevention">Prevention</option>
+                <option value="etiology" data-i18n="opt_qt_etiology">Etiology (harm / causation)</option>
+                <option value="diagnosis" data-i18n="opt_qt_diagnosis">Diagnosis</option>
+                <option value="prognosis" data-i18n="opt_qt_prognosis">Prognosis (forecast)</option>
+                <option value="qualitative" data-i18n="opt_qt_qualitative">Qualitative (meaning)</option>
+                <option value="prevalence" data-i18n="opt_qt_prevalence">Prevalence / incidence</option>
+                <option value="methodology" data-i18n="opt_qt_methodology">Methodology</option>
+                <option value="other" data-i18n="opt_qt_other">Other</option>
+              </select>
+              <p class="error" data-i18n="pf_q_err" hidden>Please select the question type</p>
+              <a class="learn" href="https://guides.library.cornell.edu/evidence-synthesis/research-question" target="_blank" rel="noopener"><span data-i18n="pf_q_learn">Learn about the different types of questions</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg></a>
+            </div>
+
+            <div class="field" data-key="area">
+              <label for="pf-area" data-i18n="pf_area">Area of research</label>
+              <select id="pf-area" name="area" class="is-empty">
+                <option value="" data-i18n="pf_select">Select...</option>
+                <option value="arts" data-i18n="opt_ar_arts">Arts and humanities</option>
+                <option value="agri" data-i18n="opt_ar_agri">Agricultural, veterinary and food sciences</option>
+                <option value="bio" data-i18n="opt_ar_bio">Biological and chemical sciences</option>
+                <option value="earth" data-i18n="opt_ar_earth">Earth and environmental sciences</option>
+                <option value="econ" data-i18n="opt_ar_econ">Economic, business, management and social sciences</option>
+                <option value="edu" data-i18n="opt_ar_edu">Education</option>
+                <option value="eng" data-i18n="opt_ar_eng">Engineering, maths, physics and technology</option>
+                <option value="med" data-i18n="opt_ar_med">Medical and health sciences</option>
+                <option value="psy" data-i18n="opt_ar_psy">Psychology</option>
+                <option value="other" data-i18n="opt_ar_other">Other</option>
+              </select>
+              <a class="learn" href="https://www.abs.gov.au/statistics/classifications/australian-and-new-zealand-standard-research-classification-anzsrc/latest-release" target="_blank" rel="noopener"><span data-i18n="pf_area_learn">Learn about the different areas of research</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg></a>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" data-i18n="pf_create">Create project</button>
+              <button type="button" class="btn btn-secondary" id="cancel-btn" data-i18n="pf_cancel">Cancel</button>
+            </div>
+          </form>
+
+          <div class="card project-done" id="project-done" hidden>
+            <h2 data-i18n="pd_title">Project created</h2>
+            <p class="lead-sm" data-i18n="pd_lead">Choose a tool below to begin.</p>
+            <dl>
+              <dt data-i18n="pf_name">Project name</dt><dd data-field="name"></dd>
+              <dt data-i18n="pf_type">Project type</dt><dd data-field="type"></dd>
+              <dt data-i18n="pf_q">Question type</dt><dd data-field="question"></dd>
+              <dt data-i18n="pf_area">Area of research</dt><dd data-field="area"></dd>
+            </dl>
+            <div class="form-actions">
+              <a class="btn btn-primary" href="#toolkit" data-i18n="pd_tools">Go to the toolkit</a>
+              <button type="button" class="btn btn-secondary" id="another-btn" data-i18n="pd_another">Start another project</button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <!-- 中部：STEP 四个定义 -->
-      <section class="step" aria-label="STEP">
+      <!-- Part 2: toolkit -->
+      <section class="toolkit" id="toolkit">
         <div class="container">
-          <div class="step-grid">
-
-            <article class="tile">
-              <div class="tile-text">
-                <h2><span data-i18n="s_t">Simple</span> <span class="abbr">(S)</span></h2>
-                <p data-i18n="s_d">Easy to use</p>
-              </div>
-              <!-- Simple: one switch, already on -->
-              <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-                <ellipse cx="300" cy="302" rx="150" ry="20" fill="#171a20" opacity="0.16" filter="url(#blur14)" />
-                <rect x="180" y="160" width="240" height="110" rx="55" fill="url(#plum-body)" />
-                <rect x="180" y="160" width="240" height="110" rx="55" fill="url(#sheen)" />
-                <path d="M235 172h130" stroke="#fff" stroke-opacity="0.3" stroke-width="3" stroke-linecap="round" />
-                <circle cx="367" cy="223" r="42" fill="#171a20" opacity="0.28" filter="url(#blur6)" />
-                <circle cx="362" cy="215" r="44" fill="url(#knob)" />
-                <circle cx="362" cy="215" r="44" fill="none" stroke="#171a20" stroke-opacity="0.08" />
-                <ellipse cx="348" cy="196" rx="16" ry="9" fill="#fff" opacity="0.9" filter="url(#blur3)" />
-              </svg>
-            </article>
-
-            <article class="tile">
-              <div class="tile-text">
-                <h2><span data-i18n="t_t">Transparent</span> <span class="abbr">(T)</span></h2>
-                <p data-i18n="t_d">Clear sources and methods</p>
-              </div>
-              <!-- Transparent: sources on a glass sheet, read through the lens -->
-              <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-                <g transform="translate(-28 16)">
-                  <ellipse cx="300" cy="326" rx="130" ry="14" fill="#171a20" opacity="0.14" filter="url(#blur14)" />
-                  <rect x="210" y="80" width="180" height="230" rx="16" fill="#ffffff" fill-opacity="0.72" stroke="#171a20" stroke-opacity="0.14" stroke-width="1.5" />
-                  <rect x="210" y="80" width="180" height="230" rx="16" fill="url(#sheen)" />
-                  <rect x="238" y="118" width="124" height="9" rx="4.5" fill="#171a20" opacity="0.55" />
-                  <rect x="238" y="144" width="124" height="9" rx="4.5" fill="#171a20" opacity="0.28" />
-                  <rect x="238" y="170" width="84" height="9" rx="4.5" fill="#171a20" opacity="0.28" />
-                  <rect x="238" y="196" width="104" height="9" rx="4.5" fill="#5C004D" opacity="0.9" />
-                  <rect x="238" y="222" width="64" height="9" rx="4.5" fill="#171a20" opacity="0.18" />
-                  <circle cx="372" cy="263" r="56" fill="#171a20" opacity="0.18" filter="url(#blur6)" />
-                  <path d="M410 300l52 52" stroke="#5f6168" stroke-width="20" stroke-linecap="round" />
-                  <path d="M410 300l52 52" stroke="url(#metal)" stroke-width="13" stroke-linecap="round" />
-                  <circle cx="368" cy="256" r="56" fill="#ffffff" fill-opacity="0.35" />
-                  <circle cx="368" cy="256" r="56" fill="none" stroke="#5f6168" stroke-width="12" />
-                  <circle cx="368" cy="256" r="56" fill="none" stroke="url(#metal)" stroke-width="7" />
-                  <path d="M330 236a44 44 0 0 1 28-30" stroke="#fff" stroke-opacity="0.9" stroke-width="4" stroke-linecap="round" fill="none" />
-                </g>
-              </svg>
-            </article>
-
-            <article class="tile">
-              <div class="tile-text">
-                <h2><span data-i18n="e_t">Exact</span> <span class="abbr">(E)</span></h2>
-                <p data-i18n="e_d">Accurate data and results</p>
-              </div>
-              <!-- Exact: the AIM-STEP mark -->
-              <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-                <!-- the AIM-STEP mark, finished like the magnifier (dark base + brushed-metal face), plum centre -->
-                <g transform="translate(300 228) scale(0.62) translate(-500 -360)" fill="none" stroke-linecap="round">
-                  <g stroke="#171a20" opacity="0.18" filter="url(#blur6)" transform="translate(0 16)">
-                    <path d="M621.72 399.56A128 128 0 0 1 539.56 481.72M460.44 481.72A128 128 0 0 1 378.28 399.56M378.28 320.44A128 128 0 0 1 460.44 238.28M539.56 238.28A128 128 0 0 1 621.72 320.44" stroke-width="26" />
-                    <path d="M500 180L500 264M500 456L500 540M320 360L404 360M596 360L680 360" stroke-width="30" />
-                  </g>
-                  <path d="M621.72 399.56A128 128 0 0 1 539.56 481.72M460.44 481.72A128 128 0 0 1 378.28 399.56M378.28 320.44A128 128 0 0 1 460.44 238.28M539.56 238.28A128 128 0 0 1 621.72 320.44" stroke="#5f6168" stroke-width="26" />
-                  <path d="M500 180L500 264M500 456L500 540M320 360L404 360M596 360L680 360" stroke="#5f6168" stroke-width="30" />
-                  <path d="M621.72 399.56A128 128 0 0 1 539.56 481.72M460.44 481.72A128 128 0 0 1 378.28 399.56M378.28 320.44A128 128 0 0 1 460.44 238.28M539.56 238.28A128 128 0 0 1 621.72 320.44" stroke="url(#metal)" stroke-width="15" />
-                  <path d="M500 180L500 264M500 456L500 540M320 360L404 360M596 360L680 360" stroke="url(#metal)" stroke-width="19" />
-                  <circle cx="500" cy="360" r="26" fill="#5C004D" stroke="none" />
-                </g>
-              </svg>
-            </article>
-
-            <article class="tile">
-              <div class="tile-text">
-                <h2><span data-i18n="p_t">Prompt</span> <span class="abbr">(P)</span></h2>
-                <p data-i18n="p_d">Timely evidence updates</p>
-              </div>
-              <!-- Prompt: a clock that keeps refreshing -->
-              <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-                <g transform="translate(0 18)">
-                  <ellipse cx="300" cy="338" rx="120" ry="14" fill="#171a20" opacity="0.16" filter="url(#blur14)" />
-                  <g fill="none" stroke="#5C004D" stroke-width="14" stroke-linecap="round" opacity="0.22" filter="url(#blur6)">
-                    <path d="M440 215A140 140 0 0 1 347.9 346.6" />
-                    <path d="M160 215A140 140 0 0 1 252.1 83.4" />
-                  </g>
-                  <g fill="none" stroke="#6d1a5f" stroke-width="7" stroke-linecap="round">
-                    <path d="M440 215A140 140 0 0 1 347.9 346.6" />
-                    <path d="M160 215A140 140 0 0 1 252.1 83.4" />
-                  </g>
-                  <g fill="#6d1a5f">
-                    <polygon points="329.1,353.4 352,357.9 343.8,335.3" />
-                    <polygon points="270.9,76.6 248,72.1 256.2,94.7" />
-                  </g>
-                  <circle cx="300" cy="223" r="98" fill="#171a20" opacity="0.2" filter="url(#blur6)" />
-                  <circle cx="300" cy="215" r="98" fill="url(#metal)" />
-                  <circle cx="300" cy="215" r="90" fill="#5f6168" />
-                  <circle cx="300" cy="215" r="84" fill="url(#face)" />
-                  <path d="M366 215h10M357.2 248l8.6 5M333 272.2l5 8.6M300 281v10M267 272.2l-5 8.6M242.8 248l-8.6 5M234 215h-10M242.8 182l-8.6-5M267 157.8l-5-8.6M300 149v-10M333 157.8l5-8.6M357.2 182l8.6-5" stroke="#171a20" stroke-width="3" stroke-linecap="round" />
-                </g>
-                <g class="hand hand-h"><path d="M300 233V189" stroke="#171a20" stroke-width="8" stroke-linecap="round" /></g>
-                <g class="hand hand-m"><path d="M300 233V171" stroke="#171a20" stroke-width="5" stroke-linecap="round" /></g>
-                <circle cx="300" cy="233" r="6" fill="#5C004D" />
-                <path d="M234.2 209.1A70 70 0 0 1 276.1 167.2" stroke="#fff" stroke-opacity="0.9" stroke-width="5" stroke-linecap="round" fill="none" />
-              </svg>
-            </article>
-
+          <h2 data-i18n="tk_title">Evidence-based research toolkit</h2>
+          <p class="section-lead" data-i18n="tk_lead">End-to-end tools for screening, extraction, risk-of-bias assessment and network meta-analysis</p>
+          <div class="tool-grid">
+            <a class="tool" href="#" data-tool="criteria">
+              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 6h18a2 2 0 0 1 2 2v30a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M18 4h6v4h-6z"/><path d="M22 20h10M22 28h10"/><path class="accent" d="M14 20l2 2 3-4M14 28l2 2 3-4"/></svg></span>
+              <h3 data-i18n="t1_t">Eligibility criteria builder</h3>
+              <p data-i18n="t1_d">AI-assisted, structured inclusion and exclusion criteria, with PICO, PEO, SPIDER and other frameworks</p>
+            </a>
+            <a class="tool" href="#" data-tool="search">
+              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="20" cy="20" r="11"/><path d="M28.5 28.5L40 40"/><path class="accent" d="M17 20h6M20 17v6"/><path class="accent" d="M36 8v4M34 10h4"/></svg></span>
+              <h3 data-i18n="t2_t">Search strategy builder</h3>
+              <p data-i18n="t2_d">AI-driven search strings across databases, matching MeSH terms with free text, exportable to multiple databases in one click</p>
+            </a>
+            <a class="tool" href="#" data-tool="screen">
+              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="8" y="8" width="32" height="8" rx="2"/><rect x="8" y="20" width="32" height="8" rx="2"/><rect x="8" y="32" width="32" height="8" rx="2"/><path class="accent" d="M12 24l2 2 4-4"/><path class="accent" d="M13 34l4 4M17 34l-4 4"/></svg></span>
+              <h3 data-i18n="t3_t">Title and abstract screening</h3>
+              <p data-i18n="t3_d">Efficient screening of records and abstracts to speed up the early stages of a review</p>
+            </a>
+            <a class="tool" href="#" data-tool="fulltext">
+              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 6h13l9 9v25a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M27 6v9h9"/><path d="M17 22h14M17 28h14M17 34h8"/><path class="accent" d="M30 36l3 3 6-7"/></svg></span>
+              <h3 data-i18n="t4_t">Full-text screening</h3>
+              <p data-i18n="t4_d">Smarter full-text screening for faster, more consistent eligibility decisions</p>
+            </a>
+            <a class="tool" href="#" data-tool="extract">
+              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="6" y="8" width="28" height="26" rx="2"/><path d="M6 16h28M6 24h28M15 16v18M25 16v18"/><path class="accent" d="M34 30h8M38 26l4 4-4 4"/></svg></span>
+              <h3 data-i18n="t5_t">Data extraction</h3>
+              <p data-i18n="t5_d">Structured extraction of study data, exportable in multiple formats</p>
+            </a>
+            <a class="tool" href="#" data-tool="rob">
+              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 5l14 5v11c0 9-6 15-14 19-8-4-14-10-14-19V10z"/><path class="accent" d="M24 16v9"/><circle class="accent-fill" cx="24" cy="30" r="1.8"/></svg></span>
+              <h3 data-i18n="t6_t">Risk of bias (ROB) assessment</h3>
+              <p data-i18n="t6_d">Traceable risk-of-bias assessment, with support for re-assessment</p>
+            </a>
+            <a class="tool" href="#" data-tool="nma">
+              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="12" cy="14" r="4"/><circle cx="36" cy="12" r="4"/><circle cx="24" cy="36" r="4"/><circle class="accent" cx="30" cy="24" r="4"/><path d="M15.5 16l11.2 5.5M32.8 15.4l-1.6 4.9M26 33l2.5-5.5M15 17l8 15"/></svg></span>
+              <h3 data-i18n="t7_t">Data analysis (NMA)</h3>
+              <p data-i18n="t7_d">Multidimensional analysis and visualisation with an integrated R Shiny app</p>
+            </a>
+            <a class="tool" href="#" data-tool="grade">
+              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="24" cy="19" r="11"/><path d="M17 28l-4 14 11-5 11 5-4-14"/><path class="accent" d="M24 12l2.2 4.5 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z"/></svg></span>
+              <h3 data-i18n="t8_t">Evidence quality (GRADE) assessment</h3>
+              <p data-i18n="t8_d">Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment</p>
+            </a>
           </div>
         </div>
       </section>
     </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <footer>
       <div class="container footer-inner">
@@ -807,6 +1020,138 @@
       </form>
     </dialog>
 
+    <script>
+      window.AIMSTEP_PAGE_I18N = {
+        en: {
+          title: "AIM-STEP | Workflow",
+          wf_title: "Workflow",
+          wf_lead: "Create a project, then work through the toolkit below step by step.",
+          wf_start: "Start a new project",
+          wf_current: "Current project",
+          wf_edit: "Edit",
+          pf_about: "About your project",
+          pf_name: "Project name", pf_name_ph: "Enter name",
+          pf_name_hint: "Use the full working title or an informal working title. You can change this later.",
+          pf_name_err: "Please enter a project name",
+          pf_type: "Project type", pf_type_err: "Please select the project type", pf_type_learn: "Learn about the different types of projects",
+          pf_q: "Question type", pf_q_err: "Please select the question type", pf_q_learn: "Learn about the different types of questions",
+          pf_area: "Area of research", pf_area_learn: "Learn about the different areas of research",
+          pf_select: "Select...", pf_create: "Create project", pf_cancel: "Cancel",
+          pd_title: "Project created", pd_lead: "Choose a tool below to begin.", pd_tools: "Go to the toolkit", pd_another: "Start another project",
+          not_set: "Not specified",
+          tk_title: "Evidence-based research toolkit",
+          tk_lead: "End-to-end tools for screening, extraction, risk-of-bias assessment and network meta-analysis",
+          toast_soon: "This tool is coming soon.",
+            opt_pt_systematic: "Systematic review",
+            opt_pt_scoping: "Scoping review",
+            opt_pt_rapid: "Rapid review",
+            opt_pt_umbrella: "Umbrella review",
+            opt_pt_narrative: "Narrative literature review",
+            opt_pt_integrative: "Integrative review",
+            opt_pt_other: "Other",
+            opt_qt_effectiveness: "Effectiveness (intervention / treatment)",
+            opt_qt_mapping: "Evidence mapping",
+            opt_qt_prevention: "Prevention",
+            opt_qt_etiology: "Etiology (harm / causation)",
+            opt_qt_diagnosis: "Diagnosis",
+            opt_qt_prognosis: "Prognosis (forecast)",
+            opt_qt_qualitative: "Qualitative (meaning)",
+            opt_qt_prevalence: "Prevalence / incidence",
+            opt_qt_methodology: "Methodology",
+            opt_qt_other: "Other",
+            opt_ar_arts: "Arts and humanities",
+            opt_ar_agri: "Agricultural, veterinary and food sciences",
+            opt_ar_bio: "Biological and chemical sciences",
+            opt_ar_earth: "Earth and environmental sciences",
+            opt_ar_econ: "Economic, business, management and social sciences",
+            opt_ar_edu: "Education",
+            opt_ar_eng: "Engineering, maths, physics and technology",
+            opt_ar_med: "Medical and health sciences",
+            opt_ar_psy: "Psychology",
+            opt_ar_other: "Other",
+            t1_t: "Eligibility criteria builder",
+            t1_d: "AI-assisted, structured inclusion and exclusion criteria, with PICO, PEO, SPIDER and other frameworks",
+            t2_t: "Search strategy builder",
+            t2_d: "AI-driven search strings across databases, matching MeSH terms with free text, exportable to multiple databases in one click",
+            t3_t: "Title and abstract screening",
+            t3_d: "Efficient screening of records and abstracts to speed up the early stages of a review",
+            t4_t: "Full-text screening",
+            t4_d: "Smarter full-text screening for faster, more consistent eligibility decisions",
+            t5_t: "Data extraction",
+            t5_d: "Structured extraction of study data, exportable in multiple formats",
+            t6_t: "Risk of bias (ROB) assessment",
+            t6_d: "Traceable risk-of-bias assessment, with support for re-assessment",
+            t7_t: "Data analysis (NMA)",
+            t7_d: "Multidimensional analysis and visualisation with an integrated R Shiny app",
+            t8_t: "Evidence quality (GRADE) assessment",
+            t8_d: "Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment"
+        },
+        zh: {
+          title: "AIM-STEP | 工作流程",
+          wf_title: "工作流程",
+          wf_lead: "先创建项目，再按步骤使用下方的工具包。",
+          wf_start: "新建项目",
+          wf_current: "当前项目",
+          wf_edit: "编辑",
+          pf_about: "项目信息",
+          pf_name: "项目名称", pf_name_ph: "请输入名称",
+          pf_name_hint: "可填写完整题目或临时的工作名称，之后可以修改。",
+          pf_name_err: "请输入项目名称",
+          pf_type: "项目类型", pf_type_err: "请选择项目类型", pf_type_learn: "了解不同类型的项目",
+          pf_q: "问题类型", pf_q_err: "请选择问题类型", pf_q_learn: "了解不同类型的问题",
+          pf_area: "研究领域", pf_area_learn: "了解不同的研究领域",
+          pf_select: "请选择…", pf_create: "创建项目", pf_cancel: "取消",
+          pd_title: "项目已创建", pd_lead: "请在下方选择一个工具开始。", pd_tools: "前往工具包", pd_another: "再建一个项目",
+          not_set: "未填写",
+          tk_title: "循证科研工具包",
+          tk_lead: "覆盖筛选、提取、ROB 评价及 NMA 分析的全流程学术工具",
+          toast_soon: "该工具即将上线。",
+            opt_pt_systematic: "系统评价",
+            opt_pt_scoping: "范围综述",
+            opt_pt_rapid: "快速评价",
+            opt_pt_umbrella: "伞式评价",
+            opt_pt_narrative: "叙述性文献综述",
+            opt_pt_integrative: "整合性综述",
+            opt_pt_other: "其他",
+            opt_qt_effectiveness: "有效性（干预 / 治疗）",
+            opt_qt_mapping: "证据图谱",
+            opt_qt_prevention: "预防",
+            opt_qt_etiology: "病因（危害 / 因果）",
+            opt_qt_diagnosis: "诊断",
+            opt_qt_prognosis: "预后（预测）",
+            opt_qt_qualitative: "质性（意义）",
+            opt_qt_prevalence: "患病率 / 发病率",
+            opt_qt_methodology: "方法学",
+            opt_qt_other: "其他",
+            opt_ar_arts: "艺术与人文",
+            opt_ar_agri: "农业、兽医与食品科学",
+            opt_ar_bio: "生物与化学科学",
+            opt_ar_earth: "地球与环境科学",
+            opt_ar_econ: "经济、商业、管理与社会科学",
+            opt_ar_edu: "教育",
+            opt_ar_eng: "工程、数学、物理与技术",
+            opt_ar_med: "医学与健康科学",
+            opt_ar_psy: "心理学",
+            opt_ar_other: "其他",
+            t1_t: "纳排标准构建",
+            t1_d: "AI 辅助生成结构化纳排标准，支持 PICO/PEO/SPIDER 等多种框架",
+            t2_t: "检索策略构建",
+            t2_d: "AI 驱动的跨库检索式生成，自动匹配主题词 (MeSH) 与自由词，支持多数据库一键导出",
+            t3_t: "题录与摘要筛选",
+            t3_d: "高效筛选文献题录与摘要，助力系统综述前期工作",
+            t4_t: "全文筛选",
+            t4_d: "智能化全文筛选，提升纳排效率",
+            t5_t: "数据提取",
+            t5_d: "结构化提取研究数据，支持多种格式导出",
+            t6_t: "ROB 评估",
+            t6_d: "偏倚风险评估，流程可追溯，支持二次处理",
+            t7_t: "数据分析（NMA）",
+            t7_d: "集成 R Shiny，支持多维度数据分析与可视化",
+            t8_t: "证据质量 (GRADE) 评估",
+            t8_d: "循证医学证据质量分级，支持二次处理"
+        }
+      };
+    </script>
     <script>
       (function () {
         var I18N = {
@@ -923,6 +1268,102 @@
 
         btn.addEventListener("click", function () {
           apply(document.documentElement.getAttribute("data-lang") === "zh" ? "en" : "zh");
+        });
+      })();
+    </script>
+    <script>
+      (function () {
+        var t = function (k) { return window.AIMSTEP.t(k); };
+        var KEY = "aimstep-project";
+        var startBtn = document.getElementById("start-btn");
+        var form = document.getElementById("project-form");
+        var done = document.getElementById("project-done");
+        var current = document.getElementById("project-current");
+        var fields = { name: form.querySelector('[data-key="name"]'), type: form.querySelector('[data-key="type"]'), question: form.querySelector('[data-key="question"]') };
+        var inputs = { name: document.getElementById("pf-name"), type: document.getElementById("pf-type"), question: document.getElementById("pf-question"), area: document.getElementById("pf-area") };
+        var project = null;
+
+        try { project = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
+
+        function labelFor(select, value) {
+          if (!value) return t("not_set");
+          var opt = select.querySelector('option[value="' + value + '"]');
+          return opt ? t(opt.getAttribute("data-i18n")) : value;
+        }
+
+        function fill(panel) {
+          panel.querySelector('[data-field="name"]').textContent = project.name;
+          panel.querySelector('[data-field="type"]').textContent = labelFor(inputs.type, project.type);
+          panel.querySelector('[data-field="question"]').textContent = labelFor(inputs.question, project.question);
+          panel.querySelector('[data-field="area"]').textContent = labelFor(inputs.area, project.area);
+        }
+
+        function show(which) {
+          form.hidden = which !== "form";
+          done.hidden = which !== "done";
+          current.hidden = which !== "current";
+          startBtn.hidden = which === "form" || which === "done";
+          if (which === "done") fill(done);
+          if (which === "current") fill(current);
+        }
+
+        function openForm(prefill) {
+          form.querySelectorAll(".field").forEach(function (f) { f.classList.remove("is-invalid"); var e = f.querySelector(".error"); if (e) e.hidden = true; });
+          inputs.name.value = prefill ? prefill.name : "";
+          inputs.type.value = prefill ? prefill.type : "";
+          inputs.question.value = prefill ? prefill.question : "";
+          inputs.area.value = prefill ? prefill.area : "";
+          [inputs.type, inputs.question, inputs.area].forEach(function (s) { s.classList.toggle("is-empty", !s.value); });
+          show("form");
+          inputs.name.focus();
+          form.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        [inputs.type, inputs.question, inputs.area].forEach(function (s) {
+          s.addEventListener("change", function () { s.classList.toggle("is-empty", !s.value); });
+        });
+
+        startBtn.addEventListener("click", function () { openForm(null); });
+        document.getElementById("edit-btn").addEventListener("click", function () { openForm(project); });
+        document.getElementById("another-btn").addEventListener("click", function () { openForm(null); });
+        document.getElementById("cancel-btn").addEventListener("click", function () { show(project ? "current" : "none"); });
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          var ok = true;
+          Object.keys(fields).forEach(function (k) {
+            var bad = !inputs[k].value.trim();
+            fields[k].classList.toggle("is-invalid", bad);
+            fields[k].querySelector(".error").hidden = !bad;
+            if (bad && ok) { inputs[k].focus(); ok = false; }
+          });
+          if (!ok) return;
+          project = {
+            name: inputs.name.value.trim(), type: inputs.type.value, question: inputs.question.value, area: inputs.area.value,
+            created: new Date().toISOString()
+          };
+          try { localStorage.setItem(KEY, JSON.stringify(project)); } catch (err) {}
+          show("done");
+        });
+
+        // keep the summaries in the current language
+        document.addEventListener("aimstep:lang", function () {
+          if (project) { if (!done.hidden) fill(done); if (!current.hidden) fill(current); }
+        });
+
+        show(project ? "current" : "none");
+
+        // toolkit cards: tools that are not linked yet show a short notice
+        var toast = document.getElementById("toast"), timer = null;
+        document.querySelectorAll(".tool").forEach(function (a) {
+          a.addEventListener("click", function (e) {
+            if (a.getAttribute("href") !== "#") return;
+            e.preventDefault();
+            toast.textContent = t("toast_soon");
+            toast.classList.add("show");
+            clearTimeout(timer);
+            timer = setTimeout(function () { toast.classList.remove("show"); }, 2200);
+          });
         });
       })();
     </script>
