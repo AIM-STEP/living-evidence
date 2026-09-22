@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="AIM-STEP workflow: start a project and work through the evidence-based research toolkit." />
     <meta name="theme-color" content="#ffffff" />
-    <title>AIM-STEP | Workflow</title>
+    <title>AIM-STEP | Contact</title>
     <style>
       /* Tesla's own typeface is Universal Sans (Family Type, commercial licence).
          If you license it, drop the files into fonts/ with these names and it is used automatically;
@@ -814,9 +814,9 @@
 
         <nav class="nav" aria-label="Main navigation">
           <a href="index.html" data-i18n="nav_overview">Overview</a>
-          <a href="workflow.html" aria-current="page" data-i18n="nav_workflow">Workflow</a>
+          <a href="workflow.html" data-i18n="nav_workflow">Workflow</a>
           <a href="team.html" data-i18n="nav_team">Team</a>
-          <a href="contact.html" data-i18n="nav_contact">Contact</a>
+          <a href="contact.html" aria-current="page" data-i18n="nav_contact">Contact</a>
         </nav>
 
         <div class="header-actions">
@@ -838,185 +838,40 @@
       </div>
     </header>
 
-    <main>
-      <!-- Part 1: start a project -->
-      <section class="start">
-        <div class="container start-inner">
-          <h1 data-i18n="wf_title">Workflow</h1>
-          <p class="lead" data-i18n="wf_lead">Create a project, then work through the toolkit below step by step.</p>
-          <button type="button" class="btn btn-primary" id="start-btn" data-i18n="wf_start">Start a new project</button>
-
-          <div class="card project-current" id="project-current" hidden>
-            <h2 data-i18n="wf_current">Current project</h2>
-            <dl>
-              <dt data-i18n="pf_name">Project name</dt><dd data-field="name"></dd>
-              <dt data-i18n="pf_type">Project type</dt><dd data-field="type"></dd>
-              <dt data-i18n="pf_dataset">Data in this project</dt><dd data-field="dataset"></dd>
-              <dt data-i18n="pf_q">Question type</dt><dd data-field="question"></dd>
-              <dt data-i18n="pf_area">Area of research</dt><dd data-field="area"></dd>
-            </dl>
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary" id="edit-btn" data-i18n="wf_edit">Edit</button>
+      <main>
+        <section class="start">
+          <div class="container start-inner">
+            <h1 data-i18n="contact_h1">Contact</h1>
+            <p class="lead" data-i18n="contact_sub">For questions about the method, the data, or taking part in the project.</p>
+            <div class="card">
+              <h2 data-i18n="contact_pending_h">Contact details are being finalised</h2>
+              <p data-i18n="contact_pending_p">This page is live so the navigation works. No address has been published yet — that is a decision for the project team, not a detail to fill in automatically.</p>
+              <p data-i18n="contact_pending_note">If you already work with the project, use the channel you normally use.</p>
             </div>
           </div>
-          <div id="project-list" hidden></div>
+        </section>
 
-          <form class="card project-form" id="project-form" hidden novalidate>
-            <h2 data-i18n="pf_about">About your project</h2>
-
-            <div class="field" data-key="name">
-              <label for="pf-name" data-i18n="pf_name">Project name</label>
-              <input type="text" id="pf-name" name="name" autocomplete="off" placeholder="Enter name" data-i18n-ph="pf_name_ph" />
-              <p class="hint" data-i18n="pf_name_hint">Use the full working title or an informal working title. You can change this later.</p>
-              <p class="error" data-i18n="pf_name_err" hidden>Please enter a project name</p>
-            </div>
-
-            <div class="field" data-key="type">
-              <label for="pf-type" data-i18n="pf_type">Project type</label>
-              <select id="pf-type" name="type" class="is-empty">
-                <option value="" data-i18n="pf_select">Select...</option>
-                <option value="systematic" data-i18n="opt_pt_systematic">Systematic review</option>
-                <option value="scoping" data-i18n="opt_pt_scoping">Scoping review</option>
-                <option value="rapid" data-i18n="opt_pt_rapid">Rapid review</option>
-                <option value="umbrella" data-i18n="opt_pt_umbrella">Umbrella review</option>
-                <option value="narrative" data-i18n="opt_pt_narrative">Narrative literature review</option>
-                <option value="integrative" data-i18n="opt_pt_integrative">Integrative review</option>
-                <option value="other" data-i18n="opt_pt_other">Other</option>
-              </select>
-              <p class="error" data-i18n="pf_type_err" hidden>Please select the project type</p>
-              <a class="learn" href="https://guides.library.cornell.edu/evidence-synthesis/types" target="_blank" rel="noopener"><span data-i18n="pf_type_learn">Learn about the different types of projects</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg></a>
-            </div>
-
-            <div class="field" data-key="dataset">
-              <label for="pf-dataset" data-i18n="pf_dataset">Data in this project</label>
-              <select id="pf-dataset" name="dataset" class="is-empty">
-                <option value="" data-i18n="pf_select">Select...</option>
-                <option value="real" data-i18n="opt_ds_real">Real study data</option>
-                <option value="synthetic" data-i18n="opt_ds_synth">Synthetic data, for testing or teaching</option>
-              </select>
-              <p class="hint" data-i18n="pf_dataset_hint">This cannot be changed after the project is created. Real and synthetic data are kept apart so that a test project can never be mistaken for an assessment.</p>
-              <p class="error" data-i18n="pf_dataset_err" hidden>Please say which kind of data this project holds</p>
-            </div>
-
-            <div class="field" data-key="question">
-              <label for="pf-question" data-i18n="pf_q">Question type</label>
-              <select id="pf-question" name="question" class="is-empty">
-                <option value="" data-i18n="pf_select">Select...</option>
-                <option value="effectiveness" data-i18n="opt_qt_effectiveness">Effectiveness (intervention / treatment)</option>
-                <option value="mapping" data-i18n="opt_qt_mapping">Evidence mapping</option>
-                <option value="prevention" data-i18n="opt_qt_prevention">Prevention</option>
-                <option value="etiology" data-i18n="opt_qt_etiology">Etiology (harm / causation)</option>
-                <option value="diagnosis" data-i18n="opt_qt_diagnosis">Diagnosis</option>
-                <option value="prognosis" data-i18n="opt_qt_prognosis">Prognosis (forecast)</option>
-                <option value="qualitative" data-i18n="opt_qt_qualitative">Qualitative (meaning)</option>
-                <option value="prevalence" data-i18n="opt_qt_prevalence">Prevalence / incidence</option>
-                <option value="methodology" data-i18n="opt_qt_methodology">Methodology</option>
-                <option value="other" data-i18n="opt_qt_other">Other</option>
-              </select>
-              <p class="error" data-i18n="pf_q_err" hidden>Please select the question type</p>
-              <a class="learn" href="https://guides.library.cornell.edu/evidence-synthesis/research-question" target="_blank" rel="noopener"><span data-i18n="pf_q_learn">Learn about the different types of questions</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg></a>
-            </div>
-
-            <div class="field" data-key="area">
-              <label for="pf-area" data-i18n="pf_area">Area of research</label>
-              <select id="pf-area" name="area" class="is-empty">
-                <option value="" data-i18n="pf_select">Select...</option>
-                <option value="arts" data-i18n="opt_ar_arts">Arts and humanities</option>
-                <option value="agri" data-i18n="opt_ar_agri">Agricultural, veterinary and food sciences</option>
-                <option value="bio" data-i18n="opt_ar_bio">Biological and chemical sciences</option>
-                <option value="earth" data-i18n="opt_ar_earth">Earth and environmental sciences</option>
-                <option value="econ" data-i18n="opt_ar_econ">Economic, business, management and social sciences</option>
-                <option value="edu" data-i18n="opt_ar_edu">Education</option>
-                <option value="eng" data-i18n="opt_ar_eng">Engineering, maths, physics and technology</option>
-                <option value="med" data-i18n="opt_ar_med">Medical and health sciences</option>
-                <option value="psy" data-i18n="opt_ar_psy">Psychology</option>
-                <option value="other" data-i18n="opt_ar_other">Other</option>
-              </select>
-              <a class="learn" href="https://www.abs.gov.au/statistics/classifications/australian-and-new-zealand-standard-research-classification-anzsrc/latest-release" target="_blank" rel="noopener"><span data-i18n="pf_area_learn">Learn about the different areas of research</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg></a>
-            </div>
-
-            <div class="form-actions">
-              <button type="submit" class="btn btn-primary" data-i18n="pf_create">Create project</button>
-              <button type="button" class="btn btn-secondary" id="cancel-btn" data-i18n="pf_cancel">Cancel</button>
-            </div>
-          </form>
-
-          <div class="card project-done" id="project-done" hidden>
-            <h2 data-i18n="pd_title">Project created</h2>
-            <p class="lead-sm" data-i18n="pd_lead">Choose a tool below to begin.</p>
-            <dl>
-              <dt data-i18n="pf_name">Project name</dt><dd data-field="name"></dd>
-              <dt data-i18n="pf_type">Project type</dt><dd data-field="type"></dd>
-              <dt data-i18n="pf_dataset">Data in this project</dt><dd data-field="dataset"></dd>
-              <dt data-i18n="pf_q">Question type</dt><dd data-field="question"></dd>
-              <dt data-i18n="pf_area">Area of research</dt><dd data-field="area"></dd>
-            </dl>
-            <div class="form-actions">
-              <a class="btn btn-primary" href="#toolkit" data-i18n="pd_tools">Go to the toolkit</a>
-              <button type="button" class="btn btn-secondary" id="another-btn" data-i18n="pd_another">Start another project</button>
+        <section class="toolkit">
+          <div class="container">
+            <h2 data-i18n="contact_what_h">What to include</h2>
+            <p class="section-lead" data-i18n="contact_what_sub">These are what make a question answerable without a round trip.</p>
+            <div class="tool-grid">
+              <article class="tool">
+                <h3 data-i18n="contact_w1_t">A methodological question</h3>
+                <p data-i18n="contact_w1_d">Name the assessment stage and the field number it concerns, so the answer can cite the same place in the source documents.</p>
+              </article>
+              <article class="tool">
+                <h3 data-i18n="contact_w2_t">A problem with the site</h3>
+                <p data-i18n="contact_w2_d">What you did, what happened, and what you expected instead. A screenshot of any error message helps.</p>
+              </article>
+              <article class="tool">
+                <h3 data-i18n="contact_w3_t">Joining the project</h3>
+                <p data-i18n="contact_w3_d">Creating a project needs your account to be on the allowlist. Say which email address you sign in with.</p>
+              </article>
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- Part 2: toolkit -->
-      <section class="toolkit" id="toolkit">
-        <div class="container">
-          <h2 data-i18n="tk_title">Evidence-based research toolkit</h2>
-          <p class="section-lead" data-i18n="tk_lead">End-to-end tools for screening, extraction, risk-of-bias assessment and network meta-analysis</p>
-          <div class="tool-grid">
-            <a class="tool" href="#" data-tool="criteria">
-              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 6h18a2 2 0 0 1 2 2v30a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M18 4h6v4h-6z"/><path d="M22 20h10M22 28h10"/><path class="accent" d="M14 20l2 2 3-4M14 28l2 2 3-4"/></svg></span>
-              <h3 data-i18n="t1_t">Eligibility criteria builder</h3>
-              <p data-i18n="t1_d">AI-assisted, structured inclusion and exclusion criteria, with PICO, PEO, SPIDER and other frameworks</p>
-            </a>
-            <a class="tool" href="#" data-tool="search">
-              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="20" cy="20" r="11"/><path d="M28.5 28.5L40 40"/><path class="accent" d="M17 20h6M20 17v6"/><path class="accent" d="M36 8v4M34 10h4"/></svg></span>
-              <h3 data-i18n="t2_t">Search strategy builder</h3>
-              <p data-i18n="t2_d">AI-driven search strings across databases, matching MeSH terms with free text, exportable to multiple databases in one click</p>
-            </a>
-            <a class="tool" href="#" data-tool="screen">
-              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="8" y="8" width="32" height="8" rx="2"/><rect x="8" y="20" width="32" height="8" rx="2"/><rect x="8" y="32" width="32" height="8" rx="2"/><path class="accent" d="M12 24l2 2 4-4"/><path class="accent" d="M13 34l4 4M17 34l-4 4"/></svg></span>
-              <h3 data-i18n="t3_t">Title and abstract screening</h3>
-              <p data-i18n="t3_d">Efficient screening of records and abstracts to speed up the early stages of a review</p>
-            </a>
-            <a class="tool" href="#" data-tool="fulltext">
-              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 6h13l9 9v25a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M27 6v9h9"/><path d="M17 22h14M17 28h14M17 34h8"/><path class="accent" d="M30 36l3 3 6-7"/></svg></span>
-              <h3 data-i18n="t4_t">Full-text screening</h3>
-              <p data-i18n="t4_d">Smarter full-text screening for faster, more consistent eligibility decisions</p>
-            </a>
-            <a class="tool" href="#" data-tool="extract">
-              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="6" y="8" width="28" height="26" rx="2"/><path d="M6 16h28M6 24h28M15 16v18M25 16v18"/><path class="accent" d="M34 30h8M38 26l4 4-4 4"/></svg></span>
-              <h3 data-i18n="t5_t">Data extraction</h3>
-              <p data-i18n="t5_d">Structured extraction of study data, exportable in multiple formats</p>
-            </a>
-            <a class="tool" href="#" data-tool="rob">
-              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 5l14 5v11c0 9-6 15-14 19-8-4-14-10-14-19V10z"/><path class="accent" d="M24 16v9"/><circle class="accent-fill" cx="24" cy="30" r="1.8"/></svg></span>
-              <h3 data-i18n="t6_t">Risk of bias (ROB) assessment</h3>
-              <p data-i18n="t6_d">Traceable risk-of-bias assessment, with support for re-assessment</p>
-            </a>
-            <a class="tool" href="#" data-tool="nma">
-              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="12" cy="14" r="4"/><circle cx="36" cy="12" r="4"/><circle cx="24" cy="36" r="4"/><circle class="accent" cx="30" cy="24" r="4"/><path d="M15.5 16l11.2 5.5M32.8 15.4l-1.6 4.9M26 33l2.5-5.5M15 17l8 15"/></svg></span>
-              <h3 data-i18n="t7_t">Data analysis (NMA)</h3>
-              <p data-i18n="t7_d">Multidimensional analysis and visualisation with an integrated R Shiny app</p>
-            </a>
-            <a class="tool" href="#" data-tool="grade">
-              <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="24" cy="19" r="11"/><path d="M17 28l-4 14 11-5 11 5-4-14"/><path class="accent" d="M24 12l2.2 4.5 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z"/></svg></span>
-              <h3 data-i18n="t8_t">Evidence quality (GRADE) assessment</h3>
-              <p data-i18n="t8_d">Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment</p>
-            </a>
-          </div>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -1216,7 +1071,20 @@
       (function () {
         var I18N = {
           en: {
-            title: "AIM-STEP | Overview",
+            title: "AIM-STEP | Contact",
+              contact_h1: "Contact",
+              contact_sub: "For questions about the method, the data, or taking part in the project.",
+              contact_pending_h: "Contact details are being finalised",
+              contact_pending_p: "This page is live so that the navigation works. A contact address has not been published yet — publishing one is a decision for the project team, not a detail to fill in automatically.",
+              contact_pending_note: "If you already work with the project, use the channel you normally use.",
+              contact_what_h: "What to include",
+              contact_what_sub: "These are what make a question answerable without a round trip.",
+              contact_w1_t: "A methodological question",
+              contact_w1_d: "Name the assessment stage and the field number it concerns, so the answer can cite the same place in the source documents.",
+              contact_w2_t: "A problem with the site",
+              contact_w2_d: "What you did, what happened, and what you expected instead. A screenshot of any error message helps.",
+              contact_w3_t: "Joining the project",
+              contact_w3_d: "Creating a project needs your account to be on the allowlist. Say which email address you sign in with.",
             nav_overview: "Overview", nav_workflow: "Workflow", nav_team: "Team", nav_contact: "Contact",
             lang_btn: "中文",
             h1: [
@@ -1242,7 +1110,20 @@
             login_confirm_email: "Please confirm your email address to finish signing in:"
           },
           zh: {
-            title: "AIM-STEP | 概览",
+            title: "AIM-STEP | 联系",
+              contact_h1: "联系我们",
+              contact_sub: "方法学、数据或参与项目方面的问题，都可以通过这里联系。",
+              contact_pending_h: "联系方式正在确定",
+              contact_pending_p: "本页已上线以保证导航可用。联系邮箱尚未公布——是否公开联系方式由项目团队决定，不应被自动填上。",
+              contact_pending_note: "若您已在与本项目合作，请继续使用原有的联系渠道。",
+              contact_what_h: "来信请说明",
+              contact_what_sub: "写清这几点，问题通常一次就能答复。",
+              contact_w1_t: "方法学问题",
+              contact_w1_d: "请指明所涉及的评价阶段与字段编号，以便答复能引用源文件的同一处。",
+              contact_w2_t: "网站问题",
+              contact_w2_d: "您做了什么、发生了什么、期望的是什么。附上报错截图会更快。",
+              contact_w3_t: "参与项目",
+              contact_w3_d: "创建项目需要账号在白名单中。请说明您用哪个邮箱登录。",
             nav_overview: "概览", nav_workflow: "流程", nav_team: "团队", nav_contact: "联系",
             lang_btn: "EN",
             h1: [
@@ -1480,334 +1361,6 @@
         }
 
         render();
-      })();
-    </script>
-    <script>
-      (function () {
-        var t = function (k) { return window.AIMSTEP.t(k); };
-        var PENDING = "aimstep-pending-membership";
-
-        var startBtn = document.getElementById("start-btn");
-        var form = document.getElementById("project-form");
-        var done = document.getElementById("project-done");
-        var current = document.getElementById("project-current");
-        var list = document.getElementById("project-list");
-        var submitBtn = form.querySelector('button[type="submit"]');
-
-        var fields = {
-          name: form.querySelector('[data-key="name"]'),
-          type: form.querySelector('[data-key="type"]'),
-          dataset: form.querySelector('[data-key="dataset"]'),
-          question: form.querySelector('[data-key="question"]')
-        };
-        var inputs = {
-          name: document.getElementById("pf-name"),
-          type: document.getElementById("pf-type"),
-          dataset: document.getElementById("pf-dataset"),
-          question: document.getElementById("pf-question"),
-          area: document.getElementById("pf-area")
-        };
-
-        var api = null;        // { fs, db } once the SDK is up
-        var projects = [];     // what the signed-in user can open
-        var lastCreated = null;
-        var loadToken = 0;     // guards against a slow load landing after a newer one
-
-        // ---- shared helpers -------------------------------------------------
-
-        function labelFor(select, value) {
-          if (!value) return t("not_set");
-          var opt = select.querySelector('option[value="' + value + '"]');
-          return opt ? t(opt.getAttribute("data-i18n")) : value;
-        }
-
-        function fill(panel, p) {
-          panel.querySelector('[data-field="name"]').textContent = p.name;
-          panel.querySelector('[data-field="type"]').textContent = labelFor(inputs.type, p.project_type);
-          panel.querySelector('[data-field="dataset"]').textContent = labelFor(inputs.dataset, p.dataset_kind);
-          panel.querySelector('[data-field="question"]').textContent = labelFor(inputs.question, p.question_type);
-          panel.querySelector('[data-field="area"]').textContent = labelFor(inputs.area, p.area_of_research);
-        }
-
-        function notice(key, extra) {
-          var p = document.createElement("p");
-          p.className = "lead-sm";
-          p.textContent = t(key) + (extra || "");
-          return p;
-        }
-
-        function formError(key, extra) {
-          var box = form.querySelector(".form-error") || (function () {
-            var el = document.createElement("p");
-            el.className = "error form-error";
-            form.querySelector(".form-actions").insertAdjacentElement("beforebegin", el);
-            return el;
-          })();
-          box.hidden = !key;
-          box.dataset.key = key || "";
-          box.dataset.extra = extra || "";
-          box.textContent = key ? t(key) + (extra || "") : "";
-        }
-
-        // ---- rendering ------------------------------------------------------
-
-        function renderList() {
-          list.textContent = "";
-          var user = window.AIMSTEP.auth.user();
-
-          if (!user) {
-            // No second sign-in button here: "Start a new project" above already
-            // opens the dialog, and two controls doing the same thing a few
-            // pixels apart reads as a mistake.
-            list.hidden = false;
-            list.appendChild(notice("pl_signin"));
-            return;
-          }
-          if (projects === null) { list.hidden = false; list.appendChild(notice("pl_loading")); return; }
-          if (!projects.length) { list.hidden = true; return; }
-
-          list.hidden = false;
-          var h = document.createElement("h2");
-          h.textContent = t("pl_yours");
-          list.appendChild(h);
-          projects.forEach(function (p) {
-            var panel = current.cloneNode(true);
-            panel.removeAttribute("id");
-            panel.hidden = false;
-            // The edit button belongs to the single-project markup this panel was
-            // cloned from; editing an existing project is not wired up yet, so it
-            // is removed rather than left there doing nothing.
-            var actions = panel.querySelector(".form-actions");
-            if (actions) actions.remove();
-            fill(panel, p);
-            if (p.dataset_kind === "synthetic") panel.setAttribute("data-synthetic", t("badge_synth"));
-            list.appendChild(panel);
-          });
-        }
-
-        function show(which) {
-          form.hidden = which !== "form";
-          done.hidden = which !== "done";
-          current.hidden = true;                       // now a template for the list
-          startBtn.hidden = which === "form" || which === "done";
-          list.hidden = which === "form" || which === "done";
-          if (which === "done" && lastCreated) fill(done, lastCreated);
-          if (which === "list") renderList();
-        }
-
-        function openForm() {
-          form.querySelectorAll(".field").forEach(function (f) {
-            f.classList.remove("is-invalid");
-            var e = f.querySelector(".error");
-            if (e) e.hidden = true;
-          });
-          formError(null);
-          Object.keys(inputs).forEach(function (k) { inputs[k].value = ""; });
-          [inputs.type, inputs.dataset, inputs.question, inputs.area].forEach(function (s) {
-            s.classList.add("is-empty");
-          });
-          show("form");
-          inputs.name.focus();
-          form.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-
-        [inputs.type, inputs.dataset, inputs.question, inputs.area].forEach(function (s) {
-          s.addEventListener("change", function () { s.classList.toggle("is-empty", !s.value); });
-        });
-
-        // ---- loading --------------------------------------------------------
-        // projects/ cannot be queried (allow list: if false). The personal index
-        // at users/{uid}/memberships is listable, so read that and fetch each
-        // project by id. A membership whose project is gone or whose role no
-        // longer holds simply fails its get; it is skipped, which is exactly the
-        // behaviour the rules were written to produce.
-
-        function load() {
-          var user = window.AIMSTEP.auth.user();
-          var token = ++loadToken;
-          if (!user || !api) { projects = []; show("list"); return; }
-          projects = null;
-          show("list");
-          var fs = api.fs, db = api.db;
-          fs.getDocs(fs.collection(db, "users", user.uid, "memberships"))
-            .then(function (snap) {
-              var ids = [];
-              snap.forEach(function (d) { ids.push(d.id); });
-              return Promise.all(ids.map(function (pid) {
-                return fs.getDoc(fs.doc(db, "projects", pid))
-                  .then(function (d) {
-                    if (!d.exists()) return null;
-                    var p = d.data();
-                    if (p.archived) return null;
-                    p.id = d.id;
-                    return p;
-                  })
-                  .catch(function () { return null; });
-              }));
-            })
-            .then(function (rows) {
-              if (token !== loadToken) return;
-              projects = rows.filter(Boolean).sort(function (a, b) {
-                var at = a.created_at && a.created_at.seconds || 0;
-                var bt = b.created_at && b.created_at.seconds || 0;
-                return bt - at;
-              });
-              show("list");
-            })
-            .catch(function () {
-              if (token !== loadToken) return;
-              projects = [];
-              show("list");
-            });
-        }
-
-        // ---- the gap between the two writes ---------------------------------
-        // Creating a project is two writes that cannot be batched. If the second
-        // one fails the project exists and is owned, but nothing points at it —
-        // and projects/ cannot be listed, so it would be unreachable. The id is
-        // therefore parked locally and retried on the next load; only if that
-        // also fails is the user shown the id so it is not lost.
-
-        function writeMembership(pid, uid) {
-          var fs = api.fs, db = api.db;
-          return fs.setDoc(fs.doc(db, "users", uid, "memberships", pid),
-                           { role: "owner", added_at: fs.serverTimestamp() });
-        }
-
-        function retryPending() {
-          var user = window.AIMSTEP.auth.user();
-          var pid = null;
-          try { pid = localStorage.getItem(PENDING); } catch (e) {}
-          if (!pid || !user || !api) return Promise.resolve();
-          return writeMembership(pid, user.uid)
-            .then(function () { try { localStorage.removeItem(PENDING); } catch (e) {} })
-            .catch(function () {});
-        }
-
-        function explain(err) {
-          var code = (err && err.code) || "";
-          if (code === "permission-denied") {
-            var u = window.AIMSTEP.auth.user();
-            return u && u.emailVerified === false ? "err_unverified" : "err_denied";
-          }
-          if (code === "unavailable" || code === "failed-precondition") return "err_offline";
-          return null;
-        }
-
-        // ---- create ---------------------------------------------------------
-
-        form.addEventListener("submit", function (e) {
-          e.preventDefault();
-          formError(null);
-
-          var ok = true;
-          Object.keys(fields).forEach(function (k) {
-            var bad = !inputs[k].value.trim();
-            fields[k].classList.toggle("is-invalid", bad);
-            fields[k].querySelector(".error").hidden = !bad;
-            if (bad && ok) { inputs[k].focus(); ok = false; }
-          });
-          if (!ok) return;
-
-          var user = window.AIMSTEP.auth.user();
-          if (!user) { window.AIMSTEP.auth.signIn(); return; }
-          if (!api) { formError("err_offline"); return; }
-
-          var fs = api.fs, db = api.db;
-          var uid = user.uid;
-          // An auto id is 20 characters of [A-Za-z0-9], which is what
-          // pidOk() in the rules requires.
-          var ref = fs.doc(fs.collection(db, "projects"));
-          var roles = {};
-          roles[uid] = "owner";
-          var payload = {
-            name: inputs.name.value.trim(),
-            project_type: inputs.type.value,
-            question_type: inputs.question.value,
-            area_of_research: inputs.area.value,
-            dataset_kind: inputs.dataset.value,
-            roles: roles,
-            archived: false,
-            created_at: fs.serverTimestamp(),
-            created_by: uid,
-            updated_at: fs.serverTimestamp(),
-            updated_by: uid
-          };
-
-          submitBtn.disabled = true;
-          var prev = submitBtn.textContent;
-          submitBtn.textContent = t("pf_saving");
-
-          fs.setDoc(ref, payload)
-            .then(function () {
-              try { localStorage.setItem(PENDING, ref.id); } catch (err) {}
-              return writeMembership(ref.id, uid)
-                .then(function () { try { localStorage.removeItem(PENDING); } catch (err) {} })
-                .catch(function () {
-                  // The project is safe; only the index entry is missing.
-                  formError("err_partial", ref.id);
-                });
-            })
-            .then(function () {
-              lastCreated = {
-                name: payload.name, project_type: payload.project_type,
-                question_type: payload.question_type, area_of_research: payload.area_of_research,
-                dataset_kind: payload.dataset_kind, id: ref.id
-              };
-              show("done");
-              load();
-            })
-            .catch(function (err) {
-              var key = explain(err);
-              formError(key || "err_generic", key ? "" : (err.code || err.message || ""));
-            })
-            .then(function () {
-              submitBtn.disabled = false;
-              submitBtn.textContent = prev;
-            });
-        });
-
-        startBtn.addEventListener("click", function () {
-          if (!window.AIMSTEP.auth.user()) { window.AIMSTEP.auth.signIn(); return; }
-          openForm();
-        });
-        document.getElementById("another-btn").addEventListener("click", openForm);
-        document.getElementById("cancel-btn").addEventListener("click", function () { show("list"); });
-
-        var editBtn = document.getElementById("edit-btn");
-        if (editBtn) editBtn.remove();   // editing an existing project is not wired up yet
-
-        document.addEventListener("aimstep:lang", function () {
-          if (!done.hidden && lastCreated) fill(done, lastCreated);
-          if (!list.hidden) renderList();
-          var box = form.querySelector(".form-error");
-          if (box && !box.hidden) formError(box.dataset.key, box.dataset.extra);
-          if (submitBtn.disabled) submitBtn.textContent = t("pf_saving");
-        });
-
-        document.addEventListener("aimstep:auth", function () {
-          retryPending().then(load);
-        });
-
-        window.AIMSTEP.auth.ready()
-          .then(function (a) { api = a; return retryPending(); })
-          .then(load)
-          .catch(function () { show("list"); });
-
-        show("list");
-
-        // toolkit cards: tools that are not linked yet show a short notice
-        var toast = document.getElementById("toast"), timer = null;
-        document.querySelectorAll(".tool").forEach(function (a) {
-          a.addEventListener("click", function (e) {
-            if (a.getAttribute("href") !== "#") return;
-            e.preventDefault();
-            toast.textContent = t("toast_soon");
-            toast.classList.add("show");
-            clearTimeout(timer);
-            timer = setTimeout(function () { toast.classList.remove("show"); }, 2200);
-          });
-        });
       })();
     </script>
     <script>
