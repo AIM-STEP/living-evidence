@@ -15,7 +15,7 @@
  * is read only by the UI as an input placeholder; nothing here can see it.
  */
 
-import { FRAMEWORKS, LIMITERS, LEGACY_OPTIONS, getFramework, getLimiter } from "./frameworks.js";
+import { FRAMEWORKS, LIMITERS, LEGACY_OPTIONS, getFramework, getLimiter, migrateYearValue } from "./frameworks.js";
 import { QUESTION_TEMPLATES, slotsOf } from "./templates.js";
 
 /* ------------------------------------------------------------------ state */
@@ -30,7 +30,11 @@ export function emptyState(frameworkId = "PICO") {
   return {
     frameworkId,
     byFramework: {},
-    limiters: { design: [], year: { from: "", to: "" }, language: [], pubtype: [], other: [], custom: "" }
+    limiters: {
+      design: [], year: { from: "", to: "" }, language: [], pubtype: [], other: [], custom: "",
+      // Per-group custom input text fields
+      designCustom: "", languageCustom: "", pubtypeCustom: "", otherCustom: ""
+    }
   };
 }
 
@@ -48,18 +52,12 @@ export function normalizeState(raw) {
       out[el.key] = {
         value: typeof cell.value === "string" ? cell.value : "",
         exclude: typeof cell.exclude === "string" ? cell.exclude : "",
-        // Whether the exclusion box is open. Kept in state so a reload restores
-        // the same view, and so collapsing never implies clearing:
-        // "用户删除或收起排除条件时不得误删已经输入的内容".
         excludeOpen: cell.excludeOpen === true || (typeof cell.exclude === "string" && cell.exclude !== "")
       };
     }
     byFramework[fw.id] = out;
   }
   const rawLim = raw.limiters || {};
-  // Anything not currently offered is dropped, withdrawn options included.
-  // A browser that saved `fulltext` before it was removed therefore neither
-  // shows it nor exports it, and nothing has to throw to make that happen.
   const pick = (id) => {
     const lim = getLimiter(id);
     const allowed = new Set((lim && lim.options ? lim.options : []).map(o => o.id));
@@ -74,15 +72,18 @@ export function normalizeState(raw) {
     limiters: {
       design: pick("design"),
       year: {
-        from: typeof year.from === "string" ? year.from.trim() : "",
-        to: typeof year.to === "string" ? year.to.trim() : ""
+        from: migrateYearValue(year.from),
+        to: migrateYearValue(year.to)
       },
       language: pick("language"),
       pubtype: pick("pubtype"),
       other: pick("other"),
-      // Trimmed here so that whitespace alone never counts as a limit, in the
-      // panel or in any export.
-      custom: typeof rawLim.custom === "string" ? rawLim.custom.trim() : ""
+      custom: typeof rawLim.custom === "string" ? rawLim.custom.trim() : "",
+      // Per-group custom inputs
+      designCustom: typeof rawLim.designCustom === "string" ? rawLim.designCustom.trim() : "",
+      languageCustom: typeof rawLim.languageCustom === "string" ? rawLim.languageCustom.trim() : "",
+      pubtypeCustom: typeof rawLim.pubtypeCustom === "string" ? rawLim.pubtypeCustom.trim() : "",
+      otherCustom: typeof rawLim.otherCustom === "string" ? rawLim.otherCustom.trim() : ""
     }
   };
 }
@@ -101,37 +102,26 @@ function t(dict, lang) {
 }
 
 /**
- * 表 3 illustrates the open-ended case as 「2015 年及以后」 and the interface
- * reference renders the same phrase in the generated criteria, so that wording
- * is used verbatim rather than a shorter paraphrase. The closed range and the
- * upper-bound-only case are not shown anywhere and are written to match it.
+ * Year-month text for display and export. Accepts YYYY-MM values.
  */
 function yearText(year, lang) {
   const from = (year.from || "").trim(), to = (year.to || "").trim();
   if (!from && !to) return "";
-  if (from && to) return lang === "zh" ? `${from}–${to} 年` : `${from}–${to}`;
-  if (from) return lang === "zh" ? `${from} 年及以后` : `${from} onwards`;
-  return lang === "zh" ? `${to} 年及以前` : `up to ${to}`;
+  if (from && to) return lang === "zh" ? `${from} 至 ${to}` : `${from} to ${to}`;
+  if (from) return lang === "zh" ? `${from} 及以后` : `${from} onwards`;
+  return lang === "zh" ? `${to} 及以前` : `up to ${to}`;
 }
 
 const JOIN = { zh: "、", en: ", " };
 
 /**
- * Spacing where Latin text meets Chinese text.
- *
- * The interface reference renders PICO as 「…数字化 CBT-I 对睡眠质量（PSQI）…」 —
- * note the space after CBT-I. It is not in the template; it appears because a
- * Latin run butting straight against a Han character reads as cramped, and
- * Chinese technical writing conventionally separates them. Since the value is
- * whatever the user typed, the boundary cannot be baked into the template: the
- * same slot may hold 数字化 CBT-I on one project and 认知行为治疗 on the next,
- * and only the first needs the space.
- *
- * Deliberately narrow. Han and kana count as CJK; fullwidth punctuation does
- * not, so 「（PSQI）的影响」 stays unspaced exactly as the reference shows it.
- * Bracketed placeholders like [对照] are left alone too — "[" is not treated as
- * a Latin head.
+ * The custom input key for a limiter group id.
+ * design → designCustom, language → languageCustom, etc.
  */
+function customKey(limiterId) {
+  return limiterId + "Custom";
+}
+
 const CJK_CHAR = /[㐀-䶿一-鿿぀-ヿ]/;
 const LATIN_TAIL = /[A-Za-z0-9)\]]$/;
 const LATIN_HEAD = /^[A-Za-z0-9(]/;
@@ -145,13 +135,6 @@ function needsSpace(left, right) {
   return false;
 }
 
-/**
- * Inserts the boundary spaces as their own segments, so `text` stays a join.
- *
- * Slots are skipped on both sides. A placeholder is already delimited by its
- * brackets — 「与[对照]相比」 is how the gap should read — and its closing "]"
- * would otherwise look like the end of a Latin run and pull in a space.
- */
 function spaceSegments(segments) {
   const out = [];
   let prevType = null;
@@ -167,15 +150,6 @@ function spaceSegments(segments) {
 
 /* -------------------------------------------------------------- generation */
 
-/**
- * The research question, as segments so the panel can grey out the gaps and
- * the exporters can flatten them, from one pass rather than two.
- *
- * An unfilled element becomes a `slot` segment carrying its label — rendered as
- * [对照] — never the placeholder hint. The prompt is explicit that an unfilled
- * element must read as a visible gap, not be quietly backfilled with the
- * example text.
- */
 export function buildQuestion(state, lang = "zh") {
   const s = normalizeState(state);
   const fw = getFramework(s.frameworkId);
@@ -209,9 +183,7 @@ export function buildQuestion(state, lang = "zh") {
 
 /**
  * Inclusion criteria: the filled elements in framework order, then the
- * limiters that were actually selected. Nothing is emitted for an element left
- * blank — an empty criterion is worse than a missing one, because it reads as
- * a decision that was made.
+ * limiters that were actually selected or filled.
  */
 export function buildInclusion(state, lang = "zh") {
   const s = normalizeState(state);
@@ -246,24 +218,22 @@ export function buildInclusion(state, lang = "zh") {
       }
       continue;
     }
+    // multi type
     const chosen = s.limiters[lim.id] || [];
-    if (!chosen.length) continue;
+    const ck = customKey(lim.id);
+    const customVal = (s.limiters[ck] || "").trim();
     const names = chosen
       .map(id => lim.options.find(o => o.id === id))
       .filter(Boolean)
       .map(o => t(o.label, lang));
+    if (customVal) names.push(customVal);
+    if (!names.length) continue;
     rows.push({ source: "limiter", key: lim.id, label: t(lim.label, lang),
                 value: names.join(sep), text: `${t(lim.label, lang)}${colon}${names.join(sep)}` });
   }
   return rows;
 }
 
-/**
- * Exclusion criteria: only what the user actually typed into an exclusion box.
- * When there is nothing, the list is empty and the UI shows an empty state —
- * inventing a plausible exclusion would be putting a methodological decision
- * into someone's protocol on their behalf.
- */
 export function buildExclusion(state, lang = "zh") {
   const s = normalizeState(state);
   const fw = getFramework(s.frameworkId);
@@ -280,7 +250,7 @@ export function buildExclusion(state, lang = "zh") {
   return rows;
 }
 
-/** Everything the panel and both exporters read. */
+/** Everything the panel and all exporters read. */
 export function buildResult(state, lang = "zh") {
   const s = normalizeState(state);
   const fw = getFramework(s.frameworkId);
@@ -352,9 +322,6 @@ function csvCell(v) {
  * CSV with a UTF-8 BOM. Excel reads a BOM-less UTF-8 file as the system code
  * page and turns every Chinese label into mojibake, so the BOM is what the
  * requirement "确保中文在常用表格软件中正常显示" actually comes down to.
- *
- * CRLF for the same reason: it is what RFC 4180 specifies and what spreadsheet
- * software on Windows expects.
  */
 export function toCSV(result) {
   const S = STR[result.lang] || STR.en;
@@ -366,14 +333,35 @@ export function toCSV(result) {
   for (const r of result.inclusion) {
     rows.push([r.label, r.value, r.source === "element" ? exclusionFor(r.key) : ""]);
   }
-  // An element with an exclusion but no value never appears in `inclusion`, so
-  // it would otherwise be dropped from the file the user downloads.
   for (const e of result.exclusion) {
     if (!result.inclusion.some(r => r.source === "element" && r.key === e.key)) {
       rows.push([e.label, "", e.value]);
     }
   }
-  return "﻿" + rows.map(r => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+  return "\uFEFF" + rows.map(r => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+}
+
+/**
+ * Build DOCX data as a structured object for the UI to pass to the docx library.
+ * Returns { title, framework, sections[] } where each section has a heading and items.
+ */
+export function toDocxData(result, meta = {}) {
+  const S = STR[result.lang] || STR.en;
+  const name = (meta.projectName || "").trim() || S.project;
+
+  return {
+    title: name,
+    framework: { label: S.framework, value: result.frameworkLabel },
+    question: { heading: S.question, text: result.question.text },
+    inclusion: {
+      heading: S.inclusion,
+      items: result.inclusion.map(r => r.text)
+    },
+    exclusion: {
+      heading: S.exclusion,
+      items: result.exclusion.length ? result.exclusion.map(r => r.text) : [S.none]
+    }
+  };
 }
 
 /**
@@ -385,7 +373,7 @@ export function safeFilename(projectName, extension) {
   let base = String(projectName === null || projectName === undefined ? "" : projectName)
     .replace(/[\\/:*?"<>|]/g, " ")
     // eslint-disable-next-line no-control-regex
-    .replace(/[ -]/g, " ")
+    .replace(/[\x00-\x1f]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^[.\s]+|[.\s]+$/g, "");

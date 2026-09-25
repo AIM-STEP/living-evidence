@@ -33,8 +33,6 @@ export function load(projectId, store) {
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : null;
   } catch (e) {
-    // Corrupt or unreadable: treated as absent. Deleting it here would throw
-    // away a state the user might still recover by hand.
     return null;
   }
 }
@@ -68,10 +66,6 @@ export function clear(projectId, store) {
  * user entered, and built from the framework hints rather than from a second
  * copy of the same strings — a copy would drift from 表 2 the first time that
  * table changed.
- *
- * The prompt is firm that this must not blend into real work
- * ("不得与用户真实项目状态混淆"), which is why filling it is a deliberate action
- * with its own confirmation in the UI, never something that happens on load.
  */
 export function demoState(frameworks, frameworkId = "PICO") {
   const fw = frameworks.find(f => f.id === frameworkId);
@@ -97,11 +91,15 @@ export function demoState(frameworks, frameworkId = "PICO") {
     byFramework,
     limiters: {
       design: ["rct", "quasi"],
-      year: { from: "2015", to: "" },
+      year: { from: "2015-01", to: "" },
       language: ["en", "zh"],
       pubtype: ["peer"],
       other: ["human"],
-      custom: ""
+      custom: "",
+      designCustom: "",
+      languageCustom: "",
+      pubtypeCustom: "",
+      otherCustom: ""
     }
   };
 }

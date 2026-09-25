@@ -181,12 +181,17 @@ export const UPSTREAM_QUESTION_TYPES = [
  * Limiters, from 表 3. Nothing is selected by default — the table says 不勾选 /
  * 不限 for every row, and a pre-ticked limiter would quietly narrow someone's
  * review without their having chosen it.
+ *
+ * Groups with `customInput: true` get an additional free-text input field
+ * appended after their pill options. Each group's custom input is independent.
  */
 export const LIMITERS = [
   {
     id: "design",
     label: { zh: "研究设计", en: "Study design" },
     type: "multi",
+    customInput: true,
+    customHint: { zh: "输入其他研究设计", en: "Enter another study design" },
     options: [
       { id: "rct", label: { zh: "随机对照试验", en: "Randomised controlled trials" },
         pill: { zh: "RCT", en: "RCT" } },
@@ -210,28 +215,29 @@ export const LIMITERS = [
   },
   {
     id: "year",
-    label: { zh: "发表年份", en: "Publication year" },
+    label: { zh: "发表年月", en: "Publication year-month" },
     type: "range",
-    // A hint only. 表 3 shows 如"2015 年及以后" as an illustration of the format,
-    // and the prompt adds 不得作为默认真实值.
-    hint: { zh: "例如 2015 年及以后", en: "e.g. 2015 onwards" }
+    hint: { zh: "例如 2024-01 及以后", en: "e.g. 2024-01 onwards" }
   },
   {
     id: "language",
     label: { zh: "语种", en: "Language" },
     type: "multi",
-    // 表 3: 选"不限"自动取消其他.
-    exclusive: "any",
+    customInput: true,
+    customHint: { zh: "输入其他语种", en: "Enter another language" },
+    // "Any language" removed on request. Not selecting any specific language
+    // implicitly means no language restriction.
     options: [
       { id: "en", label: { zh: "英文", en: "English" } },
-      { id: "zh", label: { zh: "中文", en: "Chinese" } },
-      { id: "any", label: { zh: "不限语种", en: "Any language" } }
+      { id: "zh", label: { zh: "中文", en: "Chinese" } }
     ]
   },
   {
     id: "pubtype",
     label: { zh: "文献类型", en: "Publication type" },
     type: "multi",
+    customInput: true,
+    customHint: { zh: "输入其他文献类型", en: "Enter another publication type" },
     options: [
       { id: "peer", label: { zh: "同行评议论文", en: "Peer-reviewed articles" } },
       { id: "preprint", label: { zh: "预印本", en: "Preprints" } },
@@ -244,6 +250,8 @@ export const LIMITERS = [
     id: "other",
     label: { zh: "其他限定", en: "Other limits" },
     type: "multi",
+    customInput: true,
+    customHint: { zh: "输入其他限定条件", en: "Enter another limit" },
     // 可获取全文 / Full text available was removed on request. LEGACY_OPTIONS
     // below is what stops it coming back from a browser that saved it earlier.
     options: [
@@ -270,7 +278,10 @@ export const LIMITERS = [
  * but naming it here says that its absence is a decision rather than an
  * oversight.
  */
-export const LEGACY_OPTIONS = { other: ["fulltext"] };
+export const LEGACY_OPTIONS = {
+  other: ["fulltext"],
+  language: ["any"]
+};
 
 /** Lookups, so callers never re-scan the arrays by hand. */
 export function getFramework(id) {
@@ -286,12 +297,9 @@ export function recommendFramework(questionType) {
 }
 
 /**
- * Apply the language rule: 不限语种 and a specific language cannot both be on.
- * Returns a new array rather than mutating, so the caller can diff it.
- *
- * `justToggled` matters. Without it the rule is ambiguous — if the selection
- * already holds both, which one wins? With it the answer is always "the one the
- * user just touched", which is what makes the control feel predictable.
+ * Apply exclusivity rules. With "any" language removed, no limiter currently
+ * uses exclusivity. This function is retained for forward compatibility but
+ * now simply returns a copy of the selection.
  */
 export function applyExclusivity(limiterId, selected, justToggled) {
   const limiter = getLimiter(limiterId);
@@ -302,19 +310,34 @@ export function applyExclusivity(limiterId, selected, justToggled) {
 }
 
 /**
- * Year validation. Returns null when acceptable, otherwise an error key the UI
- * resolves through its own i18n — this module emits no user-facing prose.
+ * Year-month validation. Returns null when acceptable, otherwise an error key.
  *
- * Both ends empty means 不限, which is valid; one end alone is valid too
- * (表 3: 可只填其一).
+ * Both ends empty means no restriction, which is valid; one end alone is valid
+ * too. Accepts strict YYYY-MM format. Also accepts legacy YYYY-only values
+ * from older saved state — those are treated as YYYY-01 for comparison but
+ * the validator accepts them to avoid blocking page load.
  */
 export function validateYearRange(from, to) {
   const clean = v => (v === null || v === undefined ? "" : String(v).trim());
   const f = clean(from), t = clean(to);
   if (!f && !t) return null;
-  const four = /^\d{4}$/;
-  if (f && !four.test(f)) return "year_from_format";
-  if (t && !four.test(t)) return "year_to_format";
-  if (f && t && Number(f) > Number(t)) return "year_order";
+  const ym = /^\d{4}-(0[1-9]|1[0-2])$/;
+  const legacy4 = /^\d{4}$/;
+  if (f && !ym.test(f) && !legacy4.test(f)) return "year_from_format";
+  if (t && !ym.test(t) && !legacy4.test(t)) return "year_to_format";
+  // For comparison, normalise YYYY to YYYY-01
+  const norm = v => v.length === 4 ? v + "-01" : v;
+  if (f && t && norm(f) > norm(t)) return "year_order";
   return null;
+}
+
+/**
+ * Migrate a legacy YYYY value to YYYY-MM by appending -01.
+ * Returns the value unchanged if it is already YYYY-MM or empty.
+ */
+export function migrateYearValue(v) {
+  const s = (v === null || v === undefined ? "" : String(v)).trim();
+  if (!s) return "";
+  if (/^\d{4}$/.test(s)) return s + "-01";
+  return s;
 }

@@ -21,7 +21,8 @@ import {
   applyExclusivity, validateYearRange
 } from "./frameworks.js";
 import {
-  normalizeState, emptyState, buildResult, toPlainText, toMarkdown, toCSV, safeFilename
+  normalizeState, emptyState, buildResult, toPlainText, toMarkdown, toCSV,
+  toDocxData, safeFilename
 } from "./generate.js";
 import { load, save, clear, demoState } from "./storage.js";
 
@@ -34,15 +35,6 @@ const $ = id => document.getElementById(id);
 
 /* --------------------------------------------------------- project context */
 
-/**
- * Upstream project metadata.
- *
- * The interface is deliberately small and replaceable: whoever calls
- * setProjectMeta decides where it came from. Today that is the Firestore
- * project named by ?project=<id>; with no id, or signed out, the module runs
- * on a local draft instead. Nothing here waits on it — the builder is fully
- * usable before, and without, any of it arriving.
- */
 let projectMeta = { id: "", name: "", projectType: "", questionType: "", areaOfResearch: "" };
 let state = normalizeState(emptyState());
 let saveTimer = null;
@@ -57,14 +49,6 @@ function persist() {
   saveTimer = setTimeout(() => save(projectMeta.id, state, store()), 200);
 }
 
-/**
- * Write now, cancelling the pending debounce.
- *
- * Without this, closing the tab within 200 ms of the last keystroke loses it:
- * the timer never fires. Both events below are needed — `pagehide` covers
- * navigation and closing, `visibilitychange` covers a phone being locked or the
- * app being switched away from, which on mobile may never fire `pagehide`.
- */
 function flush() {
   clearTimeout(saveTimer);
   save(projectMeta.id, state, store());
@@ -81,17 +65,10 @@ export function setProjectMeta(meta) {
   const saved = load(projectMeta.id, store());
   state = normalizeState(saved || emptyState());
   recommended = recommendFramework(projectMeta.questionType);
-  // Only steer a project that has not been worked on yet. Overriding a saved
-  // choice because the upstream type says otherwise would undo a decision the
-  // user already made.
   if (!saved && recommended) state.frameworkId = recommended;
   renderAll();
 }
 
-/**
- * The data this module hands to the next one (检索策略构建). A stable shape, so
- * the search-strategy builder reads fields rather than re-parsing display text.
- */
 export function exportForNextModule() {
   const s = normalizeState(state);
   const fw = getFramework(s.frameworkId);
@@ -111,7 +88,11 @@ export function exportForNextModule() {
       year: { ...s.limiters.year },
       language: s.limiters.language.slice(),
       pubtype: s.limiters.pubtype.slice(),
-      other: s.limiters.other.slice()
+      other: s.limiters.other.slice(),
+      designCustom: s.limiters.designCustom,
+      languageCustom: s.limiters.languageCustom,
+      pubtypeCustom: s.limiters.pubtypeCustom,
+      otherCustom: s.limiters.otherCustom
     },
     question: result.question.text,
     inclusion: result.inclusion.map(r => r.text),
@@ -121,13 +102,6 @@ export function exportForNextModule() {
 
 /* ------------------------------------------------------------------ pills */
 
-/**
- * A pill button.
- *
- * `aria-pressed` carries the state for assistive technology, and the selected
- * look adds weight and an inner ring on top of the fill, so the difference does
- * not rest on colour alone.
- */
 function pillButton(label, selected, onClick, extra) {
   const b = document.createElement("button");
   b.type = "button";
@@ -190,7 +164,6 @@ function renderElements() {
     else input.rows = 3;
     input.id = `ec-in-${el.key}`;
     input.value = cell.value;
-    // A hint, never a value: nothing reads placeholder text back out.
     input.placeholder = pick(el.hint);
     input.autocomplete = "off";
     input.addEventListener("input", () => {
@@ -200,7 +173,6 @@ function renderElements() {
     });
     field.appendChild(input);
 
-    // Exclusion, collapsed until asked for.
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "ec-exclude-toggle";
@@ -230,8 +202,6 @@ function renderElements() {
       exWrap.hidden = !cell.excludeOpen;
       toggle.setAttribute("aria-expanded", cell.excludeOpen ? "true" : "false");
       toggle.textContent = (cell.excludeOpen ? "－ " : "＋ ") + t("ec_add_exclusion");
-      // Collapsing hides the box; it never clears it. The prompt is explicit:
-      // 用户删除或收起排除条件时不得误删已经输入的内容.
       persist();
       if (cell.excludeOpen) exInput.focus();
     });
@@ -243,6 +213,14 @@ function renderElements() {
 }
 
 /* --------------------------------------------------------- step 3 limiters */
+
+/**
+ * The custom input key for a limiter group.
+ * design → designCustom, language → languageCustom, etc.
+ */
+function customKey(limiterId) {
+  return limiterId + "Custom";
+}
 
 function renderLimiters() {
   const box = $("ec-limiters");
@@ -270,6 +248,7 @@ function renderLimiters() {
       continue;
     }
 
+    // multi type: pills + optional custom input
     const row = document.createElement("div");
     row.className = "ec-pills";
     row.setAttribute("role", "group");
@@ -286,17 +265,36 @@ function renderLimiters() {
       }));
     }
     group.appendChild(row);
+
+    // Per-group custom input field
+    if (lim.customInput) {
+      const ck = customKey(lim.id);
+      const wrap = document.createElement("div");
+      wrap.className = "ec-group-custom";
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = `ec-gc-${lim.id}`;
+      input.className = "ec-group-custom-input";
+      input.value = state.limiters[ck] || "";
+      input.placeholder = pick(lim.customHint);
+      input.autocomplete = "off";
+      input.setAttribute("aria-label", pick(lim.customHint));
+      input.addEventListener("input", function () {
+        state.limiters[ck] = input.value;
+        persist();
+        renderResult();
+      });
+      wrap.appendChild(input);
+      group.appendChild(wrap);
+    }
+
     box.appendChild(group);
   }
 }
 
 /**
- * The free-text limit.
- *
- * Its own element, created once per render of the limiter block and never
- * rebuilt while it has focus: typing calls renderResult(), not renderLimiters(),
- * so the caret and an in-flight IME composition survive. Rebuilding the group
- * on every keystroke would make Chinese input impossible to use.
+ * The free-text limit (the standalone "Custom limit" group).
  */
 function renderCustom(lim, labelId) {
   const wrap = document.createElement("div");
@@ -307,7 +305,7 @@ function renderCustom(lim, labelId) {
   input.id = "ec-custom";
   input.className = "ec-custom-input";
   input.value = state.limiters.custom || "";
-  input.placeholder = pick(lim.hint);      // a hint; never read back as a value
+  input.placeholder = pick(lim.hint);
   input.autocomplete = "off";
   input.setAttribute("aria-labelledby", labelId);
   input.addEventListener("input", function () {
@@ -327,11 +325,11 @@ function renderYear(lim) {
     const input = document.createElement("input");
     input.type = "text";
     input.inputMode = "numeric";
-    input.maxLength = 4;
+    input.maxLength = 7;
     input.className = "ec-year-input";
     input.id = `ec-year-${which}`;
     input.value = state.limiters.year[which];
-    input.placeholder = which === "from" ? "2015" : "2025";
+    input.placeholder = which === "from" ? "2024-01" : "2025-12";
     input.setAttribute("aria-label", `${pick(lim.label)} — ${t(labelKey)}`);
     input.addEventListener("input", () => {
       state.limiters.year[which] = input.value.trim();
@@ -363,7 +361,6 @@ function renderYear(lim) {
   err.hidden = true;
   wrap.appendChild(err);
 
-  // The message is tied to both inputs, so a screen reader hears it on either.
   from.setAttribute("aria-describedby", "ec-year-error");
   to.setAttribute("aria-describedby", "ec-year-error");
   return wrap;
@@ -385,11 +382,6 @@ function showYearError() {
 function renderResult() {
   const result = buildResult(state, lang());
 
-  // The research question is no longer shown: the white preview box was
-  // removed on request. It is still generated, because the copied text, the
-  // .md, the .csv and the structured handover to the next module all carry it
-  // — hiding a panel must not change what the data contains. The guard keeps
-  // this working whether or not a page chooses to display it.
   const q = $("ec-question");
   if (q) {
     q.textContent = "";
@@ -449,8 +441,6 @@ async function copyText(text) {
     await navigator.clipboard.writeText(text);
     return true;
   } catch (e) {
-    // Clipboard API needs a secure context and a permission the browser may
-    // refuse. The textarea fallback works where it does not.
     try {
       const ta = document.createElement("textarea");
       ta.value = text;
@@ -468,8 +458,8 @@ async function copyText(text) {
   }
 }
 
-function download(filename, text, mime) {
-  const blob = new Blob([text], { type: mime });
+function download(filename, content, mime) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -477,9 +467,65 @@ function download(filename, text, mime) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  // Revoked on the next tick: revoking immediately can beat the download in
-  // some browsers.
   setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/** docx library lazy-loaded from CDN. Cached after first load. */
+let _docxPromise = null;
+function loadDocx() {
+  if (_docxPromise) return _docxPromise;
+  _docxPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/docx@9.1.1/build/index.umd.min.js";
+    script.onload = () => {
+      if (window.docx) resolve(window.docx);
+      else reject(new Error("docx not found after script load"));
+    };
+    script.onerror = () => {
+      _docxPromise = null;
+      reject(new Error("Failed to load docx library"));
+    };
+    document.head.appendChild(script);
+  });
+  return _docxPromise;
+}
+
+async function downloadDocx() {
+  const r = buildResult(state, lang());
+  const data = toDocxData(r, { projectName: projectMeta.name });
+
+  try {
+    const { Document, Paragraph, TextRun, Packer, HeadingLevel } = await loadDocx();
+
+    const children = [
+      new Paragraph({ text: data.title, heading: HeadingLevel.TITLE }),
+      new Paragraph({ children: [
+        new TextRun({ text: data.framework.label + ": ", bold: true }),
+        new TextRun({ text: data.framework.value })
+      ]}),
+      new Paragraph({}),
+      new Paragraph({ text: data.question.heading, heading: HeadingLevel.HEADING_1 }),
+      new Paragraph({ text: data.question.text }),
+      new Paragraph({}),
+      new Paragraph({ text: data.inclusion.heading, heading: HeadingLevel.HEADING_1 }),
+      ...data.inclusion.items.map((text, i) =>
+        new Paragraph({ text: `${i + 1}. ${text}` })
+      ),
+      new Paragraph({}),
+      new Paragraph({ text: data.exclusion.heading, heading: HeadingLevel.HEADING_1 }),
+      ...data.exclusion.items.map((text, i) =>
+        new Paragraph({ text: `${i + 1}. ${text}` })
+      )
+    ];
+
+    const doc = new Document({ sections: [{ children }] });
+    const blob = await Packer.toBlob(doc);
+    download(safeFilename(projectMeta.name, "docx"), blob);
+    toast(t("ec_docx_ok"));
+  } catch (e) {
+    console.error("DOCX generation failed:", e);
+    toast(t("ec_docx_fail"));
+  }
 }
 
 function wireActions() {
@@ -488,12 +534,7 @@ function wireActions() {
     toast(t(ok ? "ec_copied" : "ec_copy_failed"));
   });
 
-  $("ec-dl-md").addEventListener("click", () => {
-    const r = buildResult(state, lang());
-    download(safeFilename(projectMeta.name, "md"),
-             toMarkdown(r, { projectName: projectMeta.name }),
-             "text/markdown;charset=utf-8");
-  });
+  $("ec-dl-docx").addEventListener("click", downloadDocx);
 
   $("ec-dl-csv").addEventListener("click", () => {
     const r = buildResult(state, lang());
@@ -517,7 +558,6 @@ function wireActions() {
     toast(t("ec_cleared"));
   });
 
-  // Labels and generated text both follow the site language toggle.
   document.addEventListener("aimstep:lang", renderAll);
 
   window.addEventListener("pagehide", flush);

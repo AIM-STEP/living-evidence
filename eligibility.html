@@ -946,7 +946,7 @@
       .ec-limit-label { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: var(--ink-2); }
       .ec-year { display: block; }
       .ec-year-input {
-        width: 92px; padding: 8px 10px; border: 1px solid var(--line);
+        width: 110px; padding: 8px 10px; border: 1px solid var(--line);
         border-radius: 8px; font: inherit; font-size: 15px;
         background: var(--canvas); color: var(--ink);
       }
@@ -977,6 +977,14 @@
         background: var(--canvas); color: var(--ink);
       }
       .ec-custom-input:focus-visible { outline: 2px solid var(--plum); outline-offset: 1px; border-color: var(--plum); }
+      .ec-group-custom { margin-top: 8px; }
+      .ec-group-custom-input {
+        width: 100%; box-sizing: border-box;
+        padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+        font: inherit; font-size: 15px;
+        background: var(--canvas); color: var(--ink);
+      }
+      .ec-group-custom-input:focus-visible { outline: 2px solid var(--plum); outline-offset: 1px; border-color: var(--plum); }
       .ec-list { margin: 0; padding-left: 1.5em; font-size: 15px; line-height: 1.85; }
       .ec-list li { margin: 0; }
       .ec-empty { margin: 0; font-size: 15px; color: var(--ink-3); }
@@ -1157,7 +1165,7 @@
 
                   <div class="form-actions ec-actions">
                     <button type="button" class="btn btn-primary" id="ec-copy" data-i18n="ec_copy">Copy</button>
-                    <button type="button" class="btn btn-secondary" id="ec-dl-md" data-i18n="ec_dl_md">Download .md</button>
+                    <button type="button" class="btn btn-secondary" id="ec-dl-docx" data-i18n="ec_dl_docx">Download .docx</button>
                     <button type="button" class="btn btn-secondary" id="ec-dl-csv" data-i18n="ec_dl_csv">Download .csv</button>
                   </div>
 
@@ -1297,15 +1305,15 @@
             ec_exclusion_ph: "What should be excluded for this element?",
             ec_year_from: "from",
             ec_year_to: "to",
-            ec_year_from_format: "The start year must be four digits.",
-            ec_year_to_format: "The end year must be four digits.",
-            ec_year_order: "The start year cannot be later than the end year.",
+            ec_year_from_format: "Use YYYY-MM format (e.g. 2024-01).",
+            ec_year_to_format: "Use YYYY-MM format (e.g. 2025-12).",
+            ec_year_order: "The start year-month cannot be later than the end year-month.",
             ec_inclusion: "Inclusion criteria",
             ec_exclusion: "Exclusion criteria",
             ec_inclusion_empty: "Nothing entered yet.",
             ec_exclusion_empty: "No exclusion criteria entered.",
             ec_copy: "Copy",
-            ec_dl_md: "Download .md",
+            ec_dl_docx: "Download .docx",
             ec_dl_csv: "Download .csv",
             ec_next: "Next: search strategy →",
             ec_copied: "Copied",
@@ -1314,6 +1322,8 @@
             ec_demo_filled: "Example filled in",
             ec_clear_confirm: "Clear this project's eligibility criteria? This cannot be undone.",
             ec_cleared: "Cleared",
+            ec_docx_ok: "DOCX downloaded",
+            ec_docx_fail: "DOCX generation failed. Check your connection and try again.",
           },
         zh: {
             pf_dataset: "本项目的数据",
@@ -1407,17 +1417,17 @@
             ec_recommended: "推荐",
             ec_add_exclusion: "添加排除条件",
             ec_exclusion_ph: "该要素下需要排除什么？",
-            ec_year_from: "起始年份",
-            ec_year_to: "结束年份",
-            ec_year_from_format: "起始年份需为四位数字。",
-            ec_year_to_format: "结束年份需为四位数字。",
-            ec_year_order: "起始年份不能晚于结束年份。",
+            ec_year_from: "起始年月",
+            ec_year_to: "结束年月",
+            ec_year_from_format: "请使用 YYYY-MM 格式（例如 2024-01）。",
+            ec_year_to_format: "请使用 YYYY-MM 格式（例如 2025-12）。",
+            ec_year_order: "起始年月不能晚于结束年月。",
             ec_inclusion: "纳入标准",
             ec_exclusion: "排除标准",
             ec_inclusion_empty: "尚未填写。",
             ec_exclusion_empty: "未填写排除标准。",
             ec_copy: "复制",
-            ec_dl_md: "下载 .md",
+            ec_dl_docx: "下载 .docx",
             ec_dl_csv: "下载 .csv",
             ec_next: "下一步：检索策略 →",
             ec_copied: "已复制",
@@ -1426,6 +1436,8 @@
             ec_demo_filled: "已填入示例",
             ec_clear_confirm: "清空本项目的纳排标准？此操作不可撤销。",
             ec_cleared: "已清空",
+            ec_docx_ok: "已下载 DOCX",
+            ec_docx_fail: "生成 DOCX 失败，请检查网络后重试。",
           }
       };
     </script>
