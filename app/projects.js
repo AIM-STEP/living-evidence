@@ -73,6 +73,7 @@ export function initProjects(options) {
   };
 
   let backend = null;
+  let backendPending = null;
   let projects = null;          // null = loading, [] = none, [...] = rows
   let loadError = null;
   let view = "list";
@@ -253,11 +254,33 @@ export function initProjects(options) {
 
   /* -------------------------------------------------------------- loading */
 
+  /**
+   * Bring up the backend, once, and only when it is actually needed.
+   *
+   * auth.ready() pulls in the Firestore SDK — 436 KB — so calling it on load
+   * made every signed-out visitor to the home page download a database client
+   * they were never going to use. Nothing here needs it until someone is
+   * signed in or has asked to create something.
+   */
+  function ensureBackend() {
+    if (backend) return Promise.resolve(backend);
+    if (!backendPending) {
+      backendPending = auth.ready().then(api => { backend = makeBackend(api); return backend; });
+      backendPending.catch(() => {});
+    }
+    return backendPending;
+  }
+
   function load() {
     const token = ++loadToken;
     const user = auth.user();
     loadError = null;
-    if (!user || !backend) { projects = user ? null : []; render(); return Promise.resolve(); }
+    if (!user) { projects = []; render(); return Promise.resolve(); }
+    if (!backend) {
+      projects = null;
+      render();
+      return ensureBackend().then(load, () => { loadError = true; projects = []; render(); });
+    }
     projects = null;
     render();
     return backend.listProjects(user.uid)
@@ -293,7 +316,10 @@ export function initProjects(options) {
 
     const user = auth.user();
     if (!user) { rememberIntent(); auth.signIn(); return Promise.resolve(); }
-    if (!backend) { setStatus("err_offline"); return Promise.resolve(); }
+    if (!backend) {
+      // First write of the session: bring the SDK up, then come back here.
+      return ensureBackend().then(() => submit(), () => { setStatus("err_offline"); });
+    }
 
     const payload = {
       name: fields.name.input.value.trim(),
@@ -352,13 +378,19 @@ export function initProjects(options) {
     // Someone asked to create before signing in; give them back what they
     // asked for instead of making them find the button again.
     const wanted = auth.user() && takeIntent();
-    retryPending().then(load).then(() => { if (wanted) openForm(); });
+    if (!auth.user()) { projects = []; render(); return; }
+    ensureBackend().then(retryPending).then(load)
+      .then(() => { if (wanted) openForm(); })
+      .catch(() => { loadError = true; projects = []; render(); });
   });
 
-  auth.ready()
-    .then(api => { backend = makeBackend(api); return retryPending(); })
-    .then(load)
-    .catch(() => { loadError = true; projects = []; render(); });
+  // Signed out, this does nothing but paint the "sign in" note — no SDK, no
+  // network. Everything heavier waits until there is a user.
+  if (auth.user()) {
+    ensureBackend().then(retryPending).then(load).catch(() => {
+      loadError = true; projects = []; render();
+    });
+  }
 
   render();
 
