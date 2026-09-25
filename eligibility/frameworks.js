@@ -244,12 +244,33 @@ export const LIMITERS = [
     id: "other",
     label: { zh: "其他限定", en: "Other limits" },
     type: "multi",
+    // 可获取全文 / Full text available was removed on request. LEGACY_OPTIONS
+    // below is what stops it coming back from a browser that saved it earlier.
     options: [
-      { id: "human", label: { zh: "仅人类受试者", en: "Human subjects only" } },
-      { id: "fulltext", label: { zh: "可获取全文", en: "Full text available" } }
+      { id: "human", label: { zh: "仅人类受试者", en: "Human subjects only" } }
     ]
+  },
+  {
+    // A free-text limit, for anything the fixed lists do not cover. Typed
+    // rather than picked, so it is the one limiter whose value is the user's
+    // own words; the placeholder is a hint and never becomes a value.
+    id: "custom",
+    label: { zh: "其他自定义限定", en: "Custom limit" },
+    type: "text",
+    hint: { zh: "输入其他限定条件", en: "Enter another limit" }
   }
 ];
+
+/**
+ * Options that used to exist and no longer do.
+ *
+ * A browser that saved state before the option was withdrawn still holds it.
+ * Normalising it away means the page neither shows it, nor exports it, nor
+ * throws over it — silently dropping an unknown id would do the same thing,
+ * but naming it here says that its absence is a decision rather than an
+ * oversight.
+ */
+export const LEGACY_OPTIONS = { other: ["fulltext"] };
 
 /** Lookups, so callers never re-scan the arrays by hand. */
 export function getFramework(id) {

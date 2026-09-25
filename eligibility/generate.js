@@ -15,7 +15,7 @@
  * is read only by the UI as an input placeholder; nothing here can see it.
  */
 
-import { FRAMEWORKS, LIMITERS, getFramework, getLimiter } from "./frameworks.js";
+import { FRAMEWORKS, LIMITERS, LEGACY_OPTIONS, getFramework, getLimiter } from "./frameworks.js";
 import { QUESTION_TEMPLATES, slotsOf } from "./templates.js";
 
 /* ------------------------------------------------------------------ state */
@@ -30,7 +30,7 @@ export function emptyState(frameworkId = "PICO") {
   return {
     frameworkId,
     byFramework: {},
-    limiters: { design: [], year: { from: "", to: "" }, language: [], pubtype: [], other: [] }
+    limiters: { design: [], year: { from: "", to: "" }, language: [], pubtype: [], other: [], custom: "" }
   };
 }
 
@@ -57,11 +57,15 @@ export function normalizeState(raw) {
     byFramework[fw.id] = out;
   }
   const rawLim = raw.limiters || {};
+  // Anything not currently offered is dropped, withdrawn options included.
+  // A browser that saved `fulltext` before it was removed therefore neither
+  // shows it nor exports it, and nothing has to throw to make that happen.
   const pick = (id) => {
     const lim = getLimiter(id);
     const allowed = new Set((lim && lim.options ? lim.options : []).map(o => o.id));
+    const gone = new Set(LEGACY_OPTIONS[id] || []);
     const got = Array.isArray(rawLim[id]) ? rawLim[id] : [];
-    return got.filter(v => allowed.has(v));
+    return got.filter(v => allowed.has(v) && !gone.has(v));
   };
   const year = rawLim.year && typeof rawLim.year === "object" ? rawLim.year : {};
   return {
@@ -75,7 +79,10 @@ export function normalizeState(raw) {
       },
       language: pick("language"),
       pubtype: pick("pubtype"),
-      other: pick("other")
+      other: pick("other"),
+      // Trimmed here so that whitespace alone never counts as a limit, in the
+      // panel or in any export.
+      custom: typeof rawLim.custom === "string" ? rawLim.custom.trim() : ""
     }
   };
 }
@@ -225,6 +232,14 @@ export function buildInclusion(state, lang = "zh") {
   for (const lim of LIMITERS) {
     if (lim.type === "range") {
       const text = yearText(s.limiters.year, lang);
+      if (text) {
+        rows.push({ source: "limiter", key: lim.id, label: t(lim.label, lang),
+                    value: text, text: `${t(lim.label, lang)}${colon}${text}` });
+      }
+      continue;
+    }
+    if (lim.type === "text") {
+      const text = (s.limiters[lim.id] || "").trim();
       if (text) {
         rows.push({ source: "limiter", key: lim.id, label: t(lim.label, lang),
                     value: text, text: `${t(lim.label, lang)}${colon}${text}` });

@@ -100,7 +100,8 @@ export function demoState(frameworks, frameworkId = "PICO") {
       year: { from: "2015", to: "" },
       language: ["en", "zh"],
       pubtype: ["peer"],
-      other: ["human"]
+      other: ["human"],
+      custom: ""
     }
   };
 }

@@ -15,24 +15,21 @@
         font-style: normal;
         font-weight: 400;
         font-display: swap;
-        src: local("Universal Sans"), local("Universal Sans Text"), local("UniversalSans-Regular"),
-             url("fonts/UniversalSans-Regular.woff2") format("woff2");
+        src: local("Universal Sans"), local("Universal Sans Text"), local("UniversalSans-Regular");
       }
       @font-face {
         font-family: "Universal Sans";
         font-style: normal;
         font-weight: 500;
         font-display: swap;
-        src: local("Universal Sans Medium"), local("UniversalSans-Medium"),
-             url("fonts/UniversalSans-Medium.woff2") format("woff2");
+        src: local("Universal Sans Medium"), local("UniversalSans-Medium");
       }
       @font-face {
         font-family: "Universal Sans";
         font-style: normal;
         font-weight: 700;
         font-display: swap;
-        src: local("Universal Sans Bold"), local("UniversalSans-Bold"),
-             url("fonts/UniversalSans-Bold.woff2") format("woff2");
+        src: local("Universal Sans Bold"), local("UniversalSans-Bold");
       }
       @font-face {
         font-family: "Inter";
@@ -744,6 +741,116 @@
       #project-list .ec-open a { color: var(--plum); text-decoration: none; }
       #project-list .ec-open a:hover { text-decoration: underline; }
 
+      /* --- 以下规则来自原 index.html，合并后所有页面共用一份样式 --- */
+      /* Upper part: hero with the one-line introduction */
+            .hero {
+              background: var(--canvas);
+            }
+      .hero-inner {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              text-align: center;
+              padding: 6.5rem 0 4.5rem;
+            }
+      .hero h1 {
+              font-size: clamp(1.5rem, 2.7vw, 2.25rem);
+              font-weight: 500;
+              line-height: 1.3;
+              letter-spacing: -0.01em;
+              color: var(--ink);
+            }
+      /* One orchestrated moment: words rise in one after another (about 1.4s in total),
+               then Simple / Transparent / Exact / Prompt take turns in plum, one every 2s. */
+            .hero h1 .w {
+              display: inline-block;
+              opacity: 0;
+              transform: translateY(0.45em);
+              animation: word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+              animation-delay: calc(0.15s + var(--i) * 55ms);
+            }
+      .hero h1 .k {
+              animation:
+                word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards,
+                word-plum 8s ease-in-out infinite;
+              animation-delay:
+                calc(0.15s + var(--i) * 55ms),
+                calc(1.6s + var(--k) * 2s);
+            }
+      @keyframes word-in {
+              to { opacity: 1; transform: translateY(0); }
+            }
+      @keyframes word-plum {
+              0%, 25%, 100% { color: var(--ink); }
+              4%, 20% { color: var(--plum); }
+            }
+      /* Middle part: four STEP tiles, photographic style with text over the image */
+            .step {
+              padding: 3rem 0 5rem;
+              background:
+                radial-gradient(48% 42% at 14% 22%, #f2f2f3 0%, rgba(242,242,243,0) 100%),
+                radial-gradient(44% 46% at 86% 78%, #ececee 0%, rgba(236,236,238,0) 100%),
+                var(--canvas);
+            }
+      .step-grid {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 20px;
+            }
+      .tile {
+              position: relative;
+              display: grid;
+              grid-template-columns: minmax(0, 1fr) 160px;
+              gap: 16px;
+              align-items: center;
+              container-type: inline-size;
+              padding: 20px 22px;
+              border-radius: 12px;
+              overflow: hidden;
+              background: rgba(255,255,255,0.55);
+              -webkit-backdrop-filter: blur(24px);
+              backdrop-filter: blur(24px);
+              border: 1px solid rgba(255,255,255,0.9);
+              box-shadow: 0 1px 2px rgba(23,26,32,0.04), 0 16px 40px rgba(23,26,32,0.06);
+              color: var(--ink);
+            }
+      .tile > svg {
+              display: block;
+              width: 160px;
+              height: 160px;
+            }
+      .tile-text h2 {
+              font-size: 1.125rem;
+              font-weight: 500;
+              line-height: 1.3;
+              letter-spacing: -0.01em;
+            }
+      .tile-text h2 .abbr {
+              color: var(--plum);
+              font-weight: 700;
+            }
+      .tile-text p {
+              margin-top: 4px;
+              /* one line always: shrinks with the card, 28px on a full-width desktop */
+              font-size: clamp(16px, calc((100cqw - 180px) / 13.1), 28px);
+              line-height: 1.2;
+              white-space: nowrap;
+              font-weight: 700;
+              letter-spacing: -0.01em;
+              color: var(--ink);
+            }
+      /* Clock hands in the Prompt card: minute hand one turn per 6s, hour hand twelve times slower */
+            .hand {
+              transform-box: view-box;
+              transform-origin: 300px 233px;
+              transform: rotate(var(--from));
+            }
+      .hand-h { --from: -60deg; animation: clock-spin 72s linear infinite; }
+      .hand-m { --from: 60deg; animation: clock-spin 6s linear infinite; }
+      @keyframes clock-spin {
+              from { transform: rotate(var(--from)); }
+              to { transform: rotate(calc(var(--from) + 360deg)); }
+            }
       /* --- eligibility criteria builder (scripts/build_eligibility_page.py) --- */
       .ec { padding: 28px 0 56px; }
       .ec-bar {
@@ -752,11 +859,17 @@
         padding-bottom: 14px; margin-bottom: 20px;
         border-bottom: 1px dashed var(--line);
       }
-      .ec-crumb { margin: 0; font-size: 15px; color: var(--ink-3); }
+      /* The page name is the h1 — this page deliberately has no large title,
+         so the breadcrumb carries it. A <div>, not a <p>: a heading inside a
+         paragraph is not valid markup. */
+      .ec-crumb { display: flex; align-items: baseline; margin: 0; font-size: 15px; color: var(--ink-3); }
+      .ec-crumb h1 {
+        margin: 0; font-size: inherit; font-weight: 700;
+        letter-spacing: 0; color: var(--ink);
+      }
       .ec-crumb a { color: var(--ink-3); text-decoration: none; }
       .ec-crumb a:hover { color: var(--plum); text-decoration: underline; }
       .ec-crumb span { margin: 0 6px; }
-      .ec-crumb b { color: var(--ink); }
       .ec-tools { display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px; font-size: 14px; }
       .ec-project { color: var(--ink-3); }
       .ec-project b { color: var(--ink); font-weight: 600; margin-left: .25em; }
@@ -850,13 +963,17 @@
         margin: 20px 0 8px; font-size: 14px; font-weight: 600;
         color: var(--ink-3); letter-spacing: .01em;
       }
-      .ec-question {
-        background: var(--canvas); border: 1px solid var(--line-soft);
-        border-radius: 10px; padding: 14px 16px;
-        font-size: 16px; line-height: 1.95;
+      /* The first heading in the panel sits directly under the title now that
+         the research-question preview has been removed — without this it would
+         keep the top margin that separated it from that box. */
+      .ec-result h3.ec-first { margin-top: 0; }
+      .ec-custom-input {
+        width: 100%; box-sizing: border-box;
+        padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+        font: inherit; font-size: 15px;
+        background: var(--canvas); color: var(--ink);
       }
-      .ec-filled { font-weight: 700; color: var(--ink); }
-      .ec-slot { color: var(--ink-3); }
+      .ec-custom-input:focus-visible { outline: 2px solid var(--plum); outline-offset: 1px; border-color: var(--plum); }
       .ec-list { margin: 0; padding-left: 1.5em; font-size: 15px; line-height: 1.85; }
       .ec-list li { margin: 0; }
       .ec-empty { margin: 0; font-size: 15px; color: var(--ink-3); }
@@ -962,7 +1079,7 @@
 
         <nav class="nav" aria-label="Main navigation">
           <a href="index.html" data-i18n="nav_overview">Overview</a>
-          <a href="workflow.html" data-i18n="nav_workflow">Workflow</a>
+          <a href="workflow.html" data-i18n="nav_workflow">Tool kit</a>
           <a href="team.html" data-i18n="nav_team">Team</a>
           <a href="contact.html" data-i18n="nav_contact">Contact</a>
         </nav>
@@ -991,11 +1108,11 @@
           <div class="container">
 
             <div class="ec-bar">
-              <p class="ec-crumb">
-                <a href="workflow.html" data-i18n="nav_workflow">Workflow</a>
+              <div class="ec-crumb">
+                <a href="workflow.html" data-i18n="nav_workflow">Tool kit</a>
                 <span aria-hidden="true">›</span>
-                <b data-i18n="ec_title">Eligibility criteria builder</b>
-              </p>
+                <h1 data-i18n="ec_title">Eligibility criteria builder</h1>
+              </div>
               <div class="ec-tools">
                 <span class="ec-project"><span data-i18n="ec_project">Project:</span><b id="ec-project-name"></b></span>
                 <button type="button" class="ec-link" id="ec-demo" data-i18n="ec_demo">Fill with an example</button>
@@ -1027,9 +1144,7 @@
                 <section class="card ec-result" aria-labelledby="ec-h4">
                   <h2 id="ec-h4"><span class="ec-num" aria-hidden="true">④</span><span data-i18n="ec_s4">Your criteria (live)</span></h2>
 
-                  <div class="ec-question" id="ec-question" aria-live="polite"></div>
-
-                  <h3 data-i18n="ec_inclusion">Inclusion criteria</h3>
+                  <h3 class="ec-first" data-i18n="ec_inclusion">Inclusion criteria</h3>
                   <ol class="ec-list" id="ec-inclusion"></ol>
                   <p class="ec-empty" id="ec-inclusion-empty" data-i18n="ec_inclusion_empty" hidden>Nothing entered yet.</p>
 
@@ -1086,37 +1201,6 @@
     <script>
       window.AIMSTEP_PAGE_I18N = {
         en: {
-            ec_title: "Eligibility criteria builder",
-            ec_project: "Project:",
-            ec_no_project: "not selected",
-            ec_demo: "Fill with an example",
-            ec_clear: "Clear",
-            ec_s1: "Framework",
-            ec_s2: "Question elements",
-            ec_s3: "Limits",
-            ec_s4: "Your criteria (live)",
-            ec_recommended: "recommended",
-            ec_add_exclusion: "Add an exclusion",
-            ec_exclusion_ph: "What should be excluded for this element?",
-            ec_year_from: "from",
-            ec_year_to: "to",
-            ec_year_from_format: "The start year must be four digits.",
-            ec_year_to_format: "The end year must be four digits.",
-            ec_year_order: "The start year cannot be later than the end year.",
-            ec_inclusion: "Inclusion criteria",
-            ec_exclusion: "Exclusion criteria",
-            ec_inclusion_empty: "Nothing entered yet.",
-            ec_exclusion_empty: "No exclusion criteria entered.",
-            ec_copy: "Copy",
-            ec_dl_md: "Download .md",
-            ec_dl_csv: "Download .csv",
-            ec_next: "Next: search strategy →",
-            ec_copied: "Copied",
-            ec_copy_failed: "Could not copy — select the text and copy it by hand.",
-            ec_demo_confirm: "Fill every field with the worked example? This replaces what is there now.",
-            ec_demo_filled: "Example filled in",
-            ec_clear_confirm: "Clear this project's eligibility criteria? This cannot be undone.",
-            ec_cleared: "Cleared",
             pf_dataset: "Data in this project",
             pf_dataset_hint: "This cannot be changed after the project is created. Real and synthetic data are kept apart so that a test project can never be mistaken for an assessment.",
             pf_dataset_err: "Please say which kind of data this project holds",
@@ -1194,40 +1278,41 @@
             t7_t: "Data analysis (NMA)",
             t7_d: "Multidimensional analysis and visualisation with an integrated R Shiny app",
             t8_t: "Evidence quality (GRADE) assessment",
-            t8_d: "Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment"
-        },
+            t8_d: "Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment",
+            title: "AIM-STEP | Eligibility criteria builder",
+            ec_title: "Eligibility criteria builder",
+            ec_project: "Project:",
+            ec_no_project: "not selected",
+            ec_demo: "Fill with an example",
+            ec_clear: "Clear",
+            ec_s1: "Framework",
+            ec_s2: "Question elements",
+            ec_s3: "Limits",
+            ec_s4: "Your criteria (live)",
+            ec_recommended: "recommended",
+            ec_add_exclusion: "Add an exclusion",
+            ec_exclusion_ph: "What should be excluded for this element?",
+            ec_year_from: "from",
+            ec_year_to: "to",
+            ec_year_from_format: "The start year must be four digits.",
+            ec_year_to_format: "The end year must be four digits.",
+            ec_year_order: "The start year cannot be later than the end year.",
+            ec_inclusion: "Inclusion criteria",
+            ec_exclusion: "Exclusion criteria",
+            ec_inclusion_empty: "Nothing entered yet.",
+            ec_exclusion_empty: "No exclusion criteria entered.",
+            ec_copy: "Copy",
+            ec_dl_md: "Download .md",
+            ec_dl_csv: "Download .csv",
+            ec_next: "Next: search strategy →",
+            ec_copied: "Copied",
+            ec_copy_failed: "Could not copy — select the text and copy it by hand.",
+            ec_demo_confirm: "Fill every field with the worked example? This replaces what is there now.",
+            ec_demo_filled: "Example filled in",
+            ec_clear_confirm: "Clear this project's eligibility criteria? This cannot be undone.",
+            ec_cleared: "Cleared",
+          },
         zh: {
-            ec_title: "纳排标准构建",
-            ec_project: "项目：",
-            ec_no_project: "未选择",
-            ec_demo: "填入示例",
-            ec_clear: "清空",
-            ec_s1: "框架",
-            ec_s2: "问题要素",
-            ec_s3: "限定条件",
-            ec_s4: "生成的标准（实时）",
-            ec_recommended: "推荐",
-            ec_add_exclusion: "添加排除条件",
-            ec_exclusion_ph: "该要素下需要排除什么？",
-            ec_year_from: "起始年份",
-            ec_year_to: "结束年份",
-            ec_year_from_format: "起始年份需为四位数字。",
-            ec_year_to_format: "结束年份需为四位数字。",
-            ec_year_order: "起始年份不能晚于结束年份。",
-            ec_inclusion: "纳入标准",
-            ec_exclusion: "排除标准",
-            ec_inclusion_empty: "尚未填写。",
-            ec_exclusion_empty: "未填写排除标准。",
-            ec_copy: "复制",
-            ec_dl_md: "下载 .md",
-            ec_dl_csv: "下载 .csv",
-            ec_next: "下一步：检索策略 →",
-            ec_copied: "已复制",
-            ec_copy_failed: "复制失败，请手动选中文本复制。",
-            ec_demo_confirm: "用示例填满所有栏目？这会覆盖当前已填内容。",
-            ec_demo_filled: "已填入示例",
-            ec_clear_confirm: "清空本项目的纳排标准？此操作不可撤销。",
-            ec_cleared: "已清空",
             pf_dataset: "本项目的数据",
             pf_dataset_hint: "项目创建后此项不可更改。真实数据与合成数据始终分开存放，以免测试项目被误当作正式评价。",
             pf_dataset_err: "请选择本项目使用哪一类数据",
@@ -1305,8 +1390,40 @@
             t7_t: "数据分析（NMA）",
             t7_d: "集成 R Shiny，支持多维度数据分析与可视化",
             t8_t: "证据质量 (GRADE) 评估",
-            t8_d: "循证医学证据质量分级，支持二次处理"
-        }
+            t8_d: "循证医学证据质量分级，支持二次处理",
+            title: "AIM-STEP | 纳排标准构建",
+            ec_title: "纳排标准构建",
+            ec_project: "项目：",
+            ec_no_project: "未选择",
+            ec_demo: "填入示例",
+            ec_clear: "清空",
+            ec_s1: "框架",
+            ec_s2: "问题要素",
+            ec_s3: "限定条件",
+            ec_s4: "生成的标准（实时）",
+            ec_recommended: "推荐",
+            ec_add_exclusion: "添加排除条件",
+            ec_exclusion_ph: "该要素下需要排除什么？",
+            ec_year_from: "起始年份",
+            ec_year_to: "结束年份",
+            ec_year_from_format: "起始年份需为四位数字。",
+            ec_year_to_format: "结束年份需为四位数字。",
+            ec_year_order: "起始年份不能晚于结束年份。",
+            ec_inclusion: "纳入标准",
+            ec_exclusion: "排除标准",
+            ec_inclusion_empty: "尚未填写。",
+            ec_exclusion_empty: "未填写排除标准。",
+            ec_copy: "复制",
+            ec_dl_md: "下载 .md",
+            ec_dl_csv: "下载 .csv",
+            ec_next: "下一步：检索策略 →",
+            ec_copied: "已复制",
+            ec_copy_failed: "复制失败，请手动选中文本复制。",
+            ec_demo_confirm: "用示例填满所有栏目？这会覆盖当前已填内容。",
+            ec_demo_filled: "已填入示例",
+            ec_clear_confirm: "清空本项目的纳排标准？此操作不可撤销。",
+            ec_cleared: "已清空",
+          }
       };
     </script>
     <script>
@@ -1314,7 +1431,7 @@
         var I18N = {
           en: {
             title: "AIM-STEP | Overview",
-            nav_overview: "Overview", nav_workflow: "Workflow", nav_team: "Team", nav_contact: "Contact",
+            nav_overview: "Overview", nav_workflow: "Tool kit", nav_team: "Team", nav_contact: "Contact",
             lang_btn: "中文",
             h1: [
               ["AIM-STEP:", "A", "Simple,", "Transparent,", "Exact,", "and", "Prompt", "tool"],
@@ -1340,7 +1457,7 @@
           },
           zh: {
             title: "AIM-STEP | 概览",
-            nav_overview: "概览", nav_workflow: "流程", nav_team: "团队", nav_contact: "联系",
+            nav_overview: "概览", nav_workflow: "工具箱", nav_team: "团队", nav_contact: "联系",
             lang_btn: "EN",
             h1: [
               ["AIM-STEP：", "简单、", "透明、", "精确、", "及时的", "活证据工具，"],

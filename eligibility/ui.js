@@ -264,6 +264,12 @@ function renderLimiters() {
       continue;
     }
 
+    if (lim.type === "text") {
+      group.appendChild(renderCustom(lim, h.id));
+      box.appendChild(group);
+      continue;
+    }
+
     const row = document.createElement("div");
     row.className = "ec-pills";
     row.setAttribute("role", "group");
@@ -282,6 +288,35 @@ function renderLimiters() {
     group.appendChild(row);
     box.appendChild(group);
   }
+}
+
+/**
+ * The free-text limit.
+ *
+ * Its own element, created once per render of the limiter block and never
+ * rebuilt while it has focus: typing calls renderResult(), not renderLimiters(),
+ * so the caret and an in-flight IME composition survive. Rebuilding the group
+ * on every keystroke would make Chinese input impossible to use.
+ */
+function renderCustom(lim, labelId) {
+  const wrap = document.createElement("div");
+  wrap.className = "ec-custom";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = "ec-custom";
+  input.className = "ec-custom-input";
+  input.value = state.limiters.custom || "";
+  input.placeholder = pick(lim.hint);      // a hint; never read back as a value
+  input.autocomplete = "off";
+  input.setAttribute("aria-labelledby", labelId);
+  input.addEventListener("input", function () {
+    state.limiters.custom = input.value;
+    persist();
+    renderResult();
+  });
+  wrap.appendChild(input);
+  return wrap;
 }
 
 function renderYear(lim) {
@@ -350,16 +385,23 @@ function showYearError() {
 function renderResult() {
   const result = buildResult(state, lang());
 
+  // The research question is no longer shown: the white preview box was
+  // removed on request. It is still generated, because the copied text, the
+  // .md, the .csv and the structured handover to the next module all carry it
+  // — hiding a panel must not change what the data contains. The guard keeps
+  // this working whether or not a page chooses to display it.
   const q = $("ec-question");
-  q.textContent = "";
-  for (const seg of result.question.segments) {
-    if (seg.type === "text") {
-      q.appendChild(document.createTextNode(seg.text));
-    } else {
-      const span = document.createElement("span");
-      span.className = seg.type === "slot" ? "ec-slot" : "ec-filled";
-      span.textContent = seg.text;
-      q.appendChild(span);
+  if (q) {
+    q.textContent = "";
+    for (const seg of result.question.segments) {
+      if (seg.type === "text") {
+        q.appendChild(document.createTextNode(seg.text));
+      } else {
+        const span = document.createElement("span");
+        span.className = seg.type === "slot" ? "ec-slot" : "ec-filled";
+        span.textContent = seg.text;
+        q.appendChild(span);
+      }
     }
   }
 

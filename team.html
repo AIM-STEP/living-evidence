@@ -741,6 +741,116 @@
       #project-list .ec-open a { color: var(--plum); text-decoration: none; }
       #project-list .ec-open a:hover { text-decoration: underline; }
 
+      /* --- 以下规则来自原 index.html，合并后所有页面共用一份样式 --- */
+      /* Upper part: hero with the one-line introduction */
+            .hero {
+              background: var(--canvas);
+            }
+      .hero-inner {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              text-align: center;
+              padding: 6.5rem 0 4.5rem;
+            }
+      .hero h1 {
+              font-size: clamp(1.5rem, 2.7vw, 2.25rem);
+              font-weight: 500;
+              line-height: 1.3;
+              letter-spacing: -0.01em;
+              color: var(--ink);
+            }
+      /* One orchestrated moment: words rise in one after another (about 1.4s in total),
+               then Simple / Transparent / Exact / Prompt take turns in plum, one every 2s. */
+            .hero h1 .w {
+              display: inline-block;
+              opacity: 0;
+              transform: translateY(0.45em);
+              animation: word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+              animation-delay: calc(0.15s + var(--i) * 55ms);
+            }
+      .hero h1 .k {
+              animation:
+                word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards,
+                word-plum 8s ease-in-out infinite;
+              animation-delay:
+                calc(0.15s + var(--i) * 55ms),
+                calc(1.6s + var(--k) * 2s);
+            }
+      @keyframes word-in {
+              to { opacity: 1; transform: translateY(0); }
+            }
+      @keyframes word-plum {
+              0%, 25%, 100% { color: var(--ink); }
+              4%, 20% { color: var(--plum); }
+            }
+      /* Middle part: four STEP tiles, photographic style with text over the image */
+            .step {
+              padding: 3rem 0 5rem;
+              background:
+                radial-gradient(48% 42% at 14% 22%, #f2f2f3 0%, rgba(242,242,243,0) 100%),
+                radial-gradient(44% 46% at 86% 78%, #ececee 0%, rgba(236,236,238,0) 100%),
+                var(--canvas);
+            }
+      .step-grid {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 20px;
+            }
+      .tile {
+              position: relative;
+              display: grid;
+              grid-template-columns: minmax(0, 1fr) 160px;
+              gap: 16px;
+              align-items: center;
+              container-type: inline-size;
+              padding: 20px 22px;
+              border-radius: 12px;
+              overflow: hidden;
+              background: rgba(255,255,255,0.55);
+              -webkit-backdrop-filter: blur(24px);
+              backdrop-filter: blur(24px);
+              border: 1px solid rgba(255,255,255,0.9);
+              box-shadow: 0 1px 2px rgba(23,26,32,0.04), 0 16px 40px rgba(23,26,32,0.06);
+              color: var(--ink);
+            }
+      .tile > svg {
+              display: block;
+              width: 160px;
+              height: 160px;
+            }
+      .tile-text h2 {
+              font-size: 1.125rem;
+              font-weight: 500;
+              line-height: 1.3;
+              letter-spacing: -0.01em;
+            }
+      .tile-text h2 .abbr {
+              color: var(--plum);
+              font-weight: 700;
+            }
+      .tile-text p {
+              margin-top: 4px;
+              /* one line always: shrinks with the card, 28px on a full-width desktop */
+              font-size: clamp(16px, calc((100cqw - 180px) / 13.1), 28px);
+              line-height: 1.2;
+              white-space: nowrap;
+              font-weight: 700;
+              letter-spacing: -0.01em;
+              color: var(--ink);
+            }
+      /* Clock hands in the Prompt card: minute hand one turn per 6s, hour hand twelve times slower */
+            .hand {
+              transform-box: view-box;
+              transform-origin: 300px 233px;
+              transform: rotate(var(--from));
+            }
+      .hand-h { --from: -60deg; animation: clock-spin 72s linear infinite; }
+      .hand-m { --from: 60deg; animation: clock-spin 6s linear infinite; }
+      @keyframes clock-spin {
+              from { transform: rotate(var(--from)); }
+              to { transform: rotate(calc(var(--from) + 360deg)); }
+            }
     </style>
   </head>
   <body>
@@ -817,8 +927,8 @@
 
         <nav class="nav" aria-label="Main navigation">
           <a href="index.html" data-i18n="nav_overview">Overview</a>
-          <a href="workflow.html" data-i18n="nav_workflow">Workflow</a>
-          <a href="team.html" aria-current="page" data-i18n="nav_team">Team</a>
+          <a href="workflow.html" data-i18n="nav_workflow">Tool kit</a>
+          <a href="team.html" data-i18n="nav_team" aria-current="page">Team</a>
           <a href="contact.html" data-i18n="nav_contact">Contact</a>
         </nav>
 
@@ -841,7 +951,7 @@
       </div>
     </header>
 
-      <main>
+          <main>
         <section class="start">
           <div class="container start-inner">
             <h1 data-i18n="team_h1">Team</h1>
@@ -992,8 +1102,24 @@
             t7_t: "Data analysis (NMA)",
             t7_d: "Multidimensional analysis and visualisation with an integrated R Shiny app",
             t8_t: "Evidence quality (GRADE) assessment",
-            t8_d: "Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment"
-        },
+            t8_d: "Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment",
+            title: "AIM-STEP | Team",
+            team_h1: "Team",
+            team_sub: "Methodologists, statisticians and data engineers building a reproducible, auditable certainty-of-evidence system.",
+            team_pending_h: "Member profiles are being prepared",
+            team_pending_p: "This page is live so that the navigation works, but the member list has not been published yet. Names, roles and affiliations will appear here once the team has confirmed what it wants shown.",
+            team_pending_note: "Nothing on this page is placeholder data standing in for a real person.",
+            team_roles_h: "Roles on the project",
+            team_roles_sub: "The work spans four kinds of expertise, and every rating depends on all four.",
+            team_r1_t: "Evidence methodology",
+            team_r1_d: "Defines the assessment sequence, judges each GRADE domain, and decides what the source documents leave open.",
+            team_r2_t: "Statistical analysis",
+            team_r2_d: "Produces the pairwise and network estimates, the risk-of-bias weights and the information contributions each rating rests on.",
+            team_r3_t: "Data engineering",
+            team_r3_d: "Keeps raw files immutable and every recorded value traceable back to the file and cell it came from.",
+            team_r4_t: "Reproducibility review",
+            team_r4_d: "Checks that a second assessor could reach the same final certainty from the retained evidence alone.",
+          },
         zh: {
             pf_dataset: "本项目的数据",
             pf_dataset_hint: "项目创建后此项不可更改。真实数据与合成数据始终分开存放，以免测试项目被误当作正式评价。",
@@ -1072,31 +1198,32 @@
             t7_t: "数据分析（NMA）",
             t7_d: "集成 R Shiny，支持多维度数据分析与可视化",
             t8_t: "证据质量 (GRADE) 评估",
-            t8_d: "循证医学证据质量分级，支持二次处理"
-        }
+            t8_d: "循证医学证据质量分级，支持二次处理",
+            title: "AIM-STEP | 团队",
+            team_h1: "团队",
+            team_sub: "由方法学、统计、数据工程与复现性审核人员共同建设一套可复现、可审核的证据确定性评价系统。",
+            team_pending_h: "成员信息正在整理",
+            team_pending_p: "本页已上线以保证导航可用，但成员名单尚未公布。姓名、分工与单位将在团队确认公开范围后呈现。",
+            team_pending_note: "本页没有任何用于冒充真实人员的占位信息。",
+            team_roles_h: "项目中的分工",
+            team_roles_sub: "这项工作跨越四类专长，每一个评级都依赖这四者。",
+            team_r1_t: "循证方法学",
+            team_r1_d: "确定评价顺序，判断各 GRADE 领域，并裁决源文件未规定之处。",
+            team_r2_t: "统计分析",
+            team_r2_d: "产出成对与网络估计、偏倚风险权重，以及每个评级所依赖的信息贡献度。",
+            team_r3_t: "数据工程",
+            team_r3_d: "保证原始文件不可变，并使每个记录值都能追回它来自哪个文件的哪个位置。",
+            team_r4_t: "复现性审核",
+            team_r4_d: "核查另一名审核者能否仅凭保留的证据得出同一个最终确定性。",
+          }
       };
     </script>
     <script>
       (function () {
         var I18N = {
           en: {
-            title: "AIM-STEP | Team",
-              team_h1: "Team",
-              team_sub: "Methodologists, statisticians and data engineers building a reproducible, auditable certainty-of-evidence system.",
-              team_pending_h: "Member profiles are being prepared",
-              team_pending_p: "This page is live so that the navigation works, but the member list has not been published yet. Names, roles and affiliations will appear here once the team has confirmed what it wants shown.",
-              team_pending_note: "Nothing on this page is placeholder data standing in for a real person.",
-              team_roles_h: "Roles on the project",
-              team_roles_sub: "The work spans four kinds of expertise, and every rating depends on all four.",
-              team_r1_t: "Evidence methodology",
-              team_r1_d: "Defines the assessment sequence, judges each GRADE domain, and decides what the source documents leave open.",
-              team_r2_t: "Statistical analysis",
-              team_r2_d: "Produces the pairwise and network estimates, the risk-of-bias weights and the information contributions each rating rests on.",
-              team_r3_t: "Data engineering",
-              team_r3_d: "Keeps raw files immutable and every recorded value traceable back to the file and cell it came from.",
-              team_r4_t: "Reproducibility review",
-              team_r4_d: "Checks that a second assessor could reach the same final certainty from the retained evidence alone.",
-            nav_overview: "Overview", nav_workflow: "Workflow", nav_team: "Team", nav_contact: "Contact",
+            title: "AIM-STEP | Overview",
+            nav_overview: "Overview", nav_workflow: "Tool kit", nav_team: "Team", nav_contact: "Contact",
             lang_btn: "中文",
             h1: [
               ["AIM-STEP:", "A", "Simple,", "Transparent,", "Exact,", "and", "Prompt", "tool"],
@@ -1121,23 +1248,8 @@
             login_confirm_email: "Please confirm your email address to finish signing in:"
           },
           zh: {
-            title: "AIM-STEP | 团队",
-              team_h1: "团队",
-              team_sub: "由方法学、统计、数据工程与复现性审核人员共同建设一套可复现、可审核的证据确定性评价系统。",
-              team_pending_h: "成员信息正在整理",
-              team_pending_p: "本页已上线以保证导航可用，但成员名单尚未公布。姓名、分工与单位将在团队确认公开范围后呈现。",
-              team_pending_note: "本页没有任何用于冒充真实人员的占位信息。",
-              team_roles_h: "项目中的分工",
-              team_roles_sub: "这项工作跨越四类专长，每一个评级都依赖这四者。",
-              team_r1_t: "循证方法学",
-              team_r1_d: "确定评价顺序，判断各 GRADE 领域，并裁决源文件未规定之处。",
-              team_r2_t: "统计分析",
-              team_r2_d: "产出成对与网络估计、偏倚风险权重，以及每个评级所依赖的信息贡献度。",
-              team_r3_t: "数据工程",
-              team_r3_d: "保证原始文件不可变，并使每个记录值都能追回它来自哪个文件的哪个位置。",
-              team_r4_t: "复现性审核",
-              team_r4_d: "核查另一名审核者能否仅凭保留的证据得出同一个最终确定性。",
-            nav_overview: "概览", nav_workflow: "流程", nav_team: "团队", nav_contact: "联系",
+            title: "AIM-STEP | 概览",
+            nav_overview: "概览", nav_workflow: "工具箱", nav_team: "团队", nav_contact: "联系",
             lang_btn: "EN",
             h1: [
               ["AIM-STEP：", "简单、", "透明、", "精确、", "及时的", "活证据工具，"],

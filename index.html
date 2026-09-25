@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="AIM-STEP: A Simple, Transparent, Exact, and Prompt tool for living evidence that supports better clinical decisions." />
+    <meta name="description" content="AIM-STEP workflow: start a project and work through the evidence-based research toolkit." />
     <meta name="theme-color" content="#ffffff" />
     <title>AIM-STEP | Overview</title>
     <style>
@@ -331,134 +331,316 @@
 
       .login-close:hover { background: rgba(23,26,32,0.06); color: var(--ink); }
 
-      /* Upper part: hero with the one-line introduction */
-      .hero {
-        background: var(--canvas);
+
+      /* ---------- Workflow page ---------- */
+      [hidden] { display: none !important; }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 264px;
+        height: 40px;
+        padding: 0 24px;
+        border: 0;
+        border-radius: 4px;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
       }
 
-      .hero-inner {
+      .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+      .btn-primary { background: var(--plum); color: #fff; }
+      .btn-primary:hover { background: var(--plum-dark); }
+      .btn-secondary { background: rgba(23,26,32,0.08); color: var(--ink-2); }
+      .btn-secondary:hover { background: rgba(23,26,32,0.13); }
+
+      .start { padding: 5rem 0 3.5rem; }
+
+      .start-inner {
         display: flex;
         flex-direction: column;
         align-items: center;
         text-align: center;
-        padding: 6.5rem 0 4.5rem;
       }
 
-      .hero h1 {
-        font-size: clamp(1.5rem, 2.7vw, 2.25rem);
+      .start h1 {
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
         font-weight: 500;
-        line-height: 1.3;
+        line-height: 1.2;
         letter-spacing: -0.01em;
+      }
+
+      .start .lead {
+        max-width: 46ch;
+        margin: 10px 0 28px;
+        font-size: 16px;
+        line-height: 24px;
+        color: var(--ink-3);
+      }
+
+      .card {
+        width: min(720px, 100%);
+        margin-top: 28px;
+        scroll-margin-top: 90px;
+        padding: 28px 28px 24px;
+        text-align: left;
+        background: rgba(255,255,255,0.7);
+        -webkit-backdrop-filter: blur(24px);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(255,255,255,0.9);
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(23,26,32,0.04), 0 16px 40px rgba(23,26,32,0.06);
+      }
+
+      .card h2 {
+        font-size: 1.25rem;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        margin-bottom: 20px;
+      }
+
+      .field { margin-bottom: 22px; }
+
+      .field label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 15px;
+        line-height: 20px;
+      }
+
+      .field input,
+      .field select {
+        width: 100%;
+        height: 46px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        font: inherit;
+        font-size: 15px;
         color: var(--ink);
       }
 
-      /* One orchestrated moment: words rise in one after another (about 1.4s in total),
-         then Simple / Transparent / Exact / Prompt take turns in plum, one every 2s. */
-      .hero h1 .w {
+      .field select {
+        -webkit-appearance: none;
+        appearance: none;
+        padding-right: 42px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23171a20' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        background-size: 18px;
+      }
+
+      .field select:invalid,
+      .field select.is-empty { color: #8e8e8e; }
+      .field input::placeholder { color: #8e8e8e; }
+
+      .field input:focus,
+      .field select:focus {
+        outline: 2px solid var(--plum);
+        outline-offset: 1px;
+        border-color: transparent;
+      }
+
+      .field.is-invalid input,
+      .field.is-invalid select {
+        border: 2px solid #d93a1b;
+        padding-left: 13px;
+      }
+
+      .field .hint,
+      .field .error {
+        margin-top: 8px;
+        font-size: 13px;
+        line-height: 18px;
+        color: var(--ink-3);
+      }
+
+      .field .error { color: #d93a1b; }
+      .field .error[hidden] { display: none; }
+
+      .learn {
         display: inline-block;
-        opacity: 0;
-        transform: translateY(0.45em);
-        animation: word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-        animation-delay: calc(0.15s + var(--i) * 55ms);
+        margin-top: 8px;
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--plum);
+        text-decoration: underline;
+        text-underline-offset: 3px;
       }
 
-      .hero h1 .k {
-        animation:
-          word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards,
-          word-plum 8s ease-in-out infinite;
-        animation-delay:
-          calc(0.15s + var(--i) * 55ms),
-          calc(1.6s + var(--k) * 2s);
+      .learn svg { width: 14px; height: 14px; margin-left: 5px; vertical-align: -2px; }
+
+      .form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 6px;
       }
 
-      @keyframes word-in {
-        to { opacity: 1; transform: translateY(0); }
+      .form-actions .btn { min-width: 0; flex: 1 1 200px; }
+
+      .project-done h2, .project-current h2 { margin-bottom: 6px; }
+      .project-done .lead-sm, .project-current .lead-sm { color: var(--ink-3); margin-bottom: 16px; }
+
+      .project-done dl,
+      .project-current dl {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        gap: 8px 20px;
+        margin: 0 0 20px;
       }
 
-      @keyframes word-plum {
-        0%, 25%, 100% { color: var(--ink); }
-        4%, 20% { color: var(--plum); }
-      }
+      .project-done dt, .project-current dt { color: var(--ink-3); }
+      .project-done dd, .project-current dd { margin: 0; font-weight: 500; }
 
-
-
-
-      /* Middle part: four STEP tiles, photographic style with text over the image */
-      .step {
-        padding: 3rem 0 5rem;
+      /* toolkit */
+      .toolkit {
+        padding: 4rem 0 6rem;
+        scroll-margin-top: 64px;
         background:
           radial-gradient(48% 42% at 14% 22%, #f2f2f3 0%, rgba(242,242,243,0) 100%),
           radial-gradient(44% 46% at 86% 78%, #ececee 0%, rgba(236,236,238,0) 100%),
           var(--canvas);
       }
 
-      .step-grid {
+      .toolkit h2 {
+        text-align: center;
+        font-size: clamp(1.5rem, 2.4vw, 2rem);
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+
+      .section-lead {
+        max-width: 60ch;
+        margin: 10px auto 36px;
+        text-align: center;
+        font-size: 15px;
+        line-height: 22px;
+        color: var(--ink-3);
+      }
+
+      .tool-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 20px;
       }
 
-      .tile {
+      .tool {
         position: relative;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 160px;
-        gap: 16px;
+        display: flex;
+        flex-direction: column;
         align-items: center;
-        container-type: inline-size;
-        padding: 20px 22px;
-        border-radius: 12px;
-        overflow: hidden;
-        background: rgba(255,255,255,0.55);
+        padding: 30px 22px 26px;
+        background: rgba(255,255,255,0.7);
         -webkit-backdrop-filter: blur(24px);
         backdrop-filter: blur(24px);
         border: 1px solid rgba(255,255,255,0.9);
+        border-radius: 12px;
         box-shadow: 0 1px 2px rgba(23,26,32,0.04), 0 16px 40px rgba(23,26,32,0.06);
         color: var(--ink);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
 
-      .tile > svg {
-        display: block;
-        width: 160px;
-        height: 160px;
+      .tool:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 1px 2px rgba(23,26,32,0.04), 0 22px 48px rgba(23,26,32,0.1);
       }
 
+      .tool:focus-visible { outline: 2px solid var(--plum); outline-offset: 3px; }
 
-      .tile-text h2 {
+      .tool-arrow {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(92,0,77,0.08);
+        color: var(--plum);
+      }
+
+      .tool-arrow svg { width: 14px; height: 14px; }
+
+      .tool-icon {
+        display: grid;
+        place-items: center;
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        border-radius: 20px;
+        background: rgba(92,0,77,0.06);
+      }
+
+      .tool-icon svg {
+        width: 44px;
+        height: 44px;
+        fill: none;
+        stroke: var(--ink);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .tool-icon .accent { stroke: var(--plum); }
+      .tool-icon .accent-fill { fill: var(--plum); stroke: none; }
+
+      .tool h3 {
+        margin: 0 0 10px;
         font-size: 1.125rem;
         font-weight: 500;
         line-height: 1.3;
-        letter-spacing: -0.01em;
+        text-align: center;
       }
 
-      .tile-text h2 .abbr {
-        color: var(--plum);
-        font-weight: 700;
+      .tool p {
+        align-self: stretch;
+        font-size: 14px;
+        line-height: 21px;
+        color: var(--ink-3);
       }
 
-      .tile-text p {
-        margin-top: 4px;
-        /* one line always: shrinks with the card, 28px on a full-width desktop */
-        font-size: clamp(16px, calc((100cqw - 180px) / 13.1), 28px);
-        line-height: 1.2;
-        white-space: nowrap;
-        font-weight: 700;
-        letter-spacing: -0.01em;
-        color: var(--ink);
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        z-index: 20;
+        padding: 10px 16px;
+        border-radius: 6px;
+        background: var(--ink);
+        color: #fff;
+        font-size: 14px;
+        line-height: 20px;
+        opacity: 0;
+        transform: translate(-50%, 12px);
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
       }
 
-      /* Clock hands in the Prompt card: minute hand one turn per 6s, hour hand twelve times slower */
-      .hand {
-        transform-box: view-box;
-        transform-origin: 300px 233px;
-        transform: rotate(var(--from));
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      @media (max-width: 1000px) {
+        .tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
-      .hand-h { --from: -60deg; animation: clock-spin 72s linear infinite; }
-      .hand-m { --from: 60deg; animation: clock-spin 6s linear infinite; }
+      @media (max-width: 720px) {
+        .start { padding: 3.5rem 0 2.5rem; }
+        .card { padding: 22px 18px 18px; }
+        .btn { width: 100%; max-width: 320px; }
+      }
 
-      @keyframes clock-spin {
-        from { transform: rotate(var(--from)); }
-        to { transform: rotate(calc(var(--from) + 360deg)); }
+      @media (max-width: 560px) {
+        .tool-grid { grid-template-columns: 1fr; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .btn, .tool, .toast { transition: none; }
+        .tool:hover { transform: none; }
       }
 
       footer {
@@ -537,6 +719,194 @@
         .hero h1 .k { color: var(--ink); }
         .hand { animation: none; }
       }
+      /* --- project list (added by scripts/connect_firestore.py) --- */
+      #project-list { display: grid; gap: 16px; }
+      #project-list h2 { margin: 0; }
+      #project-list .project-current { margin: 0; }
+      #project-list [data-synthetic]::before {
+        content: attr(data-synthetic);
+        display: inline-block;
+        margin-bottom: 8px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: .02em;
+        color: #6b3a00;
+        background: #fdf0d5;
+        border: 1px solid #f0cf94;
+      }
+      .form-error { margin: 0 0 4px; }
+      #project-list .ec-open { margin: 12px 0 0; font-size: 15px; font-weight: 600; }
+      #project-list .ec-open a { color: var(--plum); text-decoration: none; }
+      #project-list .ec-open a:hover { text-decoration: underline; }
+
+      /* --- 以下规则来自原 index.html，合并后所有页面共用一份样式 --- */
+      /* Upper part: hero with the one-line introduction */
+            .hero {
+              background: var(--canvas);
+            }
+      .hero-inner {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              text-align: center;
+              padding: 6.5rem 0 4.5rem;
+            }
+      .hero h1 {
+              font-size: clamp(1.5rem, 2.7vw, 2.25rem);
+              font-weight: 500;
+              line-height: 1.3;
+              letter-spacing: -0.01em;
+              color: var(--ink);
+            }
+      /* One orchestrated moment: words rise in one after another (about 1.4s in total),
+               then Simple / Transparent / Exact / Prompt take turns in plum, one every 2s. */
+            .hero h1 .w {
+              display: inline-block;
+              opacity: 0;
+              transform: translateY(0.45em);
+              animation: word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+              animation-delay: calc(0.15s + var(--i) * 55ms);
+            }
+      .hero h1 .k {
+              animation:
+                word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards,
+                word-plum 8s ease-in-out infinite;
+              animation-delay:
+                calc(0.15s + var(--i) * 55ms),
+                calc(1.6s + var(--k) * 2s);
+            }
+      @keyframes word-in {
+              to { opacity: 1; transform: translateY(0); }
+            }
+      @keyframes word-plum {
+              0%, 25%, 100% { color: var(--ink); }
+              4%, 20% { color: var(--plum); }
+            }
+      /* Middle part: four STEP tiles, photographic style with text over the image */
+            .step {
+              padding: 3rem 0 5rem;
+              background:
+                radial-gradient(48% 42% at 14% 22%, #f2f2f3 0%, rgba(242,242,243,0) 100%),
+                radial-gradient(44% 46% at 86% 78%, #ececee 0%, rgba(236,236,238,0) 100%),
+                var(--canvas);
+            }
+      .step-grid {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 20px;
+            }
+      .tile {
+              position: relative;
+              display: grid;
+              grid-template-columns: minmax(0, 1fr) 160px;
+              gap: 16px;
+              align-items: center;
+              container-type: inline-size;
+              padding: 20px 22px;
+              border-radius: 12px;
+              overflow: hidden;
+              background: rgba(255,255,255,0.55);
+              -webkit-backdrop-filter: blur(24px);
+              backdrop-filter: blur(24px);
+              border: 1px solid rgba(255,255,255,0.9);
+              box-shadow: 0 1px 2px rgba(23,26,32,0.04), 0 16px 40px rgba(23,26,32,0.06);
+              color: var(--ink);
+            }
+      .tile > svg {
+              display: block;
+              width: 160px;
+              height: 160px;
+            }
+      .tile-text h2 {
+              font-size: 1.125rem;
+              font-weight: 500;
+              line-height: 1.3;
+              letter-spacing: -0.01em;
+            }
+      .tile-text h2 .abbr {
+              color: var(--plum);
+              font-weight: 700;
+            }
+      .tile-text p {
+              margin-top: 4px;
+              /* one line always: shrinks with the card, 28px on a full-width desktop */
+              font-size: clamp(16px, calc((100cqw - 180px) / 13.1), 28px);
+              line-height: 1.2;
+              white-space: nowrap;
+              font-weight: 700;
+              letter-spacing: -0.01em;
+              color: var(--ink);
+            }
+      /* Clock hands in the Prompt card: minute hand one turn per 6s, hour hand twelve times slower */
+            .hand {
+              transform-box: view-box;
+              transform-origin: 300px 233px;
+              transform: rotate(var(--from));
+            }
+      .hand-h { --from: -60deg; animation: clock-spin 72s linear infinite; }
+      .hand-m { --from: 60deg; animation: clock-spin 6s linear infinite; }
+      @keyframes clock-spin {
+              from { transform: rotate(var(--from)); }
+              to { transform: rotate(calc(var(--from) + 360deg)); }
+            }
+      /* --- Overview: compact intro, tiles first, then the projects --- */
+      .home-intro { padding: 26px 0 8px; }
+      /* The one-line statement of what the site is doubles as the page's
+         only h1: the Overview page had no main heading otherwise, and a
+         separate one above it would just repeat this sentence. Sized as the
+         lead-in it reads as, not as a default h1. */
+      h1.home-lede {
+        margin: 0; max-width: 64ch;
+        font-size: clamp(17px, 2.1vw, 21px); font-weight: 500; line-height: 1.5;
+        letter-spacing: 0; color: var(--ink-2);
+      }
+      /* The tiles used to sit below a full-height hero. They now start right
+         under the intro line, which is what the modification record asks for. */
+      .home-tiles { padding: 22px 0 40px; }
+
+      .pw { padding: 8px 0 64px; }
+      .pw-head {
+        display: flex; flex-wrap: wrap; gap: 12px 20px;
+        align-items: center; justify-content: space-between;
+        margin-bottom: 18px;
+      }
+      .pw-head h2 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+
+      .pw-banner {
+        margin: 0 0 18px; padding: 14px 16px;
+        border: 1px solid var(--plum); border-radius: 12px;
+        background: #fbf6fa;
+      }
+      .pw-banner-msg { margin: 0 0 12px; font-size: 15px; font-weight: 600; color: var(--plum); }
+      .pw-banner-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+      .pw-banner-actions .btn { width: auto; flex: 0 0 auto; padding-left: 18px; padding-right: 18px; }
+
+      .pw-form { margin-bottom: 18px; }
+      .pw-form h3 { margin: 0 0 16px; font-size: 18px; }
+      .pw-status { margin: 0 0 4px; }
+
+      .pw-note { margin: 0; padding: 18px 0; font-size: 15px; color: var(--ink-3); }
+      .pw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+      .pw-card { display: flex; flex-direction: column; gap: 8px; }
+      .pw-card-title { margin: 0; font-size: 17px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+      .pw-tag {
+        padding: 2px 9px; border-radius: 999px;
+        font-size: 12px; font-weight: 600;
+        color: #6b3a00; background: #fdf0d5; border: 1px solid #f0cf94;
+      }
+      .pw-meta { margin: 0; font-size: 14px; color: var(--ink-3); }
+      .pw-open { margin-top: auto; font-size: 15px; font-weight: 600; color: var(--plum); text-decoration: none; }
+      .pw-open:hover { text-decoration: underline; }
+      .pw-open:focus-visible, .pw-start:focus-visible { outline: 2px solid var(--plum); outline-offset: 2px; }
+
+      @media (max-width: 560px) {
+        .pw-head { align-items: stretch; }
+        .pw-head .btn { width: 100%; }
+        .pw-grid { grid-template-columns: minmax(0, 1fr); }
+      }
+
     </style>
   </head>
   <body>
@@ -612,8 +982,8 @@
         </a>
 
         <nav class="nav" aria-label="Main navigation">
-          <a href="index.html" aria-current="page" data-i18n="nav_overview">Overview</a>
-          <a href="workflow.html" data-i18n="nav_workflow">Workflow</a>
+          <a href="index.html" data-i18n="nav_overview" aria-current="page">Overview</a>
+          <a href="workflow.html" data-i18n="nav_workflow">Tool kit</a>
           <a href="team.html" data-i18n="nav_team">Team</a>
           <a href="contact.html" data-i18n="nav_contact">Contact</a>
         </nav>
@@ -637,34 +1007,15 @@
       </div>
     </header>
 
-    <main>
-      <!-- 上部：一句话简介 -->
-      <section class="hero">
-        <div class="container hero-inner">
-          <h1 class="hero-title">
-            <span class="w" style="--i:0">AIM-STEP:</span>
-            <span class="w" style="--i:1">A</span>
-            <span class="w k" style="--i:2;--k:0">Simple,</span>
-            <span class="w k" style="--i:3;--k:1">Transparent,</span>
-            <span class="w k" style="--i:4;--k:2">Exact,</span>
-            <span class="w" style="--i:5">and</span>
-            <span class="w k" style="--i:6;--k:3">Prompt</span>
-            <span class="w" style="--i:7">tool</span>
-            <br />
-            <span class="w" style="--i:8">for</span>
-            <span class="w" style="--i:9">living</span>
-            <span class="w" style="--i:10">evidence</span>
-            <span class="w" style="--i:11">that</span>
-            <span class="w" style="--i:12">supports</span>
-            <span class="w" style="--i:13">better</span>
-            <span class="w" style="--i:14">clinical</span>
-            <span class="w" style="--i:15">decisions.</span>
-          </h1>
-        </div>
-      </section>
+          <main>
 
-      <!-- 中部：STEP 四个定义 -->
-      <section class="step" aria-label="STEP">
+        <section class="home-intro">
+          <div class="container">
+            <h1 class="home-lede" data-i18n="home_lede">AIM-STEP: a Simple, Transparent, Exact and Prompt tool for living evidence that supports better clinical decisions.</h1>
+          </div>
+        </section>
+
+        <section class="step home-tiles" aria-label="STEP">
         <div class="container">
           <div class="step-grid">
 
@@ -772,7 +1123,102 @@
           </div>
         </div>
       </section>
-    </main>
+
+        <section class="pw" id="projects" aria-labelledby="pw-h">
+          <div class="container">
+            <div class="pw-head">
+              <h2 id="pw-h" data-i18n="pw_title">Your projects</h2>
+              <button type="button" class="btn btn-primary" id="pw-start" data-i18n="pw_start">Start a new project</button>
+            </div>
+
+            <div class="pw-banner" id="pw-banner" role="status" hidden></div>
+
+            <form class="card pw-form" id="pw-form" novalidate hidden>
+              <h3 data-i18n="pf_about">About your project</h3>
+
+              <div class="field" data-key="name">
+                <label for="pf-name" data-i18n="pf_name">Project name</label>
+                <input type="text" id="pf-name" name="name" autocomplete="off" placeholder="Enter name" data-i18n-ph="pf_name_ph" aria-describedby="pf-name-err" />
+                <p class="hint" data-i18n="pf_name_hint">Use the full working title or an informal working title. You can change this later.</p>
+                <p class="error" id="pf-name-err" data-i18n="pf_name_err" hidden>Please enter a project name</p>
+              </div>
+
+              <div class="field" data-key="type">
+                <label for="pf-type" data-i18n="pf_type">Project type</label>
+                <select id="pf-type" name="type" class="is-empty" aria-describedby="pf-type-err">
+                  <option value="" data-i18n="pf_select">Select...</option>
+                  <option value="systematic" data-i18n="opt_pt_systematic">Systematic review</option>
+                  <option value="scoping" data-i18n="opt_pt_scoping">Scoping review</option>
+                  <option value="rapid" data-i18n="opt_pt_rapid">Rapid review</option>
+                  <option value="umbrella" data-i18n="opt_pt_umbrella">Umbrella review</option>
+                  <option value="narrative" data-i18n="opt_pt_narrative">Narrative literature review</option>
+                  <option value="integrative" data-i18n="opt_pt_integrative">Integrative review</option>
+                  <option value="other" data-i18n="opt_pt_other">Other</option>
+                </select>
+                <p class="error" id="pf-type-err" data-i18n="pf_type_err" hidden>Please select the project type</p>
+              </div>
+
+              <div class="field" data-key="dataset">
+                <label for="pf-dataset" data-i18n="pf_dataset">Data in this project</label>
+                <select id="pf-dataset" name="dataset" class="is-empty" aria-describedby="pf-dataset-err pf-dataset-hint">
+                  <option value="" data-i18n="pf_select">Select...</option>
+                  <option value="real" data-i18n="opt_ds_real">Real study data</option>
+                  <option value="synthetic" data-i18n="opt_ds_synth">Synthetic data, for testing or teaching</option>
+                </select>
+                <p class="hint" id="pf-dataset-hint" data-i18n="pf_dataset_hint">This cannot be changed after the project is created. Real and synthetic data are kept apart so that a test project can never be mistaken for an assessment.</p>
+                <p class="error" id="pf-dataset-err" data-i18n="pf_dataset_err" hidden>Please say which kind of data this project holds</p>
+              </div>
+
+              <div class="field" data-key="question">
+                <label for="pf-question" data-i18n="pf_q">Question type</label>
+                <select id="pf-question" name="question" class="is-empty" aria-describedby="pf-question-err">
+                  <option value="" data-i18n="pf_select">Select...</option>
+                  <option value="effectiveness" data-i18n="opt_qt_effectiveness">Effectiveness (intervention / treatment)</option>
+                  <option value="prevention" data-i18n="opt_qt_prevention">Prevention</option>
+                  <option value="etiology" data-i18n="opt_qt_etiology">Etiology (harm / causation)</option>
+                  <option value="diagnosis" data-i18n="opt_qt_diagnosis">Diagnosis</option>
+                  <option value="prognosis" data-i18n="opt_qt_prognosis">Prognosis (forecast)</option>
+                  <option value="qualitative" data-i18n="opt_qt_qualitative">Qualitative (meaning)</option>
+                  <option value="prevalence" data-i18n="opt_qt_prevalence">Prevalence / incidence</option>
+                  <option value="mapping" data-i18n="opt_qt_mapping">Evidence mapping</option>
+                  <option value="methodology" data-i18n="opt_qt_methodology">Methodology</option>
+                  <option value="other" data-i18n="opt_qt_other">Other</option>
+                </select>
+                <p class="error" id="pf-question-err" data-i18n="pf_q_err" hidden>Please select the question type</p>
+              </div>
+
+              <div class="field" data-key="area">
+                <label for="pf-area" data-i18n="pf_area">Area of research</label>
+                <select id="pf-area" name="area" class="is-empty">
+                  <option value="" data-i18n="pf_select">Select...</option>
+                  <option value="arts" data-i18n="opt_ar_arts">Arts and humanities</option>
+                  <option value="agri" data-i18n="opt_ar_agri">Agricultural, veterinary and food sciences</option>
+                  <option value="bio" data-i18n="opt_ar_bio">Biological and chemical sciences</option>
+                  <option value="earth" data-i18n="opt_ar_earth">Earth and environmental sciences</option>
+                  <option value="econ" data-i18n="opt_ar_econ">Economic, business, management and social sciences</option>
+                  <option value="edu" data-i18n="opt_ar_edu">Education</option>
+                  <option value="eng" data-i18n="opt_ar_eng">Engineering, maths, physics and technology</option>
+                  <option value="med" data-i18n="opt_ar_med">Medical and health sciences</option>
+                  <option value="psy" data-i18n="opt_ar_psy">Psychology</option>
+                  <option value="other" data-i18n="opt_ar_other">Other</option>
+                </select>
+                <p class="hint" data-i18n="pf_area_hint">Optional.</p>
+              </div>
+
+              <p class="error pw-status" id="pw-status" role="alert" hidden></p>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" data-i18n="pw_create">Create project</button>
+                <button type="button" class="btn btn-secondary" id="pw-cancel" data-i18n="pf_cancel">Cancel</button>
+              </div>
+            </form>
+
+            <div class="pw-list" id="pw-list"></div>
+          </div>
+        </section>
+      </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <footer>
       <div class="container footer-inner">
@@ -805,11 +1251,211 @@
     </dialog>
 
     <script>
+      window.AIMSTEP_PAGE_I18N = {
+        en: {
+            pf_dataset: "Data in this project",
+            pf_dataset_hint: "This cannot be changed after the project is created. Real and synthetic data are kept apart so that a test project can never be mistaken for an assessment.",
+            pf_dataset_err: "Please say which kind of data this project holds",
+            opt_ds_real: "Real study data",
+            opt_ds_synth: "Synthetic data, for testing or teaching",
+            pl_yours: "Your projects",
+            pl_loading: "Loading your projects…",
+            pl_signin: "Sign in to create a project and to see the ones you already have.",
+            pf_saving: "Saving…",
+            err_denied: "This account is not cleared to create projects. Ask the project owner to add your sign-in address to the list, then try again.",
+            err_unverified: "Your sign-in address has not been confirmed yet. Open the link in the email again, then try once more.",
+            err_offline: "Could not reach the server. Your project has not been saved — check your connection and try again.",
+            err_generic: "The project could not be saved: ",
+            err_partial: "The project was created but could not be added to your list. Keep this reference and send it to the project owner: ",
+            badge_synth: "synthetic",
+            open_eligibility: "Build eligibility criteria →",
+          title: "AIM-STEP | Workflow",
+          wf_title: "Workflow",
+          wf_lead: "Create a project, then work through the toolkit below step by step.",
+          wf_start: "Start a new project",
+          wf_current: "Current project",
+          wf_edit: "Edit",
+          pf_about: "About your project",
+          pf_name: "Project name", pf_name_ph: "Enter name",
+          pf_name_hint: "Use the full working title or an informal working title. You can change this later.",
+          pf_name_err: "Please enter a project name",
+          pf_type: "Project type", pf_type_err: "Please select the project type", pf_type_learn: "Learn about the different types of projects",
+          pf_q: "Question type", pf_q_err: "Please select the question type", pf_q_learn: "Learn about the different types of questions",
+          pf_area: "Area of research", pf_area_learn: "Learn about the different areas of research",
+          pf_select: "Select...", pf_create: "Create project", pf_cancel: "Cancel",
+          pd_title: "Project created", pd_lead: "Choose a tool below to begin.", pd_tools: "Go to the toolkit", pd_another: "Start another project",
+          not_set: "Not specified",
+          tk_title: "Evidence-based research toolkit",
+          tk_lead: "End-to-end tools for screening, extraction, risk-of-bias assessment and network meta-analysis",
+          toast_soon: "This tool is coming soon.",
+            opt_pt_systematic: "Systematic review",
+            opt_pt_scoping: "Scoping review",
+            opt_pt_rapid: "Rapid review",
+            opt_pt_umbrella: "Umbrella review",
+            opt_pt_narrative: "Narrative literature review",
+            opt_pt_integrative: "Integrative review",
+            opt_pt_other: "Other",
+            opt_qt_effectiveness: "Effectiveness (intervention / treatment)",
+            opt_qt_mapping: "Evidence mapping",
+            opt_qt_prevention: "Prevention",
+            opt_qt_etiology: "Etiology (harm / causation)",
+            opt_qt_diagnosis: "Diagnosis",
+            opt_qt_prognosis: "Prognosis (forecast)",
+            opt_qt_qualitative: "Qualitative (meaning)",
+            opt_qt_prevalence: "Prevalence / incidence",
+            opt_qt_methodology: "Methodology",
+            opt_qt_other: "Other",
+            opt_ar_arts: "Arts and humanities",
+            opt_ar_agri: "Agricultural, veterinary and food sciences",
+            opt_ar_bio: "Biological and chemical sciences",
+            opt_ar_earth: "Earth and environmental sciences",
+            opt_ar_econ: "Economic, business, management and social sciences",
+            opt_ar_edu: "Education",
+            opt_ar_eng: "Engineering, maths, physics and technology",
+            opt_ar_med: "Medical and health sciences",
+            opt_ar_psy: "Psychology",
+            opt_ar_other: "Other",
+            t1_t: "Eligibility criteria builder",
+            t1_d: "AI-assisted, structured inclusion and exclusion criteria, with PICO, PEO, SPIDER and other frameworks",
+            t2_t: "Search strategy builder",
+            t2_d: "AI-driven search strings across databases, matching MeSH terms with free text, exportable to multiple databases in one click",
+            t3_t: "Title and abstract screening",
+            t3_d: "Efficient screening of records and abstracts to speed up the early stages of a review",
+            t4_t: "Full-text screening",
+            t4_d: "Smarter full-text screening for faster, more consistent eligibility decisions",
+            t5_t: "Data extraction",
+            t5_d: "Structured extraction of study data, exportable in multiple formats",
+            t6_t: "Risk of bias (ROB) assessment",
+            t6_d: "Traceable risk-of-bias assessment, with support for re-assessment",
+            t7_t: "Data analysis (NMA)",
+            t7_d: "Multidimensional analysis and visualisation with an integrated R Shiny app",
+            t8_t: "Evidence quality (GRADE) assessment",
+            t8_d: "Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment",
+            title: "AIM-STEP | Overview",
+            home_lede: "AIM-STEP: a Simple, Transparent, Exact and Prompt tool for living evidence that supports better clinical decisions.",
+            pw_title: "Your projects",
+            pw_start: "Start a new project",
+            pw_create: "Create project",
+            pw_saving: "Saving…",
+            pw_loading: "Loading your projects…",
+            pw_empty: "You have no projects yet. Start one to begin.",
+            pw_signin: "Sign in to create a project and to see the ones you already have.",
+            pw_load_failed: "Your projects could not be loaded. Check your connection and reload the page.",
+            pw_created: "Project created: ",
+            pw_open_eligibility: "Build eligibility criteria",
+            pw_dismiss: "Dismiss",
+            pw_open: "Open →",
+            pw_untitled: "(untitled)",
+            pf_about: "About your project",
+            pf_area_hint: "Optional.",
+            pf_q_err: "Please select the question type",
+          },
+        zh: {
+            pf_dataset: "本项目的数据",
+            pf_dataset_hint: "项目创建后此项不可更改。真实数据与合成数据始终分开存放，以免测试项目被误当作正式评价。",
+            pf_dataset_err: "请选择本项目使用哪一类数据",
+            opt_ds_real: "真实研究数据",
+            opt_ds_synth: "合成数据，用于测试或教学",
+            pl_yours: "我的项目",
+            pl_loading: "正在载入你的项目……",
+            pl_signin: "登录后可创建项目，并查看已有项目。",
+            pf_saving: "正在保存……",
+            err_denied: "该账号尚未获准创建项目。请让项目所有者把你的登录邮箱加入名单后重试。",
+            err_unverified: "你的登录邮箱尚未确认。请重新打开邮件里的链接，然后再试一次。",
+            err_offline: "无法连接服务器，项目未保存。请检查网络后重试。",
+            err_generic: "项目保存失败：",
+            err_partial: "项目已创建，但没能加入你的列表。请保留此编号并交给项目所有者：",
+            badge_synth: "合成",
+            open_eligibility: "构建纳排标准 →",
+          title: "AIM-STEP | 工作流程",
+          wf_title: "工作流程",
+          wf_lead: "先创建项目，再按步骤使用下方的工具包。",
+          wf_start: "新建项目",
+          wf_current: "当前项目",
+          wf_edit: "编辑",
+          pf_about: "项目信息",
+          pf_name: "项目名称", pf_name_ph: "请输入名称",
+          pf_name_hint: "可填写完整题目或临时的工作名称，之后可以修改。",
+          pf_name_err: "请输入项目名称",
+          pf_type: "项目类型", pf_type_err: "请选择项目类型", pf_type_learn: "了解不同类型的项目",
+          pf_q: "问题类型", pf_q_err: "请选择问题类型", pf_q_learn: "了解不同类型的问题",
+          pf_area: "研究领域", pf_area_learn: "了解不同的研究领域",
+          pf_select: "请选择…", pf_create: "创建项目", pf_cancel: "取消",
+          pd_title: "项目已创建", pd_lead: "请在下方选择一个工具开始。", pd_tools: "前往工具包", pd_another: "再建一个项目",
+          not_set: "未填写",
+          tk_title: "循证科研工具包",
+          tk_lead: "覆盖筛选、提取、ROB 评价及 NMA 分析的全流程学术工具",
+          toast_soon: "该工具即将上线。",
+            opt_pt_systematic: "系统评价",
+            opt_pt_scoping: "范围综述",
+            opt_pt_rapid: "快速评价",
+            opt_pt_umbrella: "伞式评价",
+            opt_pt_narrative: "叙述性文献综述",
+            opt_pt_integrative: "整合性综述",
+            opt_pt_other: "其他",
+            opt_qt_effectiveness: "有效性（干预 / 治疗）",
+            opt_qt_mapping: "证据图谱",
+            opt_qt_prevention: "预防",
+            opt_qt_etiology: "病因（危害 / 因果）",
+            opt_qt_diagnosis: "诊断",
+            opt_qt_prognosis: "预后（预测）",
+            opt_qt_qualitative: "质性（意义）",
+            opt_qt_prevalence: "患病率 / 发病率",
+            opt_qt_methodology: "方法学",
+            opt_qt_other: "其他",
+            opt_ar_arts: "艺术与人文",
+            opt_ar_agri: "农业、兽医与食品科学",
+            opt_ar_bio: "生物与化学科学",
+            opt_ar_earth: "地球与环境科学",
+            opt_ar_econ: "经济、商业、管理与社会科学",
+            opt_ar_edu: "教育",
+            opt_ar_eng: "工程、数学、物理与技术",
+            opt_ar_med: "医学与健康科学",
+            opt_ar_psy: "心理学",
+            opt_ar_other: "其他",
+            t1_t: "纳排标准构建",
+            t1_d: "AI 辅助生成结构化纳排标准，支持 PICO/PEO/SPIDER 等多种框架",
+            t2_t: "检索策略构建",
+            t2_d: "AI 驱动的跨库检索式生成，自动匹配主题词 (MeSH) 与自由词，支持多数据库一键导出",
+            t3_t: "题录与摘要筛选",
+            t3_d: "高效筛选文献题录与摘要，助力系统综述前期工作",
+            t4_t: "全文筛选",
+            t4_d: "智能化全文筛选，提升纳排效率",
+            t5_t: "数据提取",
+            t5_d: "结构化提取研究数据，支持多种格式导出",
+            t6_t: "ROB 评估",
+            t6_d: "偏倚风险评估，流程可追溯，支持二次处理",
+            t7_t: "数据分析（NMA）",
+            t7_d: "集成 R Shiny，支持多维度数据分析与可视化",
+            t8_t: "证据质量 (GRADE) 评估",
+            t8_d: "循证医学证据质量分级，支持二次处理",
+            title: "AIM-STEP | 概览",
+            home_lede: "AIM-STEP：一套简明、透明、准确、及时的活证据工具，支持更好的临床决策。",
+            pw_title: "我的项目",
+            pw_start: "新建项目",
+            pw_create: "创建项目",
+            pw_saving: "正在保存……",
+            pw_loading: "正在载入你的项目……",
+            pw_empty: "你还没有项目。新建一个即可开始。",
+            pw_signin: "登录后可创建项目，并查看已有项目。",
+            pw_load_failed: "项目载入失败。请检查网络后刷新页面。",
+            pw_created: "项目已创建：",
+            pw_open_eligibility: "构建纳排标准",
+            pw_dismiss: "知道了",
+            pw_open: "进入 →",
+            pw_untitled: "（未命名）",
+            pf_about: "项目信息",
+            pf_area_hint: "选填。",
+            pf_q_err: "请选择问题类型",
+          }
+      };
+    </script>
+    <script>
       (function () {
         var I18N = {
           en: {
             title: "AIM-STEP | Overview",
-            nav_overview: "Overview", nav_workflow: "Workflow", nav_team: "Team", nav_contact: "Contact",
+            nav_overview: "Overview", nav_workflow: "Tool kit", nav_team: "Team", nav_contact: "Contact",
             lang_btn: "中文",
             h1: [
               ["AIM-STEP:", "A", "Simple,", "Transparent,", "Exact,", "and", "Prompt", "tool"],
@@ -835,7 +1481,7 @@
           },
           zh: {
             title: "AIM-STEP | 概览",
-            nav_overview: "概览", nav_workflow: "流程", nav_team: "团队", nav_contact: "联系",
+            nav_overview: "概览", nav_workflow: "工具箱", nav_team: "团队", nav_contact: "联系",
             lang_btn: "EN",
             h1: [
               ["AIM-STEP：", "简单、", "透明、", "精确、", "及时的", "活证据工具，"],
@@ -958,6 +1604,33 @@
         var userEl = document.getElementById("login-user");
         var auth = null, fb = null, currentUser = null, statusKey = null, statusExtra = "";
 
+        var RECAPTCHA_SITE_KEY = "";   // fill in after registering reCAPTCHA v3, then redeploy
+
+        var appResolve, appReject;
+        var appReady = new Promise(function (res, rej) { appResolve = res; appReject = rej; });
+        appReady.catch(function () {});   // a failed SDK load is reported in the UI, not on the console
+
+        // Firestore is ~300 KB and only the project form needs it. team.html and
+        // contact.html share this block but never call ready(), so they never
+        // fetch it: the import happens on the first call, not on page load.
+        var fsReady = null;
+        window.AIMSTEP.auth = {
+          ready: function () {
+            if (!fsReady) {
+              fsReady = appReady.then(function (app) {
+                return import(SDK + "firebase-firestore.js").then(function (fs) {
+                  return { fs: fs, db: fs.getFirestore(app) };
+                });
+              });
+              fsReady.catch(function () {});
+            }
+            return fsReady;
+          },
+          user: function () { return currentUser; },
+          signIn: function () { open(); }
+        };
+
+
         function setStatus(key, extra, isError) {
           statusKey = key; statusExtra = extra || "";
           status.textContent = key ? t(key) + statusExtra : "";
@@ -1007,11 +1680,29 @@
         });
 
         if (FIREBASE.apiKey) {
-          Promise.all([import(SDK + "firebase-app.js"), import(SDK + "firebase-auth.js")]).then(function (mods) {
+          Promise.all([
+            import(SDK + "firebase-app.js"),
+            import(SDK + "firebase-auth.js"),
+            RECAPTCHA_SITE_KEY ? import(SDK + "firebase-app-check.js") : Promise.resolve(null)
+          ]).then(function (mods) {
             var app = mods[0].initializeApp(FIREBASE);
             fb = mods[1];
             auth = fb.getAuth(app);
-            fb.onAuthStateChanged(auth, function (user) { currentUser = user; render(); });
+            if (mods[2] && RECAPTCHA_SITE_KEY) {
+              mods[2].initializeAppCheck(app, {
+                provider: new mods[2].ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+                isTokenAutoRefreshEnabled: true
+              });
+            }
+            // Resolved only after App Check has attached: once enforcement is
+            // on, a Firestore call made before that is rejected, and that race
+            // is far harder to diagnose than a slightly later first load.
+            appResolve(app);
+            fb.onAuthStateChanged(auth, function (user) {
+              currentUser = user;
+              render();
+              document.dispatchEvent(new CustomEvent("aimstep:auth"));
+            });
             if (fb.isSignInWithEmailLink(auth, location.href)) {
               var email = null;
               try { email = localStorage.getItem(EMAIL_KEY); } catch (err) {}
@@ -1023,7 +1714,7 @@
                   .then(function () { history.replaceState(null, "", location.pathname); });
               }
             }
-          }).catch(function (err) { setStatus("login_error", err.message, true); });
+          }).catch(function (err) { appReject(err); setStatus("login_error", err.message, true); });
         }
 
         render();
@@ -1105,5 +1796,11 @@
         }
       })();
     </script>
+    <script type="module">
+      import { initProjects } from "./app/projects.js";
+      import { firestoreBackend } from "./app/backend.js";
+      initProjects({ backend: firestoreBackend });
+    </script>
+
   </body>
 </html>
