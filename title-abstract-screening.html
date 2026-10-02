@@ -133,6 +133,7 @@ th{background:#f4f4f4}
 @media(max-width:600px){.header{height:auto;min-height:62px;flex-wrap:wrap;gap:8px;padding:10px 15px;position:static}.nav{gap:15px;height:auto}.nav a{font-size:12px}.project-pill{display:none}.heading{align-items:start;flex-direction:column}h1{font-size:25px}.panel-body,.panel-head,.panel-footer{padding:14px}.rounds{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.round{padding:8px}.two,.record-controls{grid-template-columns:1fr}.stats{gap:5px}.stat{padding:8px}.stat strong{font-size:18px}.team-grid{grid-template-columns:repeat(2,1fr)}}
 .source-heading{border:0;padding:0;background:transparent;font:inherit;font-weight:700;color:var(--ink);text-align:left;cursor:pointer}.source-heading:hover{color:var(--plum);text-decoration:underline;text-underline-offset:4px}.source-heading:focus-visible{outline:2px solid var(--plum);outline-offset:2px}/* Same compact format as Search results on the Search strategy page */.results-like table{table-layout:fixed;font-size:12px;border:1px solid var(--line);border-radius:9px;border-collapse:separate;border-spacing:0;overflow:hidden}.results-like th,.results-like td{border:0;border-bottom:1px solid var(--line);padding:5px 10px;line-height:1.35;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:auto}.results-like tr:last-child td{border-bottom:0}.results-like th{background:#f7f7f7;font-weight:600}.results-like .select-col{width:34px!important;padding-left:8px;padding-right:0;text-align:center}.results-like .date-col{width:42%}.results-like .num-col{width:90px;text-align:right}.results-like input[type=checkbox]{width:14px;height:14px;margin:0;vertical-align:middle;accent-color:var(--plum)}.results-like .empty{color:var(--muted);text-align:center;white-space:normal}.source-dialog{width:min(640px,calc(100vw - 28px))}.source-dialog .panel-footer{padding:12px 19px;border-top:1px solid var(--line)}
 .source-actions{margin:0;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.results-like .del-col{width:34px;padding:0 6px;text-align:center}.results-like .src{color:var(--muted);margin-left:6px;font-size:11px}.remove-import{width:22px;height:22px;display:inline-grid;place-items:center;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--muted);font-size:15px;line-height:1;cursor:pointer}.remove-import:hover{color:var(--red);border-color:var(--line)}.remove-import:focus-visible{outline:2px solid var(--plum);outline-offset:1px}.remove-import:disabled{opacity:.4;cursor:default}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -150,7 +151,7 @@ th{background:#f4f4f4}
 <div class="panel-head"><h2>Screening source</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog">Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button></div></div>
 <div class="panel-body">
 <div class="stats"><div class="stat"><strong id="source-count">0</strong><span>Unique records</span></div><div class="stat"><strong id="source-dbs">0</strong><span>Databases</span></div><div class="stat"><strong id="source-runs">0</strong><span>Search / import runs</span></div></div>
-<div class="table-wrap source-history results-like"><table aria-label="Searches used for screening"><thead><tr><th scope="col" class="date-col">Date</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
+<div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col">Imported</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
 <div class="toolbar"><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button></div>
 </div>
@@ -286,7 +287,7 @@ function fingerprint(value){
   for(const c of JSON.stringify(value)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}
   return (h>>>0).toString(16);
 }
-function defaults(){return {excludedRuns:[],version:4,calibrationVersion:2,calibrationPassed:false,pilotApproved:false,passedRound:-1,sourceSig:'',criteriaSig:'',sampleSize:10,pilotIds:[[],[],[],[],[]],approved:[false,false,false,false,false],approvalHash:'',instructions:'',model:{provider:'ollama',base:'http://localhost:11434',name:''},modelB:{provider:'ollama',base:'http://localhost:11434',name:''},teamRules:{mode:'managed',screeners:['A','B'],resolver:'human',resolverName:''},predictions:{},pilotSecondPredictions:{},fullPredictions:{},secondPredictions:{},resolutions:{},reviews:{},imports:[],fullStartedAt:'',completedAt:'',audit:[]}}
+function defaults(){return {importedRuns:null,excludedRuns:[],version:4,calibrationVersion:2,calibrationPassed:false,pilotApproved:false,passedRound:-1,sourceSig:'',criteriaSig:'',sampleSize:10,pilotIds:[[],[],[],[],[]],approved:[false,false,false,false,false],approvalHash:'',instructions:'',model:{provider:'ollama',base:'http://localhost:11434',name:''},modelB:{provider:'ollama',base:'http://localhost:11434',name:''},teamRules:{mode:'managed',screeners:['A','B'],resolver:'human',resolverName:''},predictions:{},pilotSecondPredictions:{},fullPredictions:{},secondPredictions:{},resolutions:{},reviews:{},imports:[],fullStartedAt:'',completedAt:'',audit:[]}}
 function applySettings(){
   let settings;
   try{settings=JSON.parse(localStorage.getItem(settingsKey)||'null')}catch(e){}
@@ -401,9 +402,14 @@ async function loadSource(){
     byUid.add(r.uid);records.push(r);
     for(const key of keys)byKey.set(key,r);
     return true;
-  };  // Only records from the searches chosen in Screening source; a record found by several searches stays if any of them is chosen.
-  const excluded=new Set(workspace?.excludedRuns||[]);
-  for(const r of Array.isArray(data?.records)?data.records:[]){const prov=Array.isArray(r?.provenance)?r.provenance:[];if(excluded.size&&prov.length&&prov.every(p=>excluded.has(p.runId)))continue;add(r,null,true)}
+  };  searchRuns=(Array.isArray(data?.runs)?data.runs:[]).filter(r=>r&&typeof r.id==='string');
+  // Searches enter screening only through Import from search strategy. A
+  // workspace from before that button had an exclude-list instead: its
+  // included searches are registered as imported once, now.
+  if(workspace&&!Array.isArray(workspace.importedRuns)){const ex=new Set(workspace.excludedRuns||[]),at=now();workspace.importedRuns=searchRuns.filter(r=>!ex.has(r.id)).map(r=>({runId:r.id,importedAt:at}));save().catch(()=>{})}
+  const imported=new Map((workspace?.importedRuns||[]).map(x=>[x.runId,x.importedAt]));
+  // A record several imported searches found is screened once.
+  for(const r of Array.isArray(data?.records)?data.records:[]){const prov=Array.isArray(r?.provenance)?r.provenance:[];if(!prov.some(p=>imported.has(p.runId)))continue;add(r,null,true)}
   const imports=Array.isArray(workspace?.imports)?workspace.imports:[];
   for(const run of imports)for(const r of Array.isArray(run.records)?run.records:[])add(r);
   const live=eligibilityFallback();
@@ -412,8 +418,7 @@ async function loadSource(){
     framework:text(rawCriteria.framework,100),reviewType:text(rawCriteria.reviewType,150),
     question:text(rawCriteria.question,20000),
     rows:(Array.isArray(rawCriteria.rows)?rawCriteria.rows:[]).map(row)
-  }:null;  searchRuns=(Array.isArray(data?.runs)?data.runs:[]).filter(r=>r&&typeof r.id==='string');
-  source={records,runs:[...searchRuns.filter(r=>!excluded.has(r.id)),...imports.map(r=>({id:r.id,db:r.db,startedAt:r.startedAt,downloaded:r.downloaded,added:r.added,file:r.file,status:'Imported'}))],criteria,
+  }:null;  source={records,runs:[...searchRuns.filter(r=>imported.has(r.id)).map(r=>({...r,kind:'search',importedAt:imported.get(r.id)})),...imports.map(r=>({id:r.id,db:r.db,startedAt:r.startedAt,downloaded:r.downloaded,added:r.added,file:r.file,status:'Imported',kind:'local',importedAt:r.startedAt}))],criteria,
     sourceSig:fingerprint(records.map(r=>[r.uid,r.title,r.abstract])),
     criteriaSig:fingerprint(criteria)};
   recordById.clear();
@@ -547,10 +552,11 @@ function renderSource(){
   $('source-count').textContent=source.records.length.toLocaleString();
   $('source-dbs').textContent=databases.size.toLocaleString();
   $('source-runs').textContent=source.runs.length.toLocaleString();
-  $('source-history-rows').innerHTML=source.runs.length?source.runs.map(run=>{    const date=new Date(run.startedAt),when=Number.isNaN(date.getTime())?'—':date.toLocaleString(undefined,{dateStyle:'short',timeStyle:'short'});
-    const count=Math.max(0,Number(run.downloaded)||0),dbn=(databaseNames[run.db]||run.db||'Unknown')+(run.status==='Imported'?' (imported)':'');
-    return '<tr><td title="'+esc(when)+'">'+esc(when)+'</td><td title="'+esc(dbn)+'">'+esc(dbn)+'</td><td class="num-col">'+count.toLocaleString()+'</td></tr>';
-  }).join(''):'<tr><td colspan="3" class="empty">'+(searchRuns.length?'No searches chosen. Click Import from search strategy to choose search results.':'No searches or imports yet.')+'</td></tr>';
+  const short=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString(undefined,{dateStyle:'short',timeStyle:'short'})};
+  $('source-history-rows').innerHTML=source.runs.length?source.runs.slice().sort((a,b)=>String(b.importedAt||'').localeCompare(String(a.importedAt||''))).map(run=>{
+    const when=short(run.importedAt),count=Math.max(0,Number(run.downloaded)||0),dbn=databaseNames[run.db]||run.db||'Unknown',src=run.kind==='local'?'local file'+(run.file?': '+run.file:''):'Search strategy';
+    return '<tr><td title="'+esc(when)+'">'+esc(when)+'</td><td title="'+esc(dbn+' · '+src)+'">'+esc(dbn)+'<span class="src">'+esc(run.kind==='local'?'local file':'search strategy')+'</span></td><td class="num-col">'+count.toLocaleString()+'</td><td class="del-col"><button type="button" class="remove-import" data-delete-import="'+esc(run.kind+':'+run.id)+'" title="Delete this import" aria-label="Delete the '+esc(dbn)+' import of '+esc(when)+'">×</button></td></tr>';
+  }).join(''):'<tr><td colspan="4" class="empty">Nothing imported yet. Use Import from search strategy or Import from local.</td></tr>';
   $('criteria-rows').innerHTML=(source.criteria?.rows||[]).length?
     source.criteria.rows.map(r=>'<tr><td>'+esc(r.title)+'</td><td>'+esc(r.condition)+'</td><td>'+esc(r.uncertain)+'</td><td>'+esc(r.definition)+'</td></tr>').join(''):
     '<tr><td colspan="4">No eligibility rules saved for this project.</td></tr>';
@@ -1149,20 +1155,37 @@ function renderSourceChoices(){
 $('choose-source').addEventListener('click',async()=>{
   if(busy){toast('Stop screening before changing the screening source.');return}
   if(!importing){await loadSource();render()}
-  const excluded=new Set(workspace.excludedRuns);sourceChoice=new Set(searchRuns.map(r=>r.id).filter(id=>!excluded.has(id)));
+  sourceChoice=new Set((workspace.importedRuns||[]).map(x=>x.runId).filter(id=>searchRuns.some(r=>r.id===id)));
   renderSourceChoices();sourceDialog.showModal();
 });
 $('source-choice-rows').addEventListener('change',event=>{const b=event.target.closest('[data-run]');if(!b)return;if(b.checked)sourceChoice.add(b.dataset.run);else sourceChoice.delete(b.dataset.run);renderSourceChoices()});
 $('source-select-all').addEventListener('change',event=>{sourceChoice=event.target.checked?new Set(searchRuns.map(r=>r.id)):new Set();renderSourceChoices()});
-$('apply-source').addEventListener('click',async()=>{
-  const excluded=searchRuns.map(r=>r.id).filter(id=>!sourceChoice.has(id));
-  const changed=JSON.stringify([...excluded].sort())!==JSON.stringify([...workspace.excludedRuns].sort());
+$('apply-source').addEventListener('click',async()=>{  const before=new Map((workspace.importedRuns||[]).map(x=>[x.runId,x.importedAt])),at=now();
+  const next=searchRuns.filter(r=>sourceChoice.has(r.id)).map(r=>({runId:r.id,importedAt:before.get(r.id)||at}));
+  const changed=JSON.stringify(next.map(x=>x.runId).sort())!==JSON.stringify([...before.keys()].sort());
   sourceDialog.close();if(!changed)return;
-  workspace.excludedRuns=excluded;await save();await loadSource();render();
+  workspace.importedRuns=next;await save();await loadSource();render();
   toast(stale()?'Screening source updated. Use latest source to restart calibration with these records.':'Screening source updated.');
 });
 for(const id of ['close-source','cancel-source'])$(id).addEventListener('click',()=>sourceDialog.close());
 sourceDialog.addEventListener('click',event=>{if(event.target===sourceDialog)sourceDialog.close()});
+
+// × on a row. A search from Search strategy is only taken out of screening
+// (its results stay on that page and can be imported again); a local file
+// import is deleted.
+$('source-history-rows').addEventListener('click',async event=>{
+  const b=event.target.closest('[data-delete-import]');if(!b)return;if(busy||importing){toast('Wait for screening or the import to finish first.');return}
+  const [kind,...rest]=b.dataset.deleteImport.split(':'),id=rest.join(':'),run=source.runs.find(r=>r.kind===kind&&r.id===id);if(!run)return;
+  const dbn=databaseNames[run.db]||run.db||'this source';
+  if(!confirm(kind==='local'?'Delete the '+dbn+' file import ('+(Number(run.downloaded)||0).toLocaleString()+' records)? This cannot be undone.':'Remove the '+dbn+' search from screening? Its results stay on the Search strategy page and can be imported again.'))return;
+  if(kind==='local'){
+    const kept=workspace.imports.filter(r=>r.id!==id);
+    try{await putProject(importStore,{id:scope,runs:kept,updatedAt:now()})}catch(e){toast('The import could not be deleted: '+e.message);return}
+    workspace.imports=kept;
+  }else{workspace.importedRuns=(workspace.importedRuns||[]).filter(x=>x.runId!==id);await save()}
+  await loadSource();render();
+  toast((kind==='local'?dbn+' import deleted.':dbn+' search removed from screening.')+(stale()?' Use latest source to restart calibration with these records.':''));
+});
 $('open-import').addEventListener('click',()=>{
   if(busy){toast('Stop screening before importing additional results.');return}
   $('import-database').value=workspace.imports.at(-1)?.db||'';
@@ -1284,7 +1307,7 @@ async function init(){
     const savedImports=await getProject(importStore);
     workspace=Object.assign(defaults(),saved?.state||{});
     if(saved&&saved.state?.calibrationVersion!==2){workspace.calibrationVersion=1;workspace.calibrationPassed=false;workspace.passedRound=-1}
-    workspace.model=Object.assign(defaults().model,workspace.model||{});workspace.excludedRuns=Array.isArray(workspace.excludedRuns)?workspace.excludedRuns.filter(x=>typeof x==='string'):[];
+    workspace.model=Object.assign(defaults().model,workspace.model||{});workspace.excludedRuns=Array.isArray(workspace.excludedRuns)?workspace.excludedRuns.filter(x=>typeof x==='string'):[];workspace.importedRuns=Array.isArray(workspace.importedRuns)?workspace.importedRuns.filter(x=>x&&typeof x.runId==='string').map(x=>({runId:x.runId,importedAt:typeof x.importedAt==='string'?x.importedAt:now()})):null;
     workspace.modelB=Object.assign(defaults().modelB,workspace.modelB||{});
     workspace.teamRules=Object.assign(defaults().teamRules,workspace.teamRules||{});
     applySettings();
