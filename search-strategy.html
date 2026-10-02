@@ -5,7 +5,7 @@
 @media(max-width:620px){.wrap{padding:22px 14px 40px}.header{padding:12px 14px;flex-wrap:wrap;gap:12px;position:static}.nav{gap:18px;font-size:12px}.nav a{padding:10px 0}.brand{font-size:13px}.project-pill{font-size:11px;max-width:100%}.heading{gap:12px}.heading-actions{gap:8px}h1{font-size:25px}.panel-head,.panel-body,.panel-footer{padding:14px}.two{gap:10px}.database-list{gap:12px 8px}.filters{grid-template-columns:1fr 1fr}.filters input{grid-column:1/-1}.matrix{min-width:440px}.results-table{min-width:680px}.stats{gap:10px}.stats strong{font-size:22px}.btn{padding:8px 11px}.toolbar{gap:7px}.downloads{gap:12px}.panel-head h2{font-size:15px}.run-head{flex-wrap:wrap}.concept-head .text-input{font-size:12px}.compact{max-width:200px}}
 
 .heading{justify-content:flex-end;margin-bottom:18px}.heading-actions{width:100%;justify-content:flex-end}
-.criteria-heading{border:0;padding:0;background:transparent;font:inherit;font-weight:700;color:var(--ink);text-align:left;cursor:pointer}.criteria-heading:hover{color:var(--plum);text-decoration:underline;text-underline-offset:4px}.eligibility-panel .panel-head{border-bottom:0}.uploaded-criteria{list-style:none;margin:0;padding:0 18px 10px;border-top:1px solid var(--line)}.uploaded-criteria li{padding:11px 0 0;overflow-wrap:anywhere}.uploaded-criteria a{font-size:12px;text-decoration:underline;text-underline-offset:3px}.eligibility-panel>.notice{margin:0 18px 16px}.criteria-dialog{width:min(940px,calc(100vw - 32px));max-height:85vh;margin:auto;padding:0;border:1px solid var(--line);border-radius:12px;background:white;color:var(--ink);box-shadow:0 16px 64px #0003}.criteria-dialog::backdrop{background:#211a2466}.criteria-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:white}.criteria-dialog-body{padding:18px}.criteria-dialog .matrix{min-width:560px}
+.criteria-heading{border:0;padding:0;background:transparent;font:inherit;font-weight:700;color:var(--ink);text-align:left;cursor:pointer}.criteria-heading:hover{color:var(--plum);text-decoration:underline;text-underline-offset:4px}.eligibility-panel .panel-head{border-bottom:0}.uploaded-criteria{list-style:none;margin:0;padding:0 18px 10px;border-top:1px solid var(--line)}.uploaded-criteria li{padding:11px 0 0;overflow-wrap:anywhere;display:flex;align-items:center;gap:8px}.uploaded-criteria li a{min-width:0}.uploaded-criteria .remove-file{flex:0 0 auto;width:22px;height:22px;display:inline-grid;place-items:center;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--muted,#777);font-size:16px;line-height:1;cursor:pointer}.uploaded-criteria .remove-file:hover{color:var(--red,#b42318);border-color:var(--line)}.uploaded-criteria .remove-file:focus-visible{outline:2px solid var(--plum);outline-offset:1px}.uploaded-criteria .remove-file:disabled{opacity:.5;cursor:default}.uploaded-criteria a{font-size:12px;text-decoration:underline;text-underline-offset:3px}.eligibility-panel>.notice{margin:0 18px 16px}.criteria-dialog{width:min(940px,calc(100vw - 32px));max-height:85vh;margin:auto;padding:0;border:1px solid var(--line);border-radius:12px;background:white;color:var(--ink);box-shadow:0 16px 64px #0003}.criteria-dialog::backdrop{background:#211a2466}.criteria-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:white}.criteria-dialog-body{padding:18px}.criteria-dialog .matrix{min-width:560px}
 @media(max-width:620px){.heading-actions{justify-content:flex-start}.criteria-dialog-head,.criteria-dialog-body{padding:14px}.uploaded-criteria{padding-right:14px;padding-left:14px}.eligibility-panel>.notice{margin-right:14px;margin-left:14px}}
 .heading,.heading-actions{justify-content:flex-start}
 .manual-words-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:24px 0 18px}.manual-words-head .toolbar{margin:0;justify-content:flex-end}
@@ -295,9 +295,25 @@ async function renderUploadedCriteriaFiles(){
     const list=$('uploaded-criteria-files');list.replaceChildren();list.hidden=!files.length;
     for(const file of files){
       const li=document.createElement('li'),link=document.createElement('a'),url=URL.createObjectURL(file.data);
-      criteriaFileUrls.push(url);link.href=url;link.download=file.name;link.textContent=file.name;link.setAttribute('aria-label','Download '+file.name);li.appendChild(link);list.appendChild(li);
+      criteriaFileUrls.push(url);link.href=url;link.download=file.name;link.textContent=file.name;link.setAttribute('aria-label','Download '+file.name);li.appendChild(link);
+      const remove=document.createElement('button');remove.type='button';remove.className='remove-file';remove.textContent='×';remove.title='Delete '+file.name;remove.setAttribute('aria-label','Delete '+file.name);
+      remove.addEventListener('click',()=>deleteUploadedCriteriaFile(file,remove));li.appendChild(remove);list.appendChild(li);
     }
   }catch(error){notice('source-message','Local file storage is unavailable: '+error.message,'error')}
+}
+// Removes the stored copy only. Criteria already read from the file stay in
+// use: switching source here would also clear the search words and
+// strategies built on them, which a delete button should not do silently.
+async function deleteUploadedCriteriaFile(file,button){
+  if(busy||generating)return;
+  if(!confirm('Delete "'+file.name+'" from this browser? This cannot be undone.'))return;
+  button.disabled=true;
+  try{
+    await criteriaFilesRequest('readwrite',store=>store.delete(file.id));
+    await renderUploadedCriteriaFiles();
+    const inUse=state.source==='upload'&&state.criteriaSnapshot?.origin===file.name;
+    notice('source-message',inUse?'"'+file.name+'" was deleted. The criteria read from it are still in use; upload another file or use the previous step\'s criteria to replace them.':'"'+file.name+'" was deleted.',inUse?'warning':undefined);
+  }catch(error){button.disabled=false;notice('source-message','The file could not be deleted: '+error.message,'error')}
 }
 async function saveUploadedCriteriaFile(file){
   if(!/\.(docx?|txt)$/i.test(file.name))throw new Error('Upload a Word (.doc or .docx) or text (.txt) file.');
