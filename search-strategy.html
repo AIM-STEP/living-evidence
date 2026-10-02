@@ -33,6 +33,8 @@
 .history-wrap{margin-top:18px}.history-table th,.history-table td{width:33.333%;text-align:left}
 .machine-input{position:relative}.machine-input .textarea{min-height:130px;padding-bottom:45px}.machine-input-tools{position:absolute;left:11px;bottom:11px;display:flex;gap:7px}.machine-tool{width:29px;height:29px;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--plum);font-size:21px;line-height:1;cursor:pointer}.machine-tool:hover,.machine-tool[aria-pressed="true"]{background:var(--pale);border-color:var(--plum)}.machine-tool[aria-pressed="true"]{box-shadow:0 0 0 2px #5c004d22}.machine-tool svg{width:17px;height:17px;fill:currentColor}.machine-tool:disabled{opacity:.5;cursor:default}.machine-attachments{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.machine-attachment{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:#fafafa;font-size:11px}.machine-attachment span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}.machine-attachment button{border:0;background:transparent;font-size:17px;line-height:1;color:var(--muted);padding:0 2px;cursor:pointer}.machine-attachment button:hover{color:var(--red)}.machine-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0}.machine-actions .btn{min-width:82px}.machine-actions .btn:disabled{opacity:.6;cursor:wait}.machine-status{margin:0 0 12px}.machine-status.error{color:var(--red)}
 .active-criteria{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:11px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--ink)}.active-criteria .muted{color:var(--muted)}.active-criteria .remove-file{flex:0 0 auto;width:22px;height:22px;display:inline-grid;place-items:center;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer}.active-criteria .remove-file:hover{color:var(--red);border-color:var(--line)}.active-criteria .remove-file:focus-visible{outline:2px solid var(--plum);outline-offset:1px}.active-criteria .link-button{font-size:12px}@media(max-width:620px){.active-criteria{padding-left:14px;padding-right:14px}}
+/* Machine generate fills the same editable concept cards as Manual; the old read-only table is retired. */
+.machine-words-box,#machine-words-status{display:none!important}
 </style></head>
 <body>
 <header class="header"><a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span>AIM-STEP<small>LIVING EVIDENCE</small></span></a><nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a data-toolset href="index.html?view=toolset" class="active">Toolset</a><a data-settings href="settings.html">Settings</a><a href="contact.html">Contact</a></nav><a class="project-pill" id="project-name" hidden></a></header>
@@ -56,7 +58,7 @@
   <p class="hint" id="machine-words-status" role="status" aria-live="polite"></p>
 </div>
 <div id="manual-words-panel">
-  <div class="manual-words-head"><h3>Manual generate</h3><div class="toolbar"><button class="btn small" id="clear-words" type="button">Clear</button><button class="btn small primary" id="manual-start" type="button" title="Build word lists from the eligibility criteria">Start</button><button class="btn small" id="add-concept" type="button" aria-expanded="false" aria-controls="word-element-picker">+ Add criterion</button></div></div>
+  <div class="manual-words-head"><h3 id="words-heading">Manual generate</h3><div class="toolbar"><button class="btn small" id="clear-words" type="button">Clear</button><button class="btn small primary" id="manual-start" type="button" title="Build word lists from the eligibility criteria">Start</button><button class="btn small" id="add-concept" type="button" aria-expanded="false" aria-controls="word-element-picker">+ Add criterion</button></div></div>
   <div class="word-framework"><div class="framework-label"><span class="label">Question framework</span><span class="framework-help"><button class="framework-help-button" id="word-framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="word-framework-help-popup">i</button><span class="framework-help-popup" id="word-framework-help-popup" role="dialog" aria-label="Framework guide" hidden><strong>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your question.</span></span></div><div class="framework-options" id="word-framework" role="group" aria-label="Question framework"></div></div>
   <div class="word-element-picker" id="word-element-picker" aria-label="Choose an element" hidden></div>
   <div id="concepts" class="concept-list"></div>
@@ -350,7 +352,7 @@ function renderCriteria(){
   const rows=snapshot?.rows||[];
   $('criteria-rows').innerHTML=rows.length?rows.map(r=>`<tr><td><strong>${esc(r.title)}</strong></td><td>${esc(r.condition)}${r.definition?`<span class="other">Other rule: ${esc(r.definition)}</span>`:''}</td><td>${esc(r.uncertain)}</td></tr>`).join(''):`<tr><td colspan="3" class="empty">${esc(error||'No eligibility criteria are saved in the previous step for this project.')}</td></tr>`;
 }
-function fillControls(){$('generation-method').value=state.method;$('manual-words-panel').hidden=state.method!=='manual';$('mw-question').value=state.machineInput||'';$('apply-limits').checked=state.limits.apply;$('start-date').value=state.limits.start;$('end-date').value=state.limits.end;$('limit-language').value=state.limits.language;$('limit-other').value=state.limits.other;$('record-limit').value=state.recordLimit;$('limits-hint').textContent='Some databases support year limits rather than exact dates. The strategy notes show which limits are included. '+(state.method==='machine'?'Other is sent to the model; check its notes for restrictions that require screening or database filters.':'Other is recorded as a note.');renderDatabaseChoices();renderMachineWords();scheduleMachineWords();renderActiveCriteria()}
+function fillControls(){$('generation-method').value=state.method;$('manual-words-panel').hidden=false;$('words-heading').textContent=state.method==='machine'?'Search concepts':'Manual generate';$('manual-start').hidden=state.method==='machine';$('clear-words').textContent=state.method==='machine'?'Clear words':'Clear';$('mw-question').value=state.machineInput||'';$('apply-limits').checked=state.limits.apply;$('start-date').value=state.limits.start;$('end-date').value=state.limits.end;$('limit-language').value=state.limits.language;$('limit-other').value=state.limits.other;$('record-limit').value=state.recordLimit;$('limits-hint').textContent='Some databases support year limits rather than exact dates. The strategy notes show which limits are included. '+(state.method==='machine'?'Other is sent to the model; check its notes for restrictions that require screening or database filters.':'Other is recorded as a note.');renderDatabaseChoices();renderMachineWords();scheduleMachineWords();renderActiveCriteria()}
 function renderDatabaseChoices(){$('databases').innerHTML=Object.entries(DB).map(([id,d])=>`<label class="check"><input type="checkbox" value="${id}" ${state.databases.includes(id)?'checked':''}><span>${esc(d.label)}<small>${d.direct?'Direct retrieval':'Institutional search + import'}</small></span></label>`).join('');const previous=$('import-database').value;$('import-database').innerHTML=Object.entries(DB).map(([id,d])=>`<option value="${id}">${esc(d.label)}</option>`).join('');if(DB[previous])$('import-database').value=previous}
 function draftHash(){return fingerprint({method:state.method,databases:state.databases,criteria:comparableSnapshot(state.criteriaSnapshot),concepts:state.method==='manual'?state.concepts.map(c=>({label:c.label,role:c.role,terms:c.terms,enabled:c.enabled})):{key:machineWordKey(),rows:currentMachineWords()?.rows||[]},limits:state.limits})}
 function renderStrategies(){
@@ -555,11 +557,10 @@ async function modelCall(prompt,ids,signal){
 }
 async function machineStrategies(signal){
   const snapshot=state.criteriaSnapshot;
-  if(!snapshot?.rows.some(r=>r.condition.trim())&&!snapshot?.question.trim())throw new Error('Load eligibility criteria before Machine generate.');
-  const collected=await ensureMachineWords(signal);
+  const selected=validateConcepts();
   const ids=[...state.databases],limits=clone(state.limits),filters=Object.fromEntries(ids.map(id=>[id,compileQuery(id,[])]));
-  const payload={question:snapshot.question,questionFramework:snapshot.framework||currentFramework(),reviewType:snapshot.reviewType,criteria:snapshot.rows.map(r=>({dimension:r.title,eligibilityRule:r.condition,exclusionRule:r.uncertain,otherRule:r.definition})),searchWords:machineWordCriteria().map(c=>({dimension:c.title,words:collected.rows.find(r=>r.key===c.key)?.words||[],note:collected.rows.find(r=>r.key===c.key)?.note||''})),selectedDatabases:ids.map(id=>({id,name:DB[id].label,syntax:queryGuidance[id],dateAndLanguageClausesAppendedByPage:filters[id].text})),limits};
-  const prompt='Generate a database-specific Boolean search query directly from the supplied eligibility criteria and searchWords for EACH selected database. Return {"strategies":[{"database":"database id","query":"Boolean core query","notes":["short explanation"]}]}. Use searchWords as the term inventory; do not invent additional search words in the query. Select appropriate core criterion groups for sensitive retrieval, rather than forcing every displayed criterion into an AND block. Explain omitted groups in notes. Return a single complete core Boolean expression per database, with no markdown or numbered search lines. The page appends dateAndLanguageClausesAppendedByPage to each query: omit these filters from your query. If limits.apply is false, do not apply date/language restrictions. Consider limits.other as a requested restriction only; apply it only when supported and suitable for retrieval, otherwise record it in notes for screening or the database interface. Notes must say which requested restrictions or eligibility rules remain outside the query. Do not introduce restrictions beyond the supplied criteria and limits.\nINPUT JSON:\n'+JSON.stringify(payload);
+  const payload={question:snapshot?.question||state.machineInput||'',questionFramework:snapshot?.framework||currentFramework(),reviewType:snapshot?.reviewType||'',criteria:(snapshot?.rows||[]).map(r=>({dimension:r.title,eligibilityRule:r.condition,exclusionRule:r.uncertain,otherRule:r.definition})),searchWords:selected.map(c=>({dimension:c.label,words:lines(c.terms)})),selectedDatabases:ids.map(id=>({id,name:DB[id].label,syntax:queryGuidance[id],dateAndLanguageClausesAppendedByPage:filters[id].text})),limits};
+  const prompt='Generate a database-specific Boolean search query directly from the supplied eligibility criteria and searchWords for EACH selected database. Return {"strategies":[{"database":"database id","query":"Boolean core query","notes":["short explanation"]}]}. Use searchWords as the complete term inventory; do not invent additional search words. Each searchWords group was selected by the user for the search: build one block per group, terms combined with OR, blocks combined with AND, in the order given. Keep truncation (*) where the database supports it and adapt it where it does not. Do not add NOT clauses. Return a single complete core Boolean expression per database, with no markdown or numbered search lines. The page appends dateAndLanguageClausesAppendedByPage to each query: omit these filters from your query. If limits.apply is false, do not apply date/language restrictions. Consider limits.other as a requested restriction only; apply it only when supported and suitable for retrieval, otherwise record it in notes for screening or the database interface. Notes must say which requested restrictions or eligibility rules remain outside the query. Do not introduce restrictions beyond the supplied criteria and limits.\nINPUT JSON:\n'+JSON.stringify(payload);
   const strategies=await modelCall(prompt,ids,signal),queries={};
   for(const result of strategies){const filter=filters[result.database];queries[result.database]={text:'('+result.query.trim()+')'+(filter.text?'\nAND '+filter.text:''),notes:[...new Set([...result.notes,...filter.notes.filter(n=>!/^Other limit note|^Check field tags/.test(n)),'Model draft: review field syntax and test recall against known eligible studies. Exclusion rules remain screening criteria.'])],source:'Local model · direct database query',generatedAt:now(),hash:draftHash(),manualEdited:false}}
   return queries;
@@ -806,11 +807,14 @@ async function startMachineWords(){
       const snapshot=await deriveConcepts(input,controller.signal);
       if(controller.signal.aborted)return;
       useSnapshot(snapshot,'upload');state.machineInput=text;saveDraft();
-    }
+    }    const added=addCriteriaConcepts();saveDraft();renderConcepts();renderStrategies();
     mwStatus('Generating search words…');
-    await ensureMachineWords(controller.signal,true);
+    let result;
+    try{result=await fillConceptWords(controller.signal,input)}
+    catch(error){if(error?.name==='AbortError'||isUnreachable(error))throw error;const drafted=draftEmptyConcepts();saveDraft();renderConcepts();renderStrategies();mwStatus(error.message+(drafted?' Starting word lists were drafted from the criteria instead; edit them as needed.':' Type or upload words for each concept.'),true);return}
     if(controller.signal.aborted)return;
-    mwStatus(hasCriteria?'Search words generated. Review them, then use Generate strategies.':'Review concepts and search words generated from your input. Check them, then use Generate strategies.');
+    saveDraft();renderConcepts();renderStrategies();showConceptNotes(result.notes);
+    mwStatus((hasCriteria?'':'Review concepts were identified from your input. ')+conceptsDoneMessage(added,result.filled)+' Edit the lists below, then use Generate strategies.');
   }catch(error){
     if(mwController!==controller&&!timedOut)return;
     if(timedOut)mwStatus('Local model request timed out after 15 minutes.',true);
@@ -843,36 +847,44 @@ $('mw-question').addEventListener('input',event=>{if(mwComposing||event.isCompos
    page's own small lexicon drafts a starting list. */
 let manualController=null;
 function manualStatus(message,error=false){const el=$('manual-start-status');el.textContent=message;el.hidden=!message;el.classList.toggle('error',error)}
-async function startManualWords(){
-  if(busy||generating||manualController)return;
-  const rows=(state.criteriaSnapshot?.rows||[]).filter(r=>r.condition.trim()||r.uncertain.trim()||r.definition.trim());
-  if(!rows.some(r=>r.condition.trim())){manualStatus('There are no eligibility criteria to build from. Add them in the previous step or with Upload, or use Add criterion.',true);return}
+function addCriteriaConcepts(){
   let added=0;
-  for(const r of rows){
+  for(const r of (state.criteriaSnapshot?.rows||[]).filter(r=>r.condition.trim()||r.uncertain.trim()||r.definition.trim())){
     if(state.concepts.length>=60)break;
     if(state.concepts.some(c=>(c.criterionId&&c.criterionId===r.id)||norm(c.label)===norm(r.title)))continue;
     const role=roleFor(r.title);
     state.concepts.push({id:uid(),criterionId:r.id,displayId:r.id,label:r.title,role,sourceRule:r.condition,sourceExclusion:r.uncertain,sourceOther:r.definition,terms:'',mesh:'',emtree:'',verified:false,enabled:!['comparison','outcomes'].includes(role),uploads:[]});
     added++;
   }
-  saveDraft();renderConcepts();renderStrategies();
+  return added;
+}
+// Fills only empty lists: whatever the user typed or edited is kept.
+async function fillConceptWords(signal,context){
+  const conceptFor=c=>state.concepts.find(x=>x.criterionId&&x.criterionId===c.criterionId)||state.concepts.find(x=>norm(x.label)===norm(c.title));
+  const criteria=machineWordCriteria(),result=await collectMachineWords(clone(state.criteriaSnapshot),criteria,signal,context);
+  const notes=new Map();let filled=0;
+  criteria.forEach((c,i)=>{const out=result[i],concept=conceptFor(c);if(!out||!concept)return;if(out.note)notes.set(concept.id,out.note);if(!concept.terms.trim()&&out.words.length){concept.terms=out.words.join('\n');filled++}});
+  return {filled,notes};
+}
+function draftEmptyConcepts(){let n=0;for(const c of state.concepts){if(!c.terms.trim()&&c.sourceRule){const d=draftTerms(c.sourceRule);if(d.length){c.terms=d.join('\n');n++}}}return n}
+const conceptsDoneMessage=(added,filled)=>(added?added+' concept'+(added>1?'s':'')+' added from the criteria. ':'')+'Search words filled in for '+filled+' concept'+(filled===1?'':'s')+'. Comparator and outcome concepts are not used in the search by default (Cochrane Handbook 4.4.2); tick Use in search to include one. Lists you had already typed were not changed.';
+async function startManualWords(){
+  if(busy||generating||manualController)return;
+  if(!(state.criteriaSnapshot?.rows||[]).some(r=>r.condition.trim())){manualStatus('There are no eligibility criteria to build from. Add them in the previous step or with Upload, or use Add criterion.',true);return}
+  const added=addCriteriaConcepts();saveDraft();renderConcepts();renderStrategies();
   const controller=new AbortController();manualController=controller;
   const button=$('manual-start');button.disabled=true;button.textContent='Generating…';
   manualStatus('Generating search words with the local model…');
-  const conceptFor=c=>state.concepts.find(x=>x.criterionId&&x.criterionId===c.criterionId)||state.concepts.find(x=>norm(x.label)===norm(c.title));
-  const notes=new Map();let filled=0;
   try{
-    const criteria=machineWordCriteria(),result=await collectMachineWords(clone(state.criteriaSnapshot),criteria,controller.signal,null);
+    const {filled,notes}=await fillConceptWords(controller.signal,null);
     if(controller.signal.aborted)return;
-    criteria.forEach((c,i)=>{const out=result[i],concept=conceptFor(c);if(!out||!concept)return;if(out.note)notes.set(concept.id,out.note);if(!concept.terms.trim()&&out.words.length){concept.terms=out.words.join('\n');filled++}});
     saveDraft();renderConcepts();renderStrategies();showConceptNotes(notes);
-    manualStatus((added?added+' concept'+(added>1?'s':'')+' added from the criteria. ':'')+'Search words filled in for '+filled+' concept'+(filled===1?'':'s')+'. Comparator and outcome concepts are not used in the search by default (Cochrane Handbook 4.4.2); tick Use in search to include one. Lists you had already typed were not changed.');
+    manualStatus(conceptsDoneMessage(added,filled));
   }catch(error){
     if(manualController!==controller)return;
-    for(const c of state.concepts){if(!c.terms.trim()&&c.sourceRule){const draft=draftTerms(c.sourceRule);if(draft.length){c.terms=draft.join('\n');filled++}}}
-    saveDraft();renderConcepts();renderStrategies();
+    const drafted=draftEmptyConcepts();saveDraft();renderConcepts();renderStrategies();
     const reason=error?.name==='AbortError'?'Generation stopped.':isUnreachable(error)?await explainUnreachable():error.message;
-    manualStatus(reason+(filled?' Starting word lists were drafted from the criteria instead; edit them as needed.':' Type or upload words for each concept.'),true);
+    manualStatus(reason+(drafted?' Starting word lists were drafted from the criteria instead; edit them as needed.':' Type or upload words for each concept.'),true);
   }finally{if(manualController===controller)manualController=null;button.textContent='Start';button.disabled=busy||generating}
 }
 function showConceptNotes(notes){for(const [id,note] of notes){const el=document.querySelector(`.concept[data-id="${CSS.escape(id)}"] [data-word-message]`);if(el){el.textContent=note;el.hidden=false}}}
