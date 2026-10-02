@@ -194,11 +194,26 @@ function localModelConfig(){
   for(const [slot,model] of [['A',settings?.modelA],['B',settings?.modelB]])if(model?.name&&privateModelAddress(model.base))return {...model,slot};
   return {provider:'ollama',base:'http://127.0.0.1:11434'};
 }
+// The AIM-STEP local model server (tools/local_model_server.py). Opened from it,
+// the page finds it same-origin. Opened from the published site, GitHub Pages
+// has no backend, so the server on this computer is tried next; it allows the
+// published origin by CORS. A developer may override it with
+// window.AIMSTEP_LOCAL_SERVER='http://127.0.0.1:9000'.
+const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').replace(/\/+$/,'');
+async function findLocalBackend(signal){
+  const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];
+  const local=LOCAL_SERVER+'/api/eligibility';if(!bases.includes(local))bases.push(local);
+  for(const base of bases){
+    try{
+      const health=await fetch(base+'/health',{signal});
+      if(health.ok&&(await health.json()).service==='aimstep-local-eligibility')return {provider:'backend',base,name:'local',slot:'local'};
+    }catch(error){if(signal.aborted)throw error}
+  }
+  return null;
+}
+const unreachableModelMessage='Cannot reach the local model. On this computer, start Ollama and run python3 tools/local_model_server.py in the AIM-STEP site folder, then allow local network access if the browser asks.';
 async function resolveLocalModel(needsVision,signal){
-  try{
-    const health=await fetch(new URL('api/eligibility/health',location.href),{signal});
-    if(health.ok&&(await health.json()).service==='aimstep-local-eligibility')return {provider:'backend',base:new URL('api/eligibility',location.href).href.replace(/\/+$/,''),name:'local',slot:'local'};
-  }catch(error){if(signal.aborted)throw error}
+  const backend=await findLocalBackend(signal);if(backend)return backend;
   const configured=localModelConfig(),provider=configured.provider==='compatible'?'compatible':'ollama';
   let base=String(configured.base||'http://127.0.0.1:11434').trim().replace(/\/+$/,'');
   let address;try{address=new URL(base)}catch(e){throw new Error('The local model address is invalid.')}
@@ -316,8 +331,14 @@ const synthesisInstruction=[
   'Required propositions become inclusion rules; prohibited propositions become explicit exclusion rules. Allowed cases are exceptions or conditional permissions, not mandatory inclusion requirements. An uncertain item belongs in uncertainties unless its meaning is resolved by the same source.',
   'Merge overlapping items only when all conditions, operators, quantifiers, alternatives, numerical thresholds, dates, units, arm-level/subgroup qualifiers, scope of negation and exceptions remain intact. Do not infer an exclusion merely as the complement of inclusion. Do not require a reported outcome or invent a design/language/publication restriction.',
   'Use parallel, screening-ready sentences, no boilerplate, no repetition. Translate sources into precise, concise, professional academic English. A sentence about a participant threshold within a study describes eligible studies, not clinical trial recruitment.',
-  'The manuscriptParagraph must follow the SAME final rules and supplied limits, normally beginning We included and then We excluded if there are explicit exclusions. Omit unresolved claims. Never claim validation, give citations or include Markdown.'
+  'The manuscriptParagraph must follow the SAME final rules and supplied limits, normally beginning We included and then We excluded if there are explicit exclusions. Omit unresolved claims. Never claim validation, give citations or include Markdown.',
+  'Atom IDs belong only in evidenceIds. Never write an ID such as A001 or [A001, A002] inside text, reviewTopic or manuscriptParagraph.'
 ].join(' ');
+// Local models cite anyway ("... chronic insomnia [A001, A002]."). The IDs are
+// already carried by evidenceIds, and left in the text their digits read as
+// numbers absent from the source, so supportedNumbers rejects the whole draft.
+// Only bracketed atom-ID lists are removed; every other number is still checked.
+function stripAtomCitations(value){return String(value||'').replace(/\s*[\[(]\s*A\d{3}(?:\s*[,;]\s*A\d{3})*\s*[\])]/g,'').replace(/\s+([,.;:])/g,'$1')}
 function sourceContains(segment,sentence){
   const clean=value=>String(value||'').normalize('NFKC').replace(/\s+/g,' ').trim().toLocaleLowerCase();
   return !!clean(sentence)&&clean(segment.text).includes(clean(sentence));
@@ -376,17 +397,18 @@ function validateAcademicDraft(answer,input,signature,model,extracts){
         if(evidence.some(atom=>!atom||atom.dimension!==row.dimension))throw new Error('A rule refers to missing or mismatched evidence.');
         if(polarity==='include'&&evidence.every(atom=>atom.logic==='prohibited'||atom.logic==='uncertain'))throw new Error('An inclusion rule is supported only by exclusion or uncertain evidence.');
         if(polarity==='exclude'&&evidence.every(atom=>atom.logic!=='prohibited'))throw new Error('An exclusion rule lacks an explicit exclusion source.');
-        const text=item.text.trim().replace(/\s+/g,' ');
+        const text=stripAtomCitations(item.text).trim().replace(/\s+/g,' ');
         if(/[\u3400-\u9fff]/u.test(text)||!supportedNumbers(text,evidence.map(atom=>atom.sourceSentence).join(' ')))throw new Error('A rule contains unsupported numbers or untranslated text.');
         ids.forEach(id=>used.add(id));
-        return text;
+        // Rules are shown joined by spaces; one without a full stop runs into the next.
+        return /[.!?]$/.test(text)?text:text+'.';
       });
     }
     const include=uniqueRules(checkRules(row.include,'include')),exclude=uniqueRules(checkRules(row.exclude,'exclude'));
     if(include.some(item=>exclude.some(other=>ruleKey(item)===ruleKey(other))))throw new Error('The same rule appears in inclusion and exclusion.');
     return {dimension:row.dimension,include,exclude};
   });
-  const topic=String(answer.reviewTopic||'').trim().replace(/\s+/g,' '),paragraph=String(answer.manuscriptParagraph||'').trim().replace(/\s+/g,' ');
+  const topic=stripAtomCitations(answer.reviewTopic).trim().replace(/\s+/g,' '),paragraph=stripAtomCitations(answer.manuscriptParagraph).trim().replace(/\s+/g,' ');
   if(!topic||topic.length>300||!paragraph||paragraph.length>3500||!Array.isArray(answer.uncertainties)||answer.uncertainties.length>20)throw new Error('The model returned incomplete manuscript wording.');
   if(/[\u3400-\u9fff]/u.test(topic+paragraph)||!supportedNumbers(topic+paragraph,sourceText))throw new Error('The manuscript paragraph introduced an unsupported number or untranslated text.');
   if(!rows.some(row=>row.include.length))throw new Error('The model returned no supported inclusion rule.');
@@ -425,7 +447,7 @@ async function refineManualCriteria(){
     if(run!==manualRefinementNonce||controller.signal.aborted||manualSourceSignature()!==signature)return;
     state.manualRefinement=refinement;
     state.confirmed=false;const saved=save();setManualStatus(saved?'Source-linked draft generated. Review the pending items and original sentences.':'Draft generated, but could not be saved on this device.',!saved);
-  }catch(error){if(run===manualRefinementNonce)setManualStatus(timedOut?'Local model request timed out after 10 minutes.':error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?'Cannot reach the model. Check the local server and the other computer.':error.message,true)}
+  }catch(error){if(run===manualRefinementNonce)setManualStatus(timedOut?'Local model request timed out after 10 minutes.':error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true)}
   finally{clearTimeout(timer);if(run===manualRefinementNonce){manualRefinementController=null;button.disabled=false;button.textContent='Standardize'}}
 }
 function normalizeMachineCriteria(answer){
@@ -473,7 +495,7 @@ async function generateMachineCriteria(){
     document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));
     const saved=save();setMachineStatus(saved?'Criteria generated. Check the source trace and original question.':'Criteria generated, but could not be saved on this device.',!saved);
   }catch(error){
-    if(run===generationNonce)setMachineStatus(timedOut?'Local model request timed out after 10 minutes.':error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?'Cannot reach the model. Check the local server and the other computer.':error.message,true);
+    if(run===generationNonce)setMachineStatus(timedOut?'Local model request timed out after 10 minutes.':error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);
   }finally{clearTimeout(timer);if(run===generationNonce){generationController=null;button.disabled=false;button.textContent='Start'}}
 }
 
