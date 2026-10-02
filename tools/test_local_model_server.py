@@ -135,6 +135,18 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(sent["options"]["temperature"], 0)
         self.assertEqual(sent["messages"], self.MSG["messages"])
 
+    def test_a_schema_from_the_page_is_passed_to_ollama(self):
+        FakeOllama.replies = ['{"words": []}']
+        schema = {"type": "object", "properties": {"words": {"type": "array"}}, "required": ["words"]}
+        self.req("POST", "/api/eligibility/model", dict(self.MSG, format=schema))
+        self.assertEqual(FakeOllama.seen[0]["format"], schema)
+
+    def test_an_oversized_or_odd_format_falls_back_to_json(self):
+        for fmt in ["xml", ["a"], {"x": "y" * (srv.MAX_SCHEMA + 10)}]:
+            FakeOllama.replies = ['{}']; FakeOllama.seen = []
+            self.req("POST", "/api/eligibility/model", dict(self.MSG, format=fmt))
+            self.assertEqual(FakeOllama.seen[0]["format"], "json")
+
     def test_page_cannot_choose_the_model_or_options(self):
         FakeOllama.replies = ['{"ok": 1}']
         body = dict(self.MSG, model="other", options={"temperature": 2}, think=True)
@@ -143,6 +155,12 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(sent["model"], MODEL)
         self.assertIs(sent["think"], False)
         self.assertEqual(sent["options"]["temperature"], 0)
+
+    def test_a_json_list_is_accepted_without_repair(self):
+        FakeOllama.replies = ['```json\n[{"criterionKey": "0:INC-01", "words": ["fibromyalgia"]}]\n```']
+        status, body = self.req("POST", "/api/eligibility/model", self.MSG)
+        self.assertEqual(status, 200)
+        self.assertEqual(len(FakeOllama.seen), 1)
 
     def test_fenced_json_is_accepted_without_retry(self):
         FakeOllama.replies = ['```json\n{"a": 1}\n```']

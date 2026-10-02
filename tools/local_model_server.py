@@ -100,13 +100,28 @@ def clean_messages(payload):
     return out
 
 
-def ollama_body(model, messages, temperature=0):
+MAX_SCHEMA = 20000                  # characters of JSON schema a page may pass
+
+
+def clean_format(payload):
+    """An optional JSON schema from the page (search-strategy.html passes one).
+
+    Anything that is not a small JSON object falls back to plain "json"; the
+    page validates the reply either way.
+    """
+    fmt = payload.get("format") if isinstance(payload, dict) else None
+    if isinstance(fmt, dict) and len(json.dumps(fmt)) <= MAX_SCHEMA:
+        return fmt
+    return "json"
+
+
+def ollama_body(model, messages, temperature=0, fmt="json"):
     return {
         "model": model,
         "messages": messages,
         "stream": False,
         "think": False,
-        "format": "json",
+        "format": fmt,
         "options": {"temperature": temperature, "num_ctx": NUM_CTX, "num_predict": NUM_PREDICT},
     }
 
@@ -120,8 +135,15 @@ def _unfence(text):
 
 
 def is_json_object(text):
+    """Valid JSON whose top level is an object or a list.
+
+    Pages validate the shape themselves. A list is accepted because local
+    models often return the list a schema wraps ({"wordsByCriterion": [...]}
+    comes back as [...]), and repairing or regenerating a valid reply only
+    costs time and returns the same list.
+    """
     try:
-        return isinstance(json.loads(_unfence(text)), dict)
+        return isinstance(json.loads(_unfence(text)), (dict, list))
     except ValueError:
         return False
 
@@ -148,7 +170,7 @@ def _content(reply):
     return ((reply or {}).get("message") or {}).get("content", "")
 
 
-def chat(ollama, model, messages, post=post_json, attempts=None):
+def chat(ollama, model, messages, post=post_json, attempts=None, fmt="json"):
     """Return a reply whose content is a JSON object, trying in order:
 
       1. the reply as generated;
@@ -161,7 +183,7 @@ def chat(ollama, model, messages, post=post_json, attempts=None):
     `attempts`, if given, is filled with what happened, for the log.
     """
     log = attempts if attempts is not None else []
-    reply = post(ollama + "/api/chat", ollama_body(model, messages))
+    reply = post(ollama + "/api/chat", ollama_body(model, messages, fmt=fmt))
     content = _content(reply)
     if is_json_object(content):
         log.append("ok")
@@ -176,7 +198,7 @@ def chat(ollama, model, messages, post=post_json, attempts=None):
         log.append("model-repair-failed")
     # Temperature 0 repeats a degenerate path exactly; a little noise leaves it.
     log.append("regenerate")
-    return post(ollama + "/api/chat", ollama_body(model, messages, temperature=0.3))
+    return post(ollama + "/api/chat", ollama_body(model, messages, temperature=0.3, fmt=fmt))
 
 
 def check_model(ollama, model):
@@ -294,13 +316,15 @@ class Handler(SimpleHTTPRequestHandler):
         if length <= 0 or length > MAX_BODY:
             return self._send_json(413 if length > MAX_BODY else 400, {"error": "request body missing or too large"})
         try:
-            messages = clean_messages(json.loads(self.rfile.read(length).decode("utf-8")))
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            messages = clean_messages(payload)
+            fmt = clean_format(payload)
         except (ValueError, BadRequest) as e:
             return self._send_json(400, {"error": str(e)})
         started = time.time()
         attempts = []
         try:
-            reply = chat(self.ollama, self.model, messages, attempts=attempts)
+            reply = chat(self.ollama, self.model, messages, attempts=attempts, fmt=fmt)
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:300]
             try:
