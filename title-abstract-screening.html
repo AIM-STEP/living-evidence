@@ -135,6 +135,7 @@ th{background:#f4f4f4}
 .source-actions{margin:0;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .results-like .del-col{width:34px;padding:0 6px;text-align:center}.results-like .src{color:var(--muted);margin-left:6px;font-size:11px}.remove-import{width:22px;height:22px;display:inline-grid;place-items:center;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--muted);font-size:15px;line-height:1;cursor:pointer}.remove-import:hover{color:var(--red);border-color:var(--line)}.remove-import:focus-visible{outline:2px solid var(--plum);outline-offset:1px}.remove-import:disabled{opacity:.4;cursor:default}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .source-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#f7f7f7}.source-summary>div{padding:8px 12px;border-left:1px solid var(--line);min-width:0}.source-summary>div:first-child{border-left:0}.source-summary strong{display:block;font-size:17px;line-height:1.2}.source-summary span{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dedup-note{margin:8px 0 0}.source-history{margin-top:10px}@media(max-width:620px){.source-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.source-summary>div:nth-child(3){border-left:0}.source-summary>div:nth-child(n+3){border-top:1px solid var(--line)}}
+.collapse-toggle{width:30px;height:30px;display:inline-grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}.collapse-toggle:hover{border-color:var(--plum);color:var(--plum)}.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:1px}.collapse-toggle svg{width:18px;height:18px;fill:currentColor;transition:transform .15s}.collapse-toggle[aria-expanded="false"] svg{transform:rotate(180deg)}.panel.is-collapsed>.panel-head{border-bottom:0}@media(prefers-reduced-motion:reduce){.collapse-toggle svg{transition:none}}
 </style>
 </head>
 <body>
@@ -149,8 +150,7 @@ th{background:#f4f4f4}
 <div class="layout">
 <div class="stack">
 <section class="panel">
-<div class="panel-head"><h2>Screening source</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog">Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button></div></div>
-<div class="panel-body">
+<div class="panel-head"><h2>Screening source</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog">Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Screening source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Screening source</span></button></div></div> <div class="panel-body" id="source-body">
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span>Databases</span></div><div><strong id="stat-total">0</strong><span>Records imported</span></div><div><strong id="stat-dups">0</strong><span>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden></p>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col">Imported</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="num-col">Duplicates</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
@@ -1269,6 +1269,16 @@ $('source-history-rows').addEventListener('click',async event=>{
   await loadSource();render();
   toast((kind==='local'?dbn+' import deleted.':dbn+' search removed from screening.')+(stale()?' Use latest source to restart calibration with these records.':''));
 });
+
+// Collapse / expand Screening source. Remembered per browser and project; the
+// import buttons in the head stay usable while it is collapsed.
+(()=>{
+  const btn=$('toggle-source'),body=$('source-body'),panel=body.closest('.panel'),key='aimstep-screen-source-collapsed:'+scope;
+  const set=collapsed=>{body.hidden=collapsed;panel.classList.toggle('is-collapsed',collapsed);btn.setAttribute('aria-expanded',String(!collapsed));const label=(collapsed?'Expand':'Collapse')+' Screening source';btn.title=label;btn.querySelector('.sr-only').textContent=label};
+  let saved=false;try{saved=localStorage.getItem(key)==='1'}catch(e){}
+  set(saved);
+  btn.addEventListener('click',()=>{const collapsed=!body.hidden;set(collapsed);try{localStorage.setItem(key,collapsed?'1':'0')}catch(e){}});
+})();
 $('open-import').addEventListener('click',()=>{
   if(busy){toast('Stop screening before importing additional results.');return}
   $('import-database').value=workspace.imports.at(-1)?.db||'';
