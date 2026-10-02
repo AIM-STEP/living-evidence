@@ -140,6 +140,8 @@ th{background:#f4f4f4}
 .criteria-origin{margin:0 0 12px}.criteria-file{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-height:30px;padding:0 4px 0 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:12px;color:var(--ink2)}.criteria-file .file-name{border:0;background:none;padding:0;color:var(--plum);font:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}.criteria-file .file-name:hover{text-decoration:underline}.criteria-file .file-meta{color:var(--muted);white-space:nowrap}.criteria-upload-error{font-size:12px;color:var(--red)}
 .pilot-steps{margin:0 0 12px;padding-left:20px;font-size:12px;color:var(--ink2);line-height:1.7}.pilot-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}.pilot-controls .label{margin:0}.pilot-controls .input{width:76px}.pilot-rounds{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.pilot-rounds .round{min-width:132px}.pilot-summary{grid-template-columns:repeat(5,minmax(0,1fr))}.pilot-summary>div.alert strong{color:var(--red)}.pilot-detail{margin:8px 0}.pilot-detail .ok{color:var(--green);font-weight:700}.pilot-detail .warn{color:var(--amber);font-weight:700}.pilot-filter [aria-pressed="true"]{border-color:var(--plum);color:var(--plum);background:var(--pale)}.record.differ{border-color:#e3b4ad}.badge.differ{background:#fff0ef;color:var(--red)}.judg{font-weight:700}.judg.met{color:var(--green)}.judg.not-met{color:var(--red)}.judg.unclear{color:var(--amber)}.pilot-note{display:block;font-size:11px;font-weight:700;margin-top:8px}.pilot-note .input{margin-top:4px}
 @media(max-width:760px){.pilot-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.pilot-summary>div{border-left:0;border-top:1px solid var(--line)}}
+.export-source{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.export-source .label{margin:0;font-size:12px}.select.compact{width:auto;min-height:30px;padding:3px 8px;font-size:12px}
+.source-foot{margin-top:10px}
 </style>
 </head>
 <body>
@@ -158,7 +160,7 @@ th{background:#f4f4f4}
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span>Databases</span></div><div><strong id="stat-total">0</strong><span>Records imported</span></div><div><strong id="stat-dups">0</strong><span>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden></p>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col">Imported</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="num-col">Duplicates</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
-<div class="toolbar"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button><button class="btn small" id="upload-criteria" type="button">Upload criteria</button><input type="file" id="criteria-file-input" accept=".docx,.xlsx,.csv,.tsv,.txt,.md,.json,.html,.htm,.doc,.xls,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" hidden aria-label="Upload eligibility criteria (Word, Excel or text)"><span class="criteria-file" id="criteria-file" hidden></span><span class="criteria-upload-error" id="criteria-upload-error" role="alert" hidden></span><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button></div>
+<div class="toolbar source-foot"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button><button class="btn small" id="upload-criteria" type="button">Upload criteria</button><input type="file" id="criteria-file-input" accept=".docx,.xlsx,.csv,.tsv,.txt,.md,.json,.html,.htm,.doc,.xls,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" hidden aria-label="Upload eligibility criteria (Word, Excel or text)"><span class="criteria-file" id="criteria-file" hidden></span><span class="criteria-upload-error" id="criteria-upload-error" role="alert" hidden></span><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button><span class="export-source"><label class="label inline" for="source-format">Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Download all records after deduplication">Export records</button></span></div>
 </div>
 </section>
 <section class="panel" hidden data-developer-model>
@@ -630,6 +632,7 @@ function renderSource(){  // Databases of the imports in use, not every database
     return '<tr><td title="'+esc(when)+'">'+esc(when)+'</td><td title="'+esc(dbn+' · '+src)+'">'+esc(dbn)+'<span class="src">'+esc(run.kind==='local'?'local file':'search strategy')+'</span></td><td class="num-col">'+count.toLocaleString()+'</td><td class="num-col" title="Records already found by an earlier import">'+st.duplicates.toLocaleString()+'</td><td class="del-col"><button type="button" class="remove-import" data-delete-import="'+esc(run.kind+':'+run.id)+'" title="Delete this import" aria-label="Delete the '+esc(dbn)+' import of '+esc(when)+'">×</button></td></tr>';
   }).join(''):'<tr><td colspan="5" class="empty">Nothing imported yet. Use Import from search strategy or Import from local.</td></tr>';
   renderCriteriaFile();
+  $('export-source').disabled=!source.records.length;
   let warning='';
   if(sourceError)warning=sourceError;
   if(!source.records.length)warning+=(warning?'\n':'')+'No local search records found. Complete Search strategy for this project or import a results file.';
@@ -1590,6 +1593,43 @@ $('criteria-file-input').addEventListener('change',async event=>{
     await setCriteriaUpload({name:file.name,size:file.size,uploadedAt:now(),snapshot});
   }catch(e){uploadError('Could not read "'+file.name+'": '+e.message)}
   finally{button.disabled=false;event.target.value=''}
+});
+
+/* Export of every record after deduplication, as listed in Screening source.
+   Each record keeps the databases it was found in; nothing about screening
+   decisions is included (those are in Download at the end of the page). */
+function sourceDatabases(r){return [...new Set((r.provenance||[]).map(p=>databaseNames[p.db]||p.db).filter(Boolean))]}
+function splitPages(pages){const m=String(pages||'').match(/^\s*([^-–—]+?)\s*[-–—]+\s*(.+?)\s*$/);return m?[m[1],m[2]]:[String(pages||'').trim(),'']}
+function sourceRIS(records){
+  return records.map(r=>{const [sp,ep]=splitPages(r.pages);
+    return [['TY','JOUR'],['TI',r.title],...r.authors.map(a=>['AU',a]),['PY',r.year],['T2',r.journal],['VL',r.volume],['IS',r.issue],['SP',sp],['EP',ep],['DO',r.doi],['AN',r.pmid],['UR',r.url],['AB',r.abstract],['DB',sourceDatabases(r).join('; ')],['ID',r.uid]]
+      .filter(([,v])=>String(v||'').trim()).map(([t,v])=>t+'  - '+risSafe(v)).join('\r\n')+'\r\nER  - ';
+  }).join('\r\n\r\n')+'\r\n';
+}
+function sourceCSV(records){
+  const head=['Record ID','Title','Authors','Year','Journal','Volume','Issue','Pages','DOI','PMID','URL','Abstract','Databases'];
+  return '\uFEFF'+[head,...records.map(r=>[r.uid,r.title,r.authors.join('; '),r.year,r.journal,r.volume,r.issue,r.pages,r.doi,r.pmid,r.url,r.abstract,sourceDatabases(r).join('; ')])].map(row=>row.map(csvCell).join(',')).join('\r\n');
+}
+function sourceBibTeX(records){
+  const tex=v=>String(v??'').replace(/\s+/g,' ').trim().replace(/[\\{}]/g,c=>c==='\\'?'\\textbackslash{}':'\\'+c).replace(/([&%$#_])/g,'\\$1');
+  const used=new Map();
+  return records.map(r=>{
+    const base=((String(r.authors[0]||'').split(/[ ,]/)[0]||'record').normalize('NFKD').replace(/[^A-Za-z0-9]/g,'').toLowerCase()||'record')+(String(r.year).match(/\d{4}/)?.[0]||'');
+    const n=(used.get(base)||0)+1;used.set(base,n);
+    const fields=[['title',r.title],['author',r.authors.join(' and ')],['journal',r.journal],['year',r.year],['volume',r.volume],['number',r.issue],['pages',String(r.pages||'').replace(/\s*[-–—]+\s*/,'--')],['doi',r.doi],['pmid',r.pmid],['url',r.url],['abstract',r.abstract],['note','Databases: '+sourceDatabases(r).join('; ')]];
+    return '@article{'+base+(n>1?String.fromCharCode(96+n):'')+',\n'+fields.filter(([,v])=>String(v||'').trim()).map(([k,v])=>'  '+k+' = {'+tex(v)+'}').join(',\n')+'\n}';
+  }).join('\n\n')+'\n';
+}
+$('export-source').addEventListener('click',()=>{
+  const records=source.records,format=$('source-format').value;
+  if(!records.length){toast('There are no records to export.');return}
+  const name='deduplicated-records-'+(projectId?projectId.replace(/[^\w-]+/g,'_')+'-':'')+stamp();
+  if(format==='csv')download(name+'.csv','text/csv;charset=utf-8',sourceCSV(records));
+  else if(format==='bib')download(name+'.bib','application/x-bibtex;charset=utf-8',sourceBibTeX(records));
+  else if(format==='json')download(name+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-deduplicated-records/v1',project:projectId,exportedAt:now(),imported:dedupStats.total,duplicates:Math.max(0,dedupStats.total-records.length),records:records.map(r=>({...r,databases:sourceDatabases(r)}))},null,2));
+  else download(name+'.ris','application/x-research-info-systems;charset=utf-8',sourceRIS(records));
+  log('source-exported',{format,records:records.length});save().catch(()=>{});
+  toast(records.length.toLocaleString()+' deduplicated records exported.');
 });
 $('open-criteria').addEventListener('click',()=>{renderCriteriaView();criteriaDialog.showModal()});
 $('close-criteria').addEventListener('click',()=>criteriaDialog.close());
