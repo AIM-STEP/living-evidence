@@ -671,15 +671,18 @@ $('question').addEventListener('input',event=>{if(!composingQuestion&&!event.isC
 $('review-type').addEventListener('input',()=>{stopMachineGeneration();state.confirmed=false;setMachineStatus('');save()});
 ['start-date','end-date','limits-other'].forEach(id=>$(id).addEventListener('input',()=>{state.confirmed=false;save()}));$('language').addEventListener('change',()=>{state.confirmed=false;save()});
 $('download').addEventListener('click',()=>{save();const blob=new Blob([criteriaWordFile()],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='eligibility-criteria'+(projectId?'-'+projectId:'')+'.docx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
-$('next-search-strategy').addEventListener('click',event=>{
+// Next always goes to Search strategy, whatever the state of this step. What
+// it no longer does is block: criteria can also be uploaded there. The step is
+// still only marked complete, and the criteria only handed over, when there is
+// a current set with at least one eligibility rule.
+$('next-search-strategy').addEventListener('click',()=>{
+  if(generationController||manualRefinementController||voiceRecognition){stopMachineGeneration();stopManualRefinement();abortVoiceInput()}
+  let saved=false;try{saved=save()}catch(e){}
   const mode=$('generation-method').value;
-  if(generationController||manualRefinementController||voiceRecognition){event.preventDefault();toast('Wait for the current generation to complete.');return}
-  if(mode==='machine'&&(!state.machineRun||state.machineRun.question!==$('question').value.trim()||state.machineRun.reviewType!==$('review-type').value||(state.machineRun.sourceRevision??0)!==(Number(state.machineSourceRevision)||0))){event.preventDefault();toast('Click Start to generate criteria with the current text and files.');return}
+  const machineCurrent=mode!=='machine'||(state.machineRun&&state.machineRun.question===$('question').value.trim()&&state.machineRun.reviewType===$('review-type').value&&(state.machineRun.sourceRevision??0)===(Number(state.machineSourceRevision)||0));
   const rows=mode==='machine'?state.machineCriteria:state.criteria;
-  if(!mode||!rows.length||!rows.some(row=>String(row.condition||'').trim())){
-    event.preventDefault();toast('Choose a generation method and enter eligibility criteria before continuing.');return;
-  }
-  if(!save()){event.preventDefault();toast('The criteria could not be saved on this device.');return}
+  const ready=saved&&!!mode&&machineCurrent&&rows.length>0&&rows.some(row=>String(row.condition||'').trim());
+  if(!ready)return;
   if(completionKey){
     try{
       const done=JSON.parse(localStorage.getItem(completionKey)||'[]');
