@@ -154,7 +154,7 @@ th{background:#f4f4f4}
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span>Databases</span></div><div><strong id="stat-total">0</strong><span>Records imported</span></div><div><strong id="stat-dups">0</strong><span>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden></p>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col">Imported</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="num-col">Duplicates</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
-<div class="toolbar"><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button></div>
+<div class="toolbar"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button></div>
 </div>
 </section>
 <section class="panel" hidden data-developer-model>
@@ -217,7 +217,7 @@ th{background:#f4f4f4}
 </dialog>
 <dialog id="criteria-dialog" class="dialog" aria-labelledby="criteria-title">
 <div class="panel-head"><h2 id="criteria-title">Eligibility criteria</h2><button class="btn small" type="button" id="close-criteria">Close</button></div>
-<div class="panel-body"><div class="table-wrap"><table><thead><tr><th>Criterion dimension</th><th>Eligibility rule</th><th>Exclusion rule</th><th>Other rule</th></tr></thead><tbody id="criteria-rows"></tbody></table></div></div>
+<div class="panel-body"><p class="hint" id="criteria-question" hidden></p><div class="table-wrap"><table><thead><tr><th>Criterion dimension</th><th>Eligibility rule</th><th>Exclusion rule</th><th>Other rule</th></tr></thead><tbody id="criteria-rows"></tbody></table></div></div>
 </dialog>
 <dialog id="source-dialog" class="dialog source-dialog" aria-labelledby="source-dialog-title"> <div class="panel-head"><h2 id="source-dialog-title">Search results from Search strategy</h2><button class="btn small" type="button" id="close-source">Close</button></div> <div class="panel-body"> <p class="hint">Tick the searches whose records you want to screen. Records found by several searches are screened once.</p> <div class="table-wrap results-like"><table aria-label="Search results available for screening"><thead><tr><th scope="col" class="select-col"><input type="checkbox" id="source-select-all" aria-label="Select all searches"></th><th scope="col" class="date-col">Date</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th></tr></thead><tbody id="source-choice-rows"></tbody></table></div> <p class="hint" id="source-choice-summary" role="status" aria-live="polite"></p> </div> <div class="panel-footer toolbar between"><button class="btn small" type="button" id="cancel-source">Cancel</button><button class="btn primary" type="button" id="apply-source">Use selected</button></div> </dialog> <dialog id="import-dialog" class="dialog" aria-labelledby="import-title">
 <div class="panel-head"><h2 id="import-title">Import search results</h2><button class="btn small" type="button" id="close-import">Close</button></div>
@@ -1219,6 +1219,11 @@ async function importFile(file,dbName){
   return run;
 }
 
+$('open-criteria').addEventListener('click',()=>{
+  const q=source.criteria?.question||'';
+  $('criteria-question').textContent=q?'Question: '+q:'';$('criteria-question').hidden=!q;
+  criteriaDialog.showModal();
+});
 $('close-criteria').addEventListener('click',()=>criteriaDialog.close());
 criteriaDialog.addEventListener('click',event=>{if(event.target===criteriaDialog)criteriaDialog.close()});
 
