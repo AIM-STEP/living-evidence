@@ -212,6 +212,21 @@ async function findLocalBackend(signal){
   return null;
 }
 const unreachableModelMessage='Cannot reach the local model. On this computer, start Ollama and run python3 tools/local_model_server.py in the AIM-STEP site folder, then allow local network access if the browser asks.';
+// "Failed to fetch" covers a stopped server and a browser that refused to let a
+// public page reach this computer. Chrome says which, so ask before guessing.
+async function explainUnreachable(){
+  const direct=' Or open '+LOCAL_SERVER+'/eligibility.html on this computer, which needs no permission.';
+  if(['localhost','127.0.0.1','[::1]'].includes(location.hostname))return unreachableModelMessage;
+  try{
+    const policy=document.featurePolicy;
+    if(policy&&policy.features().includes('loopback-network')&&!policy.allowsFeature('loopback-network'))
+      return 'This embedded view is not allowed to reach this computer. Reload with Cmd/Ctrl+Shift+R, or open eligibility.html directly.'+direct;
+    const state=(await navigator.permissions.query({name:'loopback-network'})).state;
+    if(state==='denied')return 'The browser has blocked this site from reaching this computer. Click the site icon left of the address bar, set Local network access to Allow, then reload.'+direct;
+    if(state==='prompt')return 'The browser did not grant local network access. Click Start again and choose Allow when asked; if nothing is asked, check that tools/local_model_server.py is running.'+direct;
+  }catch(e){}
+  return unreachableModelMessage+direct;
+}
 async function resolveLocalModel(needsVision,signal){
   const backend=await findLocalBackend(signal);if(backend)return backend;
   const configured=localModelConfig(),provider=configured.provider==='compatible'?'compatible':'ollama';
@@ -447,7 +462,7 @@ async function refineManualCriteria(){
     if(run!==manualRefinementNonce||controller.signal.aborted||manualSourceSignature()!==signature)return;
     state.manualRefinement=refinement;
     state.confirmed=false;const saved=save();setManualStatus(saved?'Source-linked draft generated. Review the pending items and original sentences.':'Draft generated, but could not be saved on this device.',!saved);
-  }catch(error){if(run===manualRefinementNonce)setManualStatus(timedOut?'Local model request timed out after 10 minutes.':error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true)}
+  }catch(error){if(run===manualRefinementNonce)setManualStatus(timedOut?'Local model request timed out after 10 minutes.':error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);if(run===manualRefinementNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===manualRefinementNonce&&!manualRefinementController)setManualStatus(message,true)})}
   finally{clearTimeout(timer);if(run===manualRefinementNonce){manualRefinementController=null;button.disabled=false;button.textContent='Standardize'}}
 }
 function normalizeMachineCriteria(answer){
@@ -496,6 +511,7 @@ async function generateMachineCriteria(){
     const saved=save();setMachineStatus(saved?'Criteria generated. Check the source trace and original question.':'Criteria generated, but could not be saved on this device.',!saved);
   }catch(error){
     if(run===generationNonce)setMachineStatus(timedOut?'Local model request timed out after 10 minutes.':error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);
+    if(run===generationNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===generationNonce&&!generationController)setMachineStatus(message,true)});
   }finally{clearTimeout(timer);if(run===generationNonce){generationController=null;button.disabled=false;button.textContent='Start'}}
 }
 
