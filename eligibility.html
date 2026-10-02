@@ -408,25 +408,33 @@ async function enrichTemporalContext(model,extracts,signal,progress){
 function validateAcademicDraft(answer,input,signature,model,extracts){
   const sources=input.criteria,expected=sources.map(row=>row.dimension),atomLookup=new Map(extracts.atoms.map(atom=>[atom.id,atom]));
   if(!answer||!Array.isArray(answer.criteria)||answer.criteria.length!==expected.length)throw new Error('The model omitted or added a criterion dimension.');
-  const used=new Set(),sourceText=JSON.stringify(sources)+JSON.stringify(input.limits||{});
+  const used=new Set(),dropped=[],sourceText=JSON.stringify(sources)+JSON.stringify(input.limits||{});
   const rows=answer.criteria.map((row,index)=>{
     if(row?.dimension!==expected[index]||!Array.isArray(row.include)||!Array.isArray(row.exclude)||row.include.length>12||row.exclude.length>12)throw new Error('The model returned an unsupported criterion structure.');
+    // One unsupported rule used to discard the whole draft, minutes of local
+    // generation included. Now that rule alone is dropped and named under
+    // Pending clarification; what it would have claimed still never reaches
+    // the criteria.
     function checkRules(items,polarity){
+      const side=polarity==='include'?'inclusion':'exclusion';
+      const reject=(item,reason)=>{const shown=typeof item?.text==='string'?stripAtomCitations(item.text).trim().replace(/\s+/g,' ').slice(0,200):'';dropped.push(row.dimension+': an '+side+' rule was removed because '+reason+(shown?' ("'+shown+'")':'')+'. Check it against the source.');return null};
       return items.map(item=>{
-        if(!item||typeof item.text!=='string'||!item.text.trim()||item.text.length>900||!Array.isArray(item.evidenceIds)||!item.evidenceIds.length)throw new Error('A rule is missing text or source evidence.');
+        if(!item||typeof item.text!=='string'||!item.text.trim()||item.text.length>900||!Array.isArray(item.evidenceIds)||!item.evidenceIds.length)return reject(item,'it had no text or no source evidence');
         const ids=[...new Set(item.evidenceIds.map(String))],evidence=ids.map(id=>atomLookup.get(id));
-        if(evidence.some(atom=>!atom||atom.dimension!==row.dimension))throw new Error('A rule refers to missing or mismatched evidence.');
-        if(polarity==='include'&&evidence.every(atom=>atom.logic==='prohibited'||atom.logic==='uncertain'))throw new Error('An inclusion rule is supported only by exclusion or uncertain evidence.');
-        if(polarity==='exclude'&&evidence.every(atom=>atom.logic!=='prohibited'))throw new Error('An exclusion rule lacks an explicit exclusion source.');
+        if(evidence.some(atom=>!atom||atom.dimension!==row.dimension))return reject(item,'it cited missing or mismatched evidence');
+        if(polarity==='include'&&evidence.every(atom=>atom.logic==='prohibited'||atom.logic==='uncertain'))return reject(item,'only exclusion or uncertain evidence supported it');
+        if(polarity==='exclude'&&evidence.every(atom=>atom.logic!=='prohibited'))return reject(item,'no explicit exclusion in the source supported it');
         const text=stripAtomCitations(item.text).trim().replace(/\s+/g,' ');
-        if(/[\u3400-\u9fff]/u.test(text)||!supportedNumbers(text,evidence.map(atom=>atom.sourceSentence).join(' ')))throw new Error('A rule contains unsupported numbers or untranslated text.');
+        if(/[\u3400-\u9fff]/u.test(text)||!supportedNumbers(text,evidence.map(atom=>atom.sourceSentence).join(' ')))return reject(item,'it contained a number not in the source or untranslated text');
         ids.forEach(id=>used.add(id));
         // Rules are shown joined by spaces; one without a full stop runs into the next.
         return /[.!?]$/.test(text)?text:text+'.';
-      });
+      }).filter(Boolean);
     }
-    const include=uniqueRules(checkRules(row.include,'include')),exclude=uniqueRules(checkRules(row.exclude,'exclude'));
-    if(include.some(item=>exclude.some(other=>ruleKey(item)===ruleKey(other))))throw new Error('The same rule appears in inclusion and exclusion.');
+    const include=uniqueRules(checkRules(row.include,'include'));
+    let exclude=uniqueRules(checkRules(row.exclude,'exclude'));
+    const both=exclude.filter(item=>include.some(other=>ruleKey(item)===ruleKey(other)));
+    if(both.length){exclude=exclude.filter(item=>!both.includes(item));both.forEach(rule=>dropped.push(row.dimension+': "'+rule+'" was proposed as both inclusion and exclusion; it was kept as inclusion only. Check it against the source.'))}
     return {dimension:row.dimension,include,exclude};
   });
   const topic=stripAtomCitations(answer.reviewTopic).trim().replace(/\s+/g,' '),paragraph=stripAtomCitations(answer.manuscriptParagraph).trim().replace(/\s+/g,' ');
@@ -435,7 +443,7 @@ function validateAcademicDraft(answer,input,signature,model,extracts){
   if(!rows.some(row=>row.include.length))throw new Error('The model returned no supported inclusion rule.');
   const missed=extracts.atoms.filter(atom=>!used.has(atom.id)).map(atom=>atom.dimension+': check the omitted or conditional proposition '+atom.sourceSentence);
   const notes=answer.uncertainties.filter(item=>typeof item==='string'&&item.trim()&&item.length<500).map(item=>item.trim());
-  return {signature,slot:model.slot,modelName:model.name,generatedAt:new Date().toISOString(),reviewTopic:topic,rows,uncertainties:[...new Set([...extracts.issues,...notes,...missed])],manuscriptParagraph:paragraph,trace:extracts.atoms.map(atom=>({...atom,used:used.has(atom.id)}))};
+  return {signature,slot:model.slot,modelName:model.name,generatedAt:new Date().toISOString(),reviewTopic:topic,rows,uncertainties:[...new Set([...dropped,...extracts.issues,...notes,...missed])],manuscriptParagraph:paragraph,trace:extracts.atoms.map(atom=>({...atom,used:used.has(atom.id)}))};
 }
 async function autoCriteriaPipeline(model,input,signature,signal,progress){
   const segments=sourceSegments(input);if(!segments.length)throw new Error('No source rules were entered.');
