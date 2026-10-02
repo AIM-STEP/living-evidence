@@ -7,7 +7,7 @@
 <meta name="description" content="Calibrate and audit AI-assisted title and abstract screening from local AIM-STEP search results.">
 <title>AIM-STEP | Title and abstract screening</title>
 <style>
-:root{--ink:#171a20;--ink2:#393c41;--muted:#686a70;--line:#d8d9db;--plum:#5c004d;--pale:#f8eff6;--green:#18794e;--amber:#986500;--red:#b42318}
+:root{--ink:#171a20;--ink2:#393c41;--muted:#686a70;--line:#d8d9db;--soft:#ececed;--plum:#5c004d;--pale:#f8eff6;--green:#18794e;--amber:#986500;--red:#b42318}
 *{box-sizing:border-box}
 body{margin:0;background:#fafafa;color:var(--ink);font:14px/1.5 Inter,Arial,sans-serif;-webkit-font-smoothing:antialiased}
 button,input,textarea,select{font:inherit}
@@ -136,6 +136,8 @@ th{background:#f4f4f4}
 .results-like .del-col{width:34px;padding:0 6px;text-align:center}.results-like .src{color:var(--muted);margin-left:6px;font-size:11px}.remove-import{width:22px;height:22px;display:inline-grid;place-items:center;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--muted);font-size:15px;line-height:1;cursor:pointer}.remove-import:hover{color:var(--red);border-color:var(--line)}.remove-import:focus-visible{outline:2px solid var(--plum);outline-offset:1px}.remove-import:disabled{opacity:.4;cursor:default}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .source-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#f7f7f7}.source-summary>div{padding:8px 12px;border-left:1px solid var(--line);min-width:0}.source-summary>div:first-child{border-left:0}.source-summary strong{display:block;font-size:17px;line-height:1.2}.source-summary span{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dedup-note{margin:8px 0 0}.source-history{margin-top:10px}@media(max-width:620px){.source-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.source-summary>div:nth-child(3){border-left:0}.source-summary>div:nth-child(n+3){border-top:1px solid var(--line)}}
 .collapse-toggle{width:30px;height:30px;display:inline-grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}.collapse-toggle:hover{border-color:var(--plum);color:var(--plum)}.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:1px}.collapse-toggle svg{width:18px;height:18px;fill:currentColor;transition:transform .15s}.collapse-toggle[aria-expanded="false"] svg{transform:rotate(180deg)}.panel.is-collapsed>.panel-head{border-bottom:0}@media(prefers-reduced-motion:reduce){.collapse-toggle svg{transition:none}}
+.criteria-summary{font-size:12px;line-height:1.7;color:var(--ink2);overflow-wrap:anywhere}.summary-rule{width:185px;max-width:100%;border-top:2px solid var(--ink);margin:0 0 10px}.summary-intro{margin:0 0 12px}.summary-intro p{margin:0}.summary-block{margin:18px 0}.summary-block h3{font-size:12px;color:var(--ink);margin:0 0 7px;font-weight:700}.summary-inclusion{display:flex;align-items:flex-start;margin:4px 0}.summary-list{margin:5px 0 0;padding-left:23px}.summary-list li{padding-left:2px;margin:3px 0}.summary-pending{list-style:none;padding-left:0}.summary-pending li{padding-left:14px;position:relative}.summary-pending li:before{content:'-';position:absolute;left:0}.summary-muted{color:var(--muted)}.summary-paragraph{margin:7px 0 0;line-height:1.75}.source-trace{margin-top:20px;border-top:1px solid var(--soft);padding-top:10px}.source-trace summary{cursor:pointer;font-weight:700}.source-trace li{margin:7px 0}.source-trace small{display:block;color:var(--muted)}
+.criteria-origin{margin:0 0 12px}.criteria-file{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-height:30px;padding:0 4px 0 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:12px;color:var(--ink2)}.criteria-file .file-name{border:0;background:none;padding:0;color:var(--plum);font:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}.criteria-file .file-name:hover{text-decoration:underline}.criteria-file .file-meta{color:var(--muted);white-space:nowrap}.criteria-upload-error{font-size:12px;color:var(--red)}
 </style>
 </head>
 <body>
@@ -154,7 +156,7 @@ th{background:#f4f4f4}
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span>Databases</span></div><div><strong id="stat-total">0</strong><span>Records imported</span></div><div><strong id="stat-dups">0</strong><span>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden></p>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col">Imported</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="num-col">Duplicates</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
-<div class="toolbar"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button></div>
+<div class="toolbar"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button><button class="btn small" id="upload-criteria" type="button">Upload criteria</button><input type="file" id="criteria-file-input" accept=".docx,.xlsx,.csv,.tsv,.txt,.md,.json,.html,.htm,.doc,.xls,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" hidden aria-label="Upload eligibility criteria (Word, Excel or text)"><span class="criteria-file" id="criteria-file" hidden></span><span class="criteria-upload-error" id="criteria-upload-error" role="alert" hidden></span><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button></div>
 </div>
 </section>
 <section class="panel" hidden data-developer-model>
@@ -217,7 +219,7 @@ th{background:#f4f4f4}
 </dialog>
 <dialog id="criteria-dialog" class="dialog" aria-labelledby="criteria-title">
 <div class="panel-head"><h2 id="criteria-title">Eligibility criteria</h2><button class="btn small" type="button" id="close-criteria">Close</button></div>
-<div class="panel-body"><p class="hint" id="criteria-question" hidden></p><div class="table-wrap"><table><thead><tr><th>Criterion dimension</th><th>Eligibility rule</th><th>Exclusion rule</th><th>Other rule</th></tr></thead><tbody id="criteria-rows"></tbody></table></div></div>
+<div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div id="criteria-view"></div></div>
 </dialog>
 <dialog id="source-dialog" class="dialog source-dialog" aria-labelledby="source-dialog-title"> <div class="panel-head"><h2 id="source-dialog-title">Search results from Search strategy</h2><button class="btn small" type="button" id="close-source">Close</button></div> <div class="panel-body"> <p class="hint">Tick the searches whose records you want to screen. Records found by several searches are screened once.</p> <div class="table-wrap results-like"><table aria-label="Search results available for screening"><thead><tr><th scope="col" class="select-col"><input type="checkbox" id="source-select-all" aria-label="Select all searches"></th><th scope="col" class="date-col">Date</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th></tr></thead><tbody id="source-choice-rows"></tbody></table></div> <p class="hint" id="source-choice-summary" role="status" aria-live="polite"></p> </div> <div class="panel-footer toolbar between"><button class="btn small" type="button" id="cancel-source">Cancel</button><button class="btn primary" type="button" id="apply-source">Use selected</button></div> </dialog> <dialog id="import-dialog" class="dialog" aria-labelledby="import-title">
 <div class="panel-head"><h2 id="import-title">Import search results</h2><button class="btn small" type="button" id="close-import">Close</button></div>
@@ -253,6 +255,8 @@ const workspaceKey='aimstep-screen-summary:'+scope;
 const searchKey='aimstep-search-strategy:'+scope;
 const searchSummaryKey='aimstep-search-summary:'+scope;
 const eligibilityKey='aimstep-eligibility:'+scope;
+const eligibilitySummaryKey='aimstep-eligibility-summary:'+scope;
+let criteriaOrigin=null,eligibilityRowsSig='';
 const settingsKey='aimstep-screen-settings:'+scope;
 const tokenKey=slot=>'aimstep-screen-token:'+slot+':'+scope;
 const criteriaDialog=$('criteria-dialog');
@@ -354,6 +358,7 @@ function eligibilityFallback(){
   try{
     const raw=JSON.parse(localStorage.getItem(eligibilityKey)||'null');
     if(!raw)return null;
+    eligibilityRowsSig=summaryRowsSig(Object.hasOwn(raw,'generationMethodChoice')&&!raw.generationMethodChoice?[]:raw.activeGenerator==='machine'?raw.machineCriteria:raw.criteria);
     const choices=Object.hasOwn(raw,'generationMethodChoice')&&!raw.generationMethodChoice?[]:
       raw.activeGenerator==='machine'?raw.machineCriteria:raw.criteria;
     return {framework:raw.framework||'',reviewType:raw.reviewType||'',question:raw.question||'',rows:(Array.isArray(choices)?choices:[]).map(row),limits:raw.dateRange||{}};
@@ -493,8 +498,9 @@ async function loadSource(){
     }
   }
   dedupStats={byImport:stats,total:[...stats.values()].reduce((n,x)=>n+x.total,0),possible};
-  const live=eligibilityFallback();
-  const rawCriteria=draft?.source==='previous'&&live?live:draft?.criteriaSnapshot||live;
+  const live=eligibilityFallback(),upload=validCriteriaUpload(workspace?.criteriaUpload);
+  const rawCriteria=upload?upload.snapshot:draft?.source==='previous'&&live?live:draft?.criteriaSnapshot||live;
+  criteriaOrigin=upload?{kind:'upload',name:upload.name}:rawCriteria&&rawCriteria===live?{kind:'eligibility'}:rawCriteria?{kind:'search',name:text(draft?.criteriaSnapshot?.origin,200)}:null;
   const criteria=rawCriteria?{
     framework:text(rawCriteria.framework,100),reviewType:text(rawCriteria.reviewType,150),
     question:text(rawCriteria.question,20000),
@@ -640,9 +646,7 @@ function renderSource(){  // Databases of the imports in use, not every database
     const when=short(run.importedAt),count=st.total,dbn=databaseNames[run.db]||run.db||'Unknown',src=run.kind==='local'?'local file'+(run.file?': '+run.file:''):'Search strategy';
     return '<tr><td title="'+esc(when)+'">'+esc(when)+'</td><td title="'+esc(dbn+' · '+src)+'">'+esc(dbn)+'<span class="src">'+esc(run.kind==='local'?'local file':'search strategy')+'</span></td><td class="num-col">'+count.toLocaleString()+'</td><td class="num-col" title="Records already found by an earlier import">'+st.duplicates.toLocaleString()+'</td><td class="del-col"><button type="button" class="remove-import" data-delete-import="'+esc(run.kind+':'+run.id)+'" title="Delete this import" aria-label="Delete the '+esc(dbn)+' import of '+esc(when)+'">×</button></td></tr>';
   }).join(''):'<tr><td colspan="5" class="empty">Nothing imported yet. Use Import from search strategy or Import from local.</td></tr>';
-  $('criteria-rows').innerHTML=(source.criteria?.rows||[]).length?
-    source.criteria.rows.map(r=>'<tr><td>'+esc(r.title)+'</td><td>'+esc(r.condition)+'</td><td>'+esc(r.uncertain)+'</td><td>'+esc(r.definition)+'</td></tr>').join(''):
-    '<tr><td colspan="4">No eligibility rules saved for this project.</td></tr>';
+  renderCriteriaFile();
   let warning='';
   if(sourceError)warning=sourceError;
   if(!source.records.length)warning+=(warning?'\n':'')+'No local search records found. Complete Search strategy for this project or import a results file.';
@@ -1219,11 +1223,260 @@ async function importFile(file,dbName){
   return run;
 }
 
-$('open-criteria').addEventListener('click',()=>{
-  const q=source.criteria?.question||'';
-  $('criteria-question').textContent=q?'Question: '+q:'';$('criteria-question').hidden=!q;
-  criteriaDialog.showModal();
+/* ---------------- Eligibility criteria: view and upload ----------------
+   The view shows the criteria exactly as the Eligibility criteria step does:
+   that page saves the summary it displays (aimstep-eligibility-summary), and
+   it is used here while it still matches the rows in use. Criteria from an
+   uploaded file, or saved before that page kept a summary, are summarised
+   with the same rules as that page's manual summary (domainInfo, ruleClauses,
+   standardizedRow and summaryTopic, kept in step with eligibility.html). */
+function summaryRowsSig(rows){let h=2166136261;for(const c of JSON.stringify((Array.isArray(rows)?rows:[]).map(r=>[String(r?.title||''),String(r?.condition||''),String(r?.uncertain||''),String(r?.definition||'')])))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0).toString(16)}
+function domainInfo(title,framework){
+  const labels={Population:['P','Population'],Intervention:['I','Intervention'],Exposure:['E','Exposure'],Comparison:['C','Comparison'],Comparator:['C','Comparator'],Outcomes:['O','Outcomes'],'Study design':['S','Study design'],Concept:['C','Concept'],Context:[framework==='PICo'?'Co':'C','Context'],'Phenomenon of Interest':['I','Phenomenon of interest'],Other:['','Other']};
+  return labels[title]||['',title||'Other'];
+}
+function ruleClauses(value,kind){
+  return String(value||'').normalize('NFKC').replace(/\r\n?/g,'\n').split(/[\n;；]+/).map(part=>{
+    let t=part.trim().replace(/^[\s•*\-–—]+/,'').replace(/^\d+[.)]\s*/,'').replace(/\s+/g,' ')
+      .replace(/^(?:(?:inclusion|eligibility|exclusion|other)\s+(?:rule|criteria?)|include|exclude)\s*:\s*/i,'')
+      .replace(/\bRCTs?\b/gi,term=>term.toLowerCase().endsWith('s')?'randomized controlled trials':'randomized controlled trial')
+      .replace(/\bvs\.?(?=\s|$)/gi,'versus').replace(/\b(?:yrs|y\/o)\b/gi,'years');
+    if(kind==='exclude')t=t.replace(/^(?:exclude|excluding|do not include)\s+/i,'');
+    else if(kind==='include')t=t.replace(/^include\s+/i,'');
+    t=t.replace(/\s+([,.:!?])/g,'$1').replace(/[\s.。]+$/,'').trim();
+    if(!t)return '';
+    return t.charAt(0).toUpperCase()+t.slice(1)+'.';
+  }).filter(Boolean);
+}
+function ruleKey(rule){return rule.toLocaleLowerCase('en').replace(/^studies?\s+(?:of|involving|with)\s+/,'').replace(/^[^\p{L}\p{N}]+/u,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim()}
+function ruleIssue(rule){
+  if(/[㐀-鿿]/u.test(rule))return 'English translation and verification required';
+  if(/^(?:please\s+)?(?:specify|define|clarify|confirm|decide|determine|consider|describe|enter|select|state|add)\b|^(?:tbd|not specified|to be defined|unknown|n\/a)\.?$/i.test(rule))return 'Operational definition required';
+  if(/^(?:eligible (?:study designs?|participants?|populations?|interventions?|comparators?|outcomes?)|adults with the condition or population of interest)\.?$/i.test(rule))return 'Specific eligibility rule required';
+  return '';
+}
+function uniqueRules(rules){const seen=new Set();return rules.filter(rule=>{const key=ruleKey(rule);if(!key||seen.has(key))return false;seen.add(key);return true})}
+function standardizedRow(row,framework,pending){
+  const [code,label]=domainInfo(row.title,framework),include=[],exclude=[];
+  const collect=(value,kind,target)=>{for(const rule of ruleClauses(value,kind)){const issue=ruleIssue(rule);if(issue)pending.push(label+': '+issue+(issue==='Operational definition required'?' ('+rule.replace(/\.$/,'')+')':''));else target.push(rule)}};
+  collect(row.condition,'include',include);
+  for(const clause of String(row.definition||'').split(/[\n;；]+/)){
+    if(/^\s*(?:exclude|excluding|do not include|ineligible\b|not eligible\b)/i.test(clause))collect(clause,'exclude',exclude);
+    else collect(clause,'other',include);
+  }
+  collect(row.uncertain,'exclude',exclude);
+  if(!String(row.condition||'').trim())pending.push(label+': Define an explicit inclusion rule.');
+  const normalizedInclude=uniqueRules(include),normalizedExclude=uniqueRules(exclude);
+  for(const rule of normalizedExclude)if(normalizedInclude.some(item=>ruleKey(item)===ruleKey(rule)))pending.push(label+': The same rule appears under inclusion and exclusion.');
+  return {code,label,include:normalizedInclude,exclude:normalizedExclude};
+}
+function shortTopicPart(value){
+  const raw=String(value||'').replace(/^(?:include\s+)?(?:studies?|reports?)\s+(?:of|with|involving|evaluating)\s+/i,'').replace(/\.$/,'').trim();
+  const part=raw.charAt(0).toUpperCase()+raw.slice(1);
+  return part.length>74?part.slice(0,74).replace(/\s+\S*$/,'').trim()+'…':part;
+}
+function summaryTopic(rows,framework){
+  if(framework==='Other')return shortTopicPart(rows.find(row=>row.label==='Other')?.include[0])||'To be defined';
+  const population=rows.find(row=>row.label==='Population');
+  const coreName=framework==='PECO'?'Exposure':framework==='PCC'?'Concept':framework==='PICo'?'Phenomenon of interest':'Intervention';
+  const core=rows.find(row=>row.label===coreName),code=domainInfo(coreName==='Phenomenon of interest'?'Phenomenon of Interest':coreName,framework)[0];
+  return 'P: '+(shortTopicPart(population?.include[0])||'To be defined')+' · '+code+': '+(shortTopicPart(core?.include[0])||'To be defined');
+}
+// A framework is only read from the file or the previous step; for a file
+// that names none it follows from the domains it uses.
+function inferFramework(rows){
+  const t=new Set(rows.map(r=>r.title));
+  if(t.has('Exposure'))return 'PECO';if(t.has('Phenomenon of Interest'))return 'PICo';if(t.has('Concept'))return 'PCC';
+  return ['Population','Intervention','Comparison','Comparator','Outcomes'].some(x=>t.has(x))?'PICO':'Other';
+}
+function summarizeCriteria(c){
+  const rows=c.rows||[],known=['PICO','PECO','PCC','PICo','SPIDER','Other'],framework=known.includes(c.framework)?c.framework:inferFramework(rows);
+  const pending=[],normalized=rows.map(row=>standardizedRow(row,framework,pending));
+  if(framework!=='Other'&&!rows.some(row=>row.title==='Population'))pending.push('Define the population.');
+  if(framework!=='Other'&&!rows.some(row=>['Intervention','Exposure','Concept','Phenomenon of Interest'].includes(row.title)))pending.push('Define the central review concept.');
+  const exclusions=new Map();for(const row of normalized)for(const rule of row.exclude){const key=ruleKey(rule);if(!exclusions.has(key))exclusions.set(key,{rule,domains:[]});exclusions.get(key).domains.push(row.label)}
+  if(!exclusions.size)pending.push('Confirm whether explicit exclusion rules are needed.');
+  const groups=new Map();for(const item of exclusions.values()){const domain=item.domains.join(' / ');if(!groups.has(domain))groups.set(domain,[]);groups.get(domain).push(item.rule)}
+  const hasStudy=normalized.some(row=>row.label==='Study design');
+  return {topic:summaryTopic(normalized,framework),framework:framework==='PICO'&&hasStudy?'PICOS':framework==='PECO'&&hasStudy?'PECOS':framework,
+    includes:normalized.map(row=>({label:row.label,text:row.include.join(' ')})),limits:[],exclusions:[...groups].map(([domain,rules])=>({domain,text:rules.join(' ')})),
+    pending:[...new Set(pending)],paragraph:'',trace:[]};
+}
+// The same markup as the Eligibility criteria preview.
+function summaryHtml(m){
+  const list=v=>Array.isArray(v)?v:[];
+  const includes=list(m.includes).map(row=>`<div class="summary-inclusion"><span><strong>${esc(row.label)}:</strong> ${row.text?esc(row.text):'<span class="summary-muted">To be defined.</span>'}</span></div>`).join('');
+  const limits=list(m.limits);
+  const exclusionHtml=list(m.exclusions).length?`<ol class="summary-list">${m.exclusions.map(g=>`<li><strong>${esc(g.domain)}:</strong> ${esc(g.text)}</li>`).join('')}</ol>`:'<p class="summary-muted">No explicit exclusion rules entered.</p>';
+  const pending=list(m.pending);
+  const trace=list(m.trace);
+  const traceHtml=trace.length?`<details class="source-trace"><summary>${esc(m.traceLabel||'Source trace')} (${trace.length})</summary><ol>${trace.map(a=>`<li><strong>${esc(a.dimension)} · ${esc(a.logic)}</strong> — ${esc(a.proposition)}<small>${esc(a.id)} / ${esc(a.sourceId)} · ${a.used?'Included in draft':'Check omission'} · ${esc(m.traceSource||'Source')}: ${esc(a.sourceSentence)}</small></li>`).join('')}</ol></details>`:'';
+  return `<div class="criteria-summary"><div class="summary-rule" aria-hidden="true"></div><div class="summary-intro"><p><strong>Review topic:</strong> ${esc(m.topic||'To be defined')}</p><p><strong>Framework:</strong> ${esc(m.framework||'Other')}</p></div><div class="summary-rule" aria-hidden="true"></div><section class="summary-block"><h3>Inclusion criteria</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong>Limits:</strong> ${esc(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclusionHtml}</section><section class="summary-block"><h3>Pending clarification</h3>${pending.length?`<ul class="summary-list summary-pending">${pending.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`:'<p class="summary-muted">None identified.</p>'}</section><section class="summary-block"><h3>Manuscript wording</h3>${m.paragraph?`<p class="summary-paragraph">${esc(m.paragraph)}</p>`:`<p class="summary-muted">${esc(m.paragraphNote||'No manuscript wording was generated for these criteria.')}</p>`}</section>${traceHtml}<div class="summary-rule" aria-hidden="true"></div></div>`;
+}
+function renderCriteriaView(){
+  const c=source.criteria,origin=$('criteria-origin');
+  if(!c?.rows?.length){origin.textContent='';origin.hidden=true;$('criteria-view').innerHTML='<p class="summary-muted">No eligibility rules saved for this project. Complete the Eligibility criteria step or use Upload criteria.</p>';return}
+  let saved=null;
+  if(criteriaOrigin?.kind==='eligibility'){try{saved=JSON.parse(localStorage.getItem(eligibilitySummaryKey)||'null')}catch(e){}if(saved?.version!==1||saved.rowsSig!==eligibilityRowsSig)saved=null}
+  const k=criteriaOrigin?.kind;
+  origin.textContent=k==='upload'?'From the uploaded file "'+criteriaOrigin.name+'". Delete it to use the criteria from the previous steps.':
+    k==='eligibility'?'From the Eligibility criteria step.'+(saved?'':' Open that step once to show its standardized wording here.'):
+    k==='search'?'From Search strategy'+(criteriaOrigin.name?' ("'+criteriaOrigin.name+'")':'')+'.':'';
+  origin.hidden=!origin.textContent;
+  $('criteria-view').innerHTML=summaryHtml(saved||summarizeCriteria(c));
+}
+
+/* Reading a criteria file. Word (.docx) and Excel (.xlsx) are ZIP packages
+   read in the browser; nothing is uploaded to a server. A table with
+   dimension / inclusion / exclusion columns is read by column; free text is
+   read by its headings: "Inclusion criteria" and "Exclusion criteria" switch
+   the section, and domain headings ("Population:", "Study design:") start a
+   row (a line with no domain after "Domain: rule" goes to Other). Lines
+   before any heading are the review question. */
+async function zipEntry(bytes,wanted){
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),dec=new TextDecoder();
+  let end=-1;for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--)if(view.getUint32(i,true)===0x06054b50){end=i;break}
+  if(end<0)throw new Error('The file could not be read as a Word or Excel document.');
+  const count=view.getUint16(end+10,true);let pos=view.getUint32(end+16,true);const names=[],entries=new Map();
+  for(let i=0;i<count&&i<5000;i++){
+    if(pos+46>bytes.length||view.getUint32(pos,true)!==0x02014b50)throw new Error('The document ZIP directory is invalid.');
+    const nameLen=view.getUint16(pos+28,true),name=dec.decode(bytes.subarray(pos+46,pos+46+nameLen));
+    entries.set(name,{flags:view.getUint16(pos+8,true),method:view.getUint16(pos+10,true),compressed:view.getUint32(pos+20,true),size:view.getUint32(pos+24,true),offset:view.getUint32(pos+42,true)});names.push(name);
+    pos+=46+nameLen+view.getUint16(pos+30,true)+view.getUint16(pos+32,true);
+  }
+  const name=typeof wanted==='function'?names.filter(wanted).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}))[0]:wanted,e=entries.get(name);
+  if(!e)return null;
+  if(e.flags&1)throw new Error('Password-protected documents are not supported.');
+  if(e.size>20000000)throw new Error('The document is too large.');
+  if(view.getUint32(e.offset,true)!==0x04034b50)throw new Error('The document entry is invalid.');
+  const start=e.offset+30+view.getUint16(e.offset+26,true)+view.getUint16(e.offset+28,true),data=bytes.subarray(start,start+e.compressed);
+  if(e.method===0)return dec.decode(data);
+  if(e.method!==8)throw new Error('This document uses an unsupported compression method.');
+  if(!globalThis.DecompressionStream)throw new Error('This browser cannot read Word or Excel files. Use current Chrome, Edge, Firefox or Safari, or upload a text file.');
+  return dec.decode(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+}
+const xmlDoc=xml=>{const d=new DOMParser().parseFromString(xml,'application/xml');if(d.querySelector('parsererror'))throw new Error('The document content is invalid.');return d};
+async function docxCriteria(bytes,origin){
+  const xml=await zipEntry(bytes,'word/document.xml');if(!xml)throw new Error('No document text was found in this .docx file.');
+  const doc=xmlDoc(xml),ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const textOf=node=>[...node.getElementsByTagNameNS(ns,'p')].map(p=>[...p.getElementsByTagNameNS(ns,'t')].map(t=>t.textContent).join('')).join('\n');
+  for(const table of doc.getElementsByTagNameNS(ns,'tbl')){
+    const grid=[...table.getElementsByTagNameNS(ns,'tr')].map(tr=>[...tr.children].filter(c=>c.localName==='tc').map(textOf));
+    if(grid.length&&grid[0].some(c=>/eligibility|inclusion|exclusion|纳入|排除/i.test(c)))return gridCriteria(grid,origin);
+  }
+  return textCriteria(textOf(doc.documentElement),origin);
+}
+async function xlsxCriteria(bytes,origin){
+  const sharedXml=await zipEntry(bytes,'xl/sharedStrings.xml'),shared=sharedXml?[...xmlDoc(sharedXml).getElementsByTagName('si')].map(si=>[...si.getElementsByTagName('t')].map(t=>t.textContent).join('')):[];
+  for(let n=1;n<=50;n++){
+    const xml=await zipEntry(bytes,'xl/worksheets/sheet'+n+'.xml');if(!xml){if(n>1)break;continue}
+    const grid=[];
+    for(const c of xmlDoc(xml).getElementsByTagName('c')){
+      const ref=c.getAttribute('r')||'',m=ref.match(/^([A-Z]+)(\d+)$/);if(!m)continue;
+      const col=[...m[1]].reduce((v,ch)=>v*26+ch.charCodeAt(0)-64,0)-1,rowIndex=Number(m[2])-1,type=c.getAttribute('t'),v=c.getElementsByTagName('v')[0]?.textContent??'';
+      const value=type==='s'?shared[Number(v)]??'':type==='inlineStr'?[...c.getElementsByTagName('t')].map(t=>t.textContent).join(''):v;
+      (grid[rowIndex]||=[])[col]=value;
+    }
+    const rows=grid.filter(Boolean).map(r=>Array.from(r,v=>v??'')).filter(r=>r.some(v=>String(v).trim()));
+    if(rows.length)return gridCriteria(rows,origin);
+  }
+  throw new Error('The workbook has no cells with criteria.');
+}
+function csvGrid(t,separator){const rows=[];let row=[],cell='',quoted=false;for(let i=0;i<t.length;i++){const c=t[i];if(c==='"'){if(quoted&&t[i+1]==='"'){cell+='"';i++}else if(!cell||quoted)quoted=!quoted;else cell+=c}else if(c===separator&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=''}else cell+=c}if(quoted)throw new Error('The file contains an unclosed quoted field.');row.push(cell);if(row.some(x=>x.trim()))rows.push(row);return rows}
+const domainTitles=[['Population',/^(?:population|participants?|patients?|subjects?|人群|研究对象|患者)$/i],['Intervention',/^(?:interventions?|treatments?|干预(?:措施)?)$/i],['Exposure',/^(?:exposures?|暴露(?:因素)?)$/i],['Comparison',/^(?:comparisons?|comparators?|controls?|对照(?:组|措施)?)$/i],['Outcomes',/^(?:outcomes?|结局(?:指标)?)$/i],['Study design',/^(?:study designs?|designs?|study types?|types? of stud(?:y|ies)|研究设计|研究类型)$/i],['Concept',/^(?:concepts?|概念)$/i],['Context',/^(?:context|settings?|背景|场景)$/i],['Phenomenon of Interest',/^(?:phenomen(?:on|a)(?: of interest)?|现象)$/i],['Other',/^(?:other|others|limits?|其他)$/i]];
+const canonicalTitle=v=>{const t=String(v||'').replace(/[*_#]/g,'').trim();return (domainTitles.find(([,re])=>re.test(t))||[t||'Other'])[0]};
+const headAlias={title:/^(?:criterion dimension|dimension|domain|criterion|element|item|维度|标准维度|项目)$/i,condition:/^(?:eligibility rules?|inclusion(?: criteria| rules?)?|eligibility(?: criteria)?|include|纳入(?:标准|规则)?)$/i,uncertain:/^(?:exclusion(?: criteria| rules?)?|exclude|排除(?:标准|规则)?)$/i,definition:/^(?:other rules?|other|definitions?|notes?|其他(?:规则)?|备注)$/i};
+function rowsFrom(list,question,origin){
+  const rows=[];
+  for(const r of list){const title=canonicalTitle(r.title),cell=v=>text(String(v||'').trim(),5000);if(!cell(r.condition)&&!cell(r.uncertain)&&!cell(r.definition))continue;
+    const same=rows.find(x=>x.title===title);
+    if(same){for(const k of ['condition','uncertain','definition'])if(cell(r[k]))same[k]=text((same[k]?same[k]+'\n':'')+cell(r[k]),5000)}
+    else rows.push({id:'UP-'+String(rows.length+1).padStart(2,'0'),title,condition:cell(r.condition),uncertain:cell(r.uncertain),definition:cell(r.definition)});
+  }
+  if(!rows.length)throw new Error('No inclusion or exclusion criteria were found in "'+origin+'".');
+  return {framework:'',reviewType:'',question:text(question||'',20000),rows:rows.slice(0,60)};
+}
+function gridCriteria(grid,origin){
+  const heads=grid[0].map(h=>String(h||'').replace(/\s+/g,' ').trim()),idx=f=>heads.findIndex(h=>headAlias[f].test(h));
+  const header=idx('condition')>=0||idx('uncertain')>=0;
+  if(!header&&grid.every(r=>r.filter(v=>String(v||'').trim()).length<=1))return textCriteria(grid.map(r=>r.join(' ')).join('\n'),origin);
+  const cols=header?{title:idx('title'),condition:idx('condition'),uncertain:idx('uncertain'),definition:idx('definition')}:{title:0,condition:1,uncertain:2,definition:3};
+  return rowsFrom((header?grid.slice(1):grid).map(r=>Object.fromEntries(Object.entries(cols).map(([k,i])=>[k,i>=0?r[i]||'':'']))),'',origin);
+}
+function textCriteria(raw,origin){
+  let t=String(raw||'').replace(/^﻿/,'').replace(/\r\n?/g,'\n').trim();
+  if(!t)throw new Error('"'+origin+'" is empty.');
+  if(/^[[{]/.test(t)){try{const v=JSON.parse(t),list=Array.isArray(v)?v:v.rows||v.criteriaSnapshot?.rows||(v.activeGenerator==='machine'?v.machineCriteria:v.criteria)||v.state?.criteriaSnapshot?.rows;if(Array.isArray(list))return rowsFrom(list.map(row),v.question||v.criteriaSnapshot?.question||'',origin)}catch(e){if(!(e instanceof SyntaxError))throw e}}
+  if(/<(?:table|html|body)\b/i.test(t)){const d=new DOMParser().parseFromString(t,'text/html'),table=d.querySelector('table');if(table)return gridCriteria([...table.rows].map(r=>[...r.cells].map(c=>c.textContent.trim())),origin);t=new DOMParser().parseFromString(d.body.innerHTML.replace(/<(?:br|\/p|\/div|\/li|\/h[1-6]|\/tr)\b[^>]*>/gi,'\n'),'text/html').body.textContent.trim()}
+  const first=t.split('\n')[0];
+  if(first.includes('\t'))return gridCriteria(csvGrid(t,'\t'),origin);
+  if(first.includes(',')&&/(criterion|dimension|eligibility|inclusion|exclusion|维度|纳入|排除)/i.test(first))return gridCriteria(csvGrid(t,','),origin);
+  const list=[],question=[];let mode='',current=null,inline=false;
+  const rowFor=title=>{let r=list.find(x=>x.title===title);if(!r){r={title,condition:'',uncertain:''};list.push(r)}return r};
+  const add=line=>{if(!line)return;const r=current||rowFor('Other'),k=mode==='exclude'?'uncertain':'condition';r[k]+=(r[k]?'\n':'')+line};
+  for(let line of t.split('\n')){
+    line=line.replace(/^\s*#+\s*/,'').replace(/\*\*/g,'').trim();if(!line)continue;
+    let m=line.match(/^(?:\d+[.)]\s*)?(inclusion|eligibility|exclusion|纳入|排除)(?:\s*(?:criteria|criterion|rules?|标准|规则))?\s*(?:[:：]\s*(.*))?$/i);
+    if(m){mode=/^(exclusion|排除)/i.test(m[1])?'exclude':'include';current=null;inline=false;add(m[2]?.trim());continue}
+    m=line.match(/^(?:[-•*]\s*)?([^:：]{1,40})[:：]\s*(.*)$/);
+    if(m&&domainTitles.some(([,re])=>re.test(m[1].trim()))){current=rowFor(canonicalTitle(m[1]));inline=!!m[2].trim();if(!mode)mode='include';add(m[2].trim());continue}
+    // A line after "Population: ..." is its own item; lines under a bare
+    // "Population:" heading belong to it.
+    if(inline){current=null;inline=false}
+    if(!mode&&!current){question.push(line);continue}
+    add(line);
+  }
+  return rowsFrom(list,question.join('\n'),origin);
+}
+async function parseCriteriaFile(file){
+  if(file.size>15*1024*1024)throw new Error('Criteria files must be 15 MB or smaller.');
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(ext==='doc')throw new Error('Older Word .doc files cannot be read in the browser. Save the file as .docx and upload it again.');
+  if(ext==='xls')throw new Error('Older Excel .xls files cannot be read in the browser. Save the file as .xlsx (or .csv) and upload it again.');
+  if(ext==='docx'||ext==='xlsx'){const bytes=new Uint8Array(await file.arrayBuffer());return ext==='docx'?docxCriteria(bytes,file.name):xlsxCriteria(bytes,file.name)}
+  if(!['csv','tsv','txt','md','json','html','htm'].includes(ext))throw new Error('Upload a Word (.docx), Excel (.xlsx), CSV, TSV, text (.txt, .md), JSON or HTML file.');
+  const content=await file.text();
+  if(ext==='csv'||ext==='tsv')return gridCriteria(csvGrid(content.replace(/^﻿/,''),ext==='tsv'?'\t':','),file.name);
+  return textCriteria(content,file.name);
+}
+function validCriteriaUpload(u){
+  if(!u||typeof u!=='object'||typeof u.name!=='string'||!Array.isArray(u.snapshot?.rows)||!u.snapshot.rows.length)return null;
+  return {name:text(u.name,200),size:Number(u.size)||0,uploadedAt:text(u.uploadedAt,40),snapshot:{framework:text(u.snapshot.framework,100),reviewType:text(u.snapshot.reviewType,150),question:text(u.snapshot.question,20000),rows:u.snapshot.rows.slice(0,60).map(row)}};
+}
+function screeningHasProgress(){return workspace.approved.some(Boolean)||Object.keys(workspace.predictions).length||Object.keys(workspace.pilotSecondPredictions).length||Object.keys(workspace.fullPredictions).length||Object.keys(workspace.secondPredictions).length||Object.keys(workspace.reviews).length}
+function renderCriteriaFile(){
+  const box=$('criteria-file'),u=validCriteriaUpload(workspace?.criteriaUpload);
+  if(!u){box.hidden=true;box.replaceChildren();return}
+  const name=document.createElement('button'),meta=document.createElement('span'),del=document.createElement('button'),n=u.snapshot.rows.length;
+  name.type='button';name.className='file-name';name.textContent=u.name;name.title='View the criteria read from '+u.name;name.addEventListener('click',()=>{renderCriteriaView();criteriaDialog.showModal()});
+  meta.className='file-meta';meta.textContent='· '+n+(n===1?' criterion':' criteria')+' in use';
+  del.type='button';del.className='remove-import';del.textContent='×';del.title='Delete this file';del.setAttribute('aria-label','Delete the uploaded criteria file '+u.name);del.addEventListener('click',()=>{if(busy){toast('Stop screening before changing the criteria.');return}if(confirm('Delete "'+u.name+'"? Screening will use the criteria from the previous steps.'))setCriteriaUpload(null).catch(e=>uploadError(e.message))});
+  box.replaceChildren(name,meta,del);box.hidden=false;
+}
+function uploadError(message){const el=$('criteria-upload-error');el.textContent=message||'';el.hidden=!message}
+// Uploaded criteria take the place of those from the previous steps. Before
+// any screening, calibration simply restarts with them; once screening has
+// started, the source is marked out of date and Use latest source restarts it.
+async function setCriteriaUpload(upload){
+  const progress=screeningHasProgress();
+  workspace.criteriaUpload=upload;
+  await loadSource();
+  if(!progress){workspace.criteriaSig=source.criteriaSig;clearCalibration()}
+  log(upload?'criteria-uploaded':'criteria-upload-deleted',upload?{file:upload.name,rows:upload.snapshot.rows.length}:{});
+  await save();render();
+  toast(progress&&stale()?'Criteria changed. Use latest source to restart calibration with them.':upload?'Criteria uploaded. Screening uses these criteria.':'Uploaded criteria deleted. Screening uses the criteria from the previous steps.');
+}
+$('upload-criteria').addEventListener('click',()=>{if(busy){toast('Stop screening before changing the criteria.');return}uploadError('');$('criteria-file-input').value='';$('criteria-file-input').click()});
+$('criteria-file-input').addEventListener('change',async event=>{
+  const file=event.target.files[0];if(!file)return;
+  const button=$('upload-criteria');button.disabled=true;uploadError('');
+  try{
+    const snapshot=await parseCriteriaFile(file);
+    await setCriteriaUpload({name:file.name,size:file.size,uploadedAt:now(),snapshot});
+  }catch(e){uploadError('Could not read "'+file.name+'": '+e.message)}
+  finally{button.disabled=false;event.target.value=''}
 });
+$('open-criteria').addEventListener('click',()=>{renderCriteriaView();criteriaDialog.showModal()});
 $('close-criteria').addEventListener('click',()=>criteriaDialog.close());
 criteriaDialog.addEventListener('click',event=>{if(event.target===criteriaDialog)criteriaDialog.close()});
 
@@ -1381,6 +1634,7 @@ function refreshSource(){
 }
 window.addEventListener('storage',e=>{
   if(e.key===searchKey||e.key===searchSummaryKey||e.key===eligibilityKey)refreshSource();
+  if(e.key===eligibilitySummaryKey&&criteriaDialog.open)renderCriteriaView();
   if(e.key===searchSummaryKey)setTimeout(refreshSource,1200);
   if(e.key===settingsKey)refreshSettings();
 });

@@ -621,12 +621,18 @@ function manuscriptDraft(rows,exclusions,limits){
   if(limits.length)sentences.push('Additional limits were '+limits.join('; ').replace(/[.\s]+$/,'')+'.');
   return sentences.join(' ');
 }
+// The summary exactly as shown below, for Title and abstract screening to
+// display the same criteria. rowsSig ties it to the rows those criteria came
+// from, so a later edit made elsewhere is never shown with an old summary.
+const summaryKey='aimstep-eligibility-summary:'+(projectId||'default');
+function summaryRowsSig(rows){let h=2166136261;for(const c of JSON.stringify((rows||[]).map(r=>[String(r.title||''),String(r.condition||''),String(r.uncertain||''),String(r.definition||'')])))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0).toString(16)}
+function shareSummary(data){try{if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
 function renderPreview(){
-  const area=$('preview');if(!$('generation-method').value){area.innerHTML='';$('download').hidden=true;return}
-  if($('generation-method').value==='machine'&&(!state.machineRun||state.machineRun.question!==$('question').value.trim()||state.machineRun.reviewType!==$('review-type').value||(state.machineRun.sourceRevision??0)!==(Number(state.machineSourceRevision)||0))){area.innerHTML='<p class="empty">Click Start to generate criteria from the current text and attachments.</p>';$('download').hidden=true;return}
+  const area=$('preview');if(!$('generation-method').value){area.innerHTML='';$('download').hidden=true;shareSummary(null);return}
+  if($('generation-method').value==='machine'&&(!state.machineRun||state.machineRun.question!==$('question').value.trim()||state.machineRun.reviewType!==$('review-type').value||(state.machineRun.sourceRevision??0)!==(Number(state.machineSourceRevision)||0))){area.innerHTML='<p class="empty">Click Start to generate criteria from the current text and attachments.</p>';$('download').hidden=true;shareSummary(null);return}
   $('download').hidden=false;
   const {rows,framework,pending,exclusions,limits,topic,paragraph,trace}=standardizedCriteria();
-  if(!rows.length){area.innerHTML='<p class="empty">No criteria have been entered.</p>';return}
+  if(!rows.length){area.innerHTML='<p class="empty">No criteria have been entered.</p>';shareSummary(null);return}
   const hasStudy=rows.some(row=>row.label==='Study design');
   const frameworkLabel=framework==='PICO'&&hasStudy?'PICOS':framework==='PECO'&&hasStudy?'PECOS':framework;
   const includes=rows.map(row=>`<div class="summary-inclusion"><span><strong>${escapeHtml(row.label)}:</strong> ${row.include.length?escapeHtml(row.include.join(' ')):'<span class="summary-muted">To be defined.</span>'}</span></div>`).join('');
@@ -634,6 +640,9 @@ function renderPreview(){
   const exclusionGroups=new Map();for(const item of exclusions){const domain=item.domains.join(' / ');if(!exclusionGroups.has(domain))exclusionGroups.set(domain,[]);exclusionGroups.get(domain).push(item.rule)}
   const exclusionHtml=exclusionGroups.size?`<ol class="summary-list">${[...exclusionGroups].map(([domain,rules])=>`<li><strong>${escapeHtml(domain)}:</strong> ${escapeHtml(rules.join(' '))}</li>`).join('')}</ol>`:'<p class="summary-muted">No explicit exclusion rules entered.</p>';
   const traceHtml=trace?.length?`<details class="source-trace"><summary>${state.activeGenerator==='machine'?'Intermediate draft trace':'Source trace'} (${trace.length})</summary><ol>${trace.map(atom=>`<li><strong>${escapeHtml(atom.dimension)} · ${escapeHtml(atom.logic)}</strong> — ${escapeHtml(atom.proposition)}<small>${escapeHtml(atom.id)} / ${escapeHtml(atom.sourceId)} · ${atom.used?'Included in draft':'Check omission'} · ${state.activeGenerator==='machine'?'First-pass draft':'Source'}: ${escapeHtml(atom.sourceSentence)}</small></li>`).join('')}</ol></details>`:'';
+  shareSummary({rowsSig:summaryRowsSig(state.activeGenerator==='machine'?state.machineCriteria:state.criteria),topic:topic||summaryTopic(rows,framework),framework:frameworkLabel,
+    includes:rows.map(row=>({label:row.label,text:row.include.join(' ')})),limits,exclusions:[...exclusionGroups].map(([domain,rules])=>({domain,text:rules.join(' ')})),pending,paragraph:paragraph||'',paragraphNote:'Click Standardize to generate a publication-style paragraph with the local model.',
+    traceLabel:trace?.length?(state.activeGenerator==='machine'?'Intermediate draft trace':'Source trace'):'',traceSource:state.activeGenerator==='machine'?'First-pass draft':'Source',trace:(trace||[]).map(a=>({dimension:a.dimension,logic:a.logic,proposition:a.proposition,id:a.id,sourceId:a.sourceId,used:!!a.used,sourceSentence:a.sourceSentence}))});
   area.innerHTML=`<div class="criteria-summary"><div class="summary-rule" aria-hidden="true"></div><div class="summary-intro"><p><strong>Review topic:</strong> ${escapeHtml(topic||summaryTopic(rows,framework))}</p><p><strong>Framework:</strong> ${escapeHtml(frameworkLabel)}</p></div><div class="summary-rule" aria-hidden="true"></div><section class="summary-block"><h3>Inclusion criteria</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong>Limits:</strong> ${escapeHtml(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclusionHtml}</section><section class="summary-block"><h3>Pending clarification</h3>${pending.length?`<ul class="summary-list summary-pending">${pending.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul>`:'<p class="summary-muted">None identified.</p>'}</section><section class="summary-block"><h3>Manuscript wording</h3>${paragraph?`<p class="summary-paragraph">${escapeHtml(paragraph)}</p>`:'<p class="summary-muted">Click Standardize to generate a publication-style paragraph with the local model.</p>'}</section>${traceHtml}<div class="summary-rule" aria-hidden="true"></div></div>`;
 }
 function xmlEscape(value){return String(value==null?'':value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
