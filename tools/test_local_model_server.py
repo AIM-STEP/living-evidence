@@ -150,19 +150,38 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(len(FakeOllama.seen), 1)
 
-    def test_a_non_json_reply_is_retried_once_with_some_temperature(self):
-        FakeOllama.replies = ['{"items": [ "own own own', '{"items": []}']
+    def test_the_swallowed_colon_glitch_goes_to_the_model_not_a_guess(self):
+        # Verbatim shape from a real gemma4 reply on "sample size greater than 20".
+        # ">> 20" or "> 20"? Only the model, seeing the source, can say.
+        broken = '{"items":[{"attribute":"sample size","value">> 20","logic":"required"}]}'
+        FakeOllama.replies = [broken, '{"items":[{"attribute":"sample size","value":"> 20","logic":"required"}]}']
+        status, body = self.req("POST", "/api/eligibility/model", self.MSG)
+        self.assertEqual(json.loads(body["message"]["content"])["items"][0]["value"], "> 20")
+        self.assertEqual(FakeOllama.seen[1]["messages"][1]["content"], broken)
+
+    def test_a_broken_reply_is_repaired_by_the_model_before_regenerating(self):
+        FakeOllama.replies = ['{"items": [ {"a" "b"} ]}', '{"items": [{"a": "b"}]}']
+        status, body = self.req("POST", "/api/eligibility/model", self.MSG)
+        self.assertEqual(body["message"]["content"], '{"items": [{"a": "b"}]}')
+        self.assertEqual(len(FakeOllama.seen), 2)
+        repair = FakeOllama.seen[1]["messages"]
+        self.assertIn("repair malformed JSON", repair[0]["content"])
+        self.assertEqual(repair[1]["content"], '{"items": [ {"a" "b"} ]}')
+        self.assertEqual(FakeOllama.seen[1]["options"]["temperature"], 0)
+
+    def test_regenerates_once_when_repair_fails(self):
+        FakeOllama.replies = ['{"items": [ "own own own', "still broken", '{"items": []}', '{"never": 1}']
         status, body = self.req("POST", "/api/eligibility/model", self.MSG)
         self.assertEqual(status, 200)
         self.assertEqual(body["message"]["content"], '{"items": []}')
-        self.assertEqual(len(FakeOllama.seen), 2)
-        self.assertGreater(FakeOllama.seen[1]["options"]["temperature"], 0)
+        self.assertEqual(len(FakeOllama.seen), 3)
+        self.assertGreater(FakeOllama.seen[2]["options"]["temperature"], 0)
+        self.assertEqual(FakeOllama.seen[2]["messages"], self.MSG["messages"])
 
-    def test_only_one_retry(self):
-        FakeOllama.replies = ["nope", "still nope", '{"never": 1}']
+    def test_an_empty_reply_skips_repair(self):
+        FakeOllama.replies = ["", '{"ok": 1}']
         status, body = self.req("POST", "/api/eligibility/model", self.MSG)
-        self.assertEqual(status, 200)
-        self.assertEqual(body["message"]["content"], "still nope")
+        self.assertEqual(body["message"]["content"], '{"ok": 1}')
         self.assertEqual(len(FakeOllama.seen), 2)
 
     def test_images_pass_through(self):
@@ -181,6 +200,7 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(rec["reply"], '{"logged": true}')
         self.assertEqual(rec["model"], MODEL)
         self.assertEqual(rec["messages"][1]["content"], "u")
+        self.assertEqual(rec["attempts"], ["ok"])
 
     # ------------------------------------------------------------- guards
 

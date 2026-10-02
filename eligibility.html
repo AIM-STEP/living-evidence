@@ -441,6 +441,9 @@ function validateAcademicDraft(answer,input,signature,model,extracts){
   if(!topic||topic.length>300||!paragraph||paragraph.length>3500||!Array.isArray(answer.uncertainties)||answer.uncertainties.length>20)throw new Error('The model returned incomplete manuscript wording.');
   if(/[\u3400-\u9fff]/u.test(topic+paragraph)||!supportedNumbers(topic+paragraph,sourceText))throw new Error('The manuscript paragraph introduced an unsupported number or untranslated text.');
   if(!rows.some(row=>row.include.length))throw new Error('The model returned no supported inclusion rule.');
+  // The paragraph is written in the same model call as the rules, so it can
+  // still state a rule that was just removed.
+  if(dropped.length)dropped.push('Manuscript wording: it was written before the rule'+(dropped.length>1?'s':'')+' above '+(dropped.length>1?'were':'was')+' removed and may still state '+(dropped.length>1?'them':'it')+'. Edit it to match the criteria.');
   const missed=extracts.atoms.filter(atom=>!used.has(atom.id)).map(atom=>atom.dimension+': check the omitted or conditional proposition '+atom.sourceSentence);
   const notes=answer.uncertainties.filter(item=>typeof item==='string'&&item.trim()&&item.length<500).map(item=>item.trim());
   return {signature,slot:model.slot,modelName:model.name,generatedAt:new Date().toISOString(),reviewTopic:topic,rows,uncertainties:[...new Set([...dropped,...extracts.issues,...notes,...missed])],manuscriptParagraph:paragraph,trace:extracts.atoms.map(atom=>({...atom,used:used.has(atom.id)}))};

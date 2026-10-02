@@ -20,8 +20,9 @@ request the browser cannot be trusted to shape:
   * thinking is off (think: false) - measured 5x faster, same content;
   * temperature 0, JSON output, a context and reply length that fit the
     page's prompts;
-  * a reply that is not a JSON object is retried once, because the page can
-    only parse JSON and gemma4 occasionally falls into a repetition loop.
+  * a reply that is not a JSON object is repaired rather than thrown away:
+    the model fixes its own syntax, and only if that fails is it regenerated
+    once (see chat()).
 
 LOCAL ONLY. It binds 127.0.0.1, refuses a Host header that is not this
 machine (DNS rebinding), and refuses a request whose Origin is another site, so
@@ -110,15 +111,30 @@ def ollama_body(model, messages, temperature=0):
     }
 
 
-def is_json_object(text):
+def _unfence(text):
     s = (text or "").strip()
     if s.startswith("```"):
         s = s.strip("`")
         s = s[4:] if s.lower().startswith("json") else s
+    return s.strip()
+
+
+def is_json_object(text):
     try:
-        return isinstance(json.loads(s), dict)
+        return isinstance(json.loads(_unfence(text)), dict)
     except ValueError:
         return False
+
+
+# A deterministic rewrite was tried and dropped. Seen from gemma4:31b on
+# "sample size greater than 20": {"value">> 20"} where {"value":"> 20"} was
+# meant. Whether the ">" replaced the colon or is part of the value cannot be
+# told from the text, and guessing wrong turns ">=5" into "=5" - a changed
+# eligibility threshold. The model, which can see "greater than 20" in the
+# source sentence, repairs it instead.
+REPAIR_PROMPT = ("You repair malformed JSON. The user message is a JSON document with syntax errors "
+                 "(for example a missing colon or quote). Return the same document as valid JSON: same keys, "
+                 "same values, same order, same wording. Fix only the syntax. Return JSON only.")
 
 
 def post_json(url, body, timeout=TIMEOUT):
@@ -128,13 +144,38 @@ def post_json(url, body, timeout=TIMEOUT):
         return json.loads(res.read().decode("utf-8"))
 
 
-def chat(ollama, model, messages, post=post_json):
-    """One call, plus one retry if the reply is not a JSON object."""
+def _content(reply):
+    return ((reply or {}).get("message") or {}).get("content", "")
+
+
+def chat(ollama, model, messages, post=post_json, attempts=None):
+    """Return a reply whose content is a JSON object, trying in order:
+
+      1. the reply as generated;
+      2. the model repairing its own reply's syntax - keeps what was extracted,
+         which regenerating would not (measured on a real failure: 8 of 8
+         items kept verbatim, "> 20" restored, 54 s);
+      3. one regeneration with a little temperature, for a reply too broken to
+         repair (e.g. a repetition loop).
+
+    `attempts`, if given, is filled with what happened, for the log.
+    """
+    log = attempts if attempts is not None else []
     reply = post(ollama + "/api/chat", ollama_body(model, messages))
-    content = ((reply or {}).get("message") or {}).get("content", "")
+    content = _content(reply)
     if is_json_object(content):
+        log.append("ok")
         return reply
+    log.append("invalid")
+    if content.strip():
+        repaired = post(ollama + "/api/chat", ollama_body(model, [
+            {"role": "system", "content": REPAIR_PROMPT}, {"role": "user", "content": content}]))
+        if is_json_object(_content(repaired)):
+            log.append("model-repair")
+            return repaired
+        log.append("model-repair-failed")
     # Temperature 0 repeats a degenerate path exactly; a little noise leaves it.
+    log.append("regenerate")
     return post(ollama + "/api/chat", ollama_body(model, messages, temperature=0.3))
 
 
@@ -257,8 +298,9 @@ class Handler(SimpleHTTPRequestHandler):
         except (ValueError, BadRequest) as e:
             return self._send_json(400, {"error": str(e)})
         started = time.time()
+        attempts = []
         try:
-            reply = chat(self.ollama, self.model, messages)
+            reply = chat(self.ollama, self.model, messages, attempts=attempts)
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:300]
             try:
@@ -271,7 +313,7 @@ class Handler(SimpleHTTPRequestHandler):
         content = reply.get("message", {}).get("content", "")
         write_log(self.log_dir, {
             "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "seconds": round(time.time() - started, 1),
-            "model": self.model, "options": ollama_body(self.model, [])["options"],
+            "model": self.model, "options": ollama_body(self.model, [])["options"], "attempts": attempts,
             "messages": [{k: (v if k != "images" else ["<%d base64 chars>" % len(i) for i in v])
                           for k, v in m.items()} for m in messages],
             "reply": content})
