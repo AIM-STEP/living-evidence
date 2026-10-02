@@ -36,6 +36,7 @@
 /* Machine generate fills the same editable concept cards as Manual; the old read-only table is retired. */
 .machine-words-box,#machine-words-status{display:none!important}
 .history-table .select-col{width:44px!important;text-align:center}.history-table th:not(.select-col),.history-table td:not(.select-col){width:auto}.history-table input[type=checkbox]{accent-color:var(--plum);width:16px;height:16px}#download-summary{margin-left:4px}
+/* Search results: compact */#results .panel-body{padding-top:12px;padding-bottom:12px}#results .history-wrap{margin-top:0}#results .history-table{min-width:0;font-size:12px}#results .history-table th,#results .history-table td{padding:5px 10px;line-height:1.35;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#results .history-table th+th,#results .history-table td+td{border-left:0}#results .history-table th{background:#f7f7f7;font-weight:600}#results .history-table .select-col{width:34px!important;padding-left:8px;padding-right:0}#results .history-table .date-col{width:42%}#results .history-table .num-col,#results .history-table td.num-col{width:90px;text-align:right}#results .history-table .del-col{width:34px;padding:0 6px;text-align:center}#results .history-table input[type=checkbox]{width:14px;height:14px;margin:0;vertical-align:middle}#results .remove-run{width:22px;height:22px;display:inline-grid;place-items:center;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--muted);font-size:15px;line-height:1;cursor:pointer}#results .remove-run:hover{color:var(--red);border-color:var(--line)}#results .remove-run:focus-visible{outline:2px solid var(--plum);outline-offset:1px}#results .remove-run:disabled{opacity:.4;cursor:default}#results .panel-footer{padding:10px 14px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style></head>
 <body>
 <header class="header"><a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span>AIM-STEP<small>LIVING EVIDENCE</small></span></a><nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a data-toolset href="index.html?view=toolset" class="active">Toolset</a><a data-settings href="settings.html">Settings</a><a href="contact.html">Contact</a></nav><a class="project-pill" id="project-name" hidden></a></header>
@@ -85,7 +86,7 @@
   <div class="panel-head"><h2>Search results</h2></div>
   <div class="panel-body">
     <div class="notice" id="import-message" hidden role="status"></div>
-    <div class="table-wrap history-wrap"><table class="matrix history-table" aria-label="Search results"><thead><tr><th scope="col" class="select-col"><input type="checkbox" id="select-all-runs" aria-label="Select all searches for download"></th><th scope="col">Date</th><th scope="col">Database</th><th scope="col">Records retrieved</th></tr></thead><tbody id="history-rows"></tbody></table></div>
+    <div class="table-wrap history-wrap"><table class="matrix history-table" aria-label="Search results"><thead><tr><th scope="col" class="select-col"><input type="checkbox" id="select-all-runs" aria-label="Select all searches for download"></th><th scope="col" class="date-col">Date</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="history-rows"></tbody></table></div>
   </div>
   <div class="panel-footer downloads"><div class="toolbar"><label class="label inline" for="download-format">Format</label><select class="select compact" id="download-format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="json">JSON</option></select><button class="btn" id="download-results" type="button" disabled>Download selected</button><span class="hint" id="download-summary"></span></div><div class="toolbar"><a class="btn" data-screening href="title-abstract-screening.html">Next: Title and abstract screening</a></div></div>
 </section>
@@ -619,9 +620,9 @@ function renderResults(){
 }
 function renderHistory(){
   $('history-rows').innerHTML=runs.length?runs.slice().reverse().map(r=>{
-    const date=new Date(r.startedAt),label=Number.isNaN(date.getTime())?'—':date.toLocaleString();
-    const count=Math.max(0,Number(r.downloaded)||0);    return `<tr><td class="select-col"><input type="checkbox" data-run="${esc(r.id)}" ${deselectedRuns.has(r.id)?'':'checked'} aria-label="Include the ${esc(DB[r.db]?.label||r.db)} search of ${esc(label)} in the download"></td><td>${esc(label)}</td><td>${esc(DB[r.db]?.label||r.db)}</td><td>${count.toLocaleString()}</td></tr>`;
-  }).join(''):'<tr><td colspan="4" class="empty">No searches yet.</td></tr>';
+    const date=new Date(r.startedAt),label=Number.isNaN(date.getTime())?'—':date.toLocaleString(undefined,{dateStyle:'short',timeStyle:'short'});
+    const count=Math.max(0,Number(r.downloaded)||0);    return `<tr><td class="select-col"><input type="checkbox" data-run="${esc(r.id)}" ${deselectedRuns.has(r.id)?'':'checked'} aria-label="Include the ${esc(DB[r.db]?.label||r.db)} search of ${esc(label)} in the download"></td><td title="${esc(label)}">${esc(label)}</td><td title="${esc(DB[r.db]?.label||r.db)}">${esc(DB[r.db]?.label||r.db)}</td><td class="num-col">${count.toLocaleString()}</td><td class="del-col"><button type="button" class="remove-run" data-delete-run="${esc(r.id)}" title="Delete this search and its records" aria-label="Delete the ${esc(DB[r.db]?.label||r.db)} search of ${esc(label)}" ${busy||generating?'disabled':''}>×</button></td></tr>`;
+  }).join(''):'<tr><td colspan="5" class="empty">No searches yet.</td></tr>';
   renderResults();
 }
 
@@ -898,6 +899,27 @@ async function startManualWords(){
 }
 function showConceptNotes(notes){for(const [id,note] of notes){const el=document.querySelector(`.concept[data-id="${CSS.escape(id)}"] [data-word-message]`);if(el){el.textContent=note;el.hidden=false}}}
 $('manual-start').addEventListener('click',startManualWords);
+
+// Deletes one search. Records found only by it go; records another search
+// also found stay, without this search in their provenance. The screening step
+// sees the changed set through the summary it already watches.
+function deleteRun(id){
+  if(busy||generating)return;
+  const run=runs.find(r=>r.id===id);if(!run)return;
+  const only=records.filter(r=>(r.provenance||[]).length&&r.provenance.every(p=>p.runId===id)).length;
+  const shared=records.filter(r=>(r.provenance||[]).some(p=>p.runId===id)).length-only;
+  const label=DB[run.db]?.label||run.db,when=new Date(run.startedAt).toLocaleString(undefined,{dateStyle:'short',timeStyle:'short'});
+  if(!confirm('Delete the '+label+' search of '+when+'?\n\n'+only.toLocaleString()+' record'+(only===1?'':'s')+' found only by this search will be deleted.'+(shared?' '+shared.toLocaleString()+' record'+(shared===1?' that another search also found is':'s that other searches also found are')+' kept.':'')+' This cannot be undone.'))return;
+  runs=runs.filter(r=>r.id!==id);
+  records=records.filter(r=>{r.provenance=(r.provenance||[]).filter(p=>p.runId!==id);return r.provenance.length>0});
+  recordMap.clear();for(const r of records)recordMap.set(r.uid,r);indexRecords();
+  deselectedRuns.delete(id);
+  persistResults();
+  if(!records.length&&projectId){try{const key='aimstep-setup-completed:'+encodeURIComponent(projectId),saved=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(saved)){localStorage.setItem(key,JSON.stringify(saved.map(Number).filter(n=>n!==2&&n!==3)));if(parent!==window&&parent.location.origin===location.origin)parent.AIMSTEP?.setSetupStepCompleted?.(2,false)}}catch(e){}}
+  renderHistory();renderResults();
+  toast(label+' search deleted'+(only?' with '+only.toLocaleString()+' record'+(only===1?'':'s'):'')+'.');
+}
+$('history-rows').addEventListener('click',event=>{const b=event.target.closest('[data-delete-run]');if(b)deleteRun(b.dataset.deleteRun)});
 async function init(){setBusy(true);try{database=await openDB();const saved=await new Promise((resolve,reject)=>{const tx=database.transaction('projects','readonly'),req=tx.objectStore('projects').get(scope);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});if(saved){runs=Array.isArray(saved.runs)?saved.runs.map(safeRun).filter(Boolean):[];for(const r of saved.records||[])addRecord(r)}resultsStored=true}catch(e){resultsStored=false;notice('storage-warning','Local result storage could not be opened. Download a JSON backup to keep your work.','warning')}
 try{
   if(sessionStorage.getItem(eligibilityHandoffKey)){
