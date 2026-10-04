@@ -875,6 +875,7 @@ async function init(){
     const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});
     handoff=await readHandoff();
     if(!ws.records.length&&handoff?.records?.length)await importFromFullText();
+    else if(!ws.records.length)showNotice('source-notice',handoff?`No included studies yet. Full-text screening has ${handoff.pending||0} report${handoff.pending===1?'':'s'} still undecided; studies you include there appear here.`:'No included studies yet. Studies you include in Full-text screening appear here.','warning');
     else if(handoff&&handoff.updatedAt>ws.handoffAt&&ws.records.length)showNotice('source-notice','Full-text screening has changed since the studies were imported. Import again to update the list; assessments are kept.','warning');
     bind();render();document.body.dataset.ready='true';
   }catch(e){showNotice('source-notice','The risk of bias workspace could not be opened: '+e.message,'error')}

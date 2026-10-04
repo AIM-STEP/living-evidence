@@ -692,6 +692,7 @@ async function init(){
     bind();
     const h=await readHandoff();
     if(!ws.records.length&&h?.records?.length)await importStudies();
+    else if(!ws.records.length)showNotice('source-notice',h?`No included studies yet. Full-text screening has ${h.pending||0} report${h.pending===1?'':'s'} still undecided; studies you include there appear here.`:'No included studies yet. Studies you include in Full-text screening appear here.','warning');
     else if(h&&h.updatedAt>ws.handoffAt&&ws.records.length)showNotice('source-notice','Full-text screening has changed since the studies were imported. Import again to update the list; extractions are kept.','warning');
     render();document.body.dataset.ready='true';
   }catch(e){showNotice('source-notice','The extraction workspace could not be opened: '+e.message,'error')}
