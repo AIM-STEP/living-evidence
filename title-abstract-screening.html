@@ -146,6 +146,7 @@ th{background:#f4f4f4}
 .criteria-editor .label{margin-top:4px}.crit-row{border:1px solid var(--line);border-radius:6px;padding:10px;margin:10px 0;background:#fafafa}.crit-row-head{display:flex;gap:6px;align-items:center;margin-bottom:6px}.crit-row-head .input{flex:1;font-weight:700}.crit-row label{display:block;font-size:11px;font-weight:700;margin-top:6px}.crit-row textarea{margin-top:3px;font-weight:400}.crit-actions{justify-content:flex-end;margin-top:12px}
 .crit-rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.crit-rules label{margin-top:0}.crit-row textarea.textarea{min-height:0;height:auto;resize:vertical}#crit-question{min-height:0}
 @media(max-width:760px){.crit-rules{grid-template-columns:1fr}}
+.abs-wrap .abstract{margin-bottom:4px}.abs-wrap:not(.open) .abstract{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.abs-toggle{border:0;background:none;padding:0;color:var(--plum);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px}.abs-toggle:hover{text-decoration:underline}.abs-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:2px}.abs-tools{justify-content:flex-end;margin:6px 0}
 </style>
 </head>
 <body>
@@ -179,6 +180,7 @@ th{background:#f4f4f4}
 <div class="source-summary pilot-summary"><div><strong id="pilot-voted">—</strong><span>Your votes</span></div><div><strong id="pilot-ai">—</strong><span>AI screened</span></div><div><strong id="pilot-agreement">—</strong><span>Agreement</span></div><div><strong id="pilot-kappa">—</strong><span>Cohen's κ</span></div><div><strong id="pilot-false-ex">—</strong><span>False exclusions</span></div></div>
 <p class="hint pilot-detail" id="pilot-detail"></p>
 <div class="toolbar pilot-filter" id="pilot-filter" hidden><button class="btn small" type="button" data-filter="all" aria-pressed="true">All records</button><button class="btn small" type="button" data-filter="differ" aria-pressed="false">Disagreements</button></div>
+<div class="toolbar abs-tools" id="pilot-abs-tools" hidden><button class="btn small" type="button" id="pilot-abs-all" aria-pressed="false">Expand all abstracts</button></div>
 <div class="pilot-list" id="pilot-list"></div>
 </div>
 </section>
@@ -603,6 +605,14 @@ function excerpt(raw,quotes){
 const PILOT_PROMPT='pilot-v3';
 const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').replace(/\/+$/,'');
 let pilotModel=null,pilotView=-1,pilotFilter='all';
+// Abstracts open by the reviewer, kept across re-renders while voting.
+const openAbstracts=new Set();let allAbstractsOpen=false;
+function abstractBlock(id,abstract,quotes){
+  if(!abstract)return '<p class="abstract"><span class="hint">No abstract available. Choose Maybe if eligibility is uncertain.</span></p>';
+  const open=allAbstractsOpen||openAbstracts.has(id),long=abstract.length>160;
+  return '<div class="abs-wrap'+(open||!long?' open':'')+'"><p class="abstract" id="abs-'+esc(id)+'">'+excerpt(abstract,quotes)+'</p>'+
+    (long?'<button type="button" class="abs-toggle" data-abs="'+esc(id)+'" aria-expanded="'+open+'" aria-controls="abs-'+esc(id)+'">'+(open?'Hide full abstract':'Show full abstract')+'</button>':'')+'</div>';
+}
 function newPilot(size=20){return {version:3,size,rounds:[],ai:{},human:{},approved:null}}
 function validPilot(p){
   if(!p||p.version!==3||!Array.isArray(p.rounds))return newPilot();
@@ -794,7 +804,7 @@ function pilotCard(rec,st,index){
     (h&&latest?'<label class="pilot-note">Note for the AI<input class="input" data-pnote="'+esc(id)+'" value="'+esc(h.note||'')+'" placeholder="'+(differ?'Why is your decision right? Used as an example in the next round':'Optional')+'"></label>':h?.note?'<p class="hint">Note: '+esc(h.note)+'</p>':'')+'</div>':'';
   return '<article class="record'+(differ?' differ':'')+'"><div class="record-head"><div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div>'+
     (h?colored(h.decision)+(h.revisedAt?'<span class="badge">Changed after comparison</span>':''):'<span class="badge">Your vote pending</span>')+'</div>'+
-    '<p class="abstract">'+(rec.abstract?excerpt(rec.abstract,quotes):'<span class="hint">No abstract available. Choose Maybe if eligibility is uncertain.</span>')+'</p>'+buttons+ai+'</article>';
+    abstractBlock(id,rec.abstract,quotes)+buttons+ai+'</article>';
 }
 function renderPilot(){
   if(!workspace?.pilot)return;
@@ -825,7 +835,9 @@ function renderPilot(){
   $('pilot-filter').querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===pilotFilter)));
   let ids=st?st.ids:[];
   if(shown){const diff=id=>workspace.pilot.ai[id]?.decision!==workspace.pilot.human[id]?.decision;ids=ids.slice().sort((a,b)=>diff(b)-diff(a));if(pilotFilter==='differ')ids=ids.filter(diff)}
+  $('pilot-abs-tools').hidden=!ids.length;$('pilot-abs-all').textContent=allAbstractsOpen?'Collapse all abstracts':'Expand all abstracts';$('pilot-abs-all').setAttribute('aria-pressed',String(allAbstractsOpen));
   $('pilot-list').innerHTML=st?(ids.length?ids.map(id=>pilotCard(recordById.get(id),st,pilotView)).join(''):'<p class="hint">You and the AI agree on every record in this round.</p>'):'';
+  trimAbstractToggles($('pilot-list'));
   const gate=$('approve-pilot'),approved=pilotApprovalValid(),canApprove=!!lastSt?.revealed&&ready&&!busy;
   gate.disabled=!(approved||canApprove);gate.classList.toggle('activated',approved);gate.setAttribute('aria-pressed',String(approved));
   gate.title=approved?'Approved (round '+(p.approved.round+1)+'). Click to withdraw.':canApprove?'Approve the latest round to unlock formal screening.':'Available when a round has been compared.';
@@ -1678,7 +1690,14 @@ $('reset-calibration').addEventListener('click',()=>{
   if(busy||!confirm('Restart the pilot? All pilot rounds, votes and the approval are removed.'))return;
   log('pilot-restarted',{rounds:workspace.pilot.rounds.length});workspace.pilot=newPilot(workspace.pilot.size);pilotView=-1;showNotice('pilot-message','');save().then(render).catch(()=>{});
 });
-$('pilot-list').addEventListener('click',e=>{const b=e.target.closest('[data-pvote]');if(b)castPilotVote(b.dataset.id,b.dataset.pvote)});
+$('pilot-list').addEventListener('click',e=>{
+  const t=e.target.closest('[data-abs]');
+  if(t){const id=t.dataset.abs,wrap=t.closest('.abs-wrap'),open=!wrap.classList.contains('open');wrap.classList.toggle('open',open);if(open)openAbstracts.add(id);else{openAbstracts.delete(id);allAbstractsOpen=false;$('pilot-abs-all').textContent='Expand all abstracts';$('pilot-abs-all').setAttribute('aria-pressed','false')}t.setAttribute('aria-expanded',String(open));t.textContent=open?'Hide full abstract':'Show full abstract';return}
+  const b=e.target.closest('[data-pvote]');if(b)castPilotVote(b.dataset.id,b.dataset.pvote);
+});
+// Abstracts that fit in the three-line preview need no toggle.
+function trimAbstractToggles(list){list.querySelectorAll('.abs-wrap:not(.open)').forEach(w=>{const p=w.querySelector('.abstract');if(p.scrollHeight<=p.clientHeight+2){w.classList.add('open');w.querySelector('.abs-toggle')?.remove()}})}
+$('pilot-abs-all').addEventListener('click',()=>{allAbstractsOpen=!allAbstractsOpen;openAbstracts.clear();renderPilot()});
 $('pilot-list').addEventListener('change',e=>{if(e.target.matches('[data-pnote]'))pilotNote(e.target.dataset.pnote,e.target.value)});
 $('start-screening').addEventListener('click',()=>runFull().catch(e=>showNotice('full-message','Could not start screening: '+e.message,'error')));
 $('stop-full').addEventListener('click',()=>controller?.abort());
