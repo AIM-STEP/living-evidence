@@ -79,9 +79,6 @@ p{margin:8px 0}
 .team-side p{color:var(--muted);margin:5px 0}
 .screening-title{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .model-setting{font-size:12px;font-weight:700;white-space:nowrap}
-.export-dialog{width:min(490px,calc(100vw - 28px))}
-.export-dialog .panel-body{padding-bottom:36px}
-.export-dialog .panel-footer{display:flex;justify-content:flex-end}
 .conflict-resolution{margin-top:13px;padding:13px;background:var(--pale);border:1px solid #dec4d9;border-radius:4px}
 .conflict-resolution strong{display:block}
 .source-history{margin-top:15px}
@@ -145,6 +142,7 @@ th{background:#f4f4f4}
 .full-intro{margin:0 0 10px}.full-track{margin:12px 0 6px}.full-now{display:flex;align-items:center;gap:8px;margin:4px 0 8px;font-size:12px;color:var(--ink2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.pulse{flex:none;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}.sub-head{font-size:14px;margin:16px 0 6px}.full-feed{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:6px;background:#fff}.full-feed li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--soft);font-size:12px;min-width:0}.full-feed li:first-child{border-top:0}.feed-title{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.feed-why{flex:none;color:var(--muted);max-width:40%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.check-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}.check-head .sub-head{margin:0 8px 0 0}.check-head .label{margin:0}.check-summary .ok{color:var(--green);font-weight:700}.check-summary .warn{color:var(--red);font-weight:700}#check-more{margin-top:8px}
 .full-summary{grid-template-columns:repeat(6,minmax(0,1fr))}.full-summary>div.alert strong{color:var(--red)}.feed-pass{flex:none;font-size:11px;color:var(--muted);width:44px}.badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}.pilot-filter .count{font-weight:400;color:var(--muted);margin-left:2px}.panel.is-collapsed>.panel-footer{border-top:0}
 @media(max-width:760px){.full-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.export-results{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.export-results .label{margin:0;font-size:12px}
 </style>
 </head>
 <body>
@@ -198,7 +196,7 @@ th{background:#f4f4f4}
 <div class="toolbar pilot-filter" id="check-filter" hidden><button class="btn small" type="button" data-cfilter="conflicts" aria-pressed="false">Conflicts <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="todo" aria-pressed="true">To check <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="done" aria-pressed="false">Checked <span class="count">0</span></button></div>
 <div class="pilot-list" id="check-list"></div>
 </div>
-<div class="panel-footer toolbar between"><button class="btn small" type="button" id="download-references">Download</button><a class="btn small" data-toolset href="index.html?view=toolset">Back: Toolset</a></div>
+<div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Records</label><select class="select compact" id="export-option"><option value="include">Include (Yes and Maybe)</option><option value="exclude">Exclude (No)</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan (RIS)</option><option value="csv">CSV (Excel, with screening decisions)</option><option value="bib">BibTeX</option><option value="json">JSON (with screening decisions)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div><a class="btn small primary" data-fulltext href="index.html?view=project#tool-full-text">Next: Full-text screening</a></div>
 </section>
 </div>
 </div>
@@ -234,15 +232,6 @@ th{background:#f4f4f4}
 <div class="toolbar"><button class="btn primary" id="confirm-import" type="button">Import records</button></div>
 </div>
 </dialog>
-<dialog id="export-dialog" class="dialog export-dialog" aria-labelledby="export-title">
-<div class="panel-head"><h2 id="export-title">References</h2><button class="btn small" type="button" id="close-export">Close</button></div>
-<div class="panel-body">
-<label class="label" for="export-option">Options</label><select class="select" id="export-option"><option value="">Please select...</option><option value="include">include</option><option value="exclude">exclude</option></select>
-<label class="label" for="export-format">Format</label><select class="select" id="export-format"><option value="">Please select...</option><option value="revman">Cochrane RevMan</option><option value="csv">CSV</option><option value="endnote">EndNote</option><option value="mendeley">Mendeley</option><option value="refworks">RefWorks</option><option value="zotero">Zotero</option></select>
-<p class="hint" id="export-count" role="status" aria-live="polite"></p>
-</div>
-<div class="panel-footer"><button class="btn primary" id="prepare-export" type="button" disabled>Prepare file</button></div>
-</dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <script>
 'use strict';
@@ -262,7 +251,6 @@ const eligibilitySummaryKey='aimstep-eligibility-summary:'+scope;
 let criteriaOrigin=null,eligibilityRowsSig='';
 const criteriaDialog=$('criteria-dialog');
 const importDialog=$('import-dialog');
-const exportDialog=$('export-dialog');
 const promptVersion='title-abstract-v2';
 let project=null;
 try{project=JSON.parse(sessionStorage.getItem('aimstep-active-project')||'null')}catch(e){}
@@ -275,6 +263,7 @@ function pageLink(file,view){
 document.querySelectorAll('[data-home]').forEach(a=>a.href=pageLink('index.html'));
 document.querySelectorAll('[data-workflow]').forEach(a=>a.href=pageLink('index.html','project'));
 document.querySelectorAll('[data-toolset]').forEach(a=>a.href=pageLink('index.html','toolset'));
+document.querySelectorAll('[data-fulltext]').forEach(a=>a.href=pageLink('index.html','project')+'#tool-full-text');
 document.querySelectorAll('[data-search]').forEach(a=>a.href=pageLink('search-strategy.html'));
 document.querySelectorAll('[data-settings]').forEach(a=>a.href=pageLink('settings.html'));
 document.querySelectorAll('[data-settings-team]').forEach(a=>a.href=pageLink('settings.html')+'#team');
@@ -1032,8 +1021,7 @@ function renderFull(){
   const list=view==='conflicts'?conflicts:view==='done'?done:todo;
   $('check-list').innerHTML=list.slice(0,fullShown).map(fullCard).join('')+(list.length>fullShown?'<button class="btn small" type="button" id="check-more">Show '+Math.min(20,list.length-fullShown)+' more</button>':'')+
     ((conflicts.length||queue.length)&&!list.length?'<p class="hint">'+(view==='conflicts'?'No conflicts between the two passes.':view==='done'?'No records checked yet.':'Every record in this scope has been checked.')+'</p>':'');
-  $('download-references').disabled=!source.records.length;
-  if(exportDialog.open)updateExportDialog();
+  updateExportCount();
   // The end-of-run message follows conflicts and Human check as they progress.
   const endMsg=$('full-message').textContent;
   if(!busy&&aiFinished()&&s.sourceCount&&(endMsg.startsWith('The AI has screened every record')||endMsg.startsWith('Screening is complete')))showNotice('full-message',endMessage(s),'success');
@@ -1073,25 +1061,26 @@ function downloadRIS(records,option,format){
   download('title-abstract-'+option+'-'+format+'-'+stamp()+'.ris','application/x-research-info-systems;charset=utf-8',out);
 }
 function risSafe(v){return String(v??'').replace(/\s+/g,' ').trim()}
+// Export of screening results: Include is Yes and Maybe (both go forward to
+// full text), Exclude is No; only records with a final decision are included.
 function selectedExportRecords(){
   const option=$('export-option').value;
-  return source.records.filter(r=>{
-    const decision=finalDecision(r.uid);
-    return option==='include'?decision==='yes'||decision==='maybe':option==='exclude'&&decision==='no';
-  });
+  return source.records.filter(r=>{const d=finalDecision(r.uid);return option==='exclude'?d==='no':d==='yes'||d==='maybe'});
 }
-function updateExportDialog(){
-  const option=$('export-option').value,format=$('export-format').value;
-  const count=option?selectedExportRecords().length:0;
-  $('export-count').textContent=option?count.toLocaleString()+' resolved '+option+' record'+(count===1?'':'s')+(option==='include'?' (Yes and Maybe)':' (No)')+'.':'';
-  $('prepare-export').disabled=!option||!format||!count;
+function updateExportCount(){
+  const n=selectedExportRecords().length,pending=summary().pending;
+  $('export-count').textContent=n.toLocaleString()+' record'+(n===1?'':'s')+(pending?' · '+pending.toLocaleString()+' still without a decision':'');
+  $('export-results').disabled=!n;
 }
-function prepareExport(){
-  const option=$('export-option').value,format=$('export-format').value,records=selectedExportRecords();
-  if(!records.length||!['include','exclude'].includes(option)||!['revman','csv','endnote','mendeley','refworks','zotero'].includes(format))return;
+function exportResults(){
+  const option=$('export-option').value==='exclude'?'exclude':'include',format=$('export-format').value,records=selectedExportRecords();
+  if(!records.length){toast('No records with this decision yet.');return}
   if(format==='csv')downloadCSV(records,option);
-  else downloadRIS(records,option,format);
-  exportDialog.close();
+  else if(format==='bib')download('title-abstract-'+option+'-'+stamp()+'.bib','application/x-bibtex;charset=utf-8',sourceBibTeX(records));
+  else if(format==='json')download('title-abstract-'+option+'-'+stamp()+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-title-abstract-results/v1',project:projectId,option,exportedAt:now(),model:workspace.pilot?.approved?.model||'',records:records.map(r=>({...r,databases:sourceDatabases(r),finalDecision:finalDecision(r.uid),decisionSource:decisionSource(r.uid),conflict:isConflict(r.uid),aiPass1:fullAI(r.uid)||null,aiPass2:fullAI2(r.uid)||null,human:workspace.full.human[r.uid]||null,pilotVote:pilotVoteOf(r.uid)}))},null,2));
+  else downloadRIS(records,option,format==='revman'?'revman':'ris');
+  log('results-exported',{option,format,records:records.length});save().catch(()=>{});
+  toast(records.length.toLocaleString()+' '+option+' records exported.');
 }
 function csvRows(contents,separator=','){
   const rows=[];let fields=[],cell='',quoted=false;
@@ -1597,14 +1586,8 @@ $('check-scope').addEventListener('change',()=>{workspace.full.check=CHECK_SCOPE
 $('check-escalate').addEventListener('click',()=>{$('check-scope').value='exclusions';$('check-scope').dispatchEvent(new Event('change'))});
 $('check-filter').addEventListener('click',e=>{const b=e.target.closest('[data-cfilter]');if(!b)return;fullFilter=b.dataset.cfilter;fullShown=20;renderFull()});
 $('check-list').addEventListener('click',e=>{const b=e.target.closest('[data-fvote]');if(b){castFullVote(b.dataset.id,b.dataset.fvote);return}if(e.target.id==='check-more'){fullShown+=20;renderFull()}});
-$('download-references').addEventListener('click',()=>{
-  $('export-option').value='';$('export-format').value='';updateExportDialog();exportDialog.showModal();
-});
-$('export-option').addEventListener('change',updateExportDialog);
-$('export-format').addEventListener('change',updateExportDialog);
-$('prepare-export').addEventListener('click',prepareExport);
-$('close-export').addEventListener('click',()=>exportDialog.close());
-exportDialog.addEventListener('click',event=>{if(event.target===exportDialog)exportDialog.close()});
+$('export-option').addEventListener('change',updateExportCount);
+$('export-results').addEventListener('click',exportResults);
 let refreshPromise=null;
 function refreshSource(){
   if(!workspace||busy||importing||document.visibilityState==='hidden')return Promise.resolve();

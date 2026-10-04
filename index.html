@@ -3496,6 +3496,10 @@
             if (id && (!activeProject || id !== activeProject.id)) rememberProject(id, "");
             var child = target.searchParams.get("view") === "page" ? sitePage(target.searchParams.get("page") || "") : null;
             setView(child && child.pathname !== home.pathname ? "page" : target.searchParams.get("view") === "project" ? "project" : target.searchParams.get("view") === "toolset" ? "toolset" : "", child, true);
+            if (!child && target.hash) {
+              history.replaceState(history.state, "", location.pathname + location.search + target.hash);
+              revealSection(target.hash);
+            }
           } else {
             if (activeProject && /\/eligibility\.html$/.test(target.pathname) && !target.searchParams.has("project")) target.searchParams.set("project", activeProject.id);
             setView("page", target, true);
@@ -3503,6 +3507,19 @@
           refreshProject();
         }
         document.addEventListener("click", followLink);
+        // A link to a workspace step (e.g. index.html?view=project#tool-full-text
+        // from a tool's Next button) opens that step and scrolls to it.
+        function revealSection(hash) {
+          var el = null;
+          try { el = document.getElementById(decodeURIComponent(hash.slice(1))); } catch (e) {}
+          if (!el || !el.offsetParent && el.tagName !== "DETAILS") return;
+          if (el.tagName === "DETAILS") el.open = true;
+          setTimeout(function () {
+            var header = document.querySelector("header"), offset = header && getComputedStyle(header).position !== "static" ? header.offsetHeight : 0;
+            window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - offset - 16, behavior: "smooth" });
+          }, 60);
+        }
+        window.addEventListener("load", function () { if (location.hash) revealSection(location.hash); });
         toolset.addEventListener("click", function (event) {
           var tool = event.target.closest("[data-tool-status]");
           if (!tool) return;
