@@ -171,6 +171,7 @@ th{background:#f4f4f4}
 .rank td,.rank th{text-align:center}.rank td:first-child{text-align:left;font-weight:600}
 .coe-out{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}.coe-out label{display:inline-flex;align-items:center;gap:4px}
 @media(max-width:760px){.model-grid,.bayes-set{grid-template-columns:1fr 1fr}.set-title{grid-column:1/-1}}
+.step-foot{padding:14px 19px;border:1px solid var(--line);border-radius:6px;background:#fff}
 </style>
 </head>
 <body>
@@ -224,9 +225,10 @@ th{background:#f4f4f4}
 <div class="tabs" role="group" aria-label="Results"><button type="button" class="tab" data-tab="freq">Frequentist</button><button type="button" class="tab" data-tab="bayes">Bayesian</button><button type="button" class="tab" data-tab="rank">Ranking</button></div>
 <div id="tab-body"></div>
 </div>
-<div class="panel-footer toolbar between"><span class="coe-out"><button class="btn small primary" type="button" id="coe-export">Send to Certainty of evidence (CSV)</button><label class="hint"><input type="checkbox" id="coe-pairs"> every pair, not only versus the reference</label></span><a class="step-btn next" data-next href="certainty-of-evidence.html">Next: Certainty of evidence <span aria-hidden="true">→</span></a></div>
+<div class="panel-footer toolbar"><span class="coe-out"><button class="btn small primary" type="button" id="coe-export">Send to Certainty of evidence (CSV)</button><label class="hint"><input type="checkbox" id="coe-pairs"> every pair, not only versus the reference</label></span></div>
 </section>
 
+<div class="step-foot toolbar between"><span class="hint">Steps run in order, from Eligibility criteria (step 1) to Certainty of evidence (step 8).</span><a class="step-btn next" data-next href="certainty-of-evidence.html">Next: Certainty of evidence <span aria-hidden="true">→</span></a></div>
 <details class="references" hidden data-developer-references><summary>Method and research references</summary><ul>
 <li>Rücker G. Network meta-analysis, electrical networks and graph theory. Res Synth Methods 2012;3:312-24. netmeta 3.7-0 (CRAN, 2026): results reproduced to 6 decimals on smokingcessation (OR, RR) and Franchini2012 (MD).</li>
 <li>Jackson D, White IR, Riley RD. Generalised DerSimonian–Laird estimator. Stat Med 2012. Krahn U, et al. Design-by-treatment decomposition. BMC Med Res Methodol 2013;13:35.</li>
