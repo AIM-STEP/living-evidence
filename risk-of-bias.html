@@ -178,6 +178,7 @@ th{background:#f4f4f4}
 .legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin:6px 0 16px}.legend .dot{width:11px;height:11px}
 @media(max-width:760px){.q-ans,.q-note,.ai-line{margin-left:0;width:100%}.bar-row{grid-template-columns:1fr}.study-table .study span{max-width:none}}
 .link-btn{border:0;background:none;padding:0;color:var(--plum);font:inherit;font-weight:600;cursor:pointer}.link-btn:hover{text-decoration:underline}.q.na{padding:5px 12px}
+.tool-choice{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:4px 0 8px}.tool-choice .label{margin:0}.tc{font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 </style>
 </head>
 <body>
@@ -196,13 +197,14 @@ th{background:#f4f4f4}
 <div class="panel-head"><h2>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft">Import from full-text screening</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Included studies</span></button></div></div>
 <div class="panel-body" id="source-body">
 <ol class="pilot-steps">
-<li>Check each study's design; it selects the tool (RoB 2 for randomised trials, ROBINS-I V2 for non-randomised studies of interventions, QUADAS-3 for diagnostic accuracy, PROBAST+AI for prediction models, ROBIS for systematic reviews).</li>
+<li>Check each study's design, and choose the tool for each design (the recommended one is first; every study of that design uses the same tool).</li>
 <li>Start the AI pre-fill: the local model drafts every answer with a quotation from the full text. Drafts stay hidden.</li>
 <li>Open each result, answer on your own, then compare with the AI draft, resolve the conflicts and confirm.</li>
 </ol>
 <div class="source-summary" id="src-stats"></div>
 <div class="notice" id="source-notice" hidden></div>
 <div class="outcome-row"><span class="label">Outcome results to assess</span><span id="outcomes"></span><input class="input compact" id="outcome-input" placeholder="Add an outcome, e.g. ACR20 at 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
+<div class="tool-choice" id="tool-choice"></div>
 <div class="toolbar ai-row"><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
 <div class="team-track full-track" id="ai-progress" hidden><span style="width:0%"></span></div><div class="hint" id="ai-now"></div>
 <div class="table-wrap"><table class="study-table" id="study-table"></table></div>
@@ -518,26 +520,32 @@ const ROB2={
    own algorithm; tools without published algorithms are judged by domain. */
 const TOOLS={rob2:ROB2};
 const DESIGNS=[
- {id:'sr',label:'Systematic review',tool:'robis',match:'\\bsystematic review\\b'},
- {id:'rct-cluster',label:'Randomised trial, cluster',tool:'rob2c',match:'cluster[- ]?randomi[sz]'},
- {id:'rct-crossover',label:'Randomised trial, crossover',tool:'rob2x',match:'cross-?over'},
- {id:'rct',label:'Randomised trial, parallel group',tool:'rob2',match:'randomi[sz]ed|randomly (assigned|allocated)|\\brct\\b'},
- {id:'dta-comp',label:'Diagnostic accuracy, comparative',tool:'quadasc',match:'comparative (diagnostic )?accuracy'},
- {id:'dta',label:'Diagnostic test accuracy',tool:'quadas3',match:'diagnostic accuracy|sensitivity and specificity'},
- {id:'prediction',label:'Prediction model (development or validation)',tool:'probast',match:'prediction model|prognostic model|risk score|machine learning model'},
- {id:'nrsi',label:'Non-randomised study of an intervention (cohort, case-control, before-after)',tool:'robinsi',match:'cohort|case-control|registry|retrospective|non-?randomi[sz]ed|observational|before[- ]after|quasi-experimental|real-world'},
- {id:'nrse',label:'Observational study of an exposure (not an intervention)',tool:'robinse'},
- {id:'case-series',label:'Case series or case report',ext:'JBI checklist for case series or case reports (not built in)',match:'case series|case report'},
- {id:'cross-sectional',label:'Prevalence or analytical cross-sectional study',ext:'JBI checklist for prevalence or analytical cross-sectional studies (not built in)',match:'prevalence|cross-sectional'},
- {id:'qualitative',label:'Qualitative study',ext:'JBI or CASP qualitative checklist (not built in)',match:'qualitative|focus group|semi-structured interview'},
- {id:'animal',label:'Animal study',ext:'SYRCLE risk of bias tool (not built in)',match:'\\b(rats?|mice|murine|rabbits?|animal model)\\b'}
+ {id:'rct',label:'Randomised trial, parallel group',tools:['rob2','robust','rob1'],match:'randomi[sz]ed|randomly (assigned|allocated)|\\brct\\b'},
+ {id:'rct-cluster',label:'Randomised trial, cluster',tools:['rob2c','robust','rob1'],match:'cluster[- ]?randomi[sz]'},
+ {id:'rct-crossover',label:'Randomised trial, crossover',tools:['rob2x','robust','rob1'],match:'cross-?over'},
+ {id:'nrsi',label:'Non-randomised study of an intervention (cohort, case-control, before-after)',tools:['robinsi','robinsi1','jbi-cohort','nos'],match:'cohort|case-control|registry|retrospective|non-?randomi[sz]ed|observational|before[- ]after|quasi-experimental|real-world'},
+ {id:'nrse',label:'Observational study of an exposure (not an intervention)',tools:['robinse','jbi-cohort','nos']},
+ {id:'dta',label:'Diagnostic test accuracy',tools:['quadas3','quadas2'],match:'diagnostic accuracy|sensitivity and specificity'},
+ {id:'dta-comp',label:'Diagnostic accuracy, comparative',tools:['quadasc'],match:'comparative (diagnostic )?accuracy'},
+ {id:'prediction',label:'Prediction model (development or validation)',tools:['probast','probast19'],match:'prediction model|prognostic model|risk score|machine learning model'},
+ {id:'sr',label:'Systematic review',tools:['robis','amstar2'],match:'\\bsystematic review\\b'},
+ {id:'cross-sectional',label:'Analytical cross-sectional study',tools:['jbi-xs','axis'],match:'cross-sectional'},
+ {id:'prevalence',label:'Prevalence study',tools:['jbi-prev','axis'],match:'prevalence'},
+ {id:'case-series',label:'Case series or case report',tools:['jbi-cs'],match:'case series|case report'},
+ {id:'qualitative',label:'Qualitative study',tools:['casp-qual','jbi-qual'],match:'qualitative|focus group|semi-structured interview'},
+ {id:'animal',label:'Animal study',tools:['syrcle'],match:'\\b(rats?|mice|murine|rabbits?|animal model)\\b'}
 ];
 const DESIGN_BY_ID=Object.fromEntries(DESIGNS.map(d=>[d.id,d]));
-const toolFor=design=>TOOLS[DESIGN_BY_ID[design]?.tool]||null;
+// The review uses one tool per design (chosen once, for every study of that design).
+const toolsOf=design=>(DESIGN_BY_ID[design]?.tools||[]).filter(id=>TOOLS[id]);
+const toolFor=design=>{const ids=toolsOf(design);if(!ids.length)return null;const pick=ws?.toolChoice?.[design];return TOOLS[ids.includes(pick)?pick:ids[0]]};
 const LEVEL_CLASS={'Low':'low','Some concerns':'some','Moderate':'some','Unclear':'some','High':'high','Serious':'high','Critical':'critical','No information':'ni'};
-const lvlClass=l=>LEVEL_CLASS[l]||'none';
-const ANSWER_LABEL={Y:'Yes',PY:'Probably yes',PN:'Probably no',N:'No',NI:'No information',WN:'Weak no',SN:'Strong no',SY:'Strong yes',WY:'Weak yes',NA:'Not applicable'};
-const direction=a=>['Y','PY','SY','WY'].includes(a)?'yes':['N','PN','SN','WN'].includes(a)?'no':a==='NI'?'ni':'';
+const lvlClass=(l,tool,d)=>d?.colors?.[l]||tool?.colors?.[l]||LEVEL_CLASS[l]||'none';
+const levelsOf=(tool,d)=>d?.levels||tool.levels;
+// Overall levels: computed (tool.overall), chosen by the reviewer (overallLevels), or none (noOverall).
+const overallLevels=tool=>tool.overallLevelsOut||tool.overallLevels||tool.levels;
+const ANSWER_LABEL={DY:'Definitely yes',DN:'Definitely no',Y:'Yes',PY:'Probably yes',PN:'Probably no',N:'No',NI:'No information',WN:'Weak no',SN:'Strong no',SY:'Strong yes',WY:'Weak yes',NA:'Not applicable'};
+const direction=a=>['Y','PY','SY','WY','DY'].includes(a)?'yes':['N','PN','SN','WN','DN'].includes(a)?'no':a==='NI'?'ni':'';
 
 /* ---------------- State ----------------
    aimstep-rob holds the assessments; the full texts stay in
@@ -546,7 +554,7 @@ const direction=a=>['Y','PY','SY','WY'].includes(a)?'yes':['N','PN','SN','WN'].i
 const summaryKey='aimstep-rob-summary:'+scope;
 let ws=null,store=null,docStore=null,handoff=null,controller=null,busy='',current=null,saveChain=Promise.resolve();
 const docCache=new Map();
-const defaults=()=>({version:1,records:[],criteriaSig:'',handoffAt:'',outcomes:[],studies:{},assess:{},audit:[]});
+const defaults=()=>({version:1,toolChoice:{},records:[],criteriaSig:'',handoffAt:'',outcomes:[],studies:{},assess:{},audit:[]});
 function log(action,detail={}){ws.audit.push({at:now(),action,...detail});if(ws.audit.length>5000)ws.audit.splice(0,ws.audit.length-5000)}
 function getKey(db,key){return new Promise((resolve,reject)=>{const tx=db.transaction('projects','readonly'),req=tx.objectStore('projects').get(key);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)})}
 async function loadDoc(uid){if(docCache.has(uid))return docCache.get(uid);if(!docStore)return null;const d=await getKey(docStore,scope+'|'+uid);if(d)docCache.set(uid,d);return d}
@@ -577,7 +585,9 @@ function finalAnswers(x){const a={...x.mine};if(x.revealed)for(const [q,v] of Ob
 function judgements(tool,x,answers){
   const a=answers||finalAnswers(x);
   const dom=tool.domains.map(d=>{const auto=domainLevel(tool,d,a),ov=x.override?.[d.id];return {id:d.id,auto,level:ov?.level||auto,overridden:!!ov?.level,reason:ov?.reason||''}});
-  const all=dom.every(d=>d.level),auto=all?tool.overall(dom.map(d=>d.level)):undefined,ov=x.override?.overall;
+  if(tool.noOverall)return {domains:dom,overallAuto:undefined,overall:undefined,none:true,overallOverridden:false,overallReason:''};
+  if(tool.overallLevels&&!tool.overall){const v=(answers||finalAnswers(x)).__overall;return {domains:dom,overallAuto:undefined,overall:v,chosen:true,overallOverridden:false,overallReason:''}}
+  const all=dom.every(d=>d.level),auto=all?tool.overall(dom.map(d=>d.level),tool):undefined,ov=x.override?.overall;
   return {domains:dom,overallAuto:auto,overall:ov?.level||auto,overallOverridden:!!ov?.level,overallReason:ov?.reason||''};
 }
 function aiJudgements(tool,x){return x.ai?.answers?judgements(tool,{override:{}},Object.fromEntries(Object.entries(x.ai.answers).map(([k,v])=>[k,v.answer]))):null}
@@ -624,7 +634,8 @@ async function importFromFullText(){
    pre-fill confirms it from the methods, and the reviewer has the last word. */
 function guessDesign(r){
   const t=squash([r.title,r.abstract].join(' '));
-  const pick=DESIGNS.find(d=>d.match&&new RegExp(d.match,'i').test(t));
+  const order=['sr','rct-cluster','rct-crossover','rct','dta-comp','dta','prediction','case-series','qualitative','animal','prevalence','cross-sectional','nrsi'];
+  const pick=order.map(id=>DESIGN_BY_ID[id]).find(d=>d?.match&&new RegExp(d.match,'i').test(t));
   const s=studyOf(r.uid);s.design=pick?pick.id:'';s.designBy=pick?'keywords':'';s.designWhy=pick?'Matched in the title or abstract.':'';
 }
 
@@ -666,7 +677,7 @@ async function aiAssess(u,signal){
   const ev=await domainEvidence(doc,tool,signal),ids=[...new Set(Object.values(ev.by).flat())];
   const abstract=doc.chunks.filter(c=>/abstract/i.test(c.section||'')).slice(0,2).map(c=>c.id);
   const passages=[...new Set([...abstract,...ids])].map(id=>doc.chunks.find(c=>c.id===id)).filter(Boolean).map(c=>({id:c.id,section:c.section,page:c.page,text:c.text}));
-  const items=tool.domains.flatMap(d=>[...d.questions.map(q=>({id:q.id,domain:d.name,question:q.text,answers:optsOf(tool,q)})),...(guided(d)?[{id:d.id,domain:d.name,question:'Overall judgement for this domain'+(d.hint?': '+d.hint:'')+(d.questions.length?' (consider the answers above)':''),answers:tool.levels}]:[])]);
+  const items=tool.domains.flatMap(d=>[...d.questions.map(q=>({id:q.id,domain:d.name,question:q.text,answers:optsOf(tool,q)})),...(guided(d)?[{id:d.id,domain:d.name,question:'Overall judgement for this domain'+(d.hint?': '+d.hint:'')+(d.questions.length?' (consider the answers above)':''),answers:levelsOf(tool,d)}]:[])]);
   const schema={type:'object',properties:{answers:{type:'array',items:{type:'object',properties:{id:{type:'string'},answer:{type:'string'},passage:{type:'string'},quote:{type:'string'},reason:{type:'string'}},required:['id','answer','passage','quote','reason']}}},required:['answers']};
   const prompt=JSON.stringify({task:`Assess the risk of bias of the result for the outcome "${ws.outcomes[u.o]}" in this study with ${tool.name} (${tool.full}). Return JSON only.`,
     report:{title:r.title,year:r.year,journal:r.journal},questions:items,passages,
@@ -698,12 +709,14 @@ async function runAI(){
 }
 
 /* ---------------- Rendering ---------------- */
-const badge=l=>l?`<span class="lvl ${lvlClass(l)}">${esc(l)}</span>`:'<span class="lvl none">—</span>';
+const badge=(l,tool,d)=>l?`<span class="lvl ${lvlClass(l,tool,d)}">${esc(l)}</span>`:'<span class="lvl none">—</span>';
 function render(){safely(renderSource);safely(renderStudies);safely(renderAssess);safely(renderSummary)}
 function renderSource(){
   const n=ws.records.length,u=units(),done=u.filter(x=>statusOf(x)==='done').length,withText=ws.records.filter(r=>r.fullText).length;
   $('src-stats').innerHTML=[[n,'Included studies'],[withText,'With full text'],[u.length,'Results to assess'],[done,'Confirmed']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');
   $('outcomes').innerHTML=ws.outcomes.map((o,i)=>`<span class="chip">${esc(o)}<button type="button" class="chip-x" data-del-outcome="${i}" aria-label="Remove ${esc(o)}"${ws.outcomes.length<2?' disabled':''}>×</button></span>`).join('');
+  const present=[...new Set(ws.records.map(r=>studyOf(r.uid).design).filter(d=>toolsOf(d).length))];
+  $('tool-choice').innerHTML=present.length?`<span class="label">Tool for each design</span>`+present.map(d=>{const ids=toolsOf(d),cur=toolFor(d)?.id;return `<label class="tc">${esc(DESIGN_BY_ID[d].label)} <select class="select compact" data-toolchoice="${d}"${ids.length<2?' disabled':''}>${ids.map(id=>`<option value="${id}"${id===cur?' selected':''}>${esc(TOOLS[id].name)}${id===ids[0]?' (recommended)':''}</option>`).join('')}</select></label>`}).join(''):'';
   $('start-ai').disabled=!!busy||!n;$('stop-ai').hidden=busy!=='ai';$('start-ai').hidden=busy==='ai';
 }
 function renderStudies(){
@@ -736,16 +749,18 @@ function renderAssess(){
   $('domains').innerHTML=tool.domains.map((d,i)=>{
     const dj=j.domains[i],ad=aj?.domains[i];
     const lv=x.mine[d.id],aiL=x.ai?.answers?.[d.id],cf=conf.includes(d.id);
-    const body=d.questions.map(q=>qRow(d,q)).join('')+(guided(d)?`<div class="q dom-judge"><div class="q-text"><b>Domain judgement</b>${d.hint&&!d.questions.length?' — '+esc(d.hint):''}</div><div class="q-ans">${tool.levels.map(l=>`<button type="button" class="ans lvl-btn${lv===l?' on':''}" data-ans="${d.id}" data-v="${esc(l)}"${x.confirmed?' disabled':''}>${esc(l)}</button>`).join('')}</div><input class="input q-note" data-note="${d.id}" value="${esc(x.notes[d.id]||'')}" placeholder="Reason for the judgement"${x.confirmed?' disabled':''}>${x.revealed&&aiL?`<div class="ai-line${cf?' conflict':''}"><span class="ai-tag">AI</span> <b>${esc(aiL.answer)}</b> ${esc(aiL.reason)}${aiL.quote?` <q>${esc(aiL.quote)}</q>`:''}${cf&&!x.confirmed?`<span class="resolve">Final: <button type="button" class="btn small${x.resolved[d.id]===lv?' sel':''}" data-res="${d.id}" data-v="${esc(lv)}">Keep ${esc(lv)}</button><button type="button" class="btn small${x.resolved[d.id]===aiL.answer?' sel':''}" data-res="${d.id}" data-v="${esc(aiL.answer)}">Use AI ${esc(aiL.answer)}</button></span>`:''}</div>`:''}</div>`:'');
-    return `<details class="domain"${x.confirmed?'':' open'}><summary><span class="dom-id">${d.id}</span> ${esc(d.name)}<span class="dom-lvl">${ad?`<span class="muted">AI ${ad.level?esc(ad.level):'—'}</span> `:''}${badge(dj.level)}${dj.overridden?'<span class="muted"> (changed)</span>':''}</span></summary>${body}
-<div class="dom-foot">${!guided(d)?`Algorithm: ${dj.auto?badge(dj.auto):'answer every applicable question'} <button type="button" class="link-btn" data-override="${d.id}"${x.confirmed?' hidden':''}>Change judgement</button>`:''}${dj.overridden?`<span class="muted"> · Reason: ${esc(dj.reason)}</span>`:''}</div></details>`;
+    const body=d.questions.map(q=>qRow(d,q)).join('')+(guided(d)?`<div class="q dom-judge"><div class="q-text"><b>Domain judgement</b>${d.hint&&!d.questions.length?' — '+esc(d.hint):''}</div><div class="q-ans">${levelsOf(tool,d).map(l=>`<button type="button" class="ans lvl-btn${lv===l?' on':''}" data-ans="${d.id}" data-v="${esc(l)}"${x.confirmed?' disabled':''}>${esc(l)}</button>`).join('')}</div><input class="input q-note" data-note="${d.id}" value="${esc(x.notes[d.id]||'')}" placeholder="Reason for the judgement"${x.confirmed?' disabled':''}>${x.revealed&&aiL?`<div class="ai-line${cf?' conflict':''}"><span class="ai-tag">AI</span> <b>${esc(aiL.answer)}</b> ${esc(aiL.reason)}${aiL.quote?` <q>${esc(aiL.quote)}</q>`:''}${cf&&!x.confirmed?`<span class="resolve">Final: <button type="button" class="btn small${x.resolved[d.id]===lv?' sel':''}" data-res="${d.id}" data-v="${esc(lv)}">Keep ${esc(lv)}</button><button type="button" class="btn small${x.resolved[d.id]===aiL.answer?' sel':''}" data-res="${d.id}" data-v="${esc(aiL.answer)}">Use AI ${esc(aiL.answer)}</button></span>`:''}</div>`:''}</div>`:'');
+    return `<details class="domain"${x.confirmed?'':' open'}><summary><span class="dom-id">${d.id}</span> ${esc(d.name)}<span class="dom-lvl">${ad?`<span class="muted">AI ${ad.level?esc(ad.level):'—'}</span> `:''}${badge(dj.level,tool,d)}${dj.overridden?'<span class="muted"> (changed)</span>':''}</span></summary>${body}
+<div class="dom-foot">${!guided(d)?`Algorithm: ${dj.auto?badge(dj.auto,tool,d):'answer every applicable question'} <button type="button" class="link-btn" data-override="${d.id}"${x.confirmed?' hidden':''}>Change judgement</button>`:''}${dj.overridden?`<span class="muted"> · Reason: ${esc(dj.reason)}</span>`:''}</div></details>`;
   }).join('');
-  $('overall').innerHTML=`<span>Overall risk of bias</span>${badge(j.overall)}${j.overallOverridden?`<span class="muted"> changed from ${esc(j.overallAuto||'—')}: ${esc(j.overallReason)}</span>`:j.overall?`<span class="muted">${esc(tool.overallRule||'')}</span>`:''}${j.overall&&!x.confirmed?` <button type="button" class="link-btn" data-override="overall">Change</button>`:''}`;
+  if(j.none)$('overall').innerHTML=`<span>Overall</span><span class="muted">${esc(tool.overallRule||'This tool defines no overall judgement.')}</span>`;
+  else if(j.chosen)$('overall').innerHTML=`<span>Overall appraisal</span>${tool.overallLevels.map(l=>`<button type="button" class="ans lvl-btn${j.overall===l?' on':''}" data-ans="__overall" data-v="${esc(l)}"${x.confirmed?' disabled':''}>${esc(l)}</button>`).join('')}<span class="muted">${esc(tool.overallRule||'')}</span>`;
+  else $('overall').innerHTML=`<span>${esc(tool.overallLabel||'Overall risk of bias')}</span>${badge(j.overall,tool)}${j.overallOverridden?`<span class="muted"> changed from ${esc(j.overallAuto||'—')}: ${esc(j.overallReason)}</span>`:j.overall?`<span class="muted">${esc(tool.overallRule||'')}</span>`:''}${j.overall&&!x.confirmed?` <button type="button" class="link-btn" data-override="overall">Change</button>`:''}`;
   const fa=finalAnswers(x),all=j.domains.every(d=>d.level)&&tool.domains.every(d=>d.questions.every(q=>!applicable(q,fa)||fa[q.id])),open=conf.filter(q=>!x.resolved[q]).length;
   let step='';
   if(x.confirmed)step=`<span class="ok">Confirmed by ${esc(x.confirmed.by||'reviewer')} on ${esc(x.confirmed.at.slice(0,10))}.</span> <button class="btn small" type="button" id="reopen">Reopen</button>`;
   else if(!x.revealed)step=`<button class="btn small primary" type="button" id="reveal"${all?'':' disabled'}>${x.ai?'Done: compare with the AI draft':'Done'}</button><span class="hint">${all?'':'Answer every applicable question first. '}${x.ai?'The AI draft stays hidden until you finish.':'No AI draft yet; you can confirm on your own answers.'}</span>`;
-  else step=`<button class="btn small primary" type="button" id="confirm"${open||!j.overall?' disabled':''}>Confirm assessment</button><span class="hint">${open?`${open} conflict${open===1?'':'s'} with the AI to resolve.`:x.ai?`${conf.length} conflict${conf.length===1?'':'s'}, all resolved.`:''}</span>`;
+  else step=`<button class="btn small primary" type="button" id="confirm"${open||(!j.overall&&!j.none)?' disabled':''}>Confirm assessment</button><span class="hint">${open?`${open} conflict${open===1?'':'s'} with the AI to resolve.`:x.ai?`${conf.length} conflict${conf.length===1?'':'s'}, all resolved.`:''}</span>`;
   $('assess-step').innerHTML=step;
 }
 function renderSummary(){
@@ -755,9 +770,9 @@ function renderSummary(){
   if(!ids.length){$('summary-body').innerHTML='<p class="hint">Confirmed assessments appear here as a traffic-light table and a summary chart, by tool.</p>';$('agree').textContent='';return}
   $('summary-body').innerHTML=ids.map(id=>{
     const tool=TOOLS[id],rows=groups[id];
-    const tl=`<div class="table-wrap"><table class="tl"><thead><tr><th>Study · outcome</th>${tool.domains.map(d=>`<th title="${esc(d.name)}">${d.id}</th>`).join('')}<th>Overall</th></tr></thead><tbody>${rows.map(({u,j})=>{const r=recBy(u.uid);return `<tr><td>${esc(firstAuthor(r))} ${esc(r.year||'')}${ws.outcomes.length>1?' · '+esc(ws.outcomes[u.o]):''}</td>${j.domains.map(d=>`<td><span class="dot ${lvlClass(d.level)}" title="${esc(d.level)}"></span></td>`).join('')}<td><span class="dot ${lvlClass(j.overall)} big" title="${esc(j.overall)}"></span></td></tr>`}).join('')}</tbody></table></div>`;
-    const bars=[...tool.domains.map((d,i)=>[d.id+' '+d.name,rows.map(x=>x.j.domains[i].level)]),['Overall',rows.map(x=>x.j.overall)]].map(([name,ls])=>`<div class="bar-row"><span class="bar-name">${esc(name)}</span><span class="bar">${tool.levels.map(l=>{const n=ls.filter(x=>x===l).length;return n?`<span class="seg ${lvlClass(l)}" style="width:${n/ls.length*100}%" title="${esc(l)}: ${n}">${Math.round(n/ls.length*100)}%</span>`:''}).join('')}</span></div>`).join('');
-    return `<h3 class="sum-h">${esc(tool.name)} · ${rows.length} result${rows.length===1?'':'s'}</h3>${tl}<div class="bars">${bars}</div><p class="legend">${tool.levels.map(l=>`<span><span class="dot ${lvlClass(l)}"></span> ${esc(l)}</span>`).join('')}</p>`;
+    const tl=`<div class="table-wrap"><table class="tl"><thead><tr><th>Study · outcome</th>${tool.domains.map(d=>`<th title="${esc(d.name)}">${d.id}</th>`).join('')}${tool.noOverall?'':'<th>Overall</th>'}</tr></thead><tbody>${rows.map(({u,j})=>{const r=recBy(u.uid);return `<tr><td>${esc(firstAuthor(r))} ${esc(r.year||'')}${ws.outcomes.length>1?' · '+esc(ws.outcomes[u.o]):''}</td>${j.domains.map((d,i)=>`<td><span class="dot ${lvlClass(d.level,tool,tool.domains[i])}" title="${esc(d.level)}"></span></td>`).join('')}${tool.noOverall?'':`<td><span class="dot ${lvlClass(j.overall,tool)} big" title="${esc(j.overall)}"></span></td>`}</tr>`}).join('')}</tbody></table></div>`;
+    const bars=[...tool.domains.map((d,i)=>[d.id+' '+d.name,rows.map(x=>x.j.domains[i].level),levelsOf(tool,d),d]),...(tool.noOverall?[]:[['Overall',rows.map(x=>x.j.overall),overallLevels(tool),null]])].map(([name,ls,lv,d])=>`<div class="bar-row"><span class="bar-name" title="${esc(name)}">${esc(name)}</span><span class="bar">${lv.map(l=>{const n=ls.filter(x=>x===l).length;return n?`<span class="seg ${lvlClass(l,tool,d)}" style="width:${n/ls.length*100}%" title="${esc(l)}: ${n}">${Math.round(n/ls.length*100)}%</span>`:''}).join('')}</span></div>`).join('');
+    return `<h3 class="sum-h">${esc(tool.name)} · ${rows.length} result${rows.length===1?'':'s'}</h3>${tl}<div class="bars">${bars}</div><p class="legend">${[...new Set([...tool.domains.flatMap(d=>levelsOf(tool,d)),...(tool.noOverall?[]:overallLevels(tool))])].map(l=>`<span><span class="dot ${lvlClass(l,tool)}"></span> ${esc(l)}</span>`).join('')}</p>`;
   }).join('');
   // AI vs reviewer agreement on signalling answers (before resolution)
   let n=0,agree=0;
@@ -813,6 +828,11 @@ function bind(){
     // re-key the assessments of later outcomes
     const next={};for(const [k,v] of Object.entries(ws.assess)){const [uid,o]=k.split('|');if(+o===i)continue;next[akey(uid,+o>i?+o-1:+o)]=v}
     ws.assess=next;log('outcome-removed',{outcome:ws.outcomes[i]});ws.outcomes.splice(i,1);current=null;save();render()});
+  $('tool-choice').addEventListener('change',e=>{const sel=e.target.closest('[data-toolchoice]');if(!sel)return;const d=sel.dataset.toolchoice,prev=toolFor(d)?.id;if(prev===sel.value)return;
+    const keys=units().filter(u=>studyOf(u.uid).design===d&&ws.assess[u.key]).map(u=>u.key),done=keys.filter(k=>ws.assess[k].confirmed||Object.keys(ws.assess[k].mine).length).length;
+    if(done&&!confirm(`Switch ${DESIGN_BY_ID[d].label} to ${TOOLS[sel.value].name}? ${done} started or confirmed ${TOOLS[prev].name} assessment${done===1?'':'s'} will be cleared (they stay in the audit trail).`)){sel.value=prev;return}
+    keys.forEach(k=>delete ws.assess[k]);ws.toolChoice[d]=sel.value;log('tool-chosen',{design:d,from:prev,to:sel.value,cleared:keys.length});save();render();
+    toast(`${DESIGN_BY_ID[d].label}: ${TOOLS[sel.value].name}. Start the AI pre-fill again for these studies.`)});
   $('study-table').addEventListener('change',e=>{const sel=e.target.closest('[data-design]');if(!sel)return;const s=studyOf(sel.dataset.design),prev=s.design;s.design=sel.value;s.designBy='reviewer';s.designWhy='';
     // a different tool means different questions: drop drafts made for the old tool
     if(toolFor(prev)?.id!==toolFor(s.design)?.id)ws.outcomes.forEach((o,i)=>{delete ws.assess[akey(sel.dataset.design,i)]});
@@ -825,9 +845,10 @@ function bind(){
     else if(res){x.resolved[res.dataset.res]=res.dataset.v;log('conflict-resolved',{key:current,q:res.dataset.res,v:res.dataset.v});save();renderAssess();renderStudies()}
     else if(ov){const id=ov.dataset.override,[uid]=current.split('|'),tool=toolFor(studyOf(uid).design),j=judgements(tool,x);
       const auto=id==='overall'?j.overallAuto:j.domains.find(d=>d.id===id)?.auto;
-      const level=prompt(`New judgement for ${id==='overall'?'the overall risk of bias':id} (${tool.levels.join(' / ')}). Leave empty to use the algorithm${auto?' ('+auto+')':''}.`,'');
-      if(level===null)return;const L=tool.levels.find(l=>l.toLowerCase()===level.trim().toLowerCase());
-      if(!level.trim()){delete x.override[id]}else if(!L){toast('Use one of: '+tool.levels.join(', '));return}else{const why=prompt('Reason for changing the judgement (required):','');if(!why||!why.trim()){toast('A reason is required.');return}x.override[id]={level:L,reason:why.trim()}}
+      const lv=id==='overall'?overallLevels(tool):levelsOf(tool,tool.domains.find(d=>d.id===id));
+      const level=prompt(`New judgement for ${id==='overall'?'the overall judgement':id} (${lv.join(' / ')}). Leave empty to use the algorithm${auto?' ('+auto+')':''}.`,'');
+      if(level===null)return;const L=lv.find(l=>l.toLowerCase()===level.trim().toLowerCase());
+      if(!level.trim()){delete x.override[id]}else if(!L){toast('Use one of: '+lv.join(', '));return}else{const why=prompt('Reason for changing the judgement (required):','');if(!why||!why.trim()){toast('A reason is required.');return}x.override[id]={level:L,reason:why.trim()}}
       log('judgement-changed',{key:current,id,to:x.override[id]||null});save();render()}
     else if(rd)openReader(rd.dataset.reader);
     else if(e.target.id==='reveal'){x.revealed=true;const [uid]=current.split('|'),tool=toolFor(studyOf(uid).design);for(const q of conflicts(tool,x))delete x.resolved[q];log('compared-with-ai',{key:current,conflicts:conflicts(tool,x).length});save();render()}
@@ -949,6 +970,83 @@ const ROBIS={id:'robis',name:'ROBIS',full:'Risk Of Bias In Systematic reviews (j
   options:[],levels:LHU,overallRule:'Any domain High → High; all Low → Low; otherwise Unclear (ROBIS phase 3 is a reviewer judgement).',
   domains:['Study eligibility criteria','Identification and selection of studies','Data collection and study appraisal','Synthesis and findings'].map((n,i)=>({id:'D'+(i+1),name:n,questions:[],hint:'Judge concerns with '+n.toLowerCase()+'.'})),overall:lhuOverall};
 Object.assign(TOOLS,{rob2c:ROB2_CLUSTER,rob2x:ROB2_CROSS,robinsi:ROBINSI,robinse:ROBINSE,quadas3:QUADAS3,quadasc:QUADASC,probast:PROBASTAI,robis:ROBIS});
+/* ---------------- Alternative tools ----------------
+   Item lists from the official tool documents (checked 2026-10-04).
+   Checklist tools: each item is judged directly; an overall judgement is
+   computed only where the tool defines one, chosen by the reviewer where the
+   tool asks for one (JBI: include / exclude / seek further info), and not
+   given where the tool says not to summarise (CASP, AXIS, SYRCLE). */
+const items=(prefix,list,levels)=>list.map((t,i)=>({id:prefix+(i+1),name:t,questions:[],...(levels?{levels}:{})}));
+const YNU=['Yes','No','Unclear','Not applicable'];
+const YNU_COLORS={'Yes':'low','No':'high','Unclear':'some','Not applicable':'none','Can\'t tell':'some','Do not know':'some'};
+const JBI_OVERALL=['Include','Seek further info','Exclude'];
+const JBI_COLORS={...YNU_COLORS,'Include':'low','Seek further info':'some','Exclude':'high'};
+const jbi=(id,name,full,ref,list)=>({id,name,full,ref,options:[],levels:YNU,colors:JBI_COLORS,overallLevels:JBI_OVERALL,overallRule:'Reviewer decision (JBI): include, exclude or seek further information, against cut-offs agreed in advance.',domains:items('Q',list)});
+const RISK_LUH=['Low','Unclear','High'];
+const ROB1={id:'rob1',name:'RoB 1',full:'Cochrane risk-of-bias tool, version 1 (2011)',ref:'Higgins JPT, et al. BMJ 2011;343:d5928.',options:[],levels:RISK_LUH,
+  overallRule:'All key domains Low → Low; one or more High → High; otherwise Unclear (Higgins 2011, Table 3; all domains treated as key).',
+  domains:[['D1','Random sequence generation (selection bias)'],['D2','Allocation concealment (selection bias)'],['D3','Blinding of participants and personnel (performance bias)'],['D4','Blinding of outcome assessment (detection bias)'],['D5','Incomplete outcome data (attrition bias)'],['D6','Selective reporting (reporting bias)'],['D7','Other bias']].map(([id,name])=>({id,name,questions:[]})),
+  overall:ds=>ds.includes('High')?'High':ds.every(d=>d==='Low')?'Low':'Unclear'};
+const RB_STEP1=['DY','PY','PN','DN'],RB_LEVELS=['Definitely low','Probably low','Probably high','Definitely high'];
+const ROBUST={id:'robust',name:'ROBUST-RCT',full:'ROBUST-RCT, core items (two steps: what happened, then the risk of bias)',ref:'Wang Y, et al. ROBUST-RCT. BMJ 2025;388:e081199; MAGIC data template.',
+  options:RB_STEP1,levels:RB_LEVELS,colors:{'Definitely low':'low','Probably low':'plow','Probably high':'phigh','Definitely high':'high'},noOverall:true,
+  overallRule:'ROBUST-RCT gives item-level judgements; GRADE combines them per outcome. No study-level overall judgement.',
+  domains:[
+   {id:'I1',name:'Random sequence generation',questions:[{id:'1.1',text:'Was the allocation sequence adequately generated?'}]},
+   {id:'I2',name:'Allocation concealment',questions:[{id:'2.1',text:'Was the allocation adequately concealed?'}]},
+   {id:'I3',name:'Blinding of participants',questions:[{id:'3.1',text:'Were participants blinded?'}]},
+   {id:'I4',name:'Blinding of healthcare providers',questions:[{id:'4.1',text:'Were healthcare providers blinded?'}]},
+   {id:'I5',name:'Blinding of outcome assessors',questions:[{id:'5.1',text:'Were outcome assessors blinded?'}]},
+   {id:'I6',name:'Outcome data not included in analysis',questions:[],hint:'Record in the reason the number not analysed and randomised in each group, then judge the risk of bias from the overall percentage not included in the analysis.'}]};
+const ROBINSI1={id:'robinsi1',name:'ROBINS-I v1',full:'ROBINS-I version 1 (2016), judged per domain',ref:'Sterne JAC, et al. BMJ 2016;355:i4919.',options:[],
+  levels:['Low','Moderate','Serious','Critical','No information'],overallRule:'Any Critical → Critical; any Serious → Serious; all Low → Low; missing key information (no Serious or Critical) → No information; otherwise Moderate.',
+  domains:['Confounding','Selection of participants into the study','Classification of interventions','Deviations from intended interventions','Missing data','Measurement of outcomes','Selection of the reported result'].map((n,i)=>({id:'D'+(i+1),name:n,questions:[]})),
+  overall:ds=>ds.includes('Critical')?'Critical':ds.includes('Serious')?'Serious':ds.includes('No information')?'No information':ds.every(d=>d==='Low')?'Low':'Moderate'};
+const QUADAS2={id:'quadas2',name:'QUADAS-2',full:'QUADAS-2 (2011), risk of bias; superseded by QUADAS-3',ref:'Whiting PF, et al. Ann Intern Med 2011;155:529-36.',
+  options:['Yes','No','Unclear'],levels:RISK_LUH,overallRule:'All domains Low → Low; any High → High; otherwise Unclear (QUADAS-2 gives no score).',
+  domains:[
+   {id:'D1',name:'Patient selection',questions:['Was a consecutive or random sample of patients enrolled?','Was a case-control design avoided?','Did the study avoid inappropriate exclusions?'].map((t,i)=>({id:'1.'+(i+1),text:t}))},
+   {id:'D2',name:'Index test',questions:['Were the index test results interpreted without knowledge of the results of the reference standard?','If a threshold was used, was it pre-specified?'].map((t,i)=>({id:'2.'+(i+1),text:t}))},
+   {id:'D3',name:'Reference standard',questions:['Is the reference standard likely to correctly classify the target condition?','Were the reference standard results interpreted without knowledge of the results of the index test?'].map((t,i)=>({id:'3.'+(i+1),text:t}))},
+   {id:'D4',name:'Flow and timing',questions:['Was there an appropriate interval between index test and reference standard?','Did all patients receive a reference standard?','Did patients receive the same reference standard?','Were all patients included in the analysis?'].map((t,i)=>({id:'4.'+(i+1),text:t}))}],
+  overall:ds=>ds.includes('High')?'High':ds.every(d=>d==='Low')?'Low':'Unclear'};
+const PROBAST19={id:'probast19',name:'PROBAST (2019)',full:'PROBAST 2019, risk of bias; superseded by PROBAST+AI',ref:'Wolff RF, et al. Ann Intern Med 2019;170:51-8.',
+  options:['Y','PY','PN','N','NI'],levels:RISK_LUH,overallRule:'All Low → Low; any High → High; otherwise Unclear. A model developed without external validation and Low everywhere should be considered High unless the data set was very large with internal validation.',
+  domains:[
+   {id:'D1',name:'Participants',questions:['Were appropriate data sources used, e.g. cohort, RCT or nested case-control study data?','Were all inclusions and exclusions of participants appropriate?'].map((t,i)=>({id:'1.'+(i+1),text:t}))},
+   {id:'D2',name:'Predictors',questions:['Were predictors defined and assessed in a similar way for all participants?','Were predictor assessments made without knowledge of outcome data?','Are all predictors available at the time the model is intended to be used?'].map((t,i)=>({id:'2.'+(i+1),text:t}))},
+   {id:'D3',name:'Outcome',questions:['Was the outcome determined appropriately?','Was a pre-specified or standard outcome definition used?','Were predictors excluded from the outcome definition?','Was the outcome defined and determined in a similar way for all participants?','Was the outcome determined without knowledge of predictor information?','Was the time interval between predictor assessment and outcome determination appropriate?'].map((t,i)=>({id:'3.'+(i+1),text:t}))},
+   {id:'D4',name:'Analysis',questions:['Were there a reasonable number of participants with the outcome?','Were continuous and categorical predictors handled appropriately?','Were all enrolled participants included in the analysis?','Were participants with missing data handled appropriately?','Was selection of predictors based on univariable analysis avoided?','Were complexities in the data (e.g. censoring, competing risks, sampling of controls) accounted for appropriately?','Were relevant model performance measures evaluated appropriately?','Were model overfitting and optimism in model performance accounted for?','Do predictors and their assigned weights in the final model correspond to the results from the reported multivariable analysis?'].map((t,i)=>({id:'4.'+(i+1),text:t}))}],
+  overall:ds=>ds.includes('High')?'High':ds.every(d=>d==='Low')?'Low':'Unclear'};
+const AM_CRIT=new Set(['Q2','Q4','Q7','Q9','Q11','Q13','Q15']);
+const AMSTAR2={id:'amstar2',overallLabel:'Overall confidence in the results',name:'AMSTAR 2',full:'AMSTAR 2: confidence in the results of a systematic review (critical items 2, 4, 7, 9, 11, 13, 15)',ref:'Shea BJ, et al. BMJ 2017;358:j4008.',
+  options:[],levels:['Yes','Partial yes','No','No meta-analysis'],colors:{'Yes':'low','Partial yes':'some','No':'high','No meta-analysis':'none','High':'low','Moderate':'some','Low':'phigh','Critically low':'high'},
+  overallRule:'High: no or one non-critical weakness; Moderate: more than one non-critical weakness; Low: one critical flaw; Critically low: more than one critical flaw.',
+  domains:['Did the research questions and inclusion criteria include the components of PICO?','Did the report contain an explicit statement that the methods were established before the review, and justify significant deviations from the protocol?','Did the authors explain their selection of the study designs for inclusion?','Did the authors use a comprehensive literature search strategy?','Did the authors perform study selection in duplicate?','Did the authors perform data extraction in duplicate?','Did the authors provide a list of excluded studies and justify the exclusions?','Did the authors describe the included studies in adequate detail?','Did the authors use a satisfactory technique for assessing the risk of bias in individual studies?','Did the authors report on the sources of funding for the included studies?','If meta-analysis was performed, did the authors use appropriate methods for statistical combination of results?','If meta-analysis was performed, did the authors assess the potential impact of risk of bias on the results?','Did the authors account for risk of bias when interpreting or discussing the results?','Did the authors provide a satisfactory explanation for, and discussion of, any heterogeneity?','If they performed quantitative synthesis, did the authors investigate publication bias and discuss its likely impact?','Did the authors report any potential sources of conflict of interest, including funding for the review?'].map((t,i)=>{const id='Q'+(i+1),n=i+1;return {id,name:t+(AM_CRIT.has(id)?' (critical)':''),questions:[],levels:[2,4,7,8,9].includes(n)?['Yes','Partial yes','No']:[11,12,15].includes(n)?['Yes','No','No meta-analysis']:['Yes','No']}}),
+  overallLevelsOut:['High','Moderate','Low','Critically low'],
+  overall:(ds,tool)=>{let crit=0,non=0;tool.domains.forEach((d,i)=>{if(ds[i]==='No'){if(AM_CRIT.has(d.id))crit++;else non++}});return crit>1?'Critically low':crit===1?'Low':non>1?'Moderate':'High'}};
+const NOS_STAR=['★','No star'],NOS_COMP=['★★','★','No star'];
+const NOS={id:'nos',overallLabel:'Overall quality (AHRQ)',name:'Newcastle–Ottawa Scale',full:'Newcastle–Ottawa Scale, cohort studies (a quality score; Cochrane recommends ROBINS-I or ROBINS-E instead)',ref:'Wells GA, et al. Newcastle–Ottawa Scale (OHRI). Stang A. Eur J Epidemiol 2010;25:603-5.',
+  options:[],levels:NOS_STAR,colors:{'★':'low','★★':'low','No star':'high','Good':'low','Fair':'some','Poor':'high'},
+  overallRule:'AHRQ conversion: Good = Selection 3–4, Comparability 1–2 and Outcome 2–3 stars; Fair = Selection 2 with the same; Poor = Selection 0–1, Comparability 0 or Outcome 0–1.',
+  domains:[['S1','Selection: representativeness of the exposed cohort'],['S2','Selection: selection of the non-exposed cohort'],['S3','Selection: ascertainment of exposure'],['S4','Selection: outcome of interest not present at start of study'],['C1','Comparability of cohorts on the basis of the design or analysis',NOS_COMP],['O1','Outcome: assessment of outcome'],['O2','Outcome: follow-up long enough for outcomes to occur'],['O3','Outcome: adequacy of follow-up of cohorts']].map(([id,name,levels])=>({id,name,questions:[],...(levels?{levels}:{})})),
+  overall:ds=>{const st=v=>v==='★★'?2:v==='★'?1:0,s=ds.slice(0,4).reduce((a,v)=>a+st(v),0),c=st(ds[4]),o=ds.slice(5).reduce((a,v)=>a+st(v),0);return s<=1||c===0||o<=1?'Poor':s>=3?'Good':'Fair'}};
+NOS.overallLevelsOut=['Good','Fair','Poor'];
+const JBI_COHORT=jbi('jbi-cohort','JBI cohort checklist','JBI critical appraisal checklist for cohort studies (11 items)','Moola S, et al. JBI Manual for Evidence Synthesis, chapter 7 (2017 checklist).',['Were the two groups similar and recruited from the same population?','Were the exposures measured similarly to assign people to both exposed and unexposed groups?','Was the exposure measured in a valid and reliable way?','Were confounding factors identified?','Were strategies to deal with confounding factors stated?','Were the groups/participants free of the outcome at the start of the study (or at the moment of exposure)?','Were the outcomes measured in a valid and reliable way?','Was the follow-up time reported and sufficient to be long enough for outcomes to occur?','Was follow-up complete, and if not, were the reasons for loss to follow-up described and explored?','Were strategies to address incomplete follow-up utilised?','Was appropriate statistical analysis used?']);
+const JBI_CS=jbi('jbi-cs','JBI case series checklist','JBI critical appraisal checklist for case series (10 items)','Munn Z, et al. JBI Evid Synth 2020;18:2127-33.',['Were there clear criteria for inclusion in the case series?','Was the condition measured in a standard, reliable way for all participants included?','Were valid methods used for identification of the condition for all participants included?','Did the case series have consecutive inclusion of participants?','Did the case series have complete inclusion of participants?','Was there clear reporting of the demographics of the participants?','Was there clear reporting of clinical information of the participants?','Were the outcomes or follow-up results of cases clearly reported?','Was there clear reporting of the presenting site(s)/clinic(s) demographic information?','Was statistical analysis appropriate?']);
+const JBI_XS=jbi('jbi-xs','JBI cross-sectional (2026)','Revised JBI critical appraisal tool for analytical cross-sectional studies (2026), grouped by bias domain','Barker TH, et al. JBI Evid Synth 2026;24(3):401-8.',['Selection and allocation: Were the criteria for inclusion in the sample clearly defined?','Selection and allocation: Were objective, standard criteria used for measurement of the condition?','Classification of the exposure: Was the exposure measured in a valid and reliable way?','Outcome assessment: Were the outcomes measured in a valid and reliable way?','Confounding: Were confounding factors identified?','Confounding: Were strategies to deal with confounding factors stated?','Statistical conclusion validity: Was appropriate statistical analysis used?','Reporting: Were the study subjects and the setting described in detail?']);
+const JBI_PREV=jbi('jbi-prev','JBI prevalence checklist','JBI critical appraisal checklist for prevalence studies (9 items)','Munn Z, et al. Int J Evid Based Healthc 2015;13:147-53.',['Was the sample frame appropriate to address the target population?','Were study participants sampled in an appropriate way?','Was the sample size adequate?','Were the study subjects and the setting described in detail?','Was the data analysis conducted with sufficient coverage of the identified sample?','Were valid methods used for the identification of the condition?','Was the condition measured in a standard, reliable way for all participants?','Was there appropriate statistical analysis?','Was the response rate adequate, and if not, was the low response rate managed appropriately?']);
+const JBI_QUAL=jbi('jbi-qual','JBI qualitative checklist','JBI critical appraisal checklist for qualitative research (10 items)','Lockwood C, et al. Int J Evid Based Healthc 2015;13:179-87.',['Is there congruity between the stated philosophical perspective and the research methodology?','Is there congruity between the research methodology and the research question or objectives?','Is there congruity between the research methodology and the methods used to collect data?','Is there congruity between the research methodology and the representation and analysis of data?','Is there congruity between the research methodology and the interpretation of results?','Is there a statement locating the researcher culturally or theoretically?','Is the influence of the researcher on the research, and vice versa, addressed?','Are participants, and their voices, adequately represented?','Is the research ethical according to current criteria, and is there evidence of ethical approval?','Do the conclusions drawn flow from the analysis or interpretation of the data?']);
+const CASP={id:'casp-qual',name:'CASP qualitative',full:'CASP qualitative studies checklist (2024), 10 questions',ref:'Critical Appraisal Skills Programme. CASP Qualitative Studies Checklist, 2024.',options:[],levels:['Yes','No','Can\'t tell'],colors:YNU_COLORS,noOverall:true,
+  overallRule:'CASP gives no score; many "Can\'t tell" answers mean the findings need caution.',
+  domains:items('Q',['Was there a clear statement of the aims of the research?','Is a qualitative methodology appropriate?','Was the research design appropriate to address the aims of the research?','Was the recruitment strategy appropriate to the aims of the research?','Was the data collected in a way that addressed the research issue?','Has the relationship between researcher and participants been adequately considered?','Have ethical issues been taken into consideration?','Was the data analysis sufficiently rigorous?','Is there a clear statement of findings?','How valuable is the research? (answer Yes if valuable, and explain)'])};
+const AXIS={id:'axis',name:'AXIS',full:'AXIS appraisal tool for cross-sectional studies (20 items; items 13 and 19 are reverse-keyed)',ref:'Downes MJ, et al. BMJ Open 2016;6:e011458.',options:[],levels:['Yes','No','Do not know'],colors:YNU_COLORS,noOverall:true,
+  overallRule:'AXIS gives no numerical score or overall rating.',
+  domains:items('Q',['Were the aims/objectives of the study clear?','Was the study design appropriate for the stated aim(s)?','Was the sample size justified?','Was the target/reference population clearly defined?','Was the sample frame taken from an appropriate population base so that it closely represented the target population?','Was the selection process likely to select subjects that were representative of the target population?','Were measures undertaken to address and categorise non-responders?','Were the risk factor and outcome variables measured appropriate to the aims of the study?','Were the risk factor and outcome variables measured correctly using instruments that had been trialled, piloted or published previously?','Is it clear what was used to determine statistical significance and/or precision estimates?','Were the methods sufficiently described to enable them to be repeated?','Were the basic data adequately described?','Does the response rate raise concerns about non-response bias? (reverse-keyed)','If appropriate, was information about non-responders described?','Were the results internally consistent?','Were the results for the analyses described in the methods presented?','Were the authors\' discussions and conclusions justified by the results?','Were the limitations of the study discussed?','Were there any funding sources or conflicts of interest that may affect the authors\' interpretation of the results? (reverse-keyed)','Was ethical approval or consent of participants attained?']).map(d=>/reverse-keyed/.test(d.name)?{...d,colors:{'Yes':'high','No':'low','Do not know':'some'}}:d)};
+const SYRCLE={id:'syrcle',name:'SYRCLE',full:'SYRCLE risk of bias tool for animal studies (10 items: Yes = low, No = high, Unclear)',ref:'Hooijmans CR, et al. BMC Med Res Methodol 2014;14:43.',options:[],levels:['Yes','No','Unclear'],colors:YNU_COLORS,noOverall:true,
+  overallRule:'SYRCLE recommends against a summary score.',
+  domains:items('Q',['Was the allocation sequence adequately generated and applied? (selection bias)','Were the groups similar at baseline or were they adjusted for confounders in the analysis? (selection bias)','Was the allocation adequately concealed? (selection bias)','Were the animals randomly housed during the experiment? (performance bias)','Were the caregivers and/or investigators blinded from knowledge which intervention each animal received? (performance bias)','Were animals selected at random for outcome assessment? (detection bias)','Was the outcome assessor blinded? (detection bias)','Were incomplete outcome data adequately addressed? (attrition bias)','Are reports of the study free of selective outcome reporting? (reporting bias)','Was the study apparently free of other problems that could result in high risk of bias? (other)'])};
+Object.assign(TOOLS,{rob1:ROB1,robust:ROBUST,robinsi1:ROBINSI1,quadas2:QUADAS2,probast19:PROBAST19,amstar2:AMSTAR2,nos:NOS,'jbi-cohort':JBI_COHORT,'jbi-cs':JBI_CS,'jbi-xs':JBI_XS,'jbi-prev':JBI_PREV,'jbi-qual':JBI_QUAL,'casp-qual':CASP,axis:AXIS,syrcle:SYRCLE});
 init();
 })();
 </script>
