@@ -15,7 +15,7 @@
 </style>
 </head>
 <body>
-<header class="header"><a class="brand" href="index.html" aria-label="AIM-STEP Workflow"><span class="brand-mark">A</span><span>AIM-STEP<small>LIVING EVIDENCE</small></span></a><nav class="nav" aria-label="Main navigation"><a href="index.html?view=project" data-nav="workflow">Workflow</a><a href="index.html?view=toolset" data-nav="toolset">Toolset</a><a href="settings.html" data-nav="settings">Settings</a><a href="contact.html">Contact</a></nav><div class="right-head"><span class="project-pill" id="project-pill" hidden></span><button class="lang" id="lang">中文</button></div></header>
+<header class="header"><a class="brand" href="index.html" aria-label="AIM-STEP Workflow"><span class="brand-mark">A</span><span>AIM-STEP<small>LIVING EVIDENCE</small></span></a><nav class="nav" aria-label="Main navigation"><a href="index.html?view=project" data-nav="workflow">Workflow</a><a href="index.html?view=toolset" data-nav="toolset">Toolset</a><a href="contact.html">Contact</a></nav><div class="right-head"><span class="project-pill" id="project-pill" hidden></span><button class="lang" id="lang">中文</button></div></header>
 <main class="wrap"><div class="crumb"><a href="index.html?view=toolset" data-nav="toolset">Toolset</a> / <span>Eligibility criteria</span></div>
 <div class="layout"><section class="panel editor" aria-label="Criteria editor">
 <div class="section"><div class="section-head"><div><h2>Review type</h2></div></div><label class="field-label" for="review-type">Review type</label><select class="select" id="review-type"><option>Literature Review</option><option>Systematic Review</option><option>Network/Meta-analysis</option><option>Scoping Review</option><option>Other Review</option></select></div>
@@ -35,7 +35,6 @@ let project=null;try{project=JSON.parse(sessionStorage.getItem(contextKey)||'nul
 function pageLink(file,view){const url=new URL(file,location.href);if(projectId)url.searchParams.set('projectId',projectId);if(view)url.searchParams.set('view',view);return url.href}
 document.querySelectorAll('[data-nav="workflow"]').forEach(a=>a.href=pageLink('index.html','project'));
 document.querySelectorAll('[data-nav="toolset"]').forEach(a=>a.href=pageLink('index.html','toolset'));
-document.querySelectorAll('[data-nav="settings"]').forEach(a=>a.href=pageLink('settings.html'));
 const nextUrl=new URL('search-strategy.html',location.href);const nextProjectId=projectId;if(nextProjectId)nextUrl.searchParams.set('projectId',nextProjectId);$('next-search-strategy').href=nextUrl.href;
 
 if(projectId){const linkedName=(project&&project.id===projectId&&project.name)||'Linked project';const projectPill=$('project-pill');if(projectPill){projectPill.hidden=false;projectPill.textContent=linkedName}}

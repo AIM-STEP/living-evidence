@@ -162,7 +162,7 @@ th{background:#f4f4f4}
 <body>
 <header class="header">
 <a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span>AIM-STEP<small>LIVING EVIDENCE</small></span></a>
-<nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a class="active" data-toolset href="index.html?view=toolset">Toolset</a><a data-settings href="settings.html">Settings</a><a href="contact.html">Contact</a></nav>
+<nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a class="active" data-toolset href="index.html?view=toolset">Toolset</a><a href="contact.html">Contact</a></nav>
 <a class="project-pill" id="project-name" hidden></a>
 </header>
 <main class="wrap">
@@ -262,7 +262,6 @@ function pageLink(file,view){
 document.querySelectorAll('[data-home]').forEach(a=>a.href=pageLink('index.html'));
 document.querySelectorAll('[data-workflow]').forEach(a=>a.href=pageLink('index.html','project'));
 document.querySelectorAll('[data-toolset]').forEach(a=>a.href=pageLink('index.html','toolset'));
-document.querySelectorAll('[data-settings]').forEach(a=>a.href=pageLink('settings.html'));
 if(project?.id===projectId&&project.name){
   $('project-name').textContent=project.name;
   $('project-name').title=project.name;

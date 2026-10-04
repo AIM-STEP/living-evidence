@@ -1671,7 +1671,6 @@
         <nav class="nav" aria-label="Main navigation">
           <a href="index.html" data-i18n="nav_workflow" aria-current="page">Workflow</a>
           <a href="index.html?view=toolset" data-page-href="workflow.html" data-i18n="nav_toolset">Toolset</a>
-          <a href="settings.html" data-i18n="nav_settings">Settings</a>
           <a href="contact.html" data-i18n="nav_contact">Contact</a>
         </nav>
 
@@ -2379,7 +2378,7 @@
         var I18N = {
           en: {
             title: "AIM-STEP | Workflow",
-            nav_workflow: "Workflow", nav_toolset: "Toolset", nav_contact: "Contact", nav_settings: "Settings",
+            nav_workflow: "Workflow", nav_toolset: "Toolset", nav_contact: "Contact",
             lang_btn: "中文",
             s_t: "Simple", s_d: "Easy to use",
             t_t: "Transparent", t_d: "Clear sources and methods",
@@ -2408,7 +2407,7 @@
           },
           zh: {
             title: "AIM-STEP | 工作流程",
-            nav_workflow: "工作流程", nav_toolset: "工具集", nav_contact: "联系", nav_settings: "设置",
+            nav_workflow: "工作流程", nav_toolset: "工具集", nav_contact: "联系",
             lang_btn: "EN",
             s_t: "简单", s_d: "易于使用",
             t_t: "透明", t_d: "来源与方法清晰",
@@ -3344,7 +3343,7 @@
           // The Toolset view lives in index so a single-file update also
           // updates the tools reached through older workflow.html links.
           if (view === "page" && target && isToolsetPage(target)) { view = "toolset"; target = null; }
-          if (view === "page" && target && activeProject && /\/(?:eligibility|search-strategy|title-abstract-screening|full-text-screening|settings)\.html$/i.test(target.pathname) && !target.searchParams.has("projectId") && !target.searchParams.has("project")) {
+          if (view === "page" && target && activeProject && /\/(?:eligibility|search-strategy|title-abstract-screening|full-text-screening)\.html$/i.test(target.pathname) && !target.searchParams.has("projectId") && !target.searchParams.has("project")) {
             target = new URL(target);
             target.searchParams.set("projectId", activeProject.id);
           }
