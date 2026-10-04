@@ -182,6 +182,7 @@ th{background:#f4f4f4}
 @media(max-width:760px){.stage-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.frow{grid-template-columns:1fr}.path-arrow{display:none}.path-step{min-width:calc(50% - 6px)}}
 .coe.unverified{color:var(--muted)}.coe.unverified small{margin-left:3px;font-size:10px;font-weight:600;color:var(--plum);background:#f3e8f1;border-radius:3px;padding:0 4px}
 .two>.label{margin-top:12px}.rule>summary{list-style:none;cursor:pointer}.rule>summary::-webkit-details-marker{display:none}.rule>summary>div:first-child:before{content:'▸';display:inline-block;width:14px;color:var(--plum);transition:transform .15s}.rule[open]>summary>div:first-child:before{transform:rotate(90deg)}.rule-chosen{margin-left:8px;font-size:12px;color:var(--ink2);font-weight:400}.rule-chosen:before{content:'· '}
+.rules-group{font-size:13px;margin:14px 0 6px}.rules-group:first-child{margin-top:0}.rules-group .muted{font-weight:400;font-size:12px}.rule.decided{border-color:var(--line);background:#fff}.rule-state{font-size:12px;font-weight:600;color:var(--green);white-space:nowrap}.rule-decision{font-size:13px;margin:8px 0 2px}.rule-head{align-items:center}
 </style>
 </head>
 <body>
@@ -221,8 +222,8 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2>Method rules</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-rules" aria-expanded="true" aria-controls="rules-body" title="Collapse Method rules"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Method rules</span></button></div></div>
 <div class="panel-body" id="rules-body">
-<p class="hint rules-intro">The GRADE-NMA Workflow and Codebook leave these rules open, and two are in conflict between the two documents. The tool never chooses for you. Choose an option, give the reason and approve it. Until then, every result that depends on the rule stays <b>Blocked</b>. GRADE guidance is shown for reference only.</p>
-<div class="rules-top"><label class="label" for="reviewer">Approved by</label><input class="input compact" id="reviewer" autocomplete="name" placeholder="Name of the person approving"><span class="hint" id="rules-status"></span></div>
+<p class="hint rules-intro">The GRADE-NMA Workflow and Codebook leave some rules open, and two conflict between the documents. The tool never decides them. Click a rule to see it.</p>
+<div class="rules-top"><label class="label" for="reviewer">Decided by</label><input class="input compact" id="reviewer" autocomplete="name" placeholder="Name of the person deciding"><span class="hint" id="rules-status"></span></div>
 <div id="rules-list" class="rules-list"></div>
 </div>
 </section>
@@ -580,7 +581,7 @@ function derive(rec,meta,rules){
   else{
     const d001=ruleChoice(rules,'D-001');
     const higher=rank(cd)<rank(ci)?'direct':'indirect',hi=rank(cd)<rank(ci)?cd:ci,lo=rank(cd)<rank(ci)?ci:cd;
-    if(!d001)set(56,'blocked',null,`Direct (${cd}) and indirect (${ci}) differ; the integration rule is not approved (D-001).`,'D-001');
+    if(!d001)set(56,'blocked',null,`Direct (${cd}) and indirect (${ci}) differ; the integration rule (D-001) is still open.`,'D-001');
     else if(d001==='manual')set(56,'manual',null,'Reviewers decide #56 from adequacy and contribution (D-001, manual).','D-001');
     else{
       const adequacy=g(52),cHi=g(higher==='direct'?54:55),cLo=g(higher==='direct'?55:54);
@@ -631,7 +632,7 @@ function derive(rec,meta,rules){
   const r65=out[65].state==='auto'?out[65].value:g(65),d003=ruleChoice(rules,'D-003');
   const covered=isCI(r65)?zonesCovered(r65.ci_lower,r65.ci_upper):null;
   out.zones=covered;
-  if(!d003)set(66,'blocked',null,covered?`CI covers ${covered.length} MID zone${covered.length>1?'s':''}; the mapping to a rating is not approved (D-003).`:'Needs the imprecision rule (D-003).','D-003');
+  if(!d003)set(66,'blocked',null,covered?`CI covers ${covered.length} MID zone${covered.length>1?'s':''}; the mapping to a rating (D-003) is still open.`:'Needs the imprecision rule (D-003).','D-003');
   else if(d003==='manual')set(66,'manual',null,'Reviewers judge imprecision (D-003, manual).','D-003');
   else if(!covered)set(66,'waiting',null,'Needs #65.');
   else set(66,'auto',['ns','serious','very serious'][covered.length-1],`95% CI ${fmtNum(trim(r65.ci_lower,1))} to ${fmtNum(trim(r65.ci_upper,1))} per 1000 covers ${covered.length} zone${covered.length>1?'s':''}: ${covered.join('; ')}.`,'D-003');
@@ -664,7 +665,7 @@ function suggestSource(rec,rules,hasDirect,hasIndirect,inc,cd,ci){
   }
   if(inc==='ns')return {value:'3',why:'Both sources, no important incoherence: the NMA estimate is generally selected (Workflow 8).'};
   if(inc==='serious'||inc==='very serious'){
-    if(!d007)return {value:null,why:'Important incoherence: the selection rule is not approved (D-007).',blocked:true};
+    if(!d007)return {value:null,why:'Important incoherence: the selection rule (D-007) is still open.',blocked:true};
     if(d007==='manual')return {value:null,why:'Important incoherence: reviewers choose and explain (D-007, manual).'};
     if(isVal(cd)&&isVal(ci)&&cd!==ci){const v=rank(cd)<rank(ci)?'1':'2';return {value:v,why:`Important incoherence: the ${v==='1'?'direct':'indirect'} estimate has higher certainty (D-007).`,firm:true}}
     if(isVal(cd)&&cd===ci)return {value:'3',why:'Important incoherence with equal certainty: the NMA estimate, rated down for incoherence (D-007).',firm:true};
@@ -736,7 +737,7 @@ function checks(rec,calc,meta,rules,kind){
   if(isNum(c54)&&isNum(c55)){
     const s=c54+c55;
     if(ruleChoice(rules,'D-011')==='none'){}
-    else if(Math.abs(s-100)>tol)add('M32',ruleChoice(rules,'D-011')?'error':'warning',[54,55],`#54 + #55 = ${fmtNum(trim(s,4))}%, outside 100 ± ${fmtNum(tol)}${ruleChoice(rules,'D-011')?'':' (tolerance not approved, D-011)'}.`);
+    else if(Math.abs(s-100)>tol)add('M32',ruleChoice(rules,'D-011')?'error':'warning',[54,55],`#54 + #55 = ${fmtNum(trim(s,4))}%, outside 100 ± ${fmtNum(tol)}${ruleChoice(rules,'D-011')?'':' (tolerance still open, D-011)'}.`);
   }else if(hasD&&hasI&&(isNum(c54)!==isNum(c55)))add('M33','warning',[54,55],'Only one of #54 and #55 has a value, so the ≈100% sum cannot be checked.');
   const first=g(38),hasFirst=isVal(first)&&String(first).trim().toLowerCase()!=='no';
   if(hasFirst&&[41,42,43].some(no=>isVal(g(no))))add('M34','error',[38,41,42,43],'A first-order loop is recorded, so #41–#43 must be NA.');
@@ -745,7 +746,7 @@ function checks(rec,calc,meta,rules,kind){
   const src=g(61),srcNo={'1':8,'2':35,'3':49}[src];
   if(srcNo&&!isCI(g(srcNo)))add('M37','error',[61,srcNo],`#61 selects #${srcNo}, which has no estimate.`);
   const sg=calc.suggest61;
-  if(src&&sg&&sg.value&&sg.firm&&src!==sg.value)add('M51','error',[61],`#61 = ${src}, but the approved rule gives ${sg.value}: ${sg.why}`);
+  if(src&&sg&&sg.value&&sg.firm&&src!==sg.value)add('M51','error',[61],`#61 = ${src}, but the decided rule gives ${sg.value}: ${sg.why}`);
   if(src&&sg&&sg.value&&!sg.firm&&!sg.blocked&&src!==sg.value)add('M52','warning',[61],`#61 = ${src}; ${sg.why} Explain the choice in #62.`);
   if(src&&sg&&sg.blocked)add('M39','blocked',[58,61],sg.why);
   // #64 -> #65 rescaling must use one factor
@@ -768,9 +769,9 @@ function checks(rec,calc,meta,rules,kind){
     const m=/unresolved:(D-\d+)/.exec(f.rule_status||'');if(!m)continue;
     if(['D-002','D-003','D-004','D-001','D-007','D-012','D-013'].includes(m[1]))continue; // handled by the engine above
     const v=rec[f.key];
-    if(isVal(v)&&!ruleChoice(rules,m[1]))add('B-'+m[1],'blocked',[f.no],`#${f.no} ${f.name}: its rule is not approved (${m[1]}).`);
+    if(isVal(v)&&!ruleChoice(rules,m[1]))add('B-'+m[1],'blocked',[f.no],`#${f.no} ${f.name}: its rule (${m[1]}) is still open.`);
   }
-  if(ruleChoice(rules,'D-008')&&!String(meta?.pico||'').trim())add('M54','warning',[2,3],'D-008 is approved but the PICO and nodes box in Assessment source is empty.');
+  if(ruleChoice(rules,'D-008')&&!String(meta?.pico||'').trim())add('M54','warning',[2,3],'D-008 is decided but the PICO and nodes box in Assessment source is empty.');
   if(ruleChoice(rules,'D-009')==='null'&&isVal(g(12))&&!NULL_CATS.includes(g(12)))add('M55','warning',[12],`#12 should be one of: ${NULL_CATS.join('; ')} (D-009).`);
   if(calc[66]?.state==='auto'&&calc[66].value==='ns'&&g(61)==='1'&&isNum(g(6))&&isNum(g(7))&&g(6)+g(7)<OIS_TOTAL_N)add('M53','warning',[6,7,66],`The CI stays in one zone, but the direct evidence has ${g(6)+g(7)} participants, below the OIS of about ${OIS_TOTAL_N}; consider rating down and explain in #67 (Core GRADE 2).`);
   return out;
@@ -808,10 +809,10 @@ function load(){
   for(const [id,r] of Object.entries(LOGGED))if(!ws.rules[id]||ws.rules[id].fromLog)ws.rules[id]={...r,params:{...(r.params||{})},approved:true,fromLog:true};
 }
 const LOGGED={
-  'D-002':{choice:'grade',by:'Project lead',at:'2026-10-04',note:'Approved in the project decision log (D-002): standard GRADE mapping.'},
-  'D-003':{choice:'zones',by:'Project lead',at:'2026-10-04',note:'Approved in the project decision log (D-003): 1 zone = 0, 2 zones = 1, 3 zones = 2 levels.'},
-  'D-004':{choice:'record',params:{unit:'pp'},by:'Project lead',at:'2026-10-04',note:'Approved in the project decision log (D-004): baseline risk per comparison; RD = BR × (RR − 1) at the point estimate and each RR limit; #64 in percentage points, so #65 = #64 × 10.'},
-  'D-012':{choice:'after_incoherence',by:'Project lead',at:'2026-10-04',note:'Approved in the project decision log (D-012): always apply imprecision to #60, as in Workflow 10.'}
+  'D-002':{choice:'grade',by:'Project lead',at:'2026-10-04',note:'Decided in the project decision log (D-002): standard GRADE mapping.'},
+  'D-003':{choice:'zones',by:'Project lead',at:'2026-10-04',note:'Decided in the project decision log (D-003): 1 zone = 0, 2 zones = 1, 3 zones = 2 levels.'},
+  'D-004':{choice:'record',params:{unit:'pp'},by:'Project lead',at:'2026-10-04',note:'Decided in the project decision log (D-004): baseline risk per comparison; RD = BR × (RR − 1) at the point estimate and each RR limit; #64 in percentage points, so #65 = #64 × 10.'},
+  'D-012':{choice:'after_incoherence',by:'Project lead',at:'2026-10-04',note:'Decided in the project decision log (D-012): always apply imprecision to #60, as in Workflow 10.'}
 };
 function save(){
   try{localStorage.setItem(storeKey,JSON.stringify(ws))}catch(e){toast('Could not save in this browser: '+e.message)}
@@ -855,7 +856,7 @@ function summarize(d){
 const COE_SYM={high:'⊕⊕⊕⊕','moderate':'⊕⊕⊕◯','low':'⊕⊕◯◯','very low':'⊕◯◯◯'};
 function coeBadge(level,state){
   if(rank(level)<0)return `<span class="coe none">${state==='blocked'?'Blocked':level===NA?'NA':'—'}</span>`;
-  if((state==='blocked'||state==='waiting'))return `<span class="coe unverified" title="Recorded value; it cannot be verified until the method rule is approved"><span class="sym" aria-hidden="true">${COE_SYM[level]}</span> ${esc(level[0].toUpperCase()+level.slice(1))}<small>unverified</small></span>`;
+  if((state==='blocked'||state==='waiting'))return `<span class="coe unverified" title="Recorded value; it cannot be verified until the method rule is decided"><span class="sym" aria-hidden="true">${COE_SYM[level]}</span> ${esc(level[0].toUpperCase()+level.slice(1))}<small>unverified</small></span>`;
   return `<span class="coe ${level.replace(' ','-')}"><span class="sym" aria-hidden="true">${COE_SYM[level]}</span> ${esc(level[0].toUpperCase()+level.slice(1))}</span>`;
 }
 const STATUS_LABEL={complete:'Complete',blocked:'Blocked by method rules',errors:'Needs correction',incomplete:'Incomplete'};
@@ -876,27 +877,31 @@ function renderSource(){
   let msg='',kind='';
   if(!d.records.length)msg=syn?'Load the synthetic example to practise. Its values are invented.':'Import comparisons exported from Analysis (CSV template or JSON), or add a comparison by hand.';
   else if(syn)msg='Synthetic example: every value is invented to show how the tool works. It must never be used for a real rating, and exports are labelled SYNTHETIC.';
-  else if(s.complete===s.comparisons&&!open)msg=`All ${s.comparisons} comparisons have a final certainty, using approved method rules.`,kind='success';
-  else{msg=`Framework ready; real assessment not complete. ${s.complete} of ${s.comparisons} comparisons complete${open?`; ${open} method rule${open>1?'s':''} not yet approved`:''}.`;kind='warning'}
+  else if(s.complete===s.comparisons&&!open)msg=`All ${s.comparisons} comparisons have a final certainty, using the decided method rules.`,kind='success';
+  else{msg=`Framework ready; real assessment not complete. ${s.complete} of ${s.comparisons} comparisons complete${open?`; ${open} method rule${open>1?'s':''} still open`:''}.`;kind='warning'}
   setNotice($('src-notice'),msg,kind);
 }
 function setNotice(el,message,kind){el.textContent=message;el.className='notice'+(kind?' '+kind:'');el.hidden=!message}
 
 function renderRules(){
   $('reviewer').value=ws.reviewer||'';
-  const open=RULES.filter(r=>!ruleChoice(ws.rules,r.id));
-  $('rules-status').innerHTML=open.length?`<span class="warn">${open.length} of ${RULES.length} rules not approved.</span> Results that depend on them stay <b>Blocked</b>; the tool does not fill them in.`:`<span class="ok">All ${RULES.length} rules approved.</span> Every result is computed from them and they are saved with each export.`;
-  $('rules-list').innerHTML=RULES.map(r=>{
-    const st=ws.rules[r.id]||{},approved=!!st.approved,choice=st.choice||'';
-    const opts=r.options.map(o=>`<label class="rule-opt${choice===o.v?' chosen':''}"><input type="radio" name="rule-${r.id}" value="${o.v}"${choice===o.v?' checked':''}${approved?' disabled':''}><span><b>${esc(o.label)}</b>${o.tag?` <span class="badge src-tag">${esc(o.tag)}</span>`:''}<span class="opt-detail">${esc(o.detail)}</span></span></label>`).join('');
-    const params=(r.params||[]).filter(p=>!p.when||p.when.includes(choice)).map(p=>`<label class="rule-param">${esc(p.label)} ${p.options?`<select class="select compact" data-param="${p.key}" data-rule="${r.id}"${approved?' disabled':''}>${p.options.map(([v,l])=>`<option value="${v}"${(st.params?.[p.key]??p.default)===v?' selected':''}>${esc(l)}</option>`).join('')}</select>`:`<input class="input compact" data-param="${p.key}" data-rule="${r.id}" value="${esc(st.params?.[p.key]??p.default??'')}"${approved?' disabled':''}>`}</label>`).join('');
-    const open=ruleOpen.has(r.id)?ruleOpen.get(r.id):!approved,chosen=r.options.find(o=>o.v===choice);
-    return `<details class="rule${approved?' approved':''}" id="rule-${r.id}" data-rule-id="${r.id}"${open?' open':''}><summary class="rule-head"><div><span class="rule-id">${r.id}</span> <b>${esc(r.title)}</b>${r.conflict?' <span class="badge differ">Source conflict</span>':''}${approved&&chosen?`<span class="rule-chosen">${esc(chosen.label)}</span>`:''}</div>${approved?`<span class="badge yes">${st.fromLog?'Approved in project decision log':'Approved'+(st.by?' by '+esc(st.by):'')} · ${esc((st.at||'').slice(0,10))}</span>`:'<span class="badge maybe">Not approved</span>'}</summary>
-<p class="rule-q">${esc(r.question)}</p><p class="hint">Sources: ${esc(r.sources)} · Affects ${r.fields.map(n=>'#'+n).join(', ')}</p>
-<div class="rule-opts">${opts}</div>${params?`<div class="rule-params">${params}</div>`:''}
-<label class="rule-note-label">Reason for the choice<textarea class="textarea rule-note" data-note="${r.id}" rows="2"${approved?' disabled':''} placeholder="Why the team chose this option">${esc(st.note||'')}</textarea></label>
-<div class="toolbar rule-actions">${approved?`<button class="btn small" type="button" data-revoke="${r.id}">Withdraw approval</button>`:`<button class="btn small primary" type="button" data-approve="${r.id}"${choice?'':' disabled'}>Approve</button>`}${r.refs?`<details class="rule-refs"><summary>What GRADE guidance says</summary><ul>${r.refs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`:''}</div></details>`;
-  }).join('');
+  const decided=RULES.filter(r=>ruleChoice(ws.rules,r.id)),open=RULES.filter(r=>!ruleChoice(ws.rules,r.id));
+  $('rules-status').innerHTML=`<span class="ok">${decided.length} decided</span> · ${open.length} still open. An open rule only matters when a comparison needs it; those results show <b>Blocked</b> until it is decided.`;
+  const card=r=>{
+    const st=ws.rules[r.id]||{},done=!!st.approved,choice=st.choice||'',chosen=r.options.find(o=>o.v===choice);
+    const isOpen=ruleOpen.get(r.id)||false;
+    const head=`<summary class="rule-head"><div><span class="rule-id">${r.id}</span> <b>${esc(r.title)}</b>${r.conflict?' <span class="badge differ">Source conflict</span>':''}</div>${done&&chosen?`<span class="rule-state">✓ ${esc(chosen.label)}</span>`:''}</summary>`;
+    const meta=`<p class="rule-q">${esc(r.question)}</p><p class="hint">Sources: ${esc(r.sources)} · Affects ${r.fields.map(n=>'#'+n).join(', ')}</p>`;
+    const refs=r.refs?`<details class="rule-refs"><summary>What GRADE guidance says</summary><ul>${r.refs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`:'';
+    if(done){
+      const params=(r.params||[]).filter(p=>!p.when||p.when.includes(choice)).map(p=>{const v=st.params?.[p.key]??p.default;const l=p.options?(p.options.find(o=>o[0]===v)||[,v])[1]:v;return `${esc(p.label)}: ${esc(l)}`}).join('; ');
+      return `<details class="rule decided" id="rule-${r.id}" data-rule-id="${r.id}"${isOpen?' open':''}>${head}${meta}<p class="rule-decision"><b>${esc(chosen?chosen.label:choice)}.</b> ${esc(chosen?chosen.detail:'')}${params?` <span class="muted">(${params})</span>`:''}</p><p class="hint">${st.fromLog?'Decided in the project decision log':'Decided by '+esc(st.by||'')} on ${esc((st.at||'').slice(0,10))}.${st.note&&!st.fromLog?' Reason: '+esc(st.note):''}</p><div class="toolbar rule-actions"><button class="btn small" type="button" data-revoke="${r.id}">Change decision</button>${refs}</div></details>`;
+    }
+    const opts=r.options.map(o=>`<label class="rule-opt${choice===o.v?' chosen':''}"><input type="radio" name="rule-${r.id}" value="${o.v}"${choice===o.v?' checked':''}><span><b>${esc(o.label)}</b>${o.tag?` <span class="badge src-tag">${esc(o.tag)}</span>`:''}<span class="opt-detail">${esc(o.detail)}</span></span></label>`).join('');
+    const params=(r.params||[]).filter(p=>!p.when||p.when.includes(choice)).map(p=>`<label class="rule-param">${esc(p.label)} ${p.options?`<select class="select compact" data-param="${p.key}" data-rule="${r.id}">${p.options.map(([v,l])=>`<option value="${v}"${(st.params?.[p.key]??p.default)===v?' selected':''}>${esc(l)}</option>`).join('')}</select>`:`<input class="input compact" data-param="${p.key}" data-rule="${r.id}" value="${esc(st.params?.[p.key]??p.default??'')}">`}</label>`).join('');
+    return `<details class="rule" id="rule-${r.id}" data-rule-id="${r.id}"${isOpen?' open':''}>${head}${meta}<div class="rule-opts">${opts}</div>${params?`<div class="rule-params">${params}</div>`:''}<label class="rule-note-label">Reason for the choice<textarea class="textarea rule-note" data-note="${r.id}" rows="2" placeholder="Why the team chose this option">${esc(st.note||'')}</textarea></label><div class="toolbar rule-actions"><button class="btn small primary" type="button" data-approve="${r.id}"${choice?'':' disabled'}>Save decision</button>${refs}</div></details>`;
+  };
+  $('rules-list').innerHTML=(decided.length?`<h4 class="rules-group">Decided</h4>${decided.map(card).join('')}`:'')+(open.length?`<h4 class="rules-group">Still open <span class="muted">· decide when a comparison needs it</span></h4>${open.map(card).join('')}`:'');
 }
 
 function renderList(){
@@ -953,7 +958,7 @@ function fieldRow(rec,f,e){
   }
   const state=c?`<div class="fstate st-${c.state}">${c.state==='auto'?'= ':c.state==='blocked'?'Blocked · ':c.state==='manual'?'Reviewer entry · ':'Waiting · '}${esc(c.note)}${c.state==='blocked'&&c.rule?` <button class="link-btn" type="button" data-goto-rule="${c.rule}">Go to ${c.rule}</button>`:''}</div>`:'';
   const sugg=f.no===61&&e.calc.suggest61?`<div class="fstate st-${e.calc.suggest61.blocked?'blocked':'manual'}">Suggested: ${e.calc.suggest61.value?esc({'1':'1 direct','2':'2 indirect','3':'3 NMA'}[e.calc.suggest61.value]):'—'} · ${esc(e.calc.suggest61.why)}${e.calc.suggest61.value&&rec.final_source!==e.calc.suggest61.value?` <button class="link-btn" type="button" data-use61="${e.calc.suggest61.value}">Use</button>`:''}</div>`:'';
-  const block=unresolved&&!c&&!ruleChoice(ws.rules,unresolved)?`<div class="fstate st-blocked">Rule not approved (${unresolved}): the value is recorded but cannot be verified. <button class="link-btn" type="button" data-goto-rule="${unresolved}">Go to ${unresolved}</button></div>`:'';
+  const block=unresolved&&!c&&!ruleChoice(ws.rules,unresolved)?`<div class="fstate st-blocked">Rule ${unresolved} is still open: the value is recorded but cannot be verified. <button class="link-btn" type="button" data-goto-rule="${unresolved}">Go to ${unresolved}</button></div>`:'';
   const err=issues.map(i=>`<div class="fissue ${i.sev}">${esc(i.rule)} · ${esc(i.msg)}</div>`).join('');
   return `<div class="frow role-${f.role}${issues.some(i=>i.sev==='error')?' has-error':''}"><label class="flabel" for="f-${f.no}"><span class="fno">#${f.no}</span> ${esc(shortName(f))} <span class="frole">${esc(role)}</span></label><div class="fcontrol">${control}<div class="fhint">${esc(f.rule)}</div><div class="ferr" id="err-${f.no}" hidden></div>${state}${sugg}${block}${err}</div></div>`;
 }
@@ -1013,7 +1018,7 @@ function renderSof(){
   const rows=d.records.map(r=>{const e=evaluate(r),c=e.calc,v=no=>c[no]?.state==='auto'?c[no].value:r[BYNO[no].key];
     return `<tr><td>${esc(r.id)}</td><td>${esc(r.intervention||'')} vs ${esc(r.control||'')}</td><td>${esc(fmtCI(r.direct_rr)||r.direct_rr||'—')}</td><td>${esc(fmtCI(r.indirect_rr)||r.indirect_rr||'—')}</td><td>${esc(fmtCI(r.nma_rr)||'—')}</td><td>${esc({'1':'Direct','2':'Indirect','3':'NMA'}[r.final_source]||'—')}</td><td>${esc(fmtCI(v(63))||'—')}</td><td class="num">${esc(fmtRD(v(65)))}</td><td>${coeBadge(v(68),c[68]?.state)}</td><td class="why">${esc(downgradeSummary(r,v))}</td></tr>`}).join('');
   $('sof-table').innerHTML=`<thead><tr><th>#</th><th>Comparison</th><th>Direct RR (95% CI)</th><th>Indirect RR (95% CI)</th><th>NMA RR (95% CI)</th><th>Final source</th><th>Final RR (95% CI)</th><th class="num">RD per 1000 (95% CI)</th><th>Certainty</th><th>Rated down for</th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="empty">No comparisons yet.</td></tr>'}</tbody>`;
-  $('sof-note').textContent=(synthetic()?'SYNTHETIC example. ':'')+`Outcome: ${d.outcome||'not recorded'}. RD per 1000 from the baseline risk under rule D-004${ruleChoice(ws.rules,'D-004')?'':' (not approved, so not computed)'}. Certainty is a statement about the evidence, not a treatment recommendation.`;
+  $('sof-note').textContent=(synthetic()?'SYNTHETIC example. ':'')+`Outcome: ${d.outcome||'not recorded'}. RD per 1000 from the baseline risk under rule D-004${ruleChoice(ws.rules,'D-004')?'':' (not decided, so not computed)'}. Certainty is a statement about the evidence, not a treatment recommendation.`;
 }
 function downgradeSummary(r,v){
   const parts=[];const add=(no,label)=>{const x=v(no)??r[BYNO[no].key];if(x==='serious'||x==='very serious'||x==='strongly suspected')parts.push(label+(x==='very serious'?' (very serious)':''))};
@@ -1119,7 +1124,7 @@ async function importFile(file){
     if(kind==='synthetic'&&!synthetic())throw new Error('This file is marked synthetic. Switch to Synthetic example to import it; synthetic data never goes into the real dataset.');
     if(kind==='real'&&synthetic())throw new Error('This file is marked real. Switch to Real data to import it.');
     importInto(recordsFromJSON(obj),obj);
-    if(obj?.method_rules)toast('Method rule approvals in the file were not imported; approve rules here.');
+    if(obj?.method_rules)toast('Method rule decisions in the file were not imported; decide rules here.');
   }else{
     const result=recordsFromCSV(parseCSV(body));
     const looksSynthetic=result.records.some(r=>/^SYNTH|SYNTHETIC/i.test(String(r.intervention||''))||/^SYNTH|SYNTHETIC/i.test(String(r.control||'')))||/\bSYNTHETIC\b/.test(body.slice(0,4000));
@@ -1195,7 +1200,7 @@ function bind(){
     Object.assign(ws.synthetic,{dataset_id:SYNTH.dataset_id||'SYNTH',outcome:SYNTH.outcome||'',source_note:SYNTH.source_note||'',pico:'SYNTHETIC. Invented nodes SYNTH-DrugA, SYNTH-DrugB, SYNTH-DrugC and SYNTH-Placebo; no real population, study or time point.',baseline_risk_per_1000:300,baseline_source:'SYNTHETIC. Invented baseline risk for practice only.'});
     importInto(r);
   });
-  $('recompute-btn').addEventListener('click',()=>{data().records.forEach(applyCalc);save();render();toast('Computed fields updated from the current inputs and approved rules.')});
+  $('recompute-btn').addEventListener('click',()=>{data().records.forEach(applyCalc);save();render();toast('Computed fields updated from the current inputs and decided rules.')});
   $('clear-btn').addEventListener('click',()=>{if(!data().records.length)return;if(!confirm(`Delete all ${data().records.length} comparisons in the ${synthetic()?'synthetic':'real'} dataset? Export first if you need them.`))return;ws[ws.active]=emptyData(ws.active);current=null;save();render()});
   $('export-btn').addEventListener('click',()=>{
     const f=$('export-format').value;
@@ -1219,8 +1224,8 @@ function bind(){
     if(a){
       const id=a.dataset.approve,st=ws.rules[id]||{};
       if(!st.choice)return;
-      if(!(ws.reviewer||'').trim()){toast('Enter who is approving, at the top of Method rules.');$('reviewer').focus();return}
-      if(!(st.note||'').trim()){toast('Give the reason for the choice before approving.');document.querySelector(`[data-note="${id}"]`)?.focus();return}
+      if(!(ws.reviewer||'').trim()){toast('Enter who is deciding, at the top of Method rules.');$('reviewer').focus();return}
+      if(!(st.note||'').trim()){toast('Give the reason for the choice before saving.');document.querySelector(`[data-note="${id}"]`)?.focus();return}
       const rule=RULE_BY_ID[id];
       for(const p of rule.params||[])if(!p.when||p.when.includes(st.choice)){st.params=st.params||{};if(st.params[p.key]===undefined||st.params[p.key]==='')st.params[p.key]=p.default}
       if(id==='D-011'&&st.choice==='tol'){const n=Number(st.params.tolerance);if(!Number.isFinite(n)||n<0||n>10){toast('Tolerance must be a number from 0 to 10.');return}}
@@ -1228,7 +1233,7 @@ function bind(){
       (ws.ruleLog=ws.ruleLog||[]).push({t:now(),rule:id,action:'approved',choice:st.choice,params:st.params||{},reason:st.note,by:st.by});
     }else if(r){
       const id=r.dataset.revoke,st=ws.rules[id];if(!st)return;
-      if(!confirm(`Withdraw the approval of ${id}? Results that depend on it go back to Blocked.`))return;
+      if(!confirm(`Reopen ${id}? Results that depend on it go back to Blocked until a new decision is saved.`))return;
       st.approved=false;st.fromLog=false;ruleOpen.set(id,true);(ws.ruleLog=ws.ruleLog||[]).push({t:now(),rule:id,action:'withdrawn',by:reviewerName()});
     }else return;
     ws.real.records.forEach(rec=>{const keep=ws.active;ws.active='real';applyCalc(rec);ws.active=keep});
