@@ -147,6 +147,7 @@ th{background:#f4f4f4}
 .crit-rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.crit-rules label{margin-top:0}.crit-row textarea.textarea{min-height:0;height:auto;resize:vertical}#crit-question{min-height:0}
 @media(max-width:760px){.crit-rules{grid-template-columns:1fr}}
 .abs-wrap .abstract{margin-bottom:4px}.abs-wrap:not(.open) .abstract{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.abs-toggle{border:0;background:none;padding:0;color:var(--plum);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px}.abs-toggle:hover{text-decoration:underline}.abs-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:2px}.abs-tools{justify-content:flex-end;margin:6px 0}
+.full-now{flex-direction:column;align-items:stretch;gap:2px}.now-item{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -603,6 +604,19 @@ function excerpt(raw,quotes){
    reviewer approves; the recommended standard (no false exclusions, and
    Cohen's kappa >= 0.6 or agreement >= 75%) is a guide, not a gate. */
 const PILOT_PROMPT='pilot-v3';
+// Requests sent to the local model at once. Ollama answers them together when
+// OLLAMA_NUM_PARALLEL is at least this (see tools/start_ollama_parallel.sh);
+// measured on an M3 Ultra with gemma4:31b, 4 at a time gives about 1.6 times
+// the throughput of 1. With a server that takes one at a time they queue.
+const AI_WORKERS=4;
+// Runs fn over items with up to n at a time. The first error stops new work,
+// aborts the requests in flight and is the one reported.
+async function runPool(items,n,fn,controller){
+  let next=0,first=null;
+  const worker=async()=>{while(!first&&!controller.signal.aborted&&next<items.length){const item=items[next++];try{await fn(item)}catch(e){if(!first){first=e;if(e.name!=='AbortError')controller.abort()}}}};
+  await Promise.all(Array.from({length:Math.min(n,items.length)},worker));
+  if(first)throw first;
+}
 const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').replace(/\/+$/,'');
 let pilotModel=null,pilotView=-1,pilotFilter='all';
 // Abstracts open by the reviewer, kept across re-renders while voting.
@@ -748,14 +762,14 @@ async function startPilotRound(){
   if(!ids.length){render();return}
   busy='pilot';controller=new AbortController();render();
   try{
-    for(let k=0;k<ids.length;k++){
-      if(controller.signal.aborted)break;
-      showNotice('pilot-message','The local AI model is screening round '+(i+1)+': '+(pilotRoundState(i).ai+1)+' / '+pilotRoundState(i).ids.length+'. You can vote while it works; its results stay hidden until you finish.');
-      const result=await screenPilotRecord(recordById.get(ids[k]),i,controller.signal);
-      workspace.pilot.ai[ids[k]]=result;
-      log('pilot-ai',{round:i+1,recordId:ids[k],decision:result.decision,modelDecision:result.modelDecision,model:result.model,promptHash:result.promptHash});
-      await save();renderPilot();
-    }
+    const progress=()=>showNotice('pilot-message','The local AI model is screening round '+(i+1)+': '+pilotRoundState(i).ai+' / '+pilotRoundState(i).ids.length+' done. You can vote while it works; its results stay hidden until you finish.');
+    progress();
+    await runPool(ids,AI_WORKERS,async id=>{
+      const result=await screenPilotRecord(recordById.get(id),i,controller.signal);
+      workspace.pilot.ai[id]=result;
+      log('pilot-ai',{round:i+1,recordId:id,decision:result.decision,modelDecision:result.modelDecision,model:result.model,promptHash:result.promptHash});
+      await save();progress();renderPilot();
+    },controller);
     delete $('pilot-message').dataset.status;
     if(!controller.signal.aborted)showNotice('pilot-message',pilotRoundState(i).votesDone?'':'The AI has screened every record in round '+(i+1)+'. Vote on the remaining records to see the comparison.','success');
   }catch(e){
@@ -870,7 +884,7 @@ function renderPilot(){
    error rate of exclusions; it cannot prove no relevant study was missed. */
 const CHECK_SCOPES={sample:'Random sample of AI exclusions',exclusions:'All AI exclusions',uncertain:'All AI exclusions and Maybe records'};
 const AUDIT_SIZE=300;
-let fullCurrent='',fullFilter='auto',fullShown=20;
+const fullNow=new Map(),fullDone=[];let fullFilter='auto',fullShown=20;
 function newFull(){return {version:3,ai:{},ai2:{},human:{},check:'sample',startedAt:'',completedAt:'',times:[]}}
 function validFull(f){
   if(!f||f.version!==3)return newFull();
@@ -948,28 +962,28 @@ async function runFull(){
     if(approved.model&&model.name!==approved.model&&!/^local/.test(model.name))throw new Error('The pilot was approved with '+approved.model+', but the local server now runs '+model.name+'. Run and approve a pilot round with this model first.');
     if(!workspace.full.startedAt)workspace.full.startedAt=now();
     log('full-run-started',{remaining:ids.length,model:approved.model,pilotRound:approved.round+1,check:workspace.full.check,passes:2});
-    for(const id of ids){
-      const record=recordById.get(id);if(!record)continue;
-      for(const pass of [1,2]){
-        if(controller.signal.aborted)break;
-        const store=pass===1?workspace.full.ai:workspace.full.ai2;
-        if(pass===1?fullAI(id):fullAI2(id))continue;
-        fullCurrent='Pass '+pass+' of 2: '+(record.title||'(untitled record)');renderFull();
+    // Both readings of every record still to read, run AI_WORKERS at a time.
+    const tasks=ids.flatMap(id=>[1,2].filter(pass=>!(pass===1?fullAI(id):fullAI2(id))).map(pass=>[id,pass]));
+    fullDone.length=0;
+    await runPool(tasks,AI_WORKERS,async([id,pass])=>{
+      const record=recordById.get(id);if(!record)return;
+      const key=id+'|'+pass;fullNow.set(key,'Pass '+pass+' of 2: '+(record.title||'(untitled record)'));renderFull();
+      try{
         const t0=performance.now(),result=await screenPilotRecord(record,approved.round+1,controller.signal,pass);
         delete result.raw;result.stage='full';result.pass=pass;
-        store[id]=result;
+        (pass===1?workspace.full.ai:workspace.full.ai2)[id]=result;
         workspace.full.times=[...(workspace.full.times||[]),Math.round(performance.now()-t0)].slice(-20);
+        fullDone.push(Date.now());if(fullDone.length>40)fullDone.shift();
         log('full-ai',{recordId:id,pass,decision:result.decision,modelDecision:result.modelDecision,model:result.model,promptHash:result.promptHash});
-        if(pass===2&&aiPair(id)==='conflict')log('full-conflict',{recordId:id,pass1:fullAI(id).decision,pass2:result.decision});
-        maybeComplete();await save();renderFull();
-      }
-      if(controller.signal.aborted)break;
-    }
+        if(fullAI(id)&&fullAI2(id)&&aiPair(id)==='conflict')log('full-conflict',{recordId:id,pass1:fullAI(id).decision,pass2:fullAI2(id).decision});
+        maybeComplete();await save();
+      }finally{fullNow.delete(key);renderFull()}
+    },controller);
     if(!controller.signal.aborted)showNotice('full-message',endMessage(summary()),'success');
   }catch(e){
     if(e.name==='AbortError')showNotice('full-message','Stopped. Every screened record is saved; click Resume to continue.','warning');
     else{log('model-error',{stage:'full',message:text(e.message,500)});showNotice('full-message',e.message,'error')}
-  }finally{busy='';controller=null;fullCurrent='';await save().catch(()=>{});render()}
+  }finally{busy='';controller=null;fullNow.clear();await save().catch(()=>{});render()}
 }
 function castFullVote(id,decision){
   if(!recordById.has(id)||!['yes','maybe','no'].includes(decision)||stale())return;
@@ -1005,12 +1019,13 @@ function renderFull(){
   $('full-conflicts').parentElement.classList.toggle('alert',s.conflicts>s.conflictsResolved);
   $('full-check').textContent=s.humanChecked.toLocaleString()+' / '+s.humanCheck.toLocaleString();
   $('team-bar').style.width=share+'%';$('team-track').setAttribute('aria-valuenow',String(share));
-  const times=workspace.full.times||[],avg=times.length?times.reduce((a,b)=>a+b,0)/times.length:0;
-  $('full-progress').textContent=share+'% · '+s.done.toLocaleString()+' of '+s.sourceCount.toLocaleString()+' records decided · AI passes '+s.aiScreened.toLocaleString()+' / '+aiRecords().length.toLocaleString()+' records'+(calls&&avg?' · about '+fmtDuration(avg*calls)+' of AI screening left':'')+(s.humanReviewed?' · '+s.humanReviewed.toLocaleString()+' decided by you':'');
+  const times=workspace.full.times||[],avg=fullDone.length>=4?(fullDone.at(-1)-fullDone[0])/(fullDone.length-1):times.length?times.reduce((a,b)=>a+b,0)/times.length/AI_WORKERS:0;
+  $('full-progress').textContent=share+'% · '+s.done.toLocaleString()+' of '+s.sourceCount.toLocaleString()+' records decided · AI passes '+s.aiScreened.toLocaleString()+' / '+aiRecords().length.toLocaleString()+' records'+(calls&&avg?' · '+(avg*calls<60000?'under a minute':'about '+fmtDuration(avg*calls))+' of AI screening left':'')+(s.humanReviewed?' · '+s.humanReviewed.toLocaleString()+' decided by you':'');
   // Why both passes excluded: the first criterion pass 1 found not met.
   const why=new Map();for(const r of aiRecords()){if(aiPair(r.uid)!=='no'||workspace.full.human[r.uid])continue;const c=fullAI(r.uid).criteria.find(x=>x.judgment==='not met'&&x.quote)?.dimension||'Other';why.set(c,(why.get(c)||0)+1)}
   if(why.size)$('full-progress').textContent+=' · AI No by criterion: '+[...why].sort((a,b)=>b[1]-a[1]).map(([c,n])=>c+' '+n).join(', ');
-  $('full-now').hidden=!fullCurrent;$('full-now').innerHTML=fullCurrent?'<span class="pulse" aria-hidden="true"></span>Now screening, '+esc(fullCurrent):'';
+  const inFlight=[...fullNow.values()];
+  $('full-now').hidden=!inFlight.length;$('full-now').innerHTML=inFlight.map(t=>'<span class="now-item"><span class="pulse" aria-hidden="true"></span>'+esc(t)+'</span>').join('');
   const start=$('start-screening');
   start.textContent=workspace.full.startedAt&&calls?'Resume':'Start';
   start.disabled=!valid||!readySource()||!!busy||!calls;

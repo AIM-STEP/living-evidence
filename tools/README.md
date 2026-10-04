@@ -97,3 +97,23 @@ ssh -N -L 8765:127.0.0.1:8765 <用户>@<模型所在机器的地址>
 ```bash
 python3 tools/test_local_model_server.py     # 20 项，用假 Ollama，无需真实模型
 ```
+
+## Faster screening: Ollama in parallel
+
+Title and abstract screening sends up to 4 model requests at once
+(`AI_WORKERS` in `title-abstract-screening.html`). Ollama answers them
+together only when its server runs with `OLLAMA_NUM_PARALLEL=4`; otherwise
+they queue and nothing breaks. The Ollama desktop app ignores
+`launchctl setenv`, so `tools/start_ollama_parallel.sh` restarts the app with
+the variable set (only if it is not already set). The login agent
+`~/Library/LaunchAgents/com.aimstep.ollama-parallel.plist` runs it at each
+login; its log is `~/Library/Logs/aimstep-ollama-parallel.log`.
+
+Measured on the Mac Studio (M3 Ultra, gemma4:31b-it-q8_0), one screening
+reading: 10.5 s one at a time, 7.3 s with 2, 6.6 s with 4 (throughput).
+Each request waits longer (about 25 s with 4), but more finish per minute.
+Restarting Ollama stops any screening in progress; finished readings are
+kept and Resume continues.
+
+    tools/start_ollama_parallel.sh                         # set it now
+    launchctl bootout gui/501/com.aimstep.ollama-parallel  # remove the login agent
