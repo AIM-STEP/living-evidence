@@ -409,7 +409,7 @@ const RULES=[
   {v:'dataset',label:'One baseline risk for the outcome',tag:'GRADEpro / Cochrane method',detail:'One baseline (control) risk per 1000 for all comparisons, entered in Assessment source with where it comes from. RD = BR × (RR − 1), applied to the point estimate and to each RR confidence limit.'},
   {v:'record',label:'Baseline risk per comparison',detail:'Each comparison gets its own control-group risk per 1000 (for example when the control is an active drug). Same formula.'},
   {v:'manual',label:'Reviewers enter the absolute effect',detail:'#64 and #65 are typed in from the analysis output; the tool checks that #65 is one rescaling of #64.'}],
- params:[{key:'unit',label:'Unit of #64',when:['dataset','record'],default:'proportion',options:[['proportion','Proportion (#65 = #64 × 1000)'],['pp','Percentage points (#65 = #64 × 10)']]}],
+ params:[{key:'unit',label:'Unit of #64',when:['dataset','record'],default:'',options:[['','Not decided (#64 stays blocked)'],['proportion','Proportion (#65 = #64 × 1000)'],['pp','Percentage points (#65 = #64 × 10)']]}],
  refs:['Core GRADE 6 (BMJ 2025;389:e083866): apply relative estimates to baseline risks from studies representative of the target population; use separate rows when baseline risks differ greatly (abstract).','GRADEpro and Cochrane apply the baseline risk to the RR confidence limits; this ignores uncertainty in the baseline risk (Murad & Lin 2025, Cochrane Evid Synth Methods, secondary source).']},
 {id:'D-001',title:'Preliminary NMA COE when direct and indirect differ',fields:[52,53,54,55,56,57],
  sources:'Workflow 6, 6.1, 6.2; Codebook #52–#57',
@@ -616,14 +616,15 @@ function derive(rec,meta,rules){
   if(!d004){set(64,'blocked',null,'Needs the baseline-risk rule (D-004).','D-004');set(65,'blocked',null,'Needs the baseline-risk rule (D-004).','D-004')}
   else if(d004==='manual'){set(64,'manual',null,'Reviewers enter the absolute effect (D-004, manual).','D-004');set(65,'manual',null,'Reviewers enter the absolute effect (D-004, manual).','D-004')}
   else{
-    const br=baselineFor(rec,meta,rules),unit=ruleParam(rules,'D-004','unit','proportion');
+    const br=baselineFor(rec,meta,rules),unit=ruleParam(rules,'D-004','unit','');
     if(!isCI(rr)){set(64,'waiting',null,'Needs #63.');set(65,'waiting',null,'Needs #63.')}
     else if(br===null){const where=d004==='record'?'this comparison':'the dataset';set(64,'waiting',null,`Needs the baseline risk per 1000 for ${where}.`);set(65,'waiting',null,`Needs the baseline risk per 1000 for ${where}.`)}
     else{
       const p=br/1000,rd=x=>p*(x-1),k=unit==='pp'?100:1;
       const prop={point:rd(rr.point),ci_lower:rd(rr.ci_lower),ci_upper:rd(rr.ci_upper)};
-      set(64,'auto',{point:prop.point*k,ci_lower:prop.ci_lower*k,ci_upper:prop.ci_upper*k},`RD = BR × (RR − 1), BR = ${fmtNum(br)}/1000, each limit from the RR limit; ${unit==='pp'?'percentage points':'proportion'}.`,'D-004');
-      set(65,'auto',{point:prop.point*1000,ci_lower:prop.ci_lower*1000,ci_upper:prop.ci_upper*1000},`#64 × ${unit==='pp'?10:1000}.`,'D-004');
+      if(!unit)set(64,'blocked',null,'The unit of #64 (proportion or percentage points) is not decided (D-004 d). #65 does not depend on it.','D-004');
+      else set(64,'auto',{point:prop.point*k,ci_lower:prop.ci_lower*k,ci_upper:prop.ci_upper*k},`RD = BR × (RR − 1), BR = ${fmtNum(br)}/1000, each limit from the RR limit; ${unit==='pp'?'percentage points':'proportion'}.`,'D-004');
+      set(65,'auto',{point:prop.point*1000,ci_lower:prop.ci_lower*1000,ci_upper:prop.ci_upper*1000},`RD per 1000 = BR × (RR − 1) × 1000, BR = ${fmtNum(br)}/1000, each limit from the RR limit.`,'D-004');
     }
   }
   // #66 imprecision from MID zones (D-003)
@@ -802,7 +803,16 @@ function load(){
   if(!ws||typeof ws!=='object')ws={};
   ws.rules=ws.rules||{};ws.real=ws.real||emptyData('real');ws.synthetic=ws.synthetic||emptyData('synthetic');
   ws.active=ws.active==='synthetic'?'synthetic':'real';ws.reviewer=ws.reviewer||'';
+  // Rules approved by the project lead in docs/DECISION_LOG.md apply by default;
+  // a choice made on this page for this project takes precedence.
+  for(const [id,r] of Object.entries(LOGGED))if(!ws.rules[id])ws.rules[id]={...r,params:{...(r.params||{})},approved:true,fromLog:true};
 }
+const LOGGED={
+  'D-002':{choice:'grade',by:'Project lead',at:'2026-10-04',note:'Approved in the project decision log (D-002): standard GRADE mapping.'},
+  'D-003':{choice:'zones',by:'Project lead',at:'2026-10-04',note:'Approved in the project decision log (D-003): 1 zone = 0, 2 zones = 1, 3 zones = 2 levels.'},
+  'D-004':{choice:'record',params:{unit:''},by:'Project lead',at:'2026-10-04',note:'Approved in the project decision log (D-004 a–c): baseline risk per comparison; the unit of #64 (d) is not decided yet.'},
+  'D-012':{choice:'after_incoherence',by:'Project lead',at:'2026-10-04',note:'Approved in the project decision log (D-012): always apply imprecision to #60, as in Workflow 10.'}
+};
 function save(){
   try{localStorage.setItem(storeKey,JSON.stringify(ws))}catch(e){toast('Could not save in this browser: '+e.message)}
   try{const s=summarize(ws.real);localStorage.setItem(summaryKey,JSON.stringify({...s,updated:now()}))}catch(e){}
@@ -881,7 +891,7 @@ function renderRules(){
     const opts=r.options.map(o=>`<label class="rule-opt${choice===o.v?' chosen':''}"><input type="radio" name="rule-${r.id}" value="${o.v}"${choice===o.v?' checked':''}${approved?' disabled':''}><span><b>${esc(o.label)}</b>${o.tag?` <span class="badge src-tag">${esc(o.tag)}</span>`:''}<span class="opt-detail">${esc(o.detail)}</span></span></label>`).join('');
     const params=(r.params||[]).filter(p=>!p.when||p.when.includes(choice)).map(p=>`<label class="rule-param">${esc(p.label)} ${p.options?`<select class="select compact" data-param="${p.key}" data-rule="${r.id}"${approved?' disabled':''}>${p.options.map(([v,l])=>`<option value="${v}"${(st.params?.[p.key]??p.default)===v?' selected':''}>${esc(l)}</option>`).join('')}</select>`:`<input class="input compact" data-param="${p.key}" data-rule="${r.id}" value="${esc(st.params?.[p.key]??p.default??'')}"${approved?' disabled':''}>`}</label>`).join('');
     const open=ruleOpen.has(r.id)?ruleOpen.get(r.id):!approved,chosen=r.options.find(o=>o.v===choice);
-    return `<details class="rule${approved?' approved':''}" id="rule-${r.id}" data-rule-id="${r.id}"${open?' open':''}><summary class="rule-head"><div><span class="rule-id">${r.id}</span> <b>${esc(r.title)}</b>${r.conflict?' <span class="badge differ">Source conflict</span>':''}${approved&&chosen?`<span class="rule-chosen">${esc(chosen.label)}</span>`:''}</div>${approved?`<span class="badge yes">Approved${st.by?' by '+esc(st.by):''} · ${esc((st.at||'').slice(0,10))}</span>`:'<span class="badge maybe">Not approved</span>'}</summary>
+    return `<details class="rule${approved?' approved':''}" id="rule-${r.id}" data-rule-id="${r.id}"${open?' open':''}><summary class="rule-head"><div><span class="rule-id">${r.id}</span> <b>${esc(r.title)}</b>${r.conflict?' <span class="badge differ">Source conflict</span>':''}${approved&&chosen?`<span class="rule-chosen">${esc(chosen.label)}</span>`:''}</div>${approved?`<span class="badge yes">${st.fromLog?'Approved in project decision log':'Approved'+(st.by?' by '+esc(st.by):'')} · ${esc((st.at||'').slice(0,10))}</span>`:'<span class="badge maybe">Not approved</span>'}</summary>
 <p class="rule-q">${esc(r.question)}</p><p class="hint">Sources: ${esc(r.sources)} · Affects ${r.fields.map(n=>'#'+n).join(', ')}</p>
 <div class="rule-opts">${opts}</div>${params?`<div class="rule-params">${params}</div>`:''}
 <label class="rule-note-label">Reason for the choice<textarea class="textarea rule-note" data-note="${r.id}" rows="2"${approved?' disabled':''} placeholder="Why the team chose this option">${esc(st.note||'')}</textarea></label>
@@ -1214,12 +1224,12 @@ function bind(){
       const rule=RULE_BY_ID[id];
       for(const p of rule.params||[])if(!p.when||p.when.includes(st.choice)){st.params=st.params||{};if(st.params[p.key]===undefined||st.params[p.key]==='')st.params[p.key]=p.default}
       if(id==='D-011'&&st.choice==='tol'){const n=Number(st.params.tolerance);if(!Number.isFinite(n)||n<0||n>10){toast('Tolerance must be a number from 0 to 10.');return}}
-      Object.assign(st,{approved:true,by:ws.reviewer.trim(),at:now()});ws.rules[id]=st;ruleOpen.delete(id);
+      Object.assign(st,{approved:true,fromLog:false,by:ws.reviewer.trim(),at:now()});ws.rules[id]=st;ruleOpen.delete(id);
       (ws.ruleLog=ws.ruleLog||[]).push({t:now(),rule:id,action:'approved',choice:st.choice,params:st.params||{},reason:st.note,by:st.by});
     }else if(r){
       const id=r.dataset.revoke,st=ws.rules[id];if(!st)return;
       if(!confirm(`Withdraw the approval of ${id}? Results that depend on it go back to Blocked.`))return;
-      st.approved=false;ruleOpen.set(id,true);(ws.ruleLog=ws.ruleLog||[]).push({t:now(),rule:id,action:'withdrawn',by:reviewerName()});
+      st.approved=false;st.fromLog=false;ruleOpen.set(id,true);(ws.ruleLog=ws.ruleLog||[]).push({t:now(),rule:id,action:'withdrawn',by:reviewerName()});
     }else return;
     ws.real.records.forEach(rec=>{const keep=ws.active;ws.active='real';applyCalc(rec);ws.active=keep});
     ws.synthetic.records.forEach(rec=>{const keep=ws.active;ws.active='synthetic';applyCalc(rec);ws.active=keep});
