@@ -538,7 +538,11 @@ function unverified(uid){
 function missingFor(uid){
   const s=st(uid),out=[];
   if(s.arms.length<2)out.push('at least two arms');
-  for(const o of ws.form.outcomes){if(s.nr[o.id])continue;const full=s.arms.every(a=>rowCells(s,o,a).every(x=>num(x)!==null));if(!full)out.push(o.name+' data (or mark it not reported)')}
+  for(const o of ws.form.outcomes){if(s.nr[o.id])continue;const full=s.arms.every(a=>rowCells(s,o,a).every(x=>num(x)!==null));if(!full){out.push(o.name+' data (or mark it not reported)');continue}
+    for(const a of s.arms){const [p,q,r]=rowCells(s,o,a).map(num),L=val(a.label)||'an arm',N=num(a.n);
+      if(o.type==='binary'&&(p<0||q<=0||p>q))out.push(`${o.name}: events must be between 0 and the total in ${L}`);
+      if(o.type==='continuous'&&(q<=0||r<=0))out.push(`${o.name}: SD and N must be above 0 in ${L}`);
+      const analysed=o.type==='binary'?q:r;if(N!==null&&analysed>N)out.push(`${o.name}: more analysed than randomised in ${L}`)}}
   return out;
 }
 function statusOf(uid){const s=st(uid);if(s.done)return 'done';if(!s.arms.length&&!Object.keys(s.fields).length)return s.ai?'ai':'todo';return unverified(uid)?'check':'progress'}
