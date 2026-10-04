@@ -59,8 +59,13 @@ from urllib.parse import urlsplit
 SERVICE = "aimstep-local-eligibility"
 HEALTH = "/api/eligibility/health"
 MODEL = "/api/eligibility/model"
+EMBED = "/api/eligibility/embed"
 
 DEFAULT_MODEL = "gemma4:31b-it-q8_0"
+DEFAULT_EMBED_MODEL = "embeddinggemma"   # full-text screening: semantic highlighting
+MAX_EMBED_INPUTS = 512
+MAX_EMBED_CHARS = 4000              # per text; embeddinggemma reads about 2,000 tokens
+EMBED_TIMEOUT = 180
 DEFAULT_OLLAMA = "http://127.0.0.1:11434"
 
 MAX_BODY = 40 * 1024 * 1024        # six page images as base64 fit with room to spare
@@ -201,6 +206,22 @@ def chat(ollama, model, messages, post=post_json, attempts=None, fmt="json"):
     return post(ollama + "/api/chat", ollama_body(model, messages, temperature=0.3, fmt=fmt))
 
 
+def clean_embed(payload):
+    """{"input": [texts]} from the page, checked."""
+    texts = payload.get("input") if isinstance(payload, dict) else None
+    if not isinstance(texts, list) or not 1 <= len(texts) <= MAX_EMBED_INPUTS or not all(isinstance(t, str) for t in texts):
+        raise BadRequest("expected {\"input\": [1 to %d strings]}" % MAX_EMBED_INPUTS)
+    return [t[:MAX_EMBED_CHARS] for t in texts]
+
+
+def embed(ollama, model, texts):
+    """Sentence vectors from Ollama /api/embed (normalised by Ollama)."""
+    body = json.dumps({"model": model, "input": texts, "keep_alive": "30m"}).encode("utf-8")
+    req = urllib.request.Request(ollama + "/api/embed", data=body, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=EMBED_TIMEOUT) as res:
+        return json.loads(res.read()).get("embeddings") or []
+
+
 def check_model(ollama, model):
     """(ok, message). Used by health and at start-up."""
     try:
@@ -228,8 +249,12 @@ def write_log(log_dir, record):
 class Handler(SimpleHTTPRequestHandler):
     server_version = "AIMSTEP-local/1"
 
-    def __init__(self, *args, model, ollama, port, log_dir=None, allowed_origins=(), **kwargs):
-        self.model, self.ollama, self.port, self.log_dir = model, ollama, port, log_dir
+    def __init__(self, *args, model, ollama, port, log_dir=None, allowed_origins=(), embed_model=DEFAULT_EMBED_MODEL,
+                 embed_ollama=None, **kwargs):
+        self.model, self.ollama, self.port, self.log_dir, self.embed_model = model, ollama, port, log_dir, embed_model
+        # Embeddings may come from a second Ollama: while the chat model is busy
+        # with parallel requests, Ollama does not schedule a second model.
+        self.embed_ollama = embed_ollama or ollama
         self.allowed_origins = {o.rstrip("/").lower() for o in allowed_origins}
         super().__init__(*args, **kwargs)
 
@@ -294,9 +319,11 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._send_json(403, {"error": "local requests only"})
             ok, msg = check_model(self.ollama, self.model)
             # The page tests only `service`; the rest is for a person reading it.
+            embed_ok, _ = check_model(self.embed_ollama, self.embed_model)
             return self._send_json(200 if ok else 503, {
                 "service": SERVICE if ok else SERVICE + "-unavailable",
-                "model": self.model, "ollama": self.ollama, "status": msg})
+                "model": self.model, "ollama": self.ollama, "status": msg,
+                "embedModel": self.embed_model if embed_ok else ""})
         return super().do_GET()
 
     def do_HEAD(self):
@@ -307,7 +334,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if not self._host_ok() or not self._origin_ok():
             return self._send_json(403, {"error": "local requests only"})
-        if urlsplit(self.path).path != MODEL:
+        route = urlsplit(self.path).path
+        if route not in (MODEL, EMBED):
             return self._send_json(404, {"error": "not found"})
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -315,6 +343,19 @@ class Handler(SimpleHTTPRequestHandler):
             length = -1
         if length <= 0 or length > MAX_BODY:
             return self._send_json(413 if length > MAX_BODY else 400, {"error": "request body missing or too large"})
+        if route == EMBED:
+            try:
+                texts = clean_embed(json.loads(self.rfile.read(length).decode("utf-8")))
+            except (ValueError, BadRequest) as e:
+                return self._send_json(400, {"error": str(e)})
+            try:
+                vectors = embed(self.embed_ollama, self.embed_model, texts)
+            except urllib.error.HTTPError as e:
+                return self._send_json(502, {"error": "Ollama HTTP %d: %s" % (e.code, e.read().decode("utf-8", "replace")[:300])})
+            except (urllib.error.URLError, OSError) as e:
+                return self._send_json(504 if isinstance(e, TimeoutError) or "timed out" in str(e) else 502,
+                                       {"error": "embedding model not available: %s" % e})
+            return self._send_json(200, {"embeddings": vectors, "model": self.embed_model})
         try:
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             messages = clean_messages(payload)
@@ -361,6 +402,10 @@ def main(argv=None):
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--model", default=os.environ.get("AIMSTEP_MODEL", DEFAULT_MODEL))
     ap.add_argument("--ollama", default=os.environ.get("OLLAMA_HOST_URL", DEFAULT_OLLAMA))
+    ap.add_argument("--embed-model", default=os.environ.get("AIMSTEP_EMBED_MODEL", DEFAULT_EMBED_MODEL),
+                    help="Ollama embedding model for full-text highlighting (default: embeddinggemma)")
+    ap.add_argument("--embed-ollama", default=os.environ.get("AIMSTEP_EMBED_OLLAMA"),
+                    help="a second local Ollama for embeddings (default: the --ollama one); see tools/README.md")
     ap.add_argument("--root", default=here, help="site directory to serve (default: the repository)")
     ap.add_argument("--allow-origin", action="append", default=None, metavar="ORIGIN",
                     help="another site allowed to call the model (repeatable); default: aimsetp.com. "
@@ -372,13 +417,17 @@ def main(argv=None):
     ollama = args.ollama.rstrip("/")
     if urlsplit(ollama).hostname not in LOCAL_HOSTS:
         ap.error("--ollama must be on this machine; this server exists to keep research text local")
+    embed_ollama = (args.embed_ollama or ollama).rstrip("/")
+    if urlsplit(embed_ollama).hostname not in LOCAL_HOSTS:
+        ap.error("--embed-ollama must be on this machine")
     ok, msg = check_model(ollama, args.model)
     print(("模型就绪" if ok else "警告") + "：%s  (%s)" % (args.model, msg))
 
     allowed = DEFAULT_ALLOWED_ORIGINS if args.allow_origin is None else \
         tuple(o for o in args.allow_origin if o.lower() != "none")
     handler = partial(Handler, directory=args.root, model=args.model, ollama=ollama, port=args.port,
-                      log_dir=args.log_dir, allowed_origins=allowed)
+                      log_dir=args.log_dir, allowed_origins=allowed, embed_model=args.embed_model,
+                      embed_ollama=embed_ollama)
     httpd = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
     print("AIM-STEP 本地站点：http://127.0.0.1:%d/eligibility.html   (Ctrl+C 停止)" % args.port)
     if allowed:

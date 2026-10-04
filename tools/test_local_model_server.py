@@ -37,6 +37,8 @@ class FakeOllama(BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         FakeOllama.seen.append(body)
+        if self.path == "/api/embed":
+            return self._json({"embeddings": [[float(len(t)), 1.0] for t in body["input"]]})
         content = FakeOllama.replies.pop(0) if FakeOllama.replies else "{}"
         self._json({"message": {"role": "assistant", "content": content}})
 
@@ -71,7 +73,7 @@ class ServerTest(unittest.TestCase):
         cls.port = cls.app.server_port
         cls.app.RequestHandlerClass = partial(srv.Handler, directory=cls.root, model=MODEL,
                                               ollama=cls.ollama, port=cls.port, log_dir=cls.logs,
-                                              allowed_origins=("https://aimsetp.com",))
+                                              allowed_origins=("https://aimsetp.com",), embed_model=MODEL)
         start(cls.app)
 
     @classmethod
@@ -279,6 +281,35 @@ class ServerTest(unittest.TestCase):
     def test_localhost_names_are_accepted(self):
         for host in ["localhost:%d" % self.port, "127.0.0.1"]:
             self.assertEqual(self.req("GET", "/api/eligibility/health", headers={"Host": host})[0], 200, host)
+
+    # ------------------------------------------------------------- embeddings
+
+    def test_embed_forwards_texts_to_the_embedding_model(self):
+        status, body = self.req("POST", srv.EMBED, {"input": ["ab", "abcd"]})
+        self.assertEqual(status, 200)
+        self.assertEqual(body["embeddings"], [[2.0, 1.0], [4.0, 1.0]])
+        sent = FakeOllama.seen[-1]
+        self.assertEqual(sent["model"], MODEL)
+        self.assertEqual(sent["input"], ["ab", "abcd"])
+
+    def test_embed_refuses_bad_input_and_truncates_long_texts(self):
+        self.assertEqual(self.req("POST", srv.EMBED, {"input": "text"})[0], 400)
+        self.assertEqual(self.req("POST", srv.EMBED, {"input": []})[0], 400)
+        self.assertEqual(self.req("POST", srv.EMBED, {"input": ["x"] * (srv.MAX_EMBED_INPUTS + 1)})[0], 400)
+        self.req("POST", srv.EMBED, {"input": ["y" * (srv.MAX_EMBED_CHARS + 50)]})
+        self.assertEqual(len(FakeOllama.seen[-1]["input"][0]), srv.MAX_EMBED_CHARS)
+
+    def test_embed_is_guarded_like_the_model(self):
+        status, _ = self.req("POST", srv.EMBED, {"input": ["a"]}, {"Origin": "https://evil.example"})
+        self.assertEqual(status, 403)
+
+    def test_embeddings_can_use_a_second_ollama(self):
+        h = srv.Handler.__init__.__code__.co_varnames
+        self.assertIn("embed_ollama", h)
+
+    def test_health_names_the_embedding_model_when_installed(self):
+        status, body = self.req("GET", srv.HEALTH)
+        self.assertEqual(body["embedModel"], MODEL)
 
     def test_other_post_paths_are_404(self):
         self.assertEqual(self.req("POST", "/api/other", self.MSG)[0], 404)

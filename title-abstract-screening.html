@@ -202,7 +202,7 @@ th{background:#f4f4f4}
 <div class="toolbar pilot-filter" id="check-filter" hidden><button class="btn small" type="button" data-cfilter="conflicts" aria-pressed="false">Conflicts <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="todo" aria-pressed="true">To check <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="done" aria-pressed="false">Checked <span class="count">0</span></button></div>
 <div class="pilot-list" id="check-list"></div>
 </div>
-<div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Records</label><select class="select compact" id="export-option"><option value="include">Include (Yes and Maybe)</option><option value="exclude">Exclude (No)</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan (RIS)</option><option value="csv">CSV (Excel, with screening decisions)</option><option value="bib">BibTeX</option><option value="json">JSON (with screening decisions)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div><a class="btn small primary" data-fulltext href="index.html?view=project#tool-full-text">Next: Full-text screening</a></div>
+<div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Records</label><select class="select compact" id="export-option"><option value="include">Include (Yes and Maybe)</option><option value="exclude">Exclude (No)</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan (RIS)</option><option value="csv">CSV (Excel, with screening decisions)</option><option value="bib">BibTeX</option><option value="json">JSON (with screening decisions)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div><a class="btn small primary" data-fulltext href="full-text-screening.html">Next: Full-text screening</a></div>
 </section>
 </div>
 </div>
@@ -269,7 +269,7 @@ function pageLink(file,view){
 document.querySelectorAll('[data-home]').forEach(a=>a.href=pageLink('index.html'));
 document.querySelectorAll('[data-workflow]').forEach(a=>a.href=pageLink('index.html','project'));
 document.querySelectorAll('[data-toolset]').forEach(a=>a.href=pageLink('index.html','toolset'));
-document.querySelectorAll('[data-fulltext]').forEach(a=>a.href=pageLink('index.html','project')+'#tool-full-text');
+document.querySelectorAll('[data-fulltext]').forEach(a=>a.href=pageLink('full-text-screening.html'));
 document.querySelectorAll('[data-search]').forEach(a=>a.href=pageLink('search-strategy.html'));
 document.querySelectorAll('[data-settings]').forEach(a=>a.href=pageLink('settings.html'));
 document.querySelectorAll('[data-settings-team]').forEach(a=>a.href=pageLink('settings.html')+'#team');
@@ -497,7 +497,23 @@ async function loadSource(){
 }
 function stale(){return !!workspace&&(workspace.sourceSig!==source.sourceSig||workspace.criteriaSig!==source.criteriaSig)}
 function readySource(){return !stale()&&source.records.length>=3&&!!source.criteria?.rows?.length}
+// Records going forward (Yes and Maybe) and the criteria in use, for the
+// Full-text screening page. Written shortly after each change.
+let handoffTimer=null;
+function publishForFullText(){
+  clearTimeout(handoffTimer);
+  handoffTimer=setTimeout(async()=>{
+    try{
+      if(!workspace||!source)return;
+      const s=summary(),records=source.records.filter(r=>forward(finalDecision(r.uid))).map(r=>({uid:r.uid,title:r.title,authors:r.authors,year:r.year,journal:r.journal,volume:r.volume,issue:r.issue,pages:r.pages,doi:r.doi,pmid:r.pmid,url:r.url,abstract:r.abstract,databases:sourceDatabases(r),taDecision:finalDecision(r.uid),taSource:decisionSource(r.uid)}));
+      const db=await openDB('aimstep-fulltext-input');
+      await putProject(db,{id:scope,updatedAt:now(),criteria:source.criteria||null,criteriaSig:source.criteriaSig,criteriaOrigin:criteriaOrigin||null,records,pending:s.pending,screeningComplete:s.completed});
+      db.close();
+    }catch(e){console.error('Full-text hand-off failed',e)}
+  },800);
+}
 function publishSummary(){
+  publishForFullText();
   const current=summary();
   try{localStorage.setItem(workspaceKey,JSON.stringify(current))}catch(e){}
   if(projectId){

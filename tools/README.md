@@ -117,3 +117,24 @@ kept and Resume continues.
 
     tools/start_ollama_parallel.sh                         # set it now
     launchctl bootout gui/501/com.aimstep.ollama-parallel  # remove the login agent
+
+## Full-text screening: embeddings
+
+`full-text-screening.html` finds each criterion's most relevant passages by
+contrastive semantic highlighting with the embedding model `embeddinggemma`
+(`ollama pull embeddinggemma`, about 620 MB). The server forwards
+`POST /api/eligibility/embed {"input": [texts]}` to Ollama `/api/embed`
+(`--embed-model`, default `embeddinggemma`).
+
+While the chat model is busy with parallel requests, the main Ollama does not
+load a second model, so embeddings get their own small Ollama on port 11435
+(same model folder, local only), started at login by
+`~/Library/LaunchAgents/com.aimstep.ollama-embed.plist`, and the server is
+started with `--embed-ollama http://127.0.0.1:11435`. Without an embedding
+model the page falls back to keyword scoring and records that it did.
+
+    launchctl kickstart -k gui/501/com.aimstep.ollama-embed   # restart it
+    curl -s http://127.0.0.1:8765/api/eligibility/health      # shows "embedModel"
+
+PDF text is read in the browser with pdf.js 4.10.38 (`vendor/pdfjs/`,
+Apache-2.0); open-access articles come from Europe PMC as JATS XML.

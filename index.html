@@ -2023,12 +2023,12 @@
                       <h3 data-i18n="dashboard_team_progress">Team progress</h3>
                       <div class="workspace-progress-track" role="progressbar" aria-label="Full-text screening progress" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><span></span></div>
                       <div class="workspace-stats">
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="screen_done">Done</span></div>
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="screen_conflicts">Conflicts</span></div>
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="screen_one_vote">One vote</span></div>
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="screen_no_votes">No votes</span></div>
+                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="fulltext_decided">Decided</span></div>
+                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="fulltext_conflicts">Conflicts open</span></div>
+                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="fulltext_awaiting">Awaiting classification</span></div>
+                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="fulltext_pending">To screen</span></div>
                       </div>
-                      <div class="workspace-team-note" data-i18n="screen_team_settings">⚙ Team settings</div>
+                      
                     </div>
                     <div class="workspace-dashboard-side">
                       <div class="workspace-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zM23 10a2 2 0 0 0-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10a2 2 0 0 0 2 2h9a2 2 0 0 0 1.84-1.22l3.02-7.05c.09-.23.14-.48.14-.73v-2z" /></svg></div>
@@ -2036,6 +2036,7 @@
                       <p data-i18n="fulltext_import_prompt">Studies selected for full-text review will appear here.</p>
                     </div>
                   </div>
+                  <p style="margin-top:16px"><a class="btn btn-primary" data-workspace-tool="fulltext" href="full-text-screening.html">Open full-text screening →</a></p>
                 </div>
               </details>
               <details class="workspace-accordion" id="tool-extraction">
@@ -2084,12 +2085,12 @@
               <span class="tool-title" data-i18n="t3_t">Title and abstract screening</span>
 
             </a>
-            <button type="button" class="tool" data-tool="fulltext" data-tool-status="development" aria-haspopup="dialog" aria-controls="toolset-status-dialog">
+            <a class="tool" href="full-text-screening.html" data-tool="fulltext">
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
               <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 6h13l9 9v25a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M27 6v9h9"/><path d="M17 22h14M17 28h14M17 34h8"/><path class="accent" d="M30 36l3 3 6-7"/></svg></span>
               <span class="tool-title" data-i18n="t4_t">Full-text screening</span>
 
-            </button>
+            </a>
             <button type="button" class="tool" data-tool="extract" data-tool-status="development" aria-haspopup="dialog" aria-controls="toolset-status-dialog">
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
               <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="6" y="8" width="28" height="26" rx="2"/><path d="M6 16h28M6 24h28M15 16v18M25 16v18"/><path class="accent" d="M34 30h8M38 26l4 4-4 4"/></svg></span>
@@ -2296,6 +2297,10 @@
             screen_import_prompt: "Import references to start title and abstract screening.",
             fulltext_no_activity: "No full-text reviews yet",
             fulltext_import_prompt: "Studies selected for full-text review will appear here.",
+            fulltext_decided: "Decided",
+            fulltext_conflicts: "Conflicts open",
+            fulltext_awaiting: "Awaiting classification",
+            fulltext_pending: "To screen",
             extraction_study: "Study",
             extraction_status: "Status",
             extraction_assigned: "Assigned to",
@@ -2442,6 +2447,10 @@
             screen_import_prompt: "导入文献后即可开始标题与摘要筛选。",
             fulltext_no_activity: "尚无全文审核",
             fulltext_import_prompt: "进入全文审核的研究将在此显示。",
+            fulltext_decided: "已决定",
+            fulltext_conflicts: "待裁决分歧",
+            fulltext_awaiting: "待分类",
+            fulltext_pending: "待筛选",
             extraction_study: "研究",
             extraction_status: "状态",
             extraction_assigned: "负责人",
@@ -3297,10 +3306,46 @@
           if (activeProject) screening.searchParams.set("projectId", activeProject.id);
           var toolsetScreen = toolset.querySelector('[data-tool="screen"]');
           if (toolsetScreen) toolsetScreen.href = routeUrl("page", screening).href;
+          var fulltext = new URL("full-text-screening.html", home);
+          if (activeProject) fulltext.searchParams.set("projectId", activeProject.id);
+          var toolsetFulltext = toolset.querySelector('[data-tool="fulltext"]');
+          if (toolsetFulltext) toolsetFulltext.href = routeUrl("page", fulltext).href;
+          var workspaceFulltext = document.querySelector('[data-workspace-tool="fulltext"]');
+          if (workspaceFulltext) workspaceFulltext.href = routeUrl("page", fulltext).href;
           var workspaceScreen = document.querySelector('[data-workspace-tool="screen"]');
           if (workspaceScreen) workspaceScreen.href = routeUrl("page", screening).href;
           renderSearchSummary();
           renderScreenSummary();
+          renderFulltextSummary();
+        }
+        function renderFulltextSummary() {
+          var section = document.getElementById("tool-full-text");
+          if (!section) return;
+          var data = null;
+          try { data = JSON.parse(localStorage.getItem("aimstep-fulltext-summary:" + (activeProject ? activeProject.id : "default")) || "null"); } catch (e) {}
+          var zh = window.AIMSTEP.lang() === "zh";
+          var n = function (k) { return Math.max(0, Number(data && data[k]) || 0); };
+          var assessed = n("assessed"), decided = n("decided");
+          var metrics = section.querySelectorAll(".workspace-summary-metrics span");
+          if (metrics[0]) metrics[0].textContent = n("exclude").toLocaleString() + (zh ? " 篇已排除" : " excluded");
+          if (metrics[1]) metrics[1].textContent = n("pending").toLocaleString() + (zh ? " 篇待筛选研究" : " studies to screen");
+          var track = section.querySelector(".workspace-progress-track");
+          if (track) {
+            track.setAttribute("aria-valuemax", String(assessed));
+            track.setAttribute("aria-valuenow", String(decided));
+            track.querySelector("span").style.width = (assessed ? Math.round(decided / assessed * 100) : 0) + "%";
+          }
+          var values = section.querySelectorAll(".workspace-stat strong");
+          [decided, n("conflicts") - n("conflictsResolved"), n("unclear"), n("pending")].forEach(function (number, i) {
+            if (values[i]) values[i].textContent = Math.max(0, number).toLocaleString();
+          });
+          var side = section.querySelector(".workspace-dashboard-side");
+          if (side && data && n("sought")) {
+            side.querySelector("h3").textContent = zh ? "全文筛选正在进行" : "Full-text screening in progress";
+            side.querySelector("p").textContent = zh
+              ? n("sought") + " 篇报告，" + n("retrieved") + " 篇已获取全文，" + n("include") + " 篇纳入。"
+              : n("sought") + " reports, " + n("retrieved") + " full texts retrieved, " + n("include") + " included.";
+          }
         }
         function renderScreenSummary() {
           var section = document.getElementById("tool-title-abstract");
@@ -3412,7 +3457,7 @@
           // The Toolset view lives in index so a single-file update also
           // updates the tools reached through older workflow.html links.
           if (view === "page" && target && isToolsetPage(target)) { view = "toolset"; target = null; }
-          if (view === "page" && target && activeProject && /\/(?:eligibility|search-strategy|title-abstract-screening|settings)\.html$/i.test(target.pathname) && !target.searchParams.has("projectId") && !target.searchParams.has("project")) {
+          if (view === "page" && target && activeProject && /\/(?:eligibility|search-strategy|title-abstract-screening|full-text-screening|settings)\.html$/i.test(target.pathname) && !target.searchParams.has("projectId") && !target.searchParams.has("project")) {
             target = new URL(target);
             target.searchParams.set("projectId", activeProject.id);
           }
@@ -3597,6 +3642,7 @@
           if (activeProject && event.key === setupStorageKey(activeProject.id)) renderSetupStatus();
           if (event.key === "aimstep-search-summary:" + (activeProject ? activeProject.id : "default")) renderSearchSummary();
           if (event.key === "aimstep-screen-summary:" + (activeProject ? activeProject.id : "default")) renderScreenSummary();
+          if (event.key === "aimstep-fulltext-summary:" + (activeProject ? activeProject.id : "default")) renderFulltextSummary();
         });
         window.addEventListener("aimstep:search-updated", renderSearchSummary);
         window.addEventListener("aimstep:screening-updated", renderScreenSummary);
