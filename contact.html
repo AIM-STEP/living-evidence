@@ -134,13 +134,9 @@
         aspect-ratio: 1 / 1;
       }
 
-      .brand-pre { align-self: flex-start; margin-top: calc(var(--brand-h) * 0.1); font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: calc(var(--brand-h) * 0.36); line-height: 1; color: #5C004D; white-space: nowrap; }
-      .brand .brand-pre + .brand-word { margin-left: -6px; }
-      @media (max-width: 720px) {
-        .brand { position: relative; }
-        .brand-pre { position: absolute; left: calc(var(--brand-h) * 1.1 + 14px); top: -12px; margin: 0; font-size: 10px; }
-        .brand .brand-pre + .brand-word { margin-left: 0; }
-      }
+      .brand-text { display: flex; flex-direction: column; justify-content: center; line-height: 1; min-width: 0; }
+      .brand-main { font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: calc(var(--brand-h) * 0.6); letter-spacing: .05em; color: #5C004D; }
+      .brand-sub { margin-top: 5px; font-size: calc(var(--brand-h) * 0.28); font-weight: 500; color: #3d3640; white-space: nowrap; }
       .brand-word {
         aspect-ratio: 774 / 228;
       }
@@ -930,9 +926,9 @@
 
     <header class="site-header">
       <div class="container header-inner">
-        <a href="index.html" class="brand" aria-label="ACHIEVE for AIM-STEP home">
+        <a href="index.html" class="brand" aria-label="ACHIEVE for AIM-STEP Living evidence — home">
           <svg class="brand-mark" viewBox="296 156 408 408" aria-hidden="true" focusable="false"><use href="#aimstep-art" /></svg>
-          <span class="brand-pre" aria-hidden="true">ACHIEVE for</span><svg class="brand-word" viewBox="112 614 774 228" role="img" aria-label="ACHIEVE for AIM-STEP — Living evidence"><use href="#aimstep-art" /></svg>
+          <span class="brand-text" aria-hidden="true"><span class="brand-main">ACHIEVE</span><span class="brand-sub">for AIM-STEP Living evidence</span></span>
         </a>
 
         <nav class="nav" aria-label="Main navigation">
