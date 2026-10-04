@@ -13,6 +13,7 @@
 .machine-input{position:relative}.machine-input .textarea{min-height:150px;padding-bottom:45px}.machine-input-tools{position:absolute;left:11px;bottom:11px;display:flex;gap:7px}.machine-tool{width:29px;height:29px;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--plum);font-size:21px;line-height:1}.machine-tool:hover,.machine-tool[aria-pressed="true"]{background:var(--pale);border-color:var(--plum)}.machine-tool[aria-pressed="true"]{box-shadow:0 0 0 2px #5c004d22}.machine-tool svg{width:17px;height:17px;fill:currentColor}.machine-attachments{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.machine-attachment{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:#fafafa;font-size:11px}.machine-attachment span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}.machine-attachment button{border:0;background:transparent;font-size:17px;line-height:1;color:var(--muted);padding:0 2px}.machine-attachment button:hover{color:var(--red)}.machine-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px}.machine-actions .btn{min-width:82px}.machine-actions .btn:disabled{opacity:.6;cursor:wait}.machine-status{margin-top:10px}.machine-status.error{color:var(--red)}
 .criteria-summary{font-size:12px;line-height:1.7;color:var(--ink2);overflow-wrap:anywhere}.summary-rule{width:185px;max-width:100%;border-top:2px solid var(--ink);margin:0 0 10px}.summary-intro{margin:0 0 12px}.summary-intro p{margin:0}.summary-block{margin:18px 0}.summary-block h3{font-size:12px;color:var(--ink);margin:0 0 7px;font-weight:700}.summary-inclusion{display:flex;align-items:flex-start;margin:4px 0}.summary-code{flex:0 0 24px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.summary-list{margin:5px 0 0;padding-left:23px}.summary-list li{padding-left:2px;margin:3px 0}.summary-pending{list-style:none;padding-left:0}.summary-pending li{padding-left:14px;position:relative}.summary-pending li:before{content:'-';position:absolute;left:0}.summary-muted{color:var(--muted)}.summary-paragraph{margin:7px 0 0;line-height:1.75}.manual-refine-controls{display:flex;justify-content:flex-end;margin-top:20px}.manual-refine-controls .btn:disabled{opacity:.6;cursor:wait}.source-trace{margin-top:20px;border-top:1px solid var(--soft);padding-top:10px}.source-trace summary{cursor:pointer;font-weight:700}.source-trace li{margin:7px 0}.source-trace small{display:block;color:var(--muted)}
 .brand-text{display:flex;flex-direction:column;line-height:1}.brand .brand-main{font-size:16px;letter-spacing:.08em;line-height:1.05}.brand .brand-sub{display:block;margin-top:3px;font-size:11px;line-height:1.2;letter-spacing:.01em;font-weight:500;color:#5f5862;text-transform:none;white-space:nowrap}
+.pc-help{margin:0 0 8px}.pc-list{list-style:none;margin:0;padding:0}.pc-item{border:1px solid #e3dfe5;border-radius:8px;padding:10px 12px;margin:0 0 10px;background:#fff}.pc-item.decided{background:#fbf9fc}.pc-q{font-size:12px;color:var(--ink);margin-bottom:8px;overflow-wrap:anywhere}.pc-fields{display:grid;grid-template-columns:minmax(110px,.6fr) 2fr;gap:6px;margin-bottom:8px}.pc-fields select,.pc-fields input{font:inherit;font-size:12px;padding:6px 8px;border:1px solid #cfcbd2;border-radius:6px;min-width:0;background:#fff}.pc-choice{display:flex;gap:6px;flex-wrap:wrap}.pc-btn{font:inherit;font-size:12px;font-weight:700;padding:5px 12px;border:1px solid #a3a5a8;border-radius:6px;background:#fff;cursor:pointer}.pc-btn.meets.selected{background:#e9f8ee;border-color:#18794e;color:#18794e}.pc-btn.fails.selected{background:#fff0ef;border-color:#b42318;color:#b42318}.pc-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}.pc-generate:disabled{opacity:.5;cursor:not-allowed}@media(max-width:600px){.pc-fields{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -609,9 +610,9 @@ function standardizedCriteria(){
     const polished=refinement.rows.map((row,index)=>({code:normalized[index].code,label:normalized[index].label,include:row.include,exclude:row.exclude}));
     const polishedExclusions=new Map();for(const row of polished)for(const rule of row.exclude){const key=ruleKey(rule);if(!polishedExclusions.has(key))polishedExclusions.set(key,{rule,domains:[]});polishedExclusions.get(key).domains.push(row.label)}
     const unresolved=polishedExclusions.size?pending.filter(item=>item!=='Confirm whether explicit exclusion rules are needed.'):pending;
-    return {rows:polished,framework,pending:[...new Set([...unresolved,...refinement.uncertainties])],exclusions:[...polishedExclusions.values()],limits,topic:refinement.reviewTopic,paragraph:refinement.manuscriptParagraph,trace:refinement.trace||[],refined:true};
+    return {rows:polished,framework,pending:openPending([...new Set([...unresolved,...refinement.uncertainties])]),exclusions:[...polishedExclusions.values()],limits,topic:refinement.reviewTopic,paragraph:refinement.manuscriptParagraph,trace:refinement.trace||[],refined:true};
   }
-  return {rows:normalized,framework,pending:[...new Set(pending)],exclusions:[...exclusions.values()],limits,topic:'',paragraph:state.activeGenerator==='machine'?manuscriptDraft(normalized,[...exclusions.values()],limits):'',refined:false};
+  return {rows:normalized,framework,pending:openPending([...new Set(pending)]),exclusions:[...exclusions.values()],limits,topic:'',paragraph:state.activeGenerator==='machine'?manuscriptDraft(normalized,[...exclusions.values()],limits):'',refined:false};
 }
 function manuscriptDraft(rows,exclusions,limits){
   const included=rows.filter(row=>row.include.length).map(row=>row.label.toLowerCase()+'—'+row.include.join(' ').replace(/\.$/,''));
@@ -643,7 +644,7 @@ function renderPreview(){
   shareSummary({rowsSig:summaryRowsSig(state.activeGenerator==='machine'?state.machineCriteria:state.criteria),topic:topic||summaryTopic(rows,framework),framework:frameworkLabel,
     includes:rows.map(row=>({label:row.label,text:row.include.join(' ')})),limits,exclusions:[...exclusionGroups].map(([domain,rules])=>({domain,text:rules.join(' ')})),pending,paragraph:paragraph||'',paragraphNote:'Click Standardize to generate a publication-style paragraph with the local model.',
     traceLabel:trace?.length?(state.activeGenerator==='machine'?'Intermediate draft trace':'Source trace'):'',traceSource:state.activeGenerator==='machine'?'First-pass draft':'Source',trace:(trace||[]).map(a=>({dimension:a.dimension,logic:a.logic,proposition:a.proposition,id:a.id,sourceId:a.sourceId,used:!!a.used,sourceSentence:a.sourceSentence}))});
-  area.innerHTML=`<div class="criteria-summary"><div class="summary-rule" aria-hidden="true"></div><div class="summary-intro"><p><strong>Review topic:</strong> ${escapeHtml(topic||summaryTopic(rows,framework))}</p><p><strong>Framework:</strong> ${escapeHtml(frameworkLabel)}</p></div><div class="summary-rule" aria-hidden="true"></div><section class="summary-block"><h3>Inclusion criteria</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong>Limits:</strong> ${escapeHtml(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclusionHtml}</section><section class="summary-block"><h3>Pending clarification</h3>${pending.length?`<ul class="summary-list summary-pending">${pending.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul>`:'<p class="summary-muted">None identified.</p>'}</section><section class="summary-block"><h3>Manuscript wording</h3>${paragraph?`<p class="summary-paragraph">${escapeHtml(paragraph)}</p>`:'<p class="summary-muted">Click Standardize to generate a publication-style paragraph with the local model.</p>'}</section>${traceHtml}<div class="summary-rule" aria-hidden="true"></div></div>`;
+  area.innerHTML=`<div class="criteria-summary"><div class="summary-rule" aria-hidden="true"></div><div class="summary-intro"><p><strong>Review topic:</strong> ${escapeHtml(topic||summaryTopic(rows,framework))}</p><p><strong>Framework:</strong> ${escapeHtml(frameworkLabel)}</p></div><div class="summary-rule" aria-hidden="true"></div><section class="summary-block"><h3>Inclusion criteria</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong>Limits:</strong> ${escapeHtml(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclusionHtml}</section><section class="summary-block"><h3>Pending clarification</h3>${pending.length?pendingEditor(pending,rows):(state.finalCriteria?.at?`<p class="summary-muted">None. ${state.finalCriteria.count} clarification${state.finalCriteria.count===1?' was':'s were'} resolved by the reviewer in the final criteria (${escapeHtml(new Date(state.finalCriteria.at).toLocaleString())}).</p>`:'<p class="summary-muted">None identified.</p>')}</section><section class="summary-block"><h3>Manuscript wording</h3>${paragraph?`<p class="summary-paragraph">${escapeHtml(paragraph)}</p>`:'<p class="summary-muted">Click Standardize to generate a publication-style paragraph with the local model.</p>'}</section>${traceHtml}<div class="summary-rule" aria-hidden="true"></div></div>`;
 }
 function xmlEscape(value){return String(value==null?'':value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
 function wordParagraph(value,bold){return '<w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r>'+(bold?'<w:rPr><w:b/></w:rPr>':'')+'<w:t xml:space="preserve">'+xmlEscape(value)+'</w:t></w:r></w:p>'}
@@ -704,6 +705,84 @@ $('next-search-strategy').addEventListener('click',()=>{
   try{sessionStorage.setItem('aimstep-eligibility-handoff:'+(projectId||'default'),String(Date.now()))}catch(e){}
 });
 $('lang').addEventListener('click',()=>{lang=lang==='en'?'zh':'en';$('lang').textContent=lang==='en'?'中文':'English';toast(lang==='zh'?'目前此页面的工作内容以英文保存。':'Page labels and criteria are currently in English.')});
+
+/* ---------------- Pending clarification: the reviewer decides ----------------
+   Each pending item gets two choices: Meets (a report like this is eligible)
+   or Does not meet (it is not). With the rule written beside it, Meets adds
+   that rule to the inclusion criteria of its dimension and Does not meet adds
+   it to the exclusion criteria; an item with no rule (for example a reminder)
+   is simply confirmed. When every item is decided, Generate final criteria
+   writes the rules into the criteria, so the next steps use them, and keeps a
+   record of each decision. A placeholder clause that an item flagged (such as
+   "Eligible study designs") is replaced by the reviewer's rule. */
+function openPending(list){const done=new Set(state.resolvedPending||[]);return list.filter(item=>!done.has(item))}
+const pendingLabels=()=>[...new Set([...(state.activeGenerator==='machine'?state.machineCriteria:state.criteria).map(r=>r.title).filter(Boolean),'Other'])];
+function pendingSuggestion(item){
+  let domain='Other',text=String(item||'').trim(),vague='';
+  const m=text.match(/^([^:]{2,40}):\s*(.*)$/);
+  const labels=pendingLabels(),hit=m&&labels.find(l=>l.toLowerCase()===m[1].trim().toLowerCase()||domainInfo(l,state.framework)[1].toLowerCase()===m[1].trim().toLowerCase());
+  if(hit){domain=hit;text=m[2].trim()}
+  const def=text.match(/^Operational definition required \((.+)\)$/i);
+  if(def){vague=def[1];text=''}
+  // A flagged placeholder (e.g. "Eligible study designs") is named by its issue.
+  const issue=['Operational definition required','Specific eligibility rule required','English translation and verification required'].find(x=>text.toLowerCase().startsWith(x.toLowerCase())||def&&x==='Operational definition required')||'';
+  text=text.replace(/^check the omitted or conditional proposition\s*/i,'').replace(/^source text was not converted[^:]*:?\s*/i,'');
+  if(/^(define|confirm|verify|clarify|specify|the same rule|the start date|english translation|specific eligibility rule required|define an explicit)/i.test(text))text='';
+  return {domain,text,vague,issue};
+}
+function pendingEditor(pending,rows){
+  const decisions=state.pendingDecisions||{},labels=pendingLabels();
+  const items=pending.map((item,i)=>{const d=decisions[item]||{},sug=pendingSuggestion(item),domain=d.domain||sug.domain,text=d.text??sug.text;
+    return `<li class="pc-item${d.decision?' decided':''}" data-pc="${i}"><div class="pc-q">${escapeHtml(item)}</div>`+
+      `<div class="pc-fields"><select class="pc-domain" data-pc-domain="${i}" aria-label="Dimension">${labels.map(l=>`<option${l===domain?' selected':''}>${escapeHtml(l)}</option>`).join('')}</select>`+
+      `<input class="pc-text" data-pc-text="${i}" value="${escapeHtml(text)}" placeholder="${sug.vague?'Write the specific rule that replaces: '+escapeHtml(sug.vague):'Rule to record (leave empty to only confirm)'}" aria-label="Rule"></div>`+
+      `<div class="pc-choice" role="group" aria-label="Decision"><button type="button" class="pc-btn meets${d.decision==='meets'?' selected':''}" data-pc-dec="meets" data-pc-i="${i}" aria-pressed="${d.decision==='meets'}">Meets</button><button type="button" class="pc-btn fails${d.decision==='fails'?' selected':''}" data-pc-dec="fails" data-pc-i="${i}" aria-pressed="${d.decision==='fails'}">Does not meet</button></div></li>`}).join('');
+  const decided=pending.filter(item=>decisions[item]?.decision).length;
+  return `<p class="summary-muted pc-help">For each item, choose whether a report like this meets the criteria. The rule is added to the inclusion criteria (Meets) or the exclusion criteria (Does not meet) of its dimension.</p><ol class="pc-list">${items}</ol>`+
+    `<div class="pc-actions"><span class="summary-muted">${decided} of ${pending.length} decided</span><button type="button" class="btn btn-primary pc-generate" data-pc-generate${decided===pending.length?'':' disabled'}>Generate final criteria</button></div>`;
+}
+function currentPending(){return standardizedCriteria().pending}
+function persistQuietly(){try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
+function sentence(t){t=String(t||'').replace(/\s+/g,' ').trim().replace(/[.。]+$/,'');return t?t.charAt(0).toUpperCase()+t.slice(1)+'.':''}
+function generateFinalCriteria(){
+  const pending=currentPending(),decisions=state.pendingDecisions||{};
+  if(!pending.length||pending.some(item=>!decisions[item]?.decision))return;
+  const machine=state.activeGenerator==='machine',rows=machine?state.machineCriteria:state.criteria;
+  // The polished wording stays valid only if it is updated with the rows.
+  const refinement=machine?(state.machineRefinement?.signature===machineSourceSignature(state.machineRun?.question,state.machineRun?.reviewType,state.machineRun?.sourceRevision??0,state.machineCriteria)?state.machineRefinement:null)
+    :(state.manualRefinement?.signature===manualSourceSignature()?state.manualRefinement:null);
+  const log=[];
+  for(const item of pending){
+    const d=decisions[item],sug=pendingSuggestion(item),domain=d.domain||sug.domain,rule=sentence(d.text??sug.text);
+    log.push({item,decision:d.decision,domain,rule});
+    if(!rule)continue;
+    let row=rows.find(r=>r.title===domain);
+    if(!row){row={id:'INC-'+String(rows.length+1).padStart(2,'0'),title:domain,condition:'',uncertain:'',definition:'',purpose:'Eligibility',stage:''};rows.push(row);if(refinement)refinement.rows.push({dimension:domain,include:[],exclude:[]})}
+    // The reviewer's rule replaces the placeholder clause the item flagged.
+    if(sug.vague||sug.issue){const k=sug.vague?ruleKey(sentence(sug.vague)):'',drop=part=>{const c=sentence(part);return c&&(k?ruleKey(c)===k:ruleIssue(c)===sug.issue)};
+      for(const f of ['condition','definition','uncertain'])row[f]=String(row[f]||'').split(/\n/).filter(line=>!line.split(/[;；]/).some(drop)).join('\n')}
+    const field=d.decision==='meets'?'condition':'uncertain';
+    row[field]=(row[field]?row[field].replace(/\s+$/,'')+'\n':'')+rule;
+    if(refinement){const rr=refinement.rows.find(x=>x.dimension===domain);if(rr){if(sug.vague)rr.include=rr.include.filter(x=>ruleKey(x)!==ruleKey(sentence(sug.vague)));(d.decision==='meets'?rr.include:rr.exclude).push(rule)}}
+  }
+  if(refinement){refinement.uncertainties=refinement.uncertainties.filter(u=>!pending.includes(u));refinement.signature=machine?machineSourceSignature(state.machineRun?.question,state.machineRun?.reviewType,state.machineRun?.sourceRevision??0,state.machineCriteria):manualSourceSignature()}
+  state.resolvedPending=[...new Set([...(state.resolvedPending||[]),...pending])];
+  state.pendingDecisions={};
+  state.finalCriteria={at:new Date().toISOString(),count:(state.finalCriteria?.count||0)+pending.length,decisions:[...(state.finalCriteria?.decisions||[]),...log]};
+  renderCards();save();
+  toast('Final criteria generated: '+log.filter(x=>x.rule).length+' rule'+(log.filter(x=>x.rule).length===1?'':'s')+' added, '+log.filter(x=>!x.rule).length+' confirmed.');
+}
+$('preview').addEventListener('click',e=>{
+  const b=e.target.closest('[data-pc-dec]');
+  if(b){const item=currentPending()[Number(b.dataset.pcI)];if(item===undefined)return;const li=b.closest('.pc-item');
+    state.pendingDecisions={...(state.pendingDecisions||{}),[item]:{decision:b.dataset.pcDec,domain:li.querySelector('.pc-domain').value,text:li.querySelector('.pc-text').value}};save();return}
+  if(e.target.closest('[data-pc-generate]'))generateFinalCriteria();
+});
+$('preview').addEventListener('input',e=>{
+  const t=e.target,i=t.dataset.pcText??t.dataset.pcDomain;if(i===undefined)return;
+  const item=currentPending()[Number(i)];if(item===undefined)return;const li=t.closest('.pc-item'),prev=(state.pendingDecisions||{})[item]||{};
+  state.pendingDecisions={...(state.pendingDecisions||{}),[item]:{...prev,domain:li.querySelector('.pc-domain').value,text:li.querySelector('.pc-text').value}};persistQuietly();
+});
 fill();
 })();
 </script>
