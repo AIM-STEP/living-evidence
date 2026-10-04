@@ -42,6 +42,9 @@
 .limits-actions{display:flex;justify-content:flex-end;margin-top:10px}
 .brand-text{display:flex;flex-direction:column;line-height:1}.brand .brand-main{font-size:16px;letter-spacing:.08em;line-height:1.05}.brand .brand-sub{display:block;margin-top:3px;font-size:11px;line-height:1.2;letter-spacing:.01em;font-weight:500;color:#5f5862;text-transform:none;white-space:nowrap}
 .step-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid var(--plum);border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.2;letter-spacing:0;text-decoration:none;white-space:nowrap;cursor:pointer}.step-btn:hover{text-decoration:none}.step-btn.back{background:#fff;color:var(--plum)}.step-btn.back:hover{background:#f8eff6}.step-btn.next{background:var(--plum);color:#fff}.step-btn.next:hover{background:#470039;color:#fff}.step-tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:#f8eff6;color:var(--plum);font-size:11px;font-weight:600;vertical-align:1px}
+.collapse-toggle{width:30px;height:30px;display:inline-grid;place-items:center;flex:none;padding:0;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}.collapse-toggle:hover{border-color:var(--plum);color:var(--plum)}.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:1px}.collapse-toggle svg{width:18px;height:18px;fill:currentColor;transition:transform .15s}.collapse-toggle[aria-expanded="false"] svg{transform:rotate(180deg)}@media(prefers-reduced-motion:reduce){.collapse-toggle svg{transition:none}}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.head-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}.has-collapse{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.is-collapsed>:not(.section-head):not(.panel-head):not(.criteria-heading):not(.panel-footer):not(.preview-actions){display:none!important}.panel.is-collapsed>.panel-head{border-bottom:0}.section.is-collapsed>.section-head{margin-bottom:0}
 </style></head>
 <body>
 <header class="header"><a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span class="brand-text"><span class="brand-main">ACHIEVE</span><small class="brand-sub">for AIM-STEP Living evidence</small></span></a><nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a data-toolset href="index.html?view=toolset" class="active">Toolset</a><a href="contact.html">Contact</a></nav><a class="project-pill" id="project-name" hidden></a></header>
@@ -1095,5 +1098,26 @@ try{
 }catch(e){notice('source-message','Could not refresh eligibility criteria: '+e.message,'error')}
 if(!state.criteriaSnapshot&&state.source==='previous'){try{const s=eligibility();if(s){state.criteriaSnapshot=s;state.sourceHash=fingerprint(comparableSnapshot(s));state.concepts=[];state.limits=clone(s.limits)}}catch(e){notice('source-message',e.message,'error')}}fillControls();renderCriteria();renderConcepts();renderStrategies();renderResults();renderHistory();saveDraft();updateSummary();await loadWordFiles();renderConcepts();setBusy(false);checkUpstream();await renderUploadedCriteriaFiles();document.body.dataset.ready='true';scheduleMachineWords(0)}
 init();
+})();
+
+// Collapse / expand each section. The head keeps its buttons; footers with
+// Next or Download stay visible. Remembered per browser, page and project.
+(()=>{
+  const q=new URLSearchParams(location.search),pid=q.get('projectId')||q.get('project')||'default',page=(location.pathname.split('/').pop()||'page').replace(/\.html$/,'');
+  const icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg>';
+  document.querySelectorAll('main .panel').forEach(box=>{
+    const head=[...box.children].find(el=>el.matches('.section-head,.panel-head,.criteria-heading'));
+    if(!head||head.querySelector('.collapse-toggle'))return;
+    const name=(head.querySelector('h2')?.textContent||'section').replace(/\s+/g,' ').trim(),key='aimstep-collapsed:'+page+':'+pid+':'+name;
+    // Everything after the title goes to the right, with the toggle last.
+    const actions=document.createElement('div');actions.className='head-actions';
+    [...head.children].slice(1).forEach(el=>actions.appendChild(el));
+    const btn=document.createElement('button');btn.type='button';btn.className='collapse-toggle';btn.innerHTML=icon+'<span class="sr-only"></span>';
+    actions.appendChild(btn);head.appendChild(actions);head.classList.add('has-collapse');
+    const set=c=>{box.classList.toggle('is-collapsed',c);btn.setAttribute('aria-expanded',String(!c));const t=(c?'Expand ':'Collapse ')+name;btn.title=t;btn.querySelector('.sr-only').textContent=t};
+    let saved=false;try{saved=localStorage.getItem(key)==='1'}catch(e){}
+    set(saved);
+    btn.addEventListener('click',()=>{const c=!box.classList.contains('is-collapsed');set(c);try{localStorage.setItem(key,c?'1':'0')}catch(e){}});
+  });
 })();
 </script></body></html>
