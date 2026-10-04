@@ -934,7 +934,22 @@ function summary(){
     conflicts:conflicts.length,conflictsResolved:conflicts.filter(id=>workspace.full.human[id]).length,humanCheck:checkIds.length,humanChecked:checked,
     completed:!!workspace.full.completedAt&&assessed.length>0&&decided===assessed.length,updatedAt:now()};
 }
-function publishSummary(){try{localStorage.setItem(summaryKey,JSON.stringify(summary()))}catch(e){}}
+/* Hand-off to Risk of bias assessment: the included reports, the criteria in
+   use, and where each full text is stored (aimstep-fulltext-docs, same key). */
+let robTimer=null;
+function publishForRob(){
+  clearTimeout(robTimer);
+  robTimer=setTimeout(async()=>{
+    try{
+      if(!workspace)return;
+      const records=workspace.records.filter(r=>finalOf(r.uid).decision==='include').map(r=>({uid:r.uid,title:r.title,authors:r.authors,year:r.year,journal:r.journal,doi:r.doi,pmid:r.pmid,url:r.url,abstract:r.abstract,fullText:workspace.docs[r.uid]?{kind:workspace.docs[r.uid].kind,source:workspace.docs[r.uid].source,chunks:workspace.docs[r.uid].chunks}:null,ftSource:finalOf(r.uid).source}));
+      const db=await openDB('aimstep-rob-input');
+      await putProject(db,{id:scope,updatedAt:now(),criteria:workspace.criteria||null,criteriaSig:workspace.criteriaSig,records,pending:summary().pending,screeningComplete:summary().completed});
+      db.close();
+    }catch(e){console.error('Risk of bias hand-off failed',e)}
+  },800);
+}
+function publishSummary(){publishForRob();try{localStorage.setItem(summaryKey,JSON.stringify(summary()))}catch(e){}}
 function maybeComplete(){const s=summary(),done=s.assessed>0&&!s.pending&&aiDone();if(done&&!workspace.full.completedAt){workspace.full.completedAt=now();log('full-text-screening-complete',{included:s.include,excluded:s.exclude,awaiting:s.unclear})}else if(!done)workspace.full.completedAt=''}
 async function runFull(){
   if(busy||!approvalsValid())return;
