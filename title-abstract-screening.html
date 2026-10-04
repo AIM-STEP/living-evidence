@@ -149,6 +149,7 @@ th{background:#f4f4f4}
 .abs-wrap .abstract{margin-bottom:4px}.abs-wrap:not(.open) .abstract{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.abs-toggle{border:0;background:none;padding:0;color:var(--plum);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px}.abs-toggle:hover{text-decoration:underline}.abs-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:2px}.abs-tools{justify-content:flex-end;margin:6px 0}
 .full-now{flex-direction:column;align-items:stretch;gap:2px}.now-item{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .brand-text{display:flex;flex-direction:column;line-height:1}.brand .brand-main{font-size:16px;letter-spacing:.08em;line-height:1.05}.brand .brand-sub{display:block;margin-top:3px;font-size:11px;line-height:1.2;letter-spacing:.01em;font-weight:500;color:#5f5862;text-transform:none;white-space:nowrap}
+.step-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid var(--plum);border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.2;letter-spacing:0;text-decoration:none;white-space:nowrap;cursor:pointer}.step-btn:hover{text-decoration:none}.step-btn.back{background:#fff;color:var(--plum)}.step-btn.back:hover{background:#f8eff6}.step-btn.next{background:var(--plum);color:#fff}.step-btn.next:hover{background:#470039;color:#fff}.step-tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:#f8eff6;color:var(--plum);font-size:11px;font-weight:600;vertical-align:1px}
 </style>
 </head>
 <body>
@@ -158,8 +159,8 @@ th{background:#f4f4f4}
 <a class="project-pill" id="project-name" hidden></a>
 </header>
 <main class="wrap">
-<div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Title and abstract screening</div>
-<div class="heading"><a class="btn" data-search href="search-strategy.html">Back: Search strategy</a></div>
+<div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Title and abstract screening<span class="step-tag">Step 3 of 8</span></div>
+<div class="heading"><a class="step-btn back" data-search href="search-strategy.html"><span aria-hidden="true">←</span> Back: Search strategy</a></div>
 <div class="layout">
 <div class="stack">
 <section class="panel">
@@ -203,7 +204,7 @@ th{background:#f4f4f4}
 <div class="toolbar pilot-filter" id="check-filter" hidden><button class="btn small" type="button" data-cfilter="conflicts" aria-pressed="false">Conflicts <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="todo" aria-pressed="true">To check <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="done" aria-pressed="false">Checked <span class="count">0</span></button></div>
 <div class="pilot-list" id="check-list"></div>
 </div>
-<div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Records</label><select class="select compact" id="export-option"><option value="include">Include (Yes and Maybe)</option><option value="exclude">Exclude (No)</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan (RIS)</option><option value="csv">CSV (Excel, with screening decisions)</option><option value="bib">BibTeX</option><option value="json">JSON (with screening decisions)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div><a class="btn small primary" data-fulltext href="full-text-screening.html">Next: Full-text screening</a></div>
+<div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Records</label><select class="select compact" id="export-option"><option value="include">Include (Yes and Maybe)</option><option value="exclude">Exclude (No)</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan (RIS)</option><option value="csv">CSV (Excel, with screening decisions)</option><option value="bib">BibTeX</option><option value="json">JSON (with screening decisions)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div><a class="step-btn next" data-fulltext href="full-text-screening.html">Next: Full-text screening <span aria-hidden="true">→</span></a></div>
 </section>
 </div>
 </div>
