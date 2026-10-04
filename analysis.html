@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<meta name="description" content="Analysis: Multidimensional analysis and visualisation with an integrated R Shiny app.">
+<meta name="description" content="Analysis: frequentist and Bayesian network meta-analysis in the browser: network plot, forest plot, league tables, node splitting, ranking, R scripts.">
 <title>AIM-STEP | Analysis</title>
 <style>
 :root{--ink:#171a20;--ink2:#393c41;--muted:#686a70;--line:#d8d9db;--soft:#ececed;--plum:#5c004d;--pale:#f8eff6;--green:#18794e;--amber:#986500;--red:#b42318}
@@ -159,7 +159,18 @@ th{background:#f4f4f4}
 .full-feed .feed-pass{width:64px;white-space:nowrap}
 .brand-text{display:flex;flex-direction:column;line-height:1}.brand .brand-main{font-size:16px;letter-spacing:.08em;line-height:1.05}.brand .brand-sub{display:block;margin-top:3px;font-size:11px;line-height:1.2;letter-spacing:.01em;font-weight:500;color:#5f5862;text-transform:none;white-space:nowrap}
 .step-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid var(--plum);border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.2;letter-spacing:0;text-decoration:none;white-space:nowrap;cursor:pointer}.step-btn:hover{text-decoration:none}.step-btn.back{background:#fff;color:var(--plum)}.step-btn.back:hover{background:#f8eff6}.step-btn.next{background:var(--plum);color:#fff}.step-btn.next:hover{background:#470039;color:#fff}.step-tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:#f8eff6;color:var(--plum);font-size:11px;font-weight:600;vertical-align:1px}
-.badge.dev{background:#fff5d8;color:#986500}.step-lede{font-size:14px;line-height:1.65;color:var(--ink2);margin:0 0 18px;max-width:760px}.step-flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:10px;align-items:stretch;margin:0 0 18px}.flow-box{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:#fafafa;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink2);min-width:0}.flow-box strong{font-size:13px;color:var(--ink)}.flow-box.current{border-color:var(--plum);background:#f8eff6}.flow-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}.flow-arrow{align-self:center;color:var(--plum);font-size:18px}@media(max-width:760px){.step-flow{grid-template-columns:1fr}.flow-arrow{transform:rotate(90deg);justify-self:center}}
+.input.compact,.select.compact{width:auto;min-height:30px;padding:4px 8px;font-size:12px}.link-btn{border:0;background:none;padding:0;color:var(--plum);font:inherit;font-weight:600;cursor:pointer}.link-btn:hover{text-decoration:underline}
+.outcome-pick{margin:0 0 10px;gap:8px}.outcome-pick .label{margin:0}#outcome-select{min-width:320px;max-width:100%}
+.net-wrap{display:flex;flex-direction:column;align-items:center;margin:8px 0}.net{width:100%;max-width:560px;height:auto}.net line{stroke:#b48aa9}.net circle{fill:var(--plum)}.net text{font-size:12px;font-weight:600;fill:var(--ink)}.net .ec{font-size:10px;fill:var(--muted);text-anchor:middle;font-weight:400}
+.data-details summary{cursor:pointer;font-weight:600;font-size:13px;margin:6px 0}
+.grid{font-size:12px;width:100%}.grid th,.grid td{white-space:normal;padding:5px 8px;vertical-align:middle}.grid td.warn{color:var(--red);font-weight:700}
+.model-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 14px;align-items:end}.model-grid .label{margin:0;display:flex;flex-direction:column;gap:4px}.model-grid .select,.model-grid .input{width:100%}.bayes-set{margin-top:12px;padding-top:10px;border-top:1px solid var(--soft);grid-template-columns:auto repeat(4,minmax(0,1fr))}.set-title{font-size:12px;font-weight:700;color:var(--plum);align-self:center}
+.forest-wrap{margin:0 0 12px}.forest{width:100%;max-width:760px;height:auto}.forest .lab{font-size:12px;fill:var(--ink)}.forest .lab.small{font-size:11px;fill:var(--muted)}.forest .num{font-size:11px;fill:var(--ink2)}.forest .num.b{fill:#3a4a7a}.forest .null{stroke:#9a9ca1;stroke-dasharray:3 3}.forest .cf{stroke:var(--plum);stroke-width:2}.forest .pf{fill:var(--plum)}.forest .cb{stroke:#3a4a7a;stroke-width:2}.forest .pb{fill:#3a4a7a}.forest .tick{font-size:10px;fill:var(--muted);text-anchor:middle}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:4px 0 12px}.tab{border:1px solid transparent;border-bottom:0;background:none;padding:7px 14px;font-weight:600;font-size:13px;color:var(--ink2);border-radius:6px 6px 0 0;cursor:pointer}.tab[aria-pressed="true"]{border-color:var(--line);background:#fff;color:var(--plum);margin-bottom:-1px}
+.league{font-size:11px;border-collapse:collapse;width:auto}.league td{border:1px solid var(--line);padding:5px 7px;text-align:center;white-space:nowrap}.league td.diag{background:var(--pale);color:var(--plum);font-weight:700}.league td.up{background:#f7f7f7;color:var(--ink2)}
+.rank td,.rank th{text-align:center}.rank td:first-child{text-align:left;font-weight:600}
+.coe-out{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}.coe-out label{display:inline-flex;align-items:center;gap:4px}
+@media(max-width:760px){.model-grid,.bayes-set{grid-template-columns:1fr 1fr}.set-title{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -173,21 +184,58 @@ th{background:#f4f4f4}
 <div class="heading"><a class="step-btn back" data-prev href="risk-of-bias.html"><span aria-hidden="true">←</span> Back: Risk of bias assessment</a></div>
 <div class="layout">
 <div class="stack">
+
 <section class="panel">
-<div class="panel-head"><h2>Analysis</h2><span class="badge dev">In development</span></div>
-<div class="panel-body">
-<p class="step-lede">Multidimensional analysis and visualisation with an integrated R Shiny app.</p>
-<div class="step-flow">
-<div class="flow-box"><span class="flow-label">Comes from</span><strong>Step 6 · Risk of bias assessment</strong><span id="flow-in">Results of Risk of bias assessment.</span></div>
-<div class="flow-arrow" aria-hidden="true">→</div>
-<div class="flow-box current"><span class="flow-label">This step</span><strong>Step 7 · Analysis</strong><span>Pairwise and network meta-analysis of the extracted outcomes, with the inputs and model of every estimate recorded.</span></div>
-<div class="flow-arrow" aria-hidden="true">→</div>
-<div class="flow-box"><span class="flow-label">Goes to</span><strong>Step 8 · Certainty of evidence</strong><span>Effect estimates for each comparison, for the certainty assessment.</span></div>
+<div class="panel-head"><h2>Network data</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-btn">Import CSV</button><input type="file" id="import-input" accept=".csv,text/csv" hidden aria-label="Import arm-level CSV"><button class="collapse-toggle" type="button" id="toggle-data" aria-expanded="true" aria-controls="data-body" title="Collapse Network data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Network data</span></button></div></div>
+<div class="panel-body" id="data-body">
+<div class="toolbar outcome-pick"><label class="label" for="outcome-select">Outcome</label><select class="select compact" id="outcome-select"></select><button class="link-btn" type="button" id="remove-import">Remove imported</button></div>
+<div class="notice" id="data-notice" hidden></div>
+<div class="source-summary" id="data-stats"></div>
+<div class="net-wrap" id="net-plot"></div>
+<details class="data-details"><summary>Arm-level data</summary><div class="table-wrap"><table class="grid" id="data-table"></table></div></details>
 </div>
-<div class="notice warning" role="status">This tool is in development. Until it is available, use the results exported from Risk of bias assessment.</div>
-</div>
-<div class="panel-footer toolbar between"><span class="hint">Steps run in order, from Eligibility criteria (step 1) to Certainty of evidence (step 8).</span><a class="step-btn next" data-next href="certainty-of-evidence.html">Next: Certainty of evidence <span aria-hidden="true">→</span></a></div>
 </section>
+
+<section class="panel" id="settings" hidden>
+<div class="panel-head"><h2>Model</h2><button class="btn small primary" type="button" id="run">Run analysis</button></div>
+<div class="panel-body">
+<div class="model-grid">
+<label class="label">Effect measure<select class="select compact" id="measure"></select></label>
+<label class="label">Reference treatment<select class="select compact" id="reference"></select></label>
+<label class="label">Model<select class="select compact" id="model"><option value="random">Random effects</option><option value="common">Common effect</option></select></label>
+<label class="label">Better outcome<select class="select compact" id="better"><option value="large">Higher values</option><option value="small">Lower values</option></select></label>
+</div>
+<div class="model-grid bayes-set"><span class="set-title">Bayesian</span>
+<label class="label">Prior on τ<select class="select compact" id="prior"><option value="halfnormal">Half-normal</option><option value="uniform">Uniform</option></select></label>
+<label class="label"><span id="prior-label">Scale</span><input class="input compact" id="prior-scale" inputmode="decimal"></label>
+<label class="label">Draws<input class="input compact" id="draws" inputmode="numeric"></label>
+<label class="label">Seed<input class="input compact" id="seed" inputmode="numeric"></label>
+</div>
+<p class="hint" id="prior-hint"></p>
+<p class="hint">Frequentist: netmeta's method (weighted least squares, DerSimonian–Laird τ²), checked against R netmeta 3.7. Bayesian: NICE DSU TSD2 random-effects model with a normal likelihood, d ~ N(0, 100²), exact posterior draws.</p>
+<div class="notice" id="run-notice" hidden></div>
+</div>
+</section>
+
+<section class="panel" id="results" hidden>
+<div class="panel-head"><h2>Results</h2><div class="toolbar"><button class="btn small" type="button" id="export-results">Export results (CSV)</button><button class="btn small" type="button" id="export-r">R script</button></div></div>
+<div class="panel-body">
+<div id="forest" class="forest-wrap"></div>
+<div class="tabs" role="group" aria-label="Results"><button type="button" class="tab" data-tab="freq">Frequentist</button><button type="button" class="tab" data-tab="bayes">Bayesian</button><button type="button" class="tab" data-tab="rank">Ranking</button></div>
+<div id="tab-body"></div>
+</div>
+<div class="panel-footer toolbar between"><span class="coe-out"><button class="btn small primary" type="button" id="coe-export">Send to Certainty of evidence (CSV)</button><label class="hint"><input type="checkbox" id="coe-pairs"> every pair, not only versus the reference</label></span><a class="step-btn next" data-next href="certainty-of-evidence.html">Next: Certainty of evidence <span aria-hidden="true">→</span></a></div>
+</section>
+
+<details class="references" hidden data-developer-references><summary>Method and research references</summary><ul>
+<li>Rücker G. Network meta-analysis, electrical networks and graph theory. Res Synth Methods 2012;3:312-24. netmeta 3.7-0 (CRAN, 2026): results reproduced to 6 decimals on smokingcessation (OR, RR) and Franchini2012 (MD).</li>
+<li>Jackson D, White IR, Riley RD. Generalised DerSimonian–Laird estimator. Stat Med 2012. Krahn U, et al. Design-by-treatment decomposition. BMC Med Res Methodol 2013;13:35.</li>
+<li>König J, Krahn U, Binder H. Back-calculation of direct and indirect evidence. Stat Med 2013;32:5414-29. Dias S, et al. Node-splitting. Stat Med 2010;29:932-44.</li>
+<li>Rücker G, Schwarzer G. P-scores. BMC Med Res Methodol 2015;15:58. Salanti G, et al. SUCRA. J Clin Epidemiol 2011;64:163-71.</li>
+<li>Dias S, Sutton AJ, Ades AE, Welton NJ. NICE DSU TSD2: a generalised linear modelling framework. Med Decis Making 2013;33:607-17.</li>
+<li>Brignardello-Petersen R, et al. GRADE minimally contextualised approach to NMA conclusions. BMJ 2020;371:m3900.</li>
+<li>Phillippo DM. multinma (Stan); van Valkenhoef G. gemtc (JAGS). SMD as Hedges' g as in meta::metacont; netmeta::pairwise SMDs may differ by under 1%.</li>
+</ul></details>
 </div>
 </div>
 </main>
@@ -196,16 +244,583 @@ th{background:#f4f4f4}
 'use strict';
 (() => {
 const $=id=>document.getElementById(id);
-const params=new URLSearchParams(location.search),projectId=params.get('projectId')||params.get('project')||'',scope=projectId||'default';
-let project=null;try{project=JSON.parse(sessionStorage.getItem('aimstep-active-project')||'null')}catch(e){}
-function pageLink(file,view){const u=new URL(file,location.href);if(projectId)u.searchParams.set('projectId',projectId);if(view)u.searchParams.set('view',view);return u.href}
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const text=(value,max=20000)=>String(value??'').slice(0,max);
+const now=()=>new Date().toISOString();
+const params=new URLSearchParams(location.search);
+const projectId=params.get('projectId')||params.get('project')||'';
+const scope=projectId||'default';
+let project=null;
+try{project=JSON.parse(sessionStorage.getItem('aimstep-active-project')||'null')}catch(e){}
+function pageLink(file,view){
+  const u=new URL(file,location.href);
+  if(projectId)u.searchParams.set('projectId',projectId);
+  if(view)u.searchParams.set('view',view);
+  return u.href;
+}
 document.querySelectorAll('[data-home]').forEach(a=>a.href=pageLink('index.html'));
 document.querySelectorAll('[data-workflow]').forEach(a=>a.href=pageLink('index.html','project'));
 document.querySelectorAll('[data-toolset]').forEach(a=>a.href=pageLink('index.html','toolset'));
 document.querySelectorAll('[data-prev]').forEach(a=>a.href=pageLink('risk-of-bias.html'));
 document.querySelectorAll('[data-next]').forEach(a=>a.href=pageLink('certainty-of-evidence.html'));
-if(project?.id===projectId&&project.name){$('project-name').textContent=project.name;$('project-name').title=project.name;$('project-name').href=pageLink('index.html','project');$('project-name').hidden=false}
+if(project?.id===projectId&&project.name){
+  $('project-name').textContent=project.name;
+  $('project-name').title=project.name;
+  $('project-name').href=pageLink('index.html','project');
+  $('project-name').hidden=false;
+}
+const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').replace(/\/+$/,'');
+const AI_WORKERS=4;
+let pilotModel=null;
+const squash=v=>String(v||'').toLowerCase().replace(/\s+/g,' ').trim();
+const pct=v=>v===null?'—':Math.round(v*100)+'%';
+let toastTimer;
+function fingerprint(value){
+  let h=2166136261;
+  for(const c of JSON.stringify(value)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}
+  return (h>>>0).toString(16);
+}
+function openDB(name){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(name,1);
+    req.onupgradeneeded=()=>{
+      if(!req.result.objectStoreNames.contains('projects'))
+        req.result.createObjectStore('projects',{keyPath:'id'});
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+    req.onblocked=()=>reject(new Error('Local database is blocked by another tab.'));
+  });
+}
+function getProject(db){
+  if(!db.objectStoreNames.contains('projects'))return Promise.resolve(null);
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('projects','readonly'),req=tx.objectStore('projects').get(scope);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function putProject(db,value){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('projects','readwrite');
+    tx.objectStore('projects').put(value);
+    tx.oncomplete=resolve;
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=()=>reject(tx.error||new Error('Local save was aborted'));
+  });
+}
+function showNotice(id,message,kind=''){
+  const el=$(id);
+  el.textContent=message;
+  el.className='notice'+(kind?' '+kind:'');
+  el.hidden=!message;
+}
+function toast(message){
+  $('toast').textContent=message;$('toast').classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3200);
+}
+function excerpt(raw,quotes){
+  const value=text(raw,500000),ranges=[];
+  for(const quote of quotes){
+    if(!quote||quote.length<3)continue;
+    const at=value.toLowerCase().indexOf(quote.toLowerCase());
+    if(at>=0)ranges.push([at,at+quote.length]);
+  }
+  ranges.sort((a,b)=>a[0]-b[0]);
+  let output='',last=0;
+  for(const [a,b] of ranges){
+    if(a<last)continue;
+    output+=esc(value.slice(last,a))+'<mark>'+esc(value.slice(a,b))+'</mark>';
+    last=b;
+  }
+  return output+esc(value.slice(last));
+}
+function download(name,mime,body){
+  const url=URL.createObjectURL(new Blob([body],{type:mime}));
+  const a=document.createElement('a');a.href=url;a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),15000);
+}
+function stamp(){return new Date().toISOString().slice(0,10)}
+function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+async function resolvePilotModel(signal){
+  if(pilotModel)return pilotModel;
+  const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];if(!bases.includes(LOCAL_SERVER+'/api/eligibility'))bases.push(LOCAL_SERVER+'/api/eligibility');
+  for(const base of bases){try{const r=await fetch(base+'/health',{signal});if(r.ok){const h=await r.json();if(h.service==='aimstep-local-eligibility')return pilotModel={provider:'backend',base,name:text(h.model||'local model',200)}}}catch(e){if(signal?.aborted)throw e}}
+  const base='http://127.0.0.1:11434',r=await fetch(base+'/api/tags',{signal});if(!r.ok)throw new Error('The local model service returned HTTP '+r.status+'.');
+  const name=((await r.json()).models||[]).map(m=>String(m?.name||'')).find(n=>n&&!/:cloud(?:$|[-_])|embed/i.test(n));
+  if(!name)throw new Error('No installed local Ollama model was found.');
+  return pilotModel={provider:'ollama',base,name};
+}
+function isUnreachable(e){return /Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||''))}
+async function explainUnreachable(){
+  const direct=' Or open '+LOCAL_SERVER+'/analysis.html on this computer, which needs no permission.';
+  const base='Cannot reach the local model. On this computer, start Ollama and run python3 tools/local_model_server.py in the AIM-STEP site folder, then allow local network access if the browser asks.';
+  if(['localhost','127.0.0.1','[::1]'].includes(location.hostname))return base;
+  if(!window.isSecureContext&&location.protocol==='http:'){let here=location.href;try{if(top.location.origin===location.origin)here=top.location.href}catch(e){}return 'This page was opened over http://, and browsers never let an http page reach this computer. Open '+here.replace(/^http:/,'https:')+' instead.'+direct}
+  try{const state=(await navigator.permissions.query({name:'loopback-network'})).state;if(state==='denied')return 'The browser has blocked this site from reaching this computer. Allow local network access for this site, then reload.'+direct;if(state==='prompt')return 'The browser did not grant local network access. Click Start again and choose Allow when asked.'+direct}catch(e){}
+  return base+direct;
+}
+async function pilotModelJSON(messages,schema,signal){
+  const model=await resolvePilotModel(signal);
+  const body=model.provider==='backend'?{messages,format:schema}:{model:model.name,messages,stream:false,format:schema,options:{temperature:0}};
+  const timer=new AbortController(),stop=()=>timer.abort(),t=setTimeout(stop,600000);signal?.addEventListener('abort',stop,{once:true});
+  let res;
+  try{res=await fetch(model.base+(model.provider==='backend'?'/model':'/api/chat'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:timer.signal})}
+  catch(e){if(signal?.aborted)throw new DOMException('Stopped','AbortError');if(isUnreachable(e)){pilotModel=null;throw new Error(await explainUnreachable())}if(timer.signal.aborted)throw new Error('The local model did not answer within 10 minutes.');throw e}
+  finally{clearTimeout(t);signal?.removeEventListener('abort',stop)}
+  if(!res.ok)throw new Error('Local model HTTP '+res.status+': '+(await res.text()).slice(0,300));
+  const data=await res.json(),content=data.message?.content;
+  if(typeof content!=='string')throw new Error('The model response did not contain text.');
+  try{return {value:JSON.parse(content.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'')),raw:text(content,20000),model:text(data.model||model.name,200)}}
+  catch(e){throw new Error('the local model returned an answer that is not valid JSON')}
+}
+async function runPool(items,n,fn,controller){
+  let next=0,fatal=null,inARow=0;const failed=[];
+  const stopRun=e=>{if(!fatal){fatal=e;if(e.name!=='AbortError')controller.abort()}};
+  const worker=async()=>{while(!fatal&&!controller.signal.aborted&&next<items.length){const item=items[next++];
+    try{await fn(item);inARow=0}
+    catch(e){
+      if(e.name==='AbortError'||/^(Cannot reach|The browser|This page was opened)/.test(e.message)){stopRun(e);break}
+      failed.push({item,message:text(e.message,300)});inARow++;
+      if(inARow>=n+2)stopRun(new Error('The local model failed '+inARow+' times in a row: '+e.message));
+    }}};
+  await Promise.all(Array.from({length:Math.min(n,items.length)},worker));
+  if(fatal)throw fatal;
+  return failed;
+}
+function safely(draw){try{draw()}catch(e){console.error(e)}}
+function collapsible(buttonId,bodyId,name,key){
+  const btn=$(buttonId),body=$(bodyId),panel=body.closest('.panel'),store='aimstep-ana-'+key+'-collapsed:'+scope;
+  const set=collapsed=>{body.hidden=collapsed;panel.classList.toggle('is-collapsed',collapsed);btn.setAttribute('aria-expanded',String(!collapsed));const text=(collapsed?'Expand ':'Collapse ')+name;btn.title=text;btn.querySelector('.sr-only').textContent=text};
+  let saved=false;try{saved=localStorage.getItem(store)==='1'}catch(e){}
+  set(saved);
+  btn.addEventListener('click',()=>{const collapsed=!body.hidden;set(collapsed);try{localStorage.setItem(store,collapsed?'1':'0')}catch(e){}});
+}
+const TOP_K=4,EVIDENCE_VERSION='ev1';
+let embedInfo=null;
+async function resolveEmbed(signal){
+  if(embedInfo)return embedInfo;
+  const model=await resolvePilotModel(signal);
+  if(model.provider==='backend'){
+    try{const h=await (await fetch(model.base+'/health',{signal})).json();embedInfo=h.embedModel?{url:model.base+'/embed',model:h.embedModel,direct:false}:{none:true}}catch(e){embedInfo={none:true}}
+  }else embedInfo={url:model.base+'/api/embed',model:'embeddinggemma',direct:true};
+  return embedInfo;
+}
+async function embedTexts(texts,signal){
+  const info=await resolveEmbed(signal);if(info.none)throw new Error('no embedding model on the local server');
+  const out=[];
+  for(let i=0;i<texts.length;i+=64){
+    const t=new AbortController(),stop=()=>t.abort(),timer=setTimeout(stop,120000);signal?.addEventListener('abort',stop,{once:true});
+    try{
+      const r=await fetch(info.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(info.direct?{model:info.model,input:texts.slice(i,i+64)}:{input:texts.slice(i,i+64)}),signal:t.signal});
+      if(!r.ok)throw new Error('embedding HTTP '+r.status);
+      out.push(...((await r.json()).embeddings||[]));
+    }finally{clearTimeout(timer);signal?.removeEventListener('abort',stop)}
+  }
+  if(out.length!==texts.length)throw new Error('embedding count mismatch');
+  return out;
+}
+const dot=(a,b)=>{let s=0,na=0,nb=0;for(let i=0;i<a.length;i++){s+=a[i]*b[i];na+=a[i]*a[i];nb+=b[i]*b[i]}return s/(Math.sqrt(na*nb)||1)};
+const ruleText=r=>[r.title+':',r.condition,r.definition].filter(Boolean).join(' ');
+const STOP=new Set('the and for with from that this were was are have has had not but into than then they their them which who whom whose what when where there these those such also only other more most some any each both all can may might will would should could been being does did doing using used use per its it via our out over under within without between among during after before about above below into onto off very non study studies trial trials patients participants include included including exclude excluded criteria rule'.split(' '));
+const terms=t=>squash(t).replace(/[^a-z0-9 ]+/g,' ').split(' ').filter(w=>w.length>2&&!STOP.has(w));
+function keywordScores(chunks,query){
+  const q=[...new Set(terms(query))];if(!q.length)return chunks.map(()=>0);
+  const N=chunks.length,df=new Map(q.map(w=>[w,0])),bags=chunks.map(c=>{const b=new Map();for(const w of terms(c.text))b.set(w,(b.get(w)||0)+1);return b});
+  for(const b of bags)for(const w of q)if(b.has(w))df.set(w,df.get(w)+1);
+  return bags.map(b=>q.reduce((s,w)=>s+(b.has(w)?Math.log(1+N/(1+df.get(w)))*(1+Math.log(b.get(w))):0),0));
+}
+/* ---------------- NMA engine (frequentist and Bayesian) ----------------
+   Contrast-based network meta-analysis from arm-level data.
+   Frequentist: weighted least squares with multi-arm covariance, common and
+   random effects, generalised DerSimonian-Laird tau^2 (Jackson, White & Riley
+   2012), design-by-treatment Q decomposition (Krahn 2013), back-calculation
+   split of direct and indirect evidence (Koenig 2013), P-scores (Ruecker &
+   Schwarzer 2015). Validated against R netmeta.
+   Bayesian: the normal-likelihood random-effects model of NICE DSU TSD2
+   (Dias 2013) on the same contrasts, d ~ N(0, 100^2), prior on tau chosen
+   by the user. The study effects and d are integrated analytically, so the
+   posterior of tau is computed exactly on a fine grid and d is drawn exactly
+   given tau: independent draws, no Markov chain and no convergence issue. */
+const NMA=(()=>{
+// ---- small dense linear algebra ----
+const zeros=(r,c)=>Array.from({length:r},()=>new Array(c).fill(0));
+function inv(A){const n=A.length,M=A.map((r,i)=>[...r,...Array.from({length:n},(_,j)=>i===j?1:0)]);
+  for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+    if(Math.abs(M[p][c])<1e-14)throw new Error('The network is not connected, or a treatment has no data.');
+    [M[c],M[p]]=[M[p],M[c]];const d=M[c][c];for(let j=0;j<2*n;j++)M[c][j]/=d;
+    for(let r=0;r<n;r++)if(r!==c&&M[r][c]){const f=M[r][c];for(let j=0;j<2*n;j++)M[r][j]-=f*M[c][j]}}
+  return M.map(r=>r.slice(n));}
+function chol(A){const n=A.length,L=zeros(n,n);for(let i=0;i<n;i++)for(let j=0;j<=i;j++){let s=A[i][j];for(let k=0;k<j;k++)s-=L[i][k]*L[j][k];if(i===j){if(s<=0)s=1e-300;L[i][i]=Math.sqrt(s)}else L[i][j]=s/L[j][j]}return L}
+function logdet(A){const L=chol(A);let s=0;for(let i=0;i<L.length;i++)s+=2*Math.log(L[i][i]);return s}
+const mm=(A,B)=>A.map(r=>B[0].map((_,j)=>r.reduce((s,v,k)=>s+v*B[k][j],0)));
+const mv=(A,x)=>A.map(r=>r.reduce((s,v,k)=>s+v*x[k],0));
+const tr=A=>A[0].map((_,j)=>A.map(r=>r[j]));
+// ---- normal distribution ----
+function pnorm(z){const t=1/(1+0.2316419*Math.abs(z)),d=0.3989422804014327*Math.exp(-z*z/2),p=d*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return z>0?1-p:p}
+function erfc(x){const z=Math.abs(x),t=1/(1+0.5*z),r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));return x>=0?r:2-r}
+const Phi=z=>0.5*erfc(-z/Math.SQRT2);
+const Z975=1.959963984540054;
+function pchisq(q,df){if(df<=0||!(q>0))return q>0?0:1;return 1-gammainc(df/2,q/2)}
+function gammainc(a,x){// regularised lower incomplete gamma P(a,x)
+  if(x<a+1){let s=1/a,t=s;for(let n=1;n<500;n++){t*=x/(a+n);s+=t;if(Math.abs(t)<1e-15*Math.abs(s))break}return s*Math.exp(-x+a*Math.log(x)-lgamma(a))}
+  let b=x+1-a,c=1e300,d=1/b,h=d;for(let i=1;i<500;i++){const an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<1e-15)break}
+  return 1-Math.exp(-x+a*Math.log(x)-lgamma(a))*h}
+function lgamma(x){const g=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];let y=x,t=x+5.5;t-=(x+0.5)*Math.log(t);let s=1.000000000190015;for(const c of g)s+=c/++y;return -t+Math.log(2.5066282746310005*s/x)}
 
+/* ---- arm-level data -> study contrasts ----
+   measure: OR, RR, MD, SMD. Binary studies with a zero cell get 0.5 added
+   to every cell of that study; studies with no events (or only events) in
+   every arm carry no information and are left out (netmeta defaults). */
+function contrasts(rows,measure){
+  const by=new Map();for(const r of rows){if(!by.has(r.study))by.set(r.study,[]);by.get(r.study).push(r)}
+  const studies=[],dropped=[];
+  for(const [study,arms0] of by){
+    const arms=arms0.filter(a=>a.treat&&Number.isFinite(a.n)&&a.n>0);
+    if(new Set(arms.map(a=>a.treat)).size<2){dropped.push({study,why:'fewer than two treatments'});continue}
+    if(new Set(arms.map(a=>a.treat)).size!==arms.length){dropped.push({study,why:'a treatment appears twice; combine those arms first'});continue}
+    let est,v;
+    if(measure==='OR'||measure==='RR'){
+      if(arms.some(a=>!Number.isFinite(a.event)||a.event<0||a.event>a.n)){dropped.push({study,why:'events missing or out of range'});continue}
+      if(arms.every(a=>a.event===0)||(measure==='OR'&&arms.every(a=>a.event===a.n))){dropped.push({study,why:arms.every(a=>a.event===0)?'no events in any arm':'all participants had the event in every arm'});continue}
+      const zero=arms.some(a=>a.event===0||a.event===a.n),inc=zero?0.5:0; // any empty cell (as meta/netmeta)
+      // OR: 0.5 added to events and non-events; RR: 0.5 added to events and to the total (as meta/netmeta)
+      est=arms.map(a=>{const e=a.event+inc,n=a.n+(measure==='OR'?2:1)*inc;return measure==='OR'?Math.log(e/(n-e)):Math.log(e/n)});
+      v=arms.map(a=>{const e=a.event+inc,n=a.n+(measure==='OR'?2:1)*inc;return measure==='OR'?1/e+1/(n-e):1/e-1/n});
+    }else{
+      if(arms.some(a=>!Number.isFinite(a.mean)||!(a.sd>0))){dropped.push({study,why:'mean or SD missing'});continue}
+      if(measure==='MD'){est=arms.map(a=>a.mean);v=arms.map(a=>a.sd*a.sd/a.n)}
+      else{// SMD (Hedges' g) against the pooled SD of the study
+        const N=arms.reduce((s,a)=>s+a.n,0),sp=Math.sqrt(arms.reduce((s,a)=>s+(a.n-1)*a.sd*a.sd,0)/(N-arms.length)),J=1-3/(4*(N-arms.length)-1);
+        est=arms.map(a=>J*a.mean/sp);v=arms.map((a,i)=>1/a.n+0)/* variance of each arm's standardised mean */;
+        // add the g^2 term to each contrast's variance below
+        studies.push({study,treats:arms.map(a=>a.treat),est,v,smd:{N,J},n:arms.map(a=>a.n),zero:false});continue}
+    }
+    studies.push({study,treats:arms.map(a=>a.treat),est,v,n:arms.map(a=>a.n),event:arms.map(a=>a.event),zero:(measure==='OR'||measure==='RR')&&arms.some(a=>a.event===0||a.event===a.n)});
+  }
+  return {studies,dropped};
+}
+
+/* Build y, S (block diagonal) and P (tau^2 structure) for contrasts of each
+   study's arms against its first arm. */
+function design(studies,treats){
+  const T=treats.length,idx=new Map(treats.map((t,i)=>[t,i]));
+  const y=[],X=[],blocks=[];
+  for(const s of studies){
+    const k=s.treats.length,b={study:s.study,rows:[],S:zeros(k-1,k-1),P:zeros(k-1,k-1),treats:s.treats};
+    for(let j=1;j<k;j++){
+      let yj=s.est[j]-s.est[0];
+      const row=new Array(T-1).fill(0),a=idx.get(s.treats[j]),c=idx.get(s.treats[0]);
+      if(a>0)row[a-1]+=1;if(c>0)row[c-1]-=1;
+      y.push(yj);X.push(row);b.rows.push(y.length-1);
+    }
+    for(let i=0;i<k-1;i++)for(let j=0;j<k-1;j++){
+      if(s.smd){const gi=s.est[i+1]-s.est[0],gj=s.est[j+1]-s.est[0];b.S[i][j]=1/s.n[0]+(i===j?1/s.n[i+1]+gi*gi/(2*s.smd.N):gi*gj/(2*s.smd.N))}
+      else b.S[i][j]=s.v[0]+(i===j?s.v[i+1]:0);
+      b.P[i][j]=i===j?1:0.5;
+    }
+    blocks.push(b);
+  }
+  return {y,X,blocks,T};
+}
+function gls(D,tau2){// estimate with V = S + tau2 P, block by block
+  const p=D.T-1,XtWX=zeros(p,p),XtWy=new Array(p).fill(0),Winv=[];
+  for(const b of D.blocks){const V=b.S.map((r,i)=>r.map((v,j)=>v+tau2*b.P[i][j])),W=inv(V);Winv.push(W);
+    for(let i=0;i<b.rows.length;i++)for(let j=0;j<b.rows.length;j++){const w=W[i][j],xi=D.X[b.rows[i]],xj=D.X[b.rows[j]];for(let a=0;a<p;a++){if(!xi[a])continue;XtWy[a]+=xi[a]*w*D.y[b.rows[j]];for(let c=0;c<p;c++)if(xj[c])XtWX[a][c]+=xi[a]*w*xj[c]}}}
+  const C=inv(XtWX),theta=mv(C,XtWy);
+  let Q=0;D.blocks.forEach((b,k)=>{const r=b.rows.map(i=>D.y[i]-D.X[i].reduce((s,v,a)=>s+v*theta[a],0));for(let i=0;i<r.length;i++)for(let j=0;j<r.length;j++)Q+=r[i]*Winv[k][i][j]*r[j]});
+  return {theta,C,Q,W:Winv,XtWX};
+}
+// generalised DerSimonian-Laird (Jackson, White & Riley 2012): tau2 = (Q - df) / tr(A P), A = W - W X (X'WX)^-1 X' W
+function tauDL(D,fit,df){
+  const C=fit.C;let trace=0;
+  // tr(A P) = sum_blocks tr(W_b P_b) - tr(C * sum_b X_b' W_b P_b W_b X_b)
+  const p=D.T-1,M=zeros(p,p);
+  D.blocks.forEach((b,k)=>{const W=fit.W[k],n=b.rows.length,WP=mm(W,b.P),WPW=mm(WP,W);for(let i=0;i<n;i++)trace+=WP[i][i];
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++){const xi=D.X[b.rows[i]],xj=D.X[b.rows[j]],w=WPW[i][j];for(let a=0;a<p;a++)if(xi[a])for(let c=0;c<p;c++)if(xj[c])M[a][c]+=xi[a]*w*xj[c]}});
+  for(let a=0;a<p;a++)for(let c=0;c<p;c++)trace-=C[a][c]*M[c][a];
+  return Math.max(0,(fit.Q-df)/trace);
+}
+function connected(studies,treats){const adj=new Map(treats.map(t=>[t,new Set()]));for(const s of studies)for(const a of s.treats)for(const b of s.treats)if(a!==b)adj.get(a).add(b);const seen=new Set([treats[0]]),q=[treats[0]];while(q.length){const t=q.pop();for(const u of adj.get(t))if(!seen.has(u)){seen.add(u);q.push(u)}}return treats.filter(t=>!seen.has(t))}
+const effect=(theta,C,i,j)=>{// treat j vs treat i, both indices into treats (0 = reference)
+  const e=(j?theta[j-1]:0)-(i?theta[i-1]:0),v=(j?C[j-1][j-1]:0)+(i?C[i-1][i-1]:0)-2*(i&&j?C[i-1][j-1]:0);return {est:e,se:Math.sqrt(Math.max(v,0))}};
+
+/* ---- frequentist ---- */
+function frequentist(rows,{measure,reference,model='random',smallBetter=false}){
+  const {studies,dropped}=contrasts(rows,measure);
+  if(!studies.length)throw new Error('No study has usable data for this outcome.');
+  let treats=[...new Set(studies.flatMap(s=>s.treats))].sort((a,b)=>a.localeCompare(b));
+  if(reference&&treats.includes(reference))treats=[reference,...treats.filter(t=>t!==reference)];
+  const lost=connected(studies,treats);if(lost.length)throw new Error('The network is not connected: '+lost.join(', ')+' cannot be reached from '+treats[0]+'.');
+  const D=design(studies,treats),nContr=D.y.length,df=nContr-(treats.length-1);
+  const common=gls(D,0),tau2=df>0?tauDL(D,common,df):0,re=gls(D,tau2),fit=model==='random'?re:common;
+  const T=treats.length,league=[];
+  for(let i=0;i<T;i++){league.push([]);for(let j=0;j<T;j++)league[i].push(i===j?null:effect(fit.theta,fit.C,i,j))}
+  // direct evidence for each pair: inverse-variance pooling of the study contrasts for that pair with the same tau^2
+  const pairs=new Map();
+  for(const s of studies)for(let a=0;a<s.treats.length;a++)for(let b=a+1;b<s.treats.length;b++){
+    let [ta,tb,ea,eb,va,vb]=[s.treats[a],s.treats[b],s.est[a],s.est[b],s.v[a],s.v[b]];
+    if(treats.indexOf(ta)>treats.indexOf(tb)){[ta,tb,ea,eb,va,vb]=[tb,ta,eb,ea,vb,va]}
+    let y=eb-ea,v=va+vb;
+    if(s.smd){y=eb-ea;v=1/s.n[s.treats.indexOf(ta)]+1/s.n[s.treats.indexOf(tb)]+y*y/(2*s.smd.N)}
+    const k=ta+'\u0000'+tb;if(!pairs.has(k))pairs.set(k,{a:ta,b:tb,studies:[],y:[],v:[],multi:[]});const p=pairs.get(k);p.studies.push(s.study);p.y.push(y);p.v.push(v);p.multi.push(s.treats.length>2);
+  }
+  const tauUse=model==='random'?tau2:0;
+  const split=[...pairs.values()].map(p=>{
+    // multi-arm studies: each of their k(k-1)/2 contrasts is down-weighted so the study counts once (variance x (k-1)/... approx: netmeta uses the graph-theoretical reduction; here the simple factor k/2 is applied)
+    const w=p.y.map((_,i)=>1/(p.v[i]+tauUse));const sw=w.reduce((a,b)=>a+b,0),dir=w.reduce((s,wi,i)=>s+wi*p.y[i],0)/sw,vdir=1/sw;
+    const i=treats.indexOf(p.a),j=treats.indexOf(p.b),nma=effect(fit.theta,fit.C,i,j),vn=nma.se**2;
+    const prop=Math.min(1,vn/vdir);let ind=null,vind=null,z=null,pv=null;
+    if(prop<0.999){vind=1/(1/vn-1/vdir);ind=vind*(nma.est/vn-dir/vdir);z=(dir-ind)/Math.sqrt(vdir+vind);pv=2*(1-Phi(Math.abs(z)))}
+    return {a:p.a,b:p.b,k:p.studies.length,studies:p.studies,multi:p.multi.some(Boolean),direct:{est:dir,se:Math.sqrt(vdir)},indirect:ind===null?null:{est:ind,se:Math.sqrt(vind)},nma,propDirect:prop,z,p:pv};
+  });
+  // design-by-treatment decomposition of Q (common effect)
+  const designs=new Map();for(const s of studies){const d=[...s.treats].sort().join(':');if(!designs.has(d))designs.set(d,[]);designs.get(d).push(s)}
+  let Qwithin=0,dfWithin=0;const perDesign=[];
+  for(const [d,ss] of designs){if(ss.length<2){continue}
+    const order=d.split(':'),local=ss.map(s=>{const o=order.map(t=>s.treats.indexOf(t));return {...s,treats:o.map(i=>s.treats[i]),est:o.map(i=>s.est[i]),v:o.map(i=>s.v[i]),n:o.map(i=>s.n[i])}});
+    const Dd=design(local,order),fd=gls(Dd,0),dfd=Dd.y.length-(order.length-1);Qwithin+=fd.Q;dfWithin+=dfd;perDesign.push({design:d.replace(/:/g,' vs '),studies:ss.length,Q:fd.Q,df:dfd,p:pchisq(fd.Q,dfd)})}
+  const Qbetween=Math.max(0,common.Q-Qwithin),dfBetween=df-dfWithin;
+  // P-scores (Ruecker & Schwarzer 2015)
+  const sign=smallBetter?-1:1,pscore=treats.map((t,i)=>{let s=0;for(let j=0;j<T;j++)if(j!==i){const e=effect(fit.theta,fit.C,j,i);s+=e.se>0?Phi(sign*e.est/e.se):0.5}return s/(T-1)});
+  return {measure,model,treats,reference:treats[0],studies:studies.map(s=>({study:s.study,treats:s.treats,n:s.n,event:s.event,zero:s.zero})),dropped,
+    k:studies.length,nContr,df,Q:common.Q,pQ:pchisq(common.Q,df),tau2,tau:Math.sqrt(tau2),I2:df>0&&common.Q>0?Math.max(0,(common.Q-df)/common.Q):0,
+    Qwithin,dfWithin,pWithin:pchisq(Qwithin,dfWithin),Qbetween,dfBetween,pBetween:pchisq(Qbetween,dfBetween),perDesign,
+    league,split,pscore,fit:{theta:fit.theta,C:fit.C}};
+}
+
+/* ---- Bayesian (normal likelihood, exact tau grid) ---- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function bayesian(rows,{measure,reference,smallBetter=false,prior={type:'halfnormal',scale:1},draws=20000,seed=2026,priorSD=100}){
+  const {studies,dropped}=contrasts(rows,measure);
+  if(!studies.length)throw new Error('No study has usable data for this outcome.');
+  let treats=[...new Set(studies.flatMap(s=>s.treats))].sort((a,b)=>a.localeCompare(b));
+  if(reference&&treats.includes(reference))treats=[reference,...treats.filter(t=>t!==reference)];
+  const lost=connected(studies,treats);if(lost.length)throw new Error('The network is not connected: '+lost.join(', ')+'.');
+  const D=design(studies,treats),p=treats.length-1,T=treats.length;
+  const upper=prior.type==='uniform'?prior.max:prior.scale*5,G=400,grid=[],logpost=[];
+  const logprior=t=>prior.type==='uniform'?(t<=prior.max?0:-Infinity):-(t*t)/(2*prior.scale*prior.scale);
+  // log marginal likelihood of tau: y ~ N(0, V_tau + X Sigma0 X'), evaluated through the GLS pieces:
+  // log p(y|tau) = -1/2 [ log|V| + log|Sigma0| + log|X'V^-1X + Sigma0^-1| + y'V^-1y - b'(X'V^-1X+Sigma0^-1)^-1 b ] + const, b = X'V^-1y
+  const prec0=1/(priorSD*priorSD);
+  const piece=tau=>{const t2=tau*tau,A=zeros(p,p),b=new Array(p).fill(0);let ldV=0,yVy=0;
+    for(const bl of D.blocks){const V=bl.S.map((r,i)=>r.map((v,j)=>v+t2*bl.P[i][j])),W=inv(V);ldV+=logdet(V);const n=bl.rows.length;
+      for(let i=0;i<n;i++)for(let j=0;j<n;j++){const w=W[i][j],xi=D.X[bl.rows[i]],xj=D.X[bl.rows[j]],yj=D.y[bl.rows[j]];yVy+=D.y[bl.rows[i]]*w*yj;for(let a=0;a<p;a++){if(!xi[a])continue;b[a]+=xi[a]*w*yj;for(let c=0;c<p;c++)if(xj[c])A[a][c]+=xi[a]*w*xj[c]}}}
+    for(let a=0;a<p;a++)A[a][a]+=prec0;
+    const C=inv(A),m=mv(C,b),quad=b.reduce((s,v,a)=>s+v*m[a],0);
+    return {lp:-0.5*(ldV+logdet(A)+yVy-quad),C,m}};
+  for(let g=0;g<G;g++){const t=(g+0.5)/G*upper;grid.push(t);logpost.push(logprior(t)+piece(t).lp)}
+  const mx=Math.max(...logpost),wts=logpost.map(l=>Math.exp(l-mx)),sw=wts.reduce((a,b)=>a+b,0),cdf=[];let acc=0;for(const w of wts){acc+=w/sw;cdf.push(acc)}
+  const rnd=mulberry32(seed),gauss=()=>{let u=0,v=0;while(!u)u=rnd();v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+  const cache=new Map(),D_=[],taus=[];
+  for(let s=0;s<draws;s++){
+    const u=rnd();let g=cdf.findIndex(c=>c>=u);if(g<0)g=G-1;const tau=grid[g]+(rnd()-0.5)*upper/G;taus.push(Math.max(0,tau));
+    if(!cache.has(g)){const pc=piece(grid[g]);cache.set(g,{m:pc.m,L:chol(pc.C)})}
+    const {m,L}=cache.get(g),z=Array.from({length:p},gauss);D_.push(m.map((mi,a)=>mi+L[a].reduce((s2,l,c)=>s2+(c<=a?l*z[c]:0),0)));
+  }
+  const q=(arr,pr)=>{const s=[...arr].sort((a,b)=>a-b);const h=(s.length-1)*pr,l=Math.floor(h);return s[l]+(s[Math.min(l+1,s.length-1)]-s[l])*(h-l)};
+  const d=(i,j,dd)=>(j?dd[j-1]:0)-(i?dd[i-1]:0);
+  const league=[];for(let i=0;i<T;i++){league.push([]);for(let j=0;j<T;j++){if(i===j){league[i].push(null);continue}const v=D_.map(dd=>d(i,j,dd));league[i].push({median:q(v,0.5),lo:q(v,0.025),hi:q(v,0.975),mean:v.reduce((a,b)=>a+b,0)/v.length,pGt0:v.filter(x=>x>0).length/v.length})}}
+  // rank probabilities: rank 1 = best
+  const rankP=treats.map(()=>new Array(T).fill(0)),sign=smallBetter?1:-1;
+  for(const dd of D_){const eff=treats.map((_,i)=>sign*(i?dd[i-1]:0));const order=eff.map((e,i)=>[e,i]).sort((a,b)=>a[0]-b[0]);order.forEach(([,i],r)=>rankP[i][r]++)}
+  rankP.forEach(r=>r.forEach((c,k)=>r[k]=c/draws));
+  const sucra=rankP.map(r=>{let cum=0,s=0;for(let k=0;k<T-1;k++){cum+=r[k];s+=cum}return T>1?s/(T-1):1});
+  return {measure,treats,reference:treats[0],dropped,k:studies.length,league,rankP,sucra,
+    tau:{median:q(taus,0.5),lo:q(taus,0.025),hi:q(taus,0.975)},prior,draws,seed,priorSD,
+    note:'Normal likelihood on study contrasts (NICE DSU TSD2), exact sampling: tau from its grid posterior ('+G+' points), d given tau from its normal posterior.'};
+}
+return {contrasts,frequentist,bayesian,Phi,pchisq,Z975};
+})();
+/* ---------------- Analysis page ----------------
+   Data come from Extraction (aimstep-analysis-input) or an imported CSV.
+   One Run fits both engines on the same contrasts; results are recomputed
+   from the data and settings, so they are always reproducible. */
+const COE_FIELDS=[{"no":1,"key":"id","name":"# ID"},{"no":2,"key":"intervention","name":"Intervention"},{"no":3,"key":"control","name":"Control"},{"no":4,"key":"n_rct","name":"Number of RCT"},{"no":5,"key":"rct_ids","name":"IDs of RCTs"},{"no":6,"key":"n_intervention","name":"Samplesizes of intervention"},{"no":7,"key":"n_control","name":"Samplesizes of control"},{"no":8,"key":"direct_rr","name":"Direct_RR (95%CI)"},{"no":9,"key":"i_squared","name":"I²"},{"no":10,"key":"inconsistency","name":"Inconsistency"},{"no":11,"key":"inconsistency_reason","name":"Inconsistency downgrade reason"},{"no":12,"key":"inconsistency_dominant_interpretation","name":"Inconsistency dominant null-based interpretation"},{"no":13,"key":"inconsistency_predominant_weight_pct","name":"Inconsistency predominant-side weight (%)"},{"no":14,"key":"inconsistency_opposite_weight_pct","name":"Inconsistency opposite-side weight (%)"},{"no":15,"key":"inconsistency_dominant_count","name":"Inconsistency dominant null-based interpretation count"},{"no":16,"key":"inconsistency_total_studies","name":"Inconsistency total studies with point estimate"},{"no":17,"key":"inconsistency_dominant_proportion_pct","name":"Inconsistency dominant null-based interpretation proportion (%)"},{"no":18,"key":"inconsistency_ci_overlap","name":"Inconsistency study-level CI overlap 1. Substantial overlap 2. Partial/limited overlap 3. Little or no overlap"},{"no":19,"key":"rob_high_weight_pct","name":"ROB high random-effects weight %"},{"no":20,"key":"low_rob_estimate","name":"Low-RoB effect estimate"},{"no":21,"key":"high_rob_estimate","name":"High-RoB effect estimate"},{"no":22,"key":"low_vs_high_rob_difference","name":"Low vs High RoB difference"},{"no":23,"key":"expected_bias_direction","name":"Expected bias direction / impact 1 = Could explain observed effect 2 = Could explain observed lack of effect 3 = Reinforces observed effect 4 = Reinforces observed lack of effect 5 = Unclear"},{"no":24,"key":"effect_estimate_used","name":"Effect estimate used"},{"no":25,"key":"rob","name":"RoB"},{"no":26,"key":"rob_reason","name":"RoB downgrade reason"},{"no":27,"key":"indirectness","name":"Indirectness"},{"no":28,"key":"indirectness_reason","name":"Indirectness reason"},{"no":29,"key":"p_egger","name":"P for egger test"},{"no":30,"key":"p_begg","name":"P for Begg test"},{"no":31,"key":"p_thompson","name":"P for Thompson test"},{"no":32,"key":"publication_bias_test_status","name":"Publication bias test status"},{"no":33,"key":"publication_bias","name":"Publication bias"},{"no":34,"key":"direct_coe_before_imprecision","name":"Direct COE before imprecision"},{"no":35,"key":"indirect_rr","name":"Indirect, RR (95%CI)"},{"no":36,"key":"n_indirect_pathways","name":"Number of available indirect pathways"},{"no":37,"key":"indirect_pathways","name":"Available indirect pathways"},{"no":38,"key":"dominant_first_order_loop","name":"Dominant first-order loop"},{"no":39,"key":"dominant_first_order_loop_contribution_pct","name":"Dominant first-order loop contribution to indirect evidence (%)"},{"no":40,"key":"extended_loop_assessment_performed","name":"Extended loop assessment performed?"},{"no":41,"key":"lowest_available_loop_order","name":"Lowest available loop order"},{"no":42,"key":"dominant_higher_order_loop","name":"Dominant higher-order loop"},{"no":43,"key":"dominant_higher_order_loop_contribution_pct","name":"Dominant lowest available loop order contribution to indirect evidence (%)"},{"no":44,"key":"dominant_loop_constituent_coes","name":"Dominant loop constituent direct COEs"},{"no":45,"key":"dominant_loop_coe","name":"Dominant received loop COE"},{"no":46,"key":"intransitivity","name":"Intransitivity"},{"no":47,"key":"intransitivity_reason","name":"Intransitivity reason"},{"no":48,"key":"indirect_coe_before_imprecision","name":"Indirect_COE before imprecision"},{"no":49,"key":"nma_rr","name":"NMA_RR (95%CI)"},{"no":50,"key":"direct_coe_before_imprecision_carried","name":"Direct COE before imprecision"},{"no":51,"key":"indirect_coe_before_imprecision_carried","name":"Indirect COE before imprecision"},{"no":52,"key":"higher_certainty_adequacy","name":"Higher-certainty evidence adequacy"},{"no":53,"key":"higher_certainty_adequacy_reason","name":"Higher-certainty evidence adequacy reason"},{"no":54,"key":"direct_contribution_pct","name":"Direct evidence contribution to NMA (%)"},{"no":55,"key":"indirect_contribution_pct","name":"Indirect evidence contribution to NMA (%)"},{"no":56,"key":"preliminary_nma_coe","name":"Preliminary NMA COE"},{"no":57,"key":"preliminary_nma_coe_reason","name":"Preliminary NMA COE reason"},{"no":58,"key":"incoherence","name":"Incoherence"},{"no":59,"key":"incoherence_reason","name":"Incoherence reason"},{"no":60,"key":"nma_coe_before_imprecision","name":"NMA COE after incoherence and before imprecision"},{"no":61,"key":"final_source","name":"Final results from: 1. direct 2. indirect 3. NMA"},{"no":62,"key":"final_source_reason","name":"Final effect estimate source reason"},{"no":63,"key":"final_rr","name":"Final_RR (95%CI)"},{"no":64,"key":"final_rd","name":"Final_RD (95%CI)"},{"no":65,"key":"final_rd_per_1000","name":"Final_RD per 1000 (95%CI)"},{"no":66,"key":"imprecision","name":"Imprecision (20%_200 patients per 1000)"},{"no":67,"key":"imprecision_reason","name":"Imprecision reason"},{"no":68,"key":"final_coe","name":"Final CoE"}];
+const stateKey='aimstep-analysis:'+scope;
+let ws=null,input=null,outcome=null,res=null,tab='freq';
+function loadState(){try{ws=JSON.parse(localStorage.getItem(stateKey)||'null')}catch(e){ws=null}ws=ws&&typeof ws==='object'?ws:{};ws.settings=ws.settings||{};ws.imported=ws.imported||[];ws.current=ws.current||''}
+function saveState(){try{localStorage.setItem(stateKey,JSON.stringify(ws))}catch(e){toast('Could not save settings: '+e.message)}}
+async function readInput(){try{const db=await openDB('aimstep-analysis-input');const v=await getProject(db);db.close();return v}catch(e){return null}}
+const outcomes=()=>[...(input?.outcomes||[]).filter(o=>o.rows?.length).map(o=>({...o,source:'Extraction'})),...ws.imported.map(o=>({...o,source:'Imported file'}))];
+const isBin=o=>o.type==='binary';
+function settingsOf(o){const s=ws.settings[o.id]||(ws.settings[o.id]={});const T=treatsOf(o);
+  return Object.assign({measure:isBin(o)?'RR':'MD',reference:T.find(t=>/placebo|control|usual|standard/i.test(t))||T[0]||'',model:'random',smallBetter:false,prior:'halfnormal',priorScale:isBin(o)?1:'',priorMax:isBin(o)?2:'',draws:20000,seed:2026},s)}
+const treatsOf=o=>[...new Set(o.rows.map(r=>r.treat))].sort((a,b)=>a.localeCompare(b));
+const ratio=m=>m==='OR'||m==='RR';
+const show=(m,x)=>ratio(m)?Math.exp(x):x;
+const f2=x=>!Number.isFinite(x)?'—':Math.abs(x)>=100?x.toFixed(0):Math.abs(x)>=10?x.toFixed(1):x.toFixed(2);
+const ci=(m,e,lo,hi)=>`${f2(show(m,e))} (${f2(show(m,lo))} to ${f2(show(m,hi))})`;
+const fci=(m,x)=>x?ci(m,x.est,x.est-NMA.Z975*x.se,x.est+NMA.Z975*x.se):'—';
+const bci=(m,x)=>x?ci(m,x.median,x.lo,x.hi):'—';
+const pf=p=>p===null||p===undefined||!Number.isFinite(p)?'—':p<0.001?'<0.001':p.toFixed(3);
+
+/* ---------------- Run ---------------- */
+function run(){
+  const o=outcome;if(!o){toast('Choose an outcome first.');return}
+  const s=settingsOf(o),prior=s.prior==='uniform'?{type:'uniform',max:Number(s.priorMax)}:{type:'halfnormal',scale:Number(s.priorScale)};
+  if(!(prior.max>0||prior.scale>0)){toast('Set the prior for the heterogeneity SD (tau) first.');$('prior-scale').focus();return}
+  try{
+    const t0=performance.now();
+    const fr=NMA.frequentist(o.rows,{measure:s.measure,reference:s.reference,model:s.model,smallBetter:s.smallBetter});
+    const by=NMA.bayesian(o.rows,{measure:s.measure,reference:s.reference,smallBetter:s.smallBetter,prior,draws:Number(s.draws)||20000,seed:Number(s.seed)||2026});
+    res={o,s,fr,by,ms:Math.round(performance.now()-t0),at:now()};
+    showNotice('run-notice',`Done in ${res.ms} ms: ${fr.k} studies, ${fr.treats.length} treatments.${fr.dropped.length?` Left out: ${fr.dropped.map(d=>d.study+' ('+d.why+')').join('; ')}.`:''}`,fr.dropped.length?'warning':'success');
+    try{localStorage.setItem('aimstep-analysis-summary:'+scope,JSON.stringify({outcome:o.name,measure:s.measure,model:s.model,studies:fr.k,treatments:fr.treats.length,tau2:fr.tau2,updatedAt:now()}))}catch(e){}
+  }catch(e){res=null;showNotice('run-notice',e.message,'error')}
+  renderResults();
+}
+
+/* ---------------- Rendering ---------------- */
+function render(){safely(renderData);safely(renderSettings);safely(renderResults)}
+function renderData(){
+  const list=outcomes();
+  $('outcome-select').innerHTML=list.length?list.map(o=>`<option value="${esc(o.id)}"${outcome?.id===o.id?' selected':''}>${esc(o.name)}${o.timepoint?' · '+esc(o.timepoint):''} (${esc(o.source)})</option>`).join(''):'<option value="">No data yet</option>';
+  if(!outcome){$('data-stats').innerHTML='';$('net-plot').innerHTML='<p class="hint">Confirm extractions in step 5, or import an arm-level CSV (study, treat, event, n — or study, treat, mean, sd, n).</p>';$('data-table').innerHTML='';return}
+  const o=outcome,T=treatsOf(o),studies=new Set(o.rows.map(r=>r.study)),multi=[...studies].filter(s=>o.rows.filter(r=>r.study===s).length>2).length,N=o.rows.reduce((a,r)=>a+(r.n||0),0);
+  $('data-stats').innerHTML=[[studies.size,'Studies'],[T.length,'Treatments'],[N.toLocaleString(),'Participants'],[multi,'Multi-arm studies']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');
+  $('net-plot').innerHTML=networkSVG(o);
+  $('data-table').innerHTML=`<thead><tr><th>Study</th><th>Treatment</th>${isBin(o)?'<th>Events</th><th>N</th>':'<th>Mean</th><th>SD</th><th>N</th>'}</tr></thead><tbody>${o.rows.map(r=>`<tr><td>${esc(r.study)}</td><td>${esc(r.treat)}</td>${isBin(o)?`<td>${r.event}</td><td>${r.n}</td>`:`<td>${r.mean}</td><td>${r.sd}</td><td>${r.n}</td>`}</tr>`).join('')}</tbody>`;
+}
+function networkSVG(o){
+  const T=treatsOf(o),W=520,H=360,cx=W/2,cy=H/2,R=Math.min(W,H)/2-60,pos=new Map(T.map((t,i)=>[t,[cx+R*Math.cos(2*Math.PI*i/T.length-Math.PI/2),cy+R*Math.sin(2*Math.PI*i/T.length-Math.PI/2)]]));
+  const n=new Map(T.map(t=>[t,0]));o.rows.forEach(r=>n.set(r.treat,n.get(r.treat)+(r.n||0)));const maxN=Math.max(...n.values(),1);
+  const edges=new Map();const by=new Map();o.rows.forEach(r=>{if(!by.has(r.study))by.set(r.study,[]);by.get(r.study).push(r.treat)});
+  for(const ts of by.values())for(let i=0;i<ts.length;i++)for(let j=i+1;j<ts.length;j++){const k=[ts[i],ts[j]].sort().join('\u0000');edges.set(k,(edges.get(k)||0)+1)}
+  const maxE=Math.max(...edges.values(),1);
+  const lines=[...edges].map(([k,c])=>{const [a,b]=k.split('\u0000'),[x1,y1]=pos.get(a),[x2,y2]=pos.get(b);return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${1.5+5*c/maxE}"><title>${esc(a)} vs ${esc(b)}: ${c} stud${c===1?'y':'ies'}</title></line>${c>1?`<text class="ec" x="${x1+(x2-x1)*0.35}" y="${y1+(y2-y1)*0.35-3}">${c}</text>`:''}`}).join('');
+  const nodes=T.map(t=>{const [x,y]=pos.get(t),r=7+14*Math.sqrt(n.get(t)/maxN),lx=x+(x-cx)/R*(r+8),ly=y+(y-cy)/R*(r+8)+4;return `<circle cx="${x}" cy="${y}" r="${r}"><title>${esc(t)}: ${n.get(t)} participants</title></circle><text x="${lx}" y="${ly}" text-anchor="${Math.abs(x-cx)<5?'middle':x>cx?'start':'end'}">${esc(t)}</text>`}).join('');
+  return `<svg class="net" viewBox="0 0 ${W} ${H}" role="img" aria-label="Network plot">${lines}${nodes}</svg><p class="hint">Node size: participants; line width: number of studies.</p>`;
+}
+function renderSettings(){
+  const box=$('settings');if(!outcome){box.hidden=true;return}box.hidden=false;
+  const o=outcome,s=settingsOf(o),T=treatsOf(o);
+  $('measure').innerHTML=(isBin(o)?[['RR','Risk ratio (RR)'],['OR','Odds ratio (OR)']]:[['MD','Mean difference (MD)'],['SMD','Standardised mean difference (SMD, Hedges g)']]).map(([v,l])=>`<option value="${v}"${s.measure===v?' selected':''}>${l}</option>`).join('');
+  $('reference').innerHTML=T.map(t=>`<option${t===s.reference?' selected':''}>${esc(t)}</option>`).join('');
+  $('model').value=s.model;$('better').value=s.smallBetter?'small':'large';
+  $('prior').value=s.prior;$('prior-scale').value=s.prior==='uniform'?s.priorMax:s.priorScale;$('prior-label').textContent=s.prior==='uniform'?'Upper limit':'Scale';
+  $('draws').value=s.draws;$('seed').value=s.seed;
+  $('prior-hint').textContent=ratio(s.measure)?'Log scale; Half-normal(1) or Uniform(0, 2) are common choices (Dias 2013).':'Same units as the outcome; choose a scale that allows clinically plausible heterogeneity.';
+}
+function forestSVG(r){
+  const m=r.s.measure,T=r.fr.treats,ref=T[0],rowsF=T.slice(1).map((t,i)=>({t,f:r.fr.league[0][i+1],b:r.by.league[0][i+1]}));
+  const vals=rowsF.flatMap(x=>[x.f.est-NMA.Z975*x.f.se,x.f.est+NMA.Z975*x.f.se,x.b.lo,x.b.hi]).filter(Number.isFinite);let lo=Math.min(0,...vals),hi=Math.max(0,...vals);const pad=(hi-lo)*0.08||0.5;lo-=pad;hi+=pad;
+  const W=720,L=170,Rw=200,H=40+rowsF.length*34,x=v=>L+(v-lo)/(hi-lo)*(W-L-Rw);
+  const ticks=ratio(m)?[0.01,0.02,0.05,0.1,0.2,0.25,0.5,1,2,4,5,10,20,50,100].map(Math.log).filter(t=>t>=lo&&t<=hi):[];if(ticks.length>7)ticks.splice(0,ticks.length,...ticks.filter((_,i)=>i%2===0));if(!ticks.length){const step=(hi-lo)/4;for(let k=0;k<=4;k++)ticks.push(lo+k*step)}
+  const body=rowsF.map((row,i)=>{const y=34+i*34,f=row.f,b=row.b;return `<text x="${L-8}" y="${y+4}" text-anchor="end" class="lab">${esc(row.t)}</text>
+<line x1="${x(f.est-NMA.Z975*f.se)}" x2="${x(f.est+NMA.Z975*f.se)}" y1="${y-5}" y2="${y-5}" class="cf"/><rect x="${x(f.est)-4}" y="${y-9}" width="8" height="8" class="pf"/>
+<line x1="${x(b.lo)}" x2="${x(b.hi)}" y1="${y+6}" y2="${y+6}" class="cb"/><path d="M${x(b.median)} ${y+1}l5 5-5 5-5-5z" class="pb"/>
+<text x="${W-Rw+10}" y="${y-2}" class="num">${fci(m,f)}</text><text x="${W-Rw+10}" y="${y+12}" class="num b">${bci(m,b)}</text>`}).join('');
+  return `<svg class="forest" viewBox="0 0 ${W} ${H+30}" role="img" aria-label="Forest plot against ${esc(ref)}"><line x1="${x(0)}" x2="${x(0)}" y1="16" y2="${H}" class="null"/>${body}${ticks.map(t=>`<text x="${x(t)}" y="${H+16}" class="tick">${f2(show(m,t))}</text>`).join('')}<text x="${L}" y="12" class="lab small">vs ${esc(ref)} · ${m}${ratio(m)?' (log scale)':''}</text><text x="${W-Rw+10}" y="12" class="lab small">■ Frequentist  ◆ Bayesian</text></svg>`;
+}
+function leagueHTML(r,which){
+  const m=r.s.measure,T=r.fr.treats,L=which==='freq'?r.fr.league:r.by.league,dir=new Map(r.fr.split.map(s=>[s.a+'\u0000'+s.b,s]));
+  const cell=(i,j)=>{if(i===j)return `<td class="diag">${esc(T[i])}</td>`;
+    if(i>j){const e=L[j][i];return `<td>${which==='freq'?fci(m,e):bci(m,e)}</td>`}
+    if(which!=='freq')return '<td class="up"></td>';
+    const s=dir.get(T[i]+'\u0000'+T[j])||dir.get(T[j]+'\u0000'+T[i]);if(!s)return '<td class="up">—</td>';
+    const d=s.b===T[i]?s.direct:{est:-s.direct.est,se:s.direct.se};return `<td class="up">${fci(m,d)}</td>`};
+  return `<div class="table-wrap"><table class="league">${T.map((_,i)=>`<tr>${T.map((__,j)=>cell(i,j)).join('')}</tr>`).join('')}</table></div><p class="hint">Lower left: ${which==='freq'?'network estimate':'posterior median (95% credible interval)'} of the row treatment versus the column treatment.${which==='freq'?' Upper right (shaded): direct evidence only, row versus column.':''}${ratio(m)?' Ratios above 1 favour the row treatment when higher values are better.':''}</p>`;
+}
+function renderResults(){
+  const box=$('results');if(!res){box.hidden=true;return}box.hidden=false;
+  const {fr,by,s}=res,m=s.measure;
+  document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===tab)));
+  $('forest').innerHTML=forestSVG(res);
+  let html='';
+  if(tab==='freq'){
+    html=`<div class="source-summary"><div><strong>${f2(fr.tau2)}</strong><span>τ² (${fr.model==='random'?'random effects, DL':'common effect'})</span></div><div><strong>${Math.round(fr.I2*100)}%</strong><span>I²</span></div><div><strong>${f2(fr.Q)}</strong><span>Q (df ${fr.df}), p ${pf(fr.pQ)}</span></div><div><strong>${f2(fr.Qbetween)}</strong><span>Between designs (df ${fr.dfBetween}), p ${pf(fr.pBetween)}</span></div></div>
+<h3 class="sub-head">League table</h3>${leagueHTML(res,'freq')}
+<h3 class="sub-head">Direct and indirect evidence (node splitting by back-calculation)</h3>
+<div class="table-wrap"><table class="grid"><thead><tr><th>Comparison</th><th>Studies</th><th>Direct</th><th>Indirect</th><th>Network</th><th>Direct share</th><th>p (direct vs indirect)</th></tr></thead><tbody>${fr.split.map(x=>`<tr><td>${esc(x.b)} vs ${esc(x.a)}</td><td>${x.k}${x.multi?'*':''}</td><td>${fci(m,x.direct)}</td><td>${fci(m,x.indirect)}</td><td>${fci(m,x.nma)}</td><td>${Math.round(x.propDirect*100)}%</td><td class="${x.p!==null&&x.p<0.1?'warn':''}">${pf(x.p)}</td></tr>`).join('')}</tbody></table></div>
+<p class="hint">Direct estimates use the network τ²; indirect = back-calculated (König 2013). * includes multi-arm studies. Judge incoherence on direction, size and CI overlap, not the p value alone (Workflow 7).</p>`;
+  }else if(tab==='bayes'){
+    html=`<div class="source-summary"><div><strong>${f2(by.tau.median)}</strong><span>τ posterior median (95% CrI ${f2(by.tau.lo)} to ${f2(by.tau.hi)})</span></div><div><strong>${esc(by.prior.type==='uniform'?'U(0, '+by.prior.max+')':'Half-N('+by.prior.scale+')')}</strong><span>Prior on τ; d ~ N(0, ${by.priorSD}²)</span></div><div><strong>${by.draws.toLocaleString()}</strong><span>Independent draws (seed ${by.seed})</span></div><div><strong>${by.k}</strong><span>Studies</span></div></div>
+<h3 class="sub-head">League table</h3>${leagueHTML(res,'bayes')}<p class="hint">${esc(by.note)} For sparse binary data with zero events, also run the binomial model in R (gemtc or multinma; see Export).</p>`;
+  }else{
+    const T=fr.treats,ord=T.map((t,i)=>i).sort((a,b)=>by.sucra[b]-by.sucra[a]);
+    html=`<div class="table-wrap"><table class="grid rank"><thead><tr><th>Treatment</th><th>P-score (frequentist)</th><th>SUCRA (Bayesian)</th>${T.map((_,k)=>`<th>P(rank ${k+1})</th>`).join('')}</tr></thead><tbody>${ord.map(i=>`<tr><td>${esc(T[i])}</td><td>${f2(fr.pscore[i])}</td><td>${f2(by.sucra[i])}</td>${by.rankP[i].map(p=>`<td style="background:rgba(92,0,77,${(p*0.6).toFixed(3)});color:${p>0.5?'#fff':'inherit'}">${Math.round(p*100)}%</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+<p class="hint">Rank 1 = best, with ${s.smallBetter?'smaller':'larger'} values better. Rankings ignore the size of differences and the certainty of evidence: report them only alongside the GRADE minimally contextualised approach (Brignardello-Petersen 2020), never alone.</p>`;
+  }
+  $('tab-body').innerHTML=html;
+  $('coe-export').disabled=s.measure!=='RR';$('coe-export').title=s.measure!=='RR'?'Certainty of evidence uses risk ratios: choose RR':'';
+}
+
+/* ---------------- Import and export ---------------- */
+function parseCSV(t){const rows=[];let row=[],cell='',q=false;t=String(t).replace(/^﻿/,'');for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}else if(c==='"')q=true;else if(c===','){row.push(cell);cell=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}else cell+=c}if(cell||row.length){row.push(cell);rows.push(row)}return rows.filter(r=>r.some(x=>x.trim()))}
+function importCSV(text,name){
+  const rows=parseCSV(text);const h=rows[0].map(x=>x.trim().toLowerCase()),col=k=>h.findIndex(x=>k.includes(x));
+  const iS=col(['study','studlab','study_id']),iT=col(['treat','treatment','node']),iE=col(['event','events','r']),iN=col(['n','total']),iM=col(['mean','y']),iSD=col(['sd']),iO=col(['outcome']);
+  if(iS<0||iT<0||iN<0||(iE<0&&(iM<0||iSD<0)))throw new Error('Columns needed: study, treat, n and either event, or mean and sd.');
+  const type=iE>=0?'binary':'continuous',groups=new Map();
+  for(const r of rows.slice(1)){if(!r[iS])continue;const key=iO>=0&&r[iO]?r[iO]:name.replace(/\.csv$/i,'');if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(type==='binary'?{study:r[iS].trim(),treat:r[iT].trim(),event:Number(r[iE]),n:Number(r[iN])}:{study:r[iS].trim(),treat:r[iT].trim(),mean:Number(r[iM]),sd:Number(r[iSD]),n:Number(r[iN])})}
+  for(const [nm,rs] of groups){const id='imp-'+fingerprint([nm,rs.length,now()]);ws.imported.push({id,name:nm,type,timepoint:'',rows:rs})}
+  saveState();return [...groups.keys()];
+}
+function exportResults(){
+  if(!res){toast('Run the analysis first.');return}
+  const {fr,by,s,o}=res,m=s.measure,T=fr.treats,out=[['Outcome',o.name],['Measure',m],['Model',fr.model],['Reference',T[0]],['tau2 (DL)',fr.tau2],['Bayesian tau median',by.tau.median],[],['Comparison','Studies','Direct','Indirect','Network (frequentist)','Direct share','p','Bayesian median (95% CrI)']];
+  for(const x of fr.split){const i=T.indexOf(x.a),j=T.indexOf(x.b);out.push([x.b+' vs '+x.a,x.k,fci(m,x.direct),fci(m,x.indirect),fci(m,x.nma),Math.round(x.propDirect*1000)/10+'%',pf(x.p),bci(m,by.league[i][j])])}
+  out.push([],['Treatment vs '+T[0],'Frequentist','Bayesian','P-score','SUCRA']);T.forEach((t,i)=>{if(i)out.push([t,fci(m,fr.league[0][i]),bci(m,by.league[0][i]),f2(fr.pscore[i]),f2(by.sucra[i])])});
+  download(`aimstep-nma-${stamp()}.csv`,'text/csv;charset=utf-8','﻿'+out.map(r=>r.map(csvCell).join(',')).join('\r\n'));
+}
+function rScript(){
+  if(!res){toast('Run the analysis first.');return}
+  const {o,s}=res,bin=isBin(o),data='dat <- read.csv(text = "'+(bin?'study,treat,event,n\\n':'study,treat,mean,sd,n\\n')+o.rows.map(r=>bin?[r.study,r.treat,r.event,r.n]:[r.study,r.treat,r.mean,r.sd,r.n]).map(x=>x.map(v=>String(v).includes(',')?'\\"'+v+'\\"':v).join(',')).join('\\n')+'")';
+  const txt=`# AIM-STEP network meta-analysis: ${o.name}${o.timepoint?' ('+o.timepoint+')':''}\n# Generated ${now()} to reproduce the browser results.\n${data}\n\n## Frequentist (netmeta)\nlibrary(netmeta)\np <- pairwise(treat = treat, ${bin?'event = event, n = n':'mean = mean, sd = sd, n = n'}, studlab = study, data = dat, sm = "${s.measure}")\nnm <- netmeta(p, reference.group = "${s.reference}", common = ${s.model==='common'?'TRUE':'FALSE'}, random = ${s.model==='random'?'TRUE':'FALSE'}, method.tau = "DL")\nsummary(nm); netleague(nm); netsplit(nm); decomp.design(nm)\nnetrank(nm, small.values = "${s.smallBetter?'desirable':'undesirable'}")\nforest(nm)\n\n## Bayesian (multinma, ${bin?'binomial-logit':'normal'} likelihood)\nlibrary(multinma)\nnet <- set_agd_arm(dat, study = study, trt = treat, ${bin?'r = event, n = n':'y = mean, se = sd / sqrt(n), sample_size = n'}, trt_ref = "${s.reference}")\nfit <- nma(net, trt_effects = "random", prior_trt = normal(0, 100), prior_het = ${s.prior==='uniform'?'uniform(0, '+s.priorMax+')':'half_normal('+s.priorScale+')'}, seed = ${s.seed})\nfit; relative_effects(fit); posterior_ranks(fit); dic(fit)\n`;
+  download(`aimstep-nma-${stamp()}.R`,'text/plain;charset=utf-8',txt);
+}
+/* Rows for Certainty of evidence, in its 68-field template layout: one row
+   per treatment versus the reference (or every pair), with the direct,
+   indirect and network RR from the same node-splitting framework. */
+function coeCSV(){
+  if(!res||res.s.measure!=='RR')return;
+  const {fr,o}=res,T=fr.treats,all=$('coe-pairs').checked,rows=[];
+  const pairs=all?T.flatMap((a,i)=>T.slice(i+1).map(b=>[b,a])):T.slice(1).map(t=>[t,T[0]]);
+  let id=1;
+  for(const [int,ctl] of pairs){
+    const i=T.indexOf(ctl),j=T.indexOf(int),sp=fr.split.find(x=>(x.a===ctl&&x.b===int)||(x.a===int&&x.b===ctl)),flip=sp&&sp.a===int;
+    const or=e=>e?{est:flip?-e.est:e.est,se:e.se}:null,rr=e=>e?`${Math.exp(e.est).toFixed(4)} (${Math.exp(e.est-NMA.Z975*e.se).toFixed(4)}, ${Math.exp(e.est+NMA.Z975*e.se).toFixed(4)})`:'NA';
+    const dir=sp?or(sp.direct):null,ind=sp?or(sp.indirect):null,nma=fr.league[i][j];
+    const st=sp?sp.studies:[],sumN=t=>st.reduce((s,name)=>s+(o.rows.find(r=>r.study===name&&r.treat===t)?.n||0),0);
+    const v={id:id++,intervention:int,control:ctl,n_rct:sp?st.length:'NA',rct_ids:sp?st.join('; '):'NA',n_intervention:sp?sumN(int):'NA',n_control:sp?sumN(ctl):'NA',direct_rr:rr(dir),i_squared:'',indirect_rr:sp?(ind?rr(ind):'NA'):rr(nma),nma_rr:rr(nma),
+      direct_contribution_pct:sp&&ind?Math.round(sp.propDirect*1000)/10:'',indirect_contribution_pct:sp&&ind?Math.round((1-sp.propDirect)*1000)/10:''};
+    rows.push(COE_FIELDS.map(f=>v[f.key]??''));
+  }
+  const head=[COE_FIELDS.map(f=>f.no),COE_FIELDS.map(f=>f.name),COE_FIELDS.map(f=>f.key),COE_FIELDS.map(()=>'(from Analysis; see the Certainty of evidence template for allowed values)')];
+  download(`aimstep-coe-input-${stamp()}.csv`,'text/csv;charset=utf-8','﻿'+[...head,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n'));
+  toast('Import this file on the Certainty of evidence page (Import comparisons).');
+}
+
+/* ---------------- Events ---------------- */
+function bind(){
+  $('outcome-select').addEventListener('change',()=>{outcome=outcomes().find(o=>o.id===$('outcome-select').value)||null;ws.current=outcome?.id||'';saveState();res=null;render()});
+  $('import-btn').addEventListener('click',()=>$('import-input').click());
+  $('import-input').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const names=importCSV(await f.text(),f.name);outcome=outcomes().find(o=>o.name===names[0]&&o.source==='Imported file');ws.current=outcome?.id;saveState();res=null;render();showNotice('data-notice',`Imported ${names.length} outcome${names.length===1?'':'s'} from ${f.name}.`,'success')}catch(err){showNotice('data-notice','Could not import '+f.name+': '+err.message,'error')}});
+  $('remove-import').addEventListener('click',()=>{if(!outcome||outcome.source!=='Imported file')return;ws.imported=ws.imported.filter(o=>o.id!==outcome.id);outcome=outcomes()[0]||null;saveState();res=null;render()});
+  const set=(k,v)=>{const s=settingsOf(outcome);s[k]=v;ws.settings[outcome.id]=s;saveState();res=null;renderSettings();renderResults()};
+  $('measure').addEventListener('change',e=>{const v=e.target.value,s=settingsOf(outcome);if(ratio(v)!==ratio(s.measure)){s.priorScale='';s.priorMax=''}set('measure',v)});
+  $('reference').addEventListener('change',e=>set('reference',e.target.value));
+  $('model').addEventListener('change',e=>set('model',e.target.value));
+  $('better').addEventListener('change',e=>set('smallBetter',e.target.value==='small'));
+  $('prior').addEventListener('change',e=>set('prior',e.target.value));
+  $('prior-scale').addEventListener('change',e=>{const v=Number(e.target.value);if(!(v>0)){toast('Enter a number above 0.');return}set(settingsOf(outcome).prior==='uniform'?'priorMax':'priorScale',v)});
+  $('draws').addEventListener('change',e=>set('draws',Math.min(100000,Math.max(2000,Number(e.target.value)||20000))));
+  $('seed').addEventListener('change',e=>set('seed',Number(e.target.value)||2026));
+  $('run').addEventListener('click',run);
+  document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;renderResults()}));
+  $('export-results').addEventListener('click',exportResults);$('export-r').addEventListener('click',rScript);$('coe-export').addEventListener('click',coeCSV);
+  collapsible('toggle-data','data-body','Network data','data');
+}
+async function init(){
+  loadState();input=await readInput();
+  const list=outcomes();outcome=list.find(o=>o.id===ws.current)||list[0]||null;
+  bind();render();
+  if(input&&input.confirmed<input.studies)showNotice('data-notice',`${input.confirmed} of ${input.studies} studies are confirmed in Extraction; only confirmed studies are analysed.`,'warning');
+  document.body.dataset.ready='true';
+}
+init();
 })();
 </script>
 </body>
