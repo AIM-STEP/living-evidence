@@ -37,5 +37,6 @@ vm.runInContext(html.slice(a,b),context);
  assert.equal(vm.runInContext('pilotDecision(value,record).decision',context),'no');
  context.record.abstract='';assert.equal(vm.runInContext('pilotDecision(value,record).decision',context),'maybe');
  context.record.abstract='Adults only.';assert.equal(vm.runInContext('pilotDecision(value,record).decision',context),'maybe');
- console.log('PASS: missing abstract and unsupported quotation cannot exclude');
+ context.record.title='Children only.';context.record.abstract='';assert.equal(vm.runInContext('pilotDecision(value,record).decision',context),'no');
+ console.log('PASS: explicit title evidence suffices; absent or unsupported evidence cannot exclude');
 })().catch(e=>{console.error(e);process.exitCode=1});

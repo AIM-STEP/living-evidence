@@ -47,11 +47,12 @@ class TypeSafeTest(unittest.TestCase):
         self.assertEqual(self.run_screen('met')['value']['decision'],'include')
         self.assertEqual(self.run_screen('unclear')['value']['decision'],'maybe')
 
-    def test_missing_abstract_cannot_exclude(self):
+    def test_explicit_title_evidence_can_exclude_without_abstract(self):
+        self.payload['input']['record']['title']='Children only.'
         self.payload['input']['record']['abstract']=''
         replies=[{'answers':{'c0':answer('not_met')}}, {'answers':{'c0':answer('s0',('none','s0'))}}]
         with patch.object(ts,'request',side_effect=replies):
-            self.assertEqual(ts.screen(self.payload)['value']['decision'],'maybe')
+            self.assertEqual(ts.screen(self.payload)['value']['decision'],'exclude')
 
     def test_bad_choice_or_probability_never_becomes_decision(self):
         for bad in [{},answer('invented'),dict(answer('met'),confidence=float('nan')),

@@ -301,8 +301,9 @@ TypeSafe uses one named choice question per eligibility criterion: met, not_met,
 unclear. Its probabilities are shown as model output, not evidence certainty or a
 validated clinical threshold. For not_met, a second request selects an exact
 source span from a fixed menu; it cannot invent a quote. No supporting span means
-unclear. The existing page rule still prevents exclusion without an abstract and
-requires an exact matching quotation. Reasons are application labels, not
+unclear. The page requires an exact matching quotation for exclusion; explicit title
+evidence can suffice when no abstract is available. Missing text alone never
+supports exclusion. Reasons are application labels, not
 model-generated explanations. JSON exports retain probabilities, provider,
 requested/resolved model, adapter version, raw responses and token usage.
 
@@ -325,3 +326,26 @@ node tools/test_typesafe_screening.cjs
 
 API contract: https://api.typesafe.ai/openapi.json (checked 2026-10-05).
 A real authenticated screening run still needs the user's key in the UI.
+
+
+## Screening workflow update (2026-10-05)
+
+At least one complete, compared pilot is required. The reviewer can approve after
+round one or choose more rounds; starting a new round withdraws the previous approval.
+One criterion explicitly not met with source evidence is sufficient. Another reading
+that is merely unclear does not veto it. If every supported exclusion criterion is
+explicitly judged met in another reading, the record remains a human conflict.
+Default Human check now covers conflicts and uncertain records only; exclusion
+sampling and all-exclusion checks remain selectable. Legacy default sample scopes
+migrate to this default; existing votes and AI readings are preserved.
+
+Human-check abstracts support per-record and all-record expansion/collapse. Human
+No votes require an entered exclusion reason. All five export formats (CSV, RIS,
+RevMan RIS, BibTeX, JSON) include an exclusion reason. AI exclusions include criteria
+and exact evidence; reviewer-entered reasons take precedence. Legacy reviewer
+exclusions without notes are explicitly marked as missing reasons, never inferred.
+Source-only bibliographic exports remain unchanged.
+
+Regression checks: `node tools/test_screening_workflow.cjs` covers minimum pilot
+gating, criterion-level conflicts, missing evidence, review scope migration,
+abstract controls, reviewer reasons and every result export format.

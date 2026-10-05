@@ -7,7 +7,7 @@ import urllib.request
 from api_model import NoRedirect, clean_key
 
 BASE = 'https://api.typesafe.ai/v1'
-VERSION = 'typesafe-screen-v1'
+VERSION = 'typesafe-screen-v2'
 
 
 def request(path, key, body=None):
@@ -96,9 +96,6 @@ def screen(payload):
                         'reason': reason, 'probabilities': answer['probabilities'],
                         'confidence': answer['confidence'], 'evidence': evidence})
     decision = 'exclude' if any(r['judgment'] == 'not met' for r in results) else 'include' if all(r['judgment'] == 'met' for r in results) else 'maybe'
-    if not record.get('abstract', '').strip() or record.get('abstract') == '(no abstract available)':
-        if decision == 'exclude':
-            decision = 'maybe'
     return {'value': {'criteria': results, 'decision': decision,
                       'reason': 'Structured TypeSafe assessment; review the criterion judgments and source evidence.'},
             'model': first.get('model', model), 'requestedModel': model, 'provider': 'typesafe',

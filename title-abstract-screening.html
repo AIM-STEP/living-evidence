@@ -174,7 +174,7 @@ th{background:#f4f4f4}
 </div>
 <div class="stack">
 <section class="panel">
-<div class="panel-head"><h2>Pilot screening</h2><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available when a round has been compared">Approved</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
+<div class="panel-head"><h2>Pilot screening</h2><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
 <div class="panel-body" id="pilot-body">
 <div class="model-connection" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)">
 <label class="label" for="screen-model-source">Model source</label>
@@ -190,7 +190,7 @@ th{background:#f4f4f4}
 </div><button class="btn small" type="button" id="screen-model-archives" hidden>Download previous model runs</button>
 </div>
 
-<ol class="pilot-steps"><li>Start a round: the selected AI model screens a random sample of records.</li><li>Vote Yes / Maybe / No on the same records. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Click Approved when you are satisfied. Formal screening then unlocks.</li></ol>
+<ol class="pilot-steps"><li>Start a round: the selected AI model screens a random sample of records.</li><li>Vote Yes / Maybe / No on the same records. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Complete at least one round. Then approve the pilot to start formal screening, or run another round if you choose. Additional rounds are optional.</li></ol>
 <div class="pilot-controls"><label class="label" for="sample-size">Records per round</label><input class="input" id="sample-size" type="number" min="5" max="100" step="1" value="20"><button class="btn primary" id="run-pilot" type="button">Start round 1</button><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-calibration" type="button">Restart pilot</button></div>
 <div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div>
 <div class="notice" id="pilot-message" hidden role="status"></div>
@@ -204,27 +204,27 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2>All records screening</h2><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-screening" type="button" disabled title="Approve the pilot first.">Start</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse All records screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse All records screening</span></button></div></div>
 <div class="panel-body" id="full-body">
-<p class="hint full-intro">The approved AI model screens every record twice, as two independent readings. When one reading excludes a record and the other keeps it, that is a conflict for you to decide. Records you voted on in the pilot keep your decision. Yes and Maybe go forward to full-text review.</p>
+<p class="hint full-intro">The approved AI model reads every record twice. One explicitly unmet criterion with source evidence is enough to exclude; other unclear criteria do not prevent exclusion. A direct disagreement about the same criterion needs your decision. Records you voted on in the pilot keep your decision. Yes and Maybe go forward to full-text review.</p>
 <div class="source-summary pilot-summary full-summary"><div><strong id="full-screened">0 / 0</strong><span>Decided</span></div><div><strong id="full-yes">0</strong><span>Yes</span></div><div><strong id="full-maybe">0</strong><span>Maybe</span></div><div><strong id="full-no">0</strong><span>No</span></div><div><strong id="full-conflicts">0 / 0</strong><span>Conflicts resolved</span></div><div><strong id="full-check">0 / 0</strong><span>Human check</span></div></div>
 <div class="team-track full-track" role="progressbar" aria-label="Screening complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="team-track"><span id="team-bar" style="width:0"></span></div>
 <p class="hint" id="full-progress" aria-live="polite"></p>
 <p class="full-now" id="full-now" hidden aria-live="polite"></p>
 <div class="notice" id="full-message" hidden role="status"></div>
 <div id="full-feed-wrap" hidden><h3 class="sub-head">Latest AI readings</h3><ol class="full-feed" id="full-feed"></ol></div>
-<div class="check-head"><h3 class="sub-head">Conflicts and Human check</h3><label class="label inline" for="check-scope">Check</label><select class="select compact" id="check-scope"><option value="sample">A random 300 AI exclusions (all if fewer)</option><option value="exclusions">All AI exclusions</option><option value="uncertain">All AI exclusions and Maybe records</option></select></div>
-<p class="hint">Resolve every conflict: both readings are shown. Then check exclusions both readings agree on, without seeing the AI first; that is where an AI error loses a study. Your decision replaces the AI's. A random check bounds how often AI exclusions are wrong; it cannot prove that no relevant study was missed.</p>
+<div class="check-head"><h3 class="sub-head">Conflicts and Human check</h3><label class="label inline" for="check-scope">Check</label><select class="select compact" id="check-scope"><option value="unresolved">Conflicts and uncertain records only</option><option value="sample">A random 300 AI exclusions (all if fewer)</option><option value="exclusions">All AI exclusions</option><option value="uncertain">All AI exclusions and Maybe records</option></select></div>
+<p class="hint">By default, review only conflicting or uncertain records. Clear, supported exclusions do not require a human check. You can optionally sample or review all AI exclusions using Check. Your decision overrides the AI's.</p>
 <p class="hint check-summary" id="check-summary"></p>
 <button class="btn small" type="button" id="check-escalate" hidden>Some AI exclusions were wrong: check all AI exclusions</button>
 <div class="toolbar pilot-filter" id="check-filter" hidden><button class="btn small" type="button" data-cfilter="conflicts" aria-pressed="false">Conflicts <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="todo" aria-pressed="true">To check <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="done" aria-pressed="false">Checked <span class="count">0</span></button></div>
-<div class="pilot-list" id="check-list"></div>
+<div class="toolbar" id="check-abs-tools" hidden><button class="btn small" type="button" id="check-abs-all" aria-pressed="false">Expand all abstracts</button></div><div class="pilot-list" id="check-list"></div>
 </div>
 <div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Records</label><select class="select compact" id="export-option"><option value="include">Include (Yes and Maybe)</option><option value="exclude">Exclude (No)</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan (RIS)</option><option value="csv">CSV (Excel, with screening decisions)</option><option value="bib">BibTeX</option><option value="json">JSON (with screening decisions)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div><a class="step-btn next" data-fulltext href="full-text-screening.html">Next: Full-text screening <span aria-hidden="true">→</span></a></div>
 </section>
 </div>
 </div>
 <details class="references" hidden data-developer-references><summary>Method and research references</summary>
-<p class="hint">All records screening: the approved model screens every record twice (pass 2 presents the record first and the criteria in reverse order); a record one pass excludes and the other keeps is a conflict the reviewer resolves; pilot votes stand; Human check reviews AI exclusions blind to the AI (a random 300 by default, or all), with an exact binomial 95% upper bound on the share of AI exclusions that are wrong. This bounds the error rate of exclusions and does not prove that no relevant study was missed.</p>
-<p class="hint">Pilot screening: one local AI model and the reviewer screen the same random sample independently; the AI judges each criterion and may exclude only with an exact quotation; disagreements and the reviewer's notes become worked examples for the next round. Agreement is measured on forward (Yes or Maybe) versus exclude. The recommended standard (no false exclusions; Cohen's κ ≥ 0.6 or agreement ≥ 75%) follows common agreement conventions and the JBI pilot rule; it is a guide for the reviewer's approval, not a validated stopping rule or a guarantee of recall.</p>
+<p class="hint">Complete at least one pilot round and approve it before formal screening. Additional rounds are optional. One unmet criterion supported by original text is sufficient for exclusion; missing information alone is not. When readings directly disagree on every supported exclusion criterion, the reviewer resolves the conflict. Clear exclusions are not audited by default; the user can opt into an exclusion sample or a full audit.</p>
+<p class="hint">Human check defaults to conflicting and uncertain records. Agreement statistics in the pilot inform the reviewer's approval; they do not mandate additional rounds or guarantee recall. Explicit title evidence can support exclusion without an abstract. Reasons are retained in all result export formats.</p>
 <ul>
 <li><a href="https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-04" target="_blank" rel="noopener noreferrer">Cochrane Handbook v6.5.1, Chapter 4 §4.6.4</a> — pilot the eligibility criteria on a sample of reports before screening.</li>
 <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12603384/" target="_blank" rel="noopener noreferrer">Flemyng et al. (2025), Cochrane, Campbell, JBI and CEE position statement on AI in evidence synthesis</a> — pilot or calibrate an AI tool within the review, keep human oversight and report its use.</li>
@@ -674,12 +674,12 @@ function isLoopback(url){try{return LOOPBACK_HOSTS.includes(new URL(url,location
 function localFetch(url,options){return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
 let pilotModel=null,pilotView=-1,pilotFilter='all';
 // Abstracts open by the reviewer, kept across re-renders while voting.
-const openAbstracts=new Set();let allAbstractsOpen=false;
-function abstractBlock(id,abstract,quotes){
+const openAbstracts=new Set(),openCheckAbstracts=new Set();let allAbstractsOpen=false,allCheckAbstractsOpen=false;
+function abstractBlock(id,abstract,quotes,check=false){
   if(!abstract)return '<p class="abstract"><span class="hint">No abstract available. Choose Maybe if eligibility is uncertain.</span></p>';
-  const open=allAbstractsOpen||openAbstracts.has(id),long=abstract.length>160;
-  return '<div class="abs-wrap'+(open||!long?' open':'')+'"><p class="abstract" id="abs-'+esc(id)+'">'+excerpt(abstract,quotes)+'</p>'+
-    (long?'<button type="button" class="abs-toggle" data-abs="'+esc(id)+'" aria-expanded="'+open+'" aria-controls="abs-'+esc(id)+'">'+(open?'Hide full abstract':'Show full abstract')+'</button>':'')+'</div>';
+  const open=check?(allCheckAbstractsOpen||openCheckAbstracts.has(id)):(allAbstractsOpen||openAbstracts.has(id)),long=check||abstract.length>160,domId=(check?'check-abs-':'abs-')+id;
+  return '<div class="abs-wrap'+(open||!long?' open':'')+'"><p class="abstract" id="'+esc(domId)+'">'+excerpt(abstract,quotes)+'</p>'+
+    (long?'<button type="button" class="abs-toggle" data-abs="'+esc(id)+'" aria-expanded="'+open+'" aria-controls="'+esc(domId)+'">'+(open?'Hide full abstract':'Show full abstract')+'</button>':'')+'</div>';
 }
 function newPilot(size=20){return {version:3,size,rounds:[],ai:{},human:{},approved:null}}
 function validPilot(p){
@@ -709,7 +709,7 @@ function pilotMetrics(ids){
 }
 const pct=v=>v===null?'—':Math.round(v*100)+'%';
 function pilotCriteriaSig(){return fingerprint({criteriaSig:source.criteriaSig,prompt:PILOT_PROMPT})}
-function pilotApprovalValid(){const a=workspace?.pilot?.approved;return !!a&&(a.provider||'local')===screeningProvider()&&a.criteriaSig===pilotCriteriaSig()&&!stale()}
+function pilotApprovalValid(){const a=workspace?.pilot?.approved,st=a?pilotRoundState(a.round):null;return !!a&&a.round===workspace.pilot.rounds.length-1&&!!st?.revealed&&st.aiDone&&st.votesDone&&(a.provider||'local')===screeningProvider()&&a.criteriaSig===pilotCriteriaSig()&&!stale()}
 function pilotHasProgress(){return !!workspace?.pilot?.rounds?.length}
 
 // TypeSafe credentials live only in this page closure, never in workspace/storage.
@@ -839,7 +839,7 @@ function pilotPrompt(record,round,variant=1){
 const squash=v=>String(v||'').toLowerCase().replace(/\s+/g,' ').trim();
 // The decision follows from the per-criterion judgments, not from the model's
 // overall answer: an exclusion needs a named criterion and a quotation that is
-// really in the record, and a record without an abstract is never excluded.
+// really in the record. Explicit title evidence suffices when the abstract is missing.
 function pilotDecision(value,record){
   const rows=source.criteria.rows,corpus=squash(record.title+' '+record.abstract),titles=new Map(rows.map(r=>[squash(r.title),r.title]));
   // Small local models sometimes rename keys (result, status) or vary the
@@ -852,9 +852,9 @@ function pilotDecision(value,record){
     return {dimension:titles.get(squash(dim))||text(dim,200),known:titles.has(squash(dim)),judgment:verdict(pick(c,['judgment','judgement','result','status','assessment','met'])),quote:found?quote:'',quoteMissing:!!quote&&!found,reason:text(pick(c,['reason','explanation','rationale']),600),...(c.probabilities?{probabilities:c.probabilities,confidence:c.confidence}:{})};
   });
   const notMet=judged.filter(c=>c.judgment==='not met'&&c.known&&c.quote),allMet=rows.every(r=>judged.some(c=>c.dimension===r.title&&c.judgment==='met'));
-  let decision=notMet.length&&record.abstract?'no':allMet?'yes':'maybe',note='';
+  let decision=notMet.length?'no':allMet?'yes':'maybe',note='';
   const said={include:'yes',maybe:'maybe',exclude:'no'}[squash(value?.decision)]||'';
-  if(said==='no'&&decision!=='no')note=!record.abstract?'Kept as Maybe: there is no abstract to support an exclusion.':'Kept as Maybe: no criterion was shown to be not met with an exact quotation.';
+  if(said==='no'&&decision!=='no')note='Kept as Maybe: no criterion was shown to be not met with an exact quotation.';
   else if(said==='yes'&&decision==='maybe')note='Maybe rather than Yes: not every criterion was judged met.';
   return {decision,modelDecision:said,criteria:judged,reason:text(value?.reason,1000),note};
 }
@@ -882,6 +882,7 @@ async function startPilotRound(){
   if(last<0||pilotRoundState(last).revealed){
     const seed=fingerprint([scope,source.sourceSig,p.rounds.length,now()]),ids=pilotSample(p.size,seed);
     if(!ids.length){showNotice('pilot-message','Every record has been used in a pilot round.','warning');return}
+    p.approved=null;
     p.rounds.push({ids,seed,size:p.size,startedAt:now(),criteriaSig:source.criteriaSig,prompt:PILOT_PROMPT,revealedAt:''});
     i=p.rounds.length-1;pilotView=i;pilotFilter='all';
     log('pilot-round-started',{round:i+1,records:ids.length,seed,criteriaSig:source.criteriaSig});
@@ -912,14 +913,15 @@ async function revealIfReady(i){
   st.round.revealedAt=now();const m=pilotMetrics(st.ids);st.round.metrics={...m,recallCI:m.recallCI};
   log('pilot-round-compared',{round:i+1,records:m.n,agreement:m.agreement,kappa:m.kappa,falseExclusions:m.fn,falseInclusions:m.fp,recall:m.recall});
   await save();
-  showNotice('pilot-message','Round '+(i+1)+' compared. '+(m.fn?m.fn+' record'+(m.fn===1?'':'s')+' you would keep the AI excluded; ':'')+'Records where you disagree are listed first. Add a note to tell the AI why; notes are used in the next round.',m.recommended?'success':'warning');
+  showNotice('pilot-message','Round '+(i+1)+' compared. '+(m.fn?m.fn+' record'+(m.fn===1?'':'s')+' you would keep the AI excluded; ':'')+'Approve this pilot when satisfied, or run another optional round. Notes on disagreements are used in the next round.',m.recommended?'success':'warning');
 }
 function castPilotVote(id,decision){
   const i=pilotView,st=pilotRoundState(i);
   if(!st||!st.ids.includes(id)||!['yes','maybe','no'].includes(decision)||stale())return;
   if(i!==workspace.pilot.rounds.length-1){toast('Only the latest round can be changed.');return}
-  const prev=workspace.pilot.human[id];
-  workspace.pilot.human[id]={decision,blind:st.revealed?prev?.blind||prev?.decision||decision:decision,note:prev?.note||'',at:now(),...(st.revealed&&prev&&prev.decision!==decision?{revisedAt:now()}:prev?.revisedAt?{revisedAt:prev.revisedAt}:{})};
+  const prev=workspace.pilot.human[id],exclusionReason=reviewerExclusionReason(id,'pilot',prev);
+  if(decision==='no'&&!exclusionReason){toast('Enter an exclusion reason before choosing No.');return;}
+  workspace.pilot.human[id]={decision,exclusionReason,blind:st.revealed?prev?.blind||prev?.decision||decision:decision,note:prev?.note||'',at:now(),...(st.revealed&&prev&&prev.decision!==decision?{revisedAt:now()}:prev?.revisedAt?{revisedAt:prev.revisedAt}:{})};
   if(st.revealed){st.round.metrics=pilotMetrics(st.ids);if(workspace.pilot.approved?.round===i)workspace.pilot.approved=null}
   log('pilot-vote',{round:i+1,recordId:id,decision,previous:prev?.decision||'',afterReveal:st.revealed});
   save().then(()=>revealIfReady(i)).then(render).catch(()=>{});
@@ -929,7 +931,7 @@ async function approvePilotRound(){
   const p=workspace.pilot;
   if(p.approved){if(!confirm('Withdraw the pilot approval? Formal screening will be locked again.'))return;log('pilot-approval-withdrawn',{round:p.approved.round+1});p.approved=null;await save();render();return}
   const i=p.rounds.length-1,st=pilotRoundState(i);
-  if(busy||stale()||!st?.revealed)return;
+  if(busy||stale()||!st?.revealed||!st.aiDone||!st.votesDone)return;
   const m=pilotMetrics(st.ids);
   if(!m.recommended&&!confirm('Round '+(i+1)+' does not meet the recommended standard'+(m.fn?' ('+m.fn+' false exclusion'+(m.fn===1?'':'s')+')':'')+'. Approve anyway and use these settings for formal screening?'))return;
   p.approved={round:i,at:now(),provider:screeningProvider(),criteriaSig:pilotCriteriaSig(),model:st.ids.map(id=>p.ai[id]?.model).find(Boolean)||'',prompt:PILOT_PROMPT,metrics:m,recommendedMet:m.recommended};
@@ -937,6 +939,44 @@ async function approvePilotRound(){
   await save();
   showNotice('pilot-message','Pilot approved. Formal screening is unlocked.','success');render();
 }
+// Reviewer-entered reasons take precedence; never attribute an AI reason to a reviewer.
+const exclusionDrafts=new Map();
+function exclusionReasonField(id,stage,vote){
+  const key=stage+'|'+id,value=exclusionDrafts.has(key)?exclusionDrafts.get(key):vote?.exclusionReason||'';
+  return '<label class="pilot-note">Exclusion reason (required for No)<input class="input" data-exclusion-stage="'+stage+'" data-exclusion-id="'+esc(id)+'" value="'+esc(value)+'" placeholder="Which criterion is not met, and why?" maxlength="2000"></label>';
+}
+function reviewerExclusionReason(id,stage,vote){
+  return text(exclusionDrafts.get(stage+'|'+id)??vote?.exclusionReason??'',2000).trim();
+}
+function captureExclusionReason(event){
+  const input=event.target;if(!input.matches('[data-exclusion-id]'))return;
+  const {exclusionId:id,exclusionStage:stage}=input.dataset;
+  exclusionDrafts.set(stage+'|'+id,input.value);
+  const vote=stage==='pilot'?workspace.pilot.human[id]:workspace.full.human[id];
+  if(vote&&input.value.trim()){
+    vote.exclusionReason=text(input.value,2000).trim();
+    save().catch(()=>{});
+  }
+}
+function exclusionDetails(id){
+  if(finalDecision(id)!=='no')return {reason:'',criteria:[],evidence:[],source:''};
+  const human=workspace.full.human[id]||pilotVoteOf(id);
+  if(human){
+    const reason=text(human.exclusionReason||human.note||'',2000).trim();
+    return {reason:reason||'Reviewer excluded this record; exclusion reason was not recorded.',criteria:[],evidence:[],source:'reviewer',missing:!reason};
+  }
+  const readings=[fullAI(id),fullAI2(id)];
+  const matches=[...unmetCriteria(id,readings[0]),...unmetCriteria(id,readings[1])].filter(c=>!readings.some(a=>(a?.criteria||[]).some(x=>squash(x.dimension)===squash(c.dimension)&&x.judgment==='met')));
+  const seen=new Set(),details=[];
+  for(const c of matches){
+    const key=squash(c.dimension)+'|'+squash(c.quote);if(seen.has(key))continue;seen.add(key);
+    const row=source.criteria.rows.find(r=>squash(r.title)===squash(c.dimension));
+    details.push({criterion:c.dimension,inclusionRule:[row?.condition,row?.definition].filter(Boolean).join(' '),exclusionRule:row?.uncertain||'',quote:c.quote});
+  }
+  return {reason:details.map(d=>d.criterion+' not met'+(d.inclusionRule?' (required: '+d.inclusionRule+')':'')+(d.exclusionRule?' (exclude when: '+d.exclusionRule+')':'')+'. Evidence: "'+d.quote+'"').join(' | ')||'Exclusion evidence was not recorded.',
+    criteria:[...new Set(details.map(d=>d.criterion))],evidence:details,source:'AI',missing:!details.length};
+}
+
 function pilotCard(rec,st,index){
   const id=rec.uid,a=workspace.pilot.ai[id],h=workspace.pilot.human[id],show=st.revealed&&a;
   const quotes=show?a.criteria.map(c=>c.quote).filter(Boolean):[],differ=show&&h&&a.decision!==h.decision,falseEx=show&&h&&a.decision==='no'&&forward(h.decision);
@@ -948,7 +988,7 @@ function pilotCard(rec,st,index){
     (h&&latest?'<label class="pilot-note">Note for the AI<input class="input" data-pnote="'+esc(id)+'" value="'+esc(h.note||'')+'" placeholder="'+(differ?'Why is your decision right? Used as an example in the next round':'Optional')+'"></label>':h?.note?'<p class="hint">Note: '+esc(h.note)+'</p>':'')+'</div>':'';
   return '<article class="record'+(differ?' differ':'')+'"><div class="record-head"><div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div>'+
     (h?colored(h.decision)+(h.revisedAt?'<span class="badge">Changed after comparison</span>':''):'<span class="badge">Your vote pending</span>')+'</div>'+
-    abstractBlock(id,rec.abstract,quotes)+buttons+ai+'</article>';
+    abstractBlock(id,rec.abstract,quotes)+buttons+exclusionReasonField(id,'pilot',h)+ai+'</article>';
 }
 function renderPilot(){
   if(!workspace?.pilot)return;
@@ -959,7 +999,7 @@ function renderPilot(){
   $('rounds').hidden=!p.rounds.length;
   $('sample-size').value=p.size;
   const resume=lastSt&&!lastSt.aiDone;
-  $('run-pilot').textContent=resume?'Resume round '+(last+1):'Start round '+(last+2);
+  $('run-pilot').textContent=resume?'Resume round '+(last+1):last<0?'Start round 1':'Run another round (optional)';
   $('run-pilot').disabled=!ready||!!busy||(!!lastSt&&!lastSt.revealed&&lastSt.aiDone);
   $('run-pilot').title=lastSt&&!lastSt.revealed&&lastSt.aiDone?'Vote on every record in round '+(last+1)+' first.':'';
   $('stop-pilot').hidden=busy!=='pilot';
@@ -982,8 +1022,8 @@ function renderPilot(){
   $('pilot-abs-tools').hidden=!ids.length;$('pilot-abs-all').textContent=allAbstractsOpen?'Collapse all abstracts':'Expand all abstracts';$('pilot-abs-all').setAttribute('aria-pressed',String(allAbstractsOpen));
   $('pilot-list').innerHTML=st?(ids.length?ids.map(id=>pilotCard(recordById.get(id),st,pilotView)).join(''):'<p class="hint">You and the AI agree on every record in this round.</p>'):'';
   trimAbstractToggles($('pilot-list'));
-  const gate=$('approve-pilot'),approved=pilotApprovalValid(),canApprove=!!lastSt?.revealed&&ready&&!busy;
-  gate.disabled=!(approved||canApprove);gate.classList.toggle('activated',approved);gate.setAttribute('aria-pressed',String(approved));
+  const gate=$('approve-pilot'),approved=pilotApprovalValid(),canApprove=!!lastSt?.revealed&&lastSt.aiDone&&lastSt.votesDone&&ready&&!busy;
+  gate.textContent=approved?'Pilot approved':'Approve pilot';gate.disabled=!(approved||canApprove);gate.classList.toggle('activated',approved);gate.setAttribute('aria-pressed',String(approved));
   gate.title=approved?'Approved (round '+(p.approved.round+1)+'). Click to withdraw.':canApprove?'Approve the latest round to unlock formal screening.':'Available when a round has been compared.';
   // Status lines set here are replaced or cleared here; messages from a run stay.
   const msg=$('pilot-message'),status=p.approved&&!approved?'The eligibility criteria changed after approval. Run a new round and approve again.':
@@ -993,48 +1033,43 @@ function renderPilot(){
 }
 // Formal screening is unlocked by the reviewer's pilot approval.
 /* ---------------- All records screening ----------------
-   The AI model approved in Pilot screening screens every record twice, as
-   two independent readings: pass 1 uses the approved prompt; pass 2 the same
-   criteria, examples and decision rule with the record first and the
-   criteria in reverse order, so it is a second reading and not a repeat of
-   the first answer (at temperature 0 an identical prompt returns the same
-   answer). When one pass excludes a record and the other keeps it, the
-   record is a conflict and the reviewer decides, as with two human
-   screeners (Cochrane Handbook v6.5.1 §4.6.4); Yes against Maybe is not a
-   conflict, both go forward. Records the reviewer voted on in the pilot keep
-   that vote. Machine-only exclusion is not yet recommended (Handbook
-   §4.6.6) and the 2025 Cochrane/Campbell/JBI/CEE position statement asks for
-   human oversight, so Human check also reviews exclusions both passes agree
-   on: by default a random 300 (all when fewer), drawn when the AI has
-   finished and checked blind to the AI; or all of them, as Cochrane
-   rapid-review guidance prefers (Garritty et al., BMJ 2024; Gartlehner et
-   al., Cochrane Evid Synth Methods 2025). The page gives the share of
-   checked exclusions that were wrong with an exact binomial 95% upper bound
-   (0 wrong in n: 1 - 0.05^(1/n), below 1% at n = 300). That bounds the
-   error rate of exclusions; it cannot prove no relevant study was missed. */
-const CHECK_SCOPES={sample:'Random sample of AI exclusions',exclusions:'All AI exclusions',uncertain:'All AI exclusions and Maybe records'};
+   One supported unmet criterion is sufficient. Another reading that is merely
+   unclear does not overturn explicit evidence. A direct met/not-met disagreement
+   on the same criterion remains a human conflict. Audit of clear exclusions is
+   optional; the default queue covers conflicts and uncertain records. */
+const CHECK_SCOPES={unresolved:'Conflicts and uncertain records',sample:'Random sample of AI exclusions',exclusions:'All AI exclusions',uncertain:'All AI exclusions and Maybe records'};
 const AUDIT_SIZE=300;
 const fullNow=new Map(),fullDone=[];let fullFilter='auto',fullShown=20;
-function newFull(){return {version:3,ai:{},ai2:{},human:{},check:'sample',startedAt:'',completedAt:'',times:[]}}
+function newFull(){return {version:3,ai:{},ai2:{},human:{},check:'unresolved',checkPolicy:2,startedAt:'',completedAt:'',times:[]}}
 function validFull(f){
   if(!f||f.version!==3)return newFull();
   const obj=v=>v&&typeof v==='object'?v:{};
-  return {version:3,ai:obj(f.ai),ai2:obj(f.ai2),human:obj(f.human),check:CHECK_SCOPES[f.check]?f.check:'sample',startedAt:text(f.startedAt,40),completedAt:text(f.completedAt,40),times:Array.isArray(f.times)?f.times.slice(-20):[]};
+  return {version:3,ai:obj(f.ai),ai2:obj(f.ai2),human:obj(f.human),check:!f.checkPolicy&&f.check==='sample'?'unresolved':CHECK_SCOPES[f.check]?f.check:'unresolved',checkPolicy:2,startedAt:text(f.startedAt,40),completedAt:text(f.completedAt,40),times:Array.isArray(f.times)?f.times.slice(-20):[]};
 }
 const pilotVoteOf=id=>workspace.pilot?.human?.[id]||null;
 function fullAI(id){const a=workspace.full.ai[id];return a&&a.criteriaSig===source.criteriaSig?a:null}
 function fullAI2(id){const a=workspace.full.ai2[id];return a&&a.criteriaSig===source.criteriaSig?a:null}
-// The two passes together: '' until both have answered, 'conflict' when one
-// excludes and the other keeps, otherwise Yes only if both say Yes.
+// Validate exclusion evidence against the actual record, including saved readings.
+function unmetCriteria(id,result){
+  const rec=recordById.get(id);if(!rec)return [];
+  const corpus=squash(rec.title+' '+(rec.abstract||''));
+  const names=new Set(source.criteria.rows.map(r=>squash(r.title)));
+  return (result?.criteria||[]).filter(c=>c.judgment==='not met'&&names.has(squash(c.dimension))&&c.quote&&corpus.includes(squash(c.quote)));
+}
 function aiPair(id){
   const a=fullAI(id),b=fullAI2(id);if(!a||!b)return '';
-  if(forward(a.decision)!==forward(b.decision))return 'conflict';
-  return a.decision==='no'?'no':a.decision==='yes'&&b.decision==='yes'?'yes':'maybe';
+  const unmet=[...unmetCriteria(id,a),...unmetCriteria(id,b)];
+  if(unmet.length){
+    // A clear exclusion survives a missing/unclear assessment, but not a direct contradiction.
+    const supported=unmet.some(c=>![...(a.criteria||[]),...(b.criteria||[])].some(other=>squash(other.dimension)===squash(c.dimension)&&other.judgment==='met'));
+    return supported?'no':'conflict';
+  }
+  return a.decision==='yes'&&b.decision==='yes'?'yes':'maybe';
 }
 const isConflict=id=>!pilotVoteOf(id)&&aiPair(id)==='conflict';
 // The reviewer's decision wins: Human check, then the pilot vote, then the AI.
 function finalDecision(id){const h=workspace.full.human[id]?.decision||pilotVoteOf(id)?.decision;if(h)return h;const p=aiPair(id);return p==='conflict'?'':p}
-function decisionSource(id){return workspace.full.human[id]?(isConflict(id)?'Conflict resolved by reviewer':'Human check'):pilotVoteOf(id)?'Pilot reviewer vote':aiPair(id)==='conflict'?'Conflict, not resolved':aiPair(id)?'AI, both passes agree':''}
+function decisionSource(id){return workspace.full.human[id]?(isConflict(id)?'Conflict resolved by reviewer':'Human check'):pilotVoteOf(id)?'Pilot reviewer vote':aiPair(id)==='conflict'?'Conflict, not resolved':aiPair(id)==='no'?'AI: at least one criterion not met with source evidence':aiPair(id)?'AI, both passes agree':''}
 const unit=key=>parseInt(fingerprint(key),16)/4294967296;
 const aiRecords=()=>source.records.filter(r=>!pilotVoteOf(r.uid));
 function aiFinished(){return aiRecords().every(r=>fullAI(r.uid)&&fullAI2(r.uid))}
@@ -1044,7 +1079,8 @@ function conflictIds(){return aiRecords().map(r=>r.uid).filter(isConflict)}
 // seed), drawn only once the AI has finished both passes.
 function checkIds(){
   const scope=workspace.full.check,no=[],maybe=[];
-  for(const r of aiRecords()){const p=aiPair(r.uid);if(p==='no')no.push(r.uid);else if(p==='maybe'&&scope==='uncertain')maybe.push(r.uid)}
+  for(const r of aiRecords()){const p=aiPair(r.uid);if(p==='no')no.push(r.uid);else if(p==='maybe'&&['uncertain','unresolved'].includes(scope))maybe.push(r.uid)}
+  if(scope==='unresolved')return maybe;
   if(scope==='sample'){
     if(!aiFinished())return [];
     return no.map(id=>[unit('audit|'+source.criteriaSig+'|'+id),id]).sort((a,b)=>a[0]-b[0]).slice(0,AUDIT_SIZE).map(([,id])=>id);
@@ -1119,8 +1155,9 @@ async function runFull(){
 }
 function castFullVote(id,decision){
   if(!recordById.has(id)||!['yes','maybe','no'].includes(decision)||stale())return;
-  const prev=workspace.full.human[id];
-  workspace.full.human[id]={decision,note:prev?.note||'',at:now()};
+  const prev=workspace.full.human[id],exclusionReason=reviewerExclusionReason(id,'full',prev);
+  if(decision==='no'&&!exclusionReason){toast('Enter an exclusion reason before choosing No.');return;}
+  workspace.full.human[id]={decision,exclusionReason,note:prev?.note||'',at:now()};
   log(isConflict(id)?'conflict-resolved':'human-check',{recordId:id,decision,previous:prev?.decision||'',pass1:fullAI(id)?.decision||'',pass2:fullAI2(id)?.decision||''});
   maybeComplete();save().then(render).catch(()=>{});
 }
@@ -1137,9 +1174,9 @@ function fullCard(id){
   const pass=(x,n)=>'<div class="audit"><div class="toolbar"><strong>AI pass '+n+'</strong>'+colored(x.decision)+'<span class="hint">'+esc(x.model)+'</span></div>'+aiDetails(x)+'</div>';
   return '<article class="record'+(wrong||conflict&&!h?' differ':'')+'"><div class="record-head"><div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div>'+
     '<div class="badges">'+(conflict?'<span class="badge differ">Conflict</span>':'')+(h?colored(h.decision)+(wrong?'<span class="badge differ">AI exclusion overturned</span>':''):'<span class="badge">'+(conflict?'To decide':'To check')+'</span>')+'</div></div>'+
-    '<p class="abstract">'+(rec.abstract?excerpt(rec.abstract,quotes):'<span class="hint">No abstract available.</span>')+'</p>'+
+    abstractBlock(id,rec.abstract,quotes,true)+
     '<div class="decision-buttons" role="group" aria-label="Your decision">'+['yes','maybe','no'].map(d=>'<button type="button" class="vote '+d+(h?.decision===d?' selected':'')+'" data-fvote="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'">'+label(d)+'</button>').join('')+'</div>'+
-    (show?pass(a,1)+pass(b,2):'<p class="hint">Decide without the AI\'s judgment; it is shown after your vote.</p>')+'</article>';
+    exclusionReasonField(id,'full',h)+(show?pass(a,1)+pass(b,2):'<p class="hint">Decide without the AI\'s judgment; it is shown after your vote.</p>')+'</article>';
 }
 function fmtDuration(ms){const m=Math.round(ms/60000);return m<1?'under a minute':m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'}
 function renderFull(){
@@ -1151,10 +1188,10 @@ function renderFull(){
   $('full-conflicts').parentElement.classList.toggle('alert',s.conflicts>s.conflictsResolved);
   $('full-check').textContent=s.humanChecked.toLocaleString()+' / '+s.humanCheck.toLocaleString();
   $('team-bar').style.width=share+'%';$('team-track').setAttribute('aria-valuenow',String(share));
-  const times=workspace.full.times||[],avg=fullDone.length>=4?(fullDone.at(-1)-fullDone[0])/(fullDone.length-1):times.length?times.reduce((a,b)=>a+b,0)/times.length/AI_WORKERS:0;
+  const times=workspace.full.times||[],avg=fullDone.length>=4?(fullDone.at(-1)-fullDone[0])/(fullDone.length-1):times.length?times.reduce((a,b)=>a+b,0)/times.length/(screeningProvider()==='typesafe'?1:AI_WORKERS):0;
   $('full-progress').textContent=share+'% · '+s.done.toLocaleString()+' of '+s.sourceCount.toLocaleString()+' records decided · AI passes '+s.aiScreened.toLocaleString()+' / '+aiRecords().length.toLocaleString()+' records'+(calls&&avg?' · '+(avg*calls<60000?'under a minute':'about '+fmtDuration(avg*calls))+' of AI screening left':'')+(s.humanReviewed?' · '+s.humanReviewed.toLocaleString()+' decided by you':'');
-  // Why both passes excluded: the first criterion pass 1 found not met.
-  const why=new Map();for(const r of aiRecords()){if(aiPair(r.uid)!=='no'||workspace.full.human[r.uid])continue;const c=fullAI(r.uid).criteria.find(x=>x.judgment==='not met'&&x.quote)?.dimension||'Other';why.set(c,(why.get(c)||0)+1)}
+  // Summarize exclusions by the first supported unmet criterion from either pass.
+  const why=new Map();for(const r of aiRecords()){if(aiPair(r.uid)!=='no'||workspace.full.human[r.uid])continue;const c=[...unmetCriteria(r.uid,fullAI(r.uid)),...unmetCriteria(r.uid,fullAI2(r.uid))][0]?.dimension||'Other';why.set(c,(why.get(c)||0)+1)}
   if(why.size)$('full-progress').textContent+=' · AI No by criterion: '+[...why].sort((a,b)=>b[1]-a[1]).map(([c,n])=>c+' '+n).join(', ');
   const inFlight=[...fullNow.values()];
   $('full-now').hidden=!inFlight.length;$('full-now').innerHTML=inFlight.map(t=>'<span class="now-item"><span class="pulse" aria-hidden="true"></span>'+esc(t)+'</span>').join('');
@@ -1173,7 +1210,7 @@ function renderFull(){
   const conflicts=conflictIds().sort((x,y)=>!!workspace.full.human[x]-!!workspace.full.human[y]),queue=checkIds(),todo=queue.filter(id=>!workspace.full.human[id]),done=queue.filter(id=>workspace.full.human[id]),open=conflicts.filter(id=>!workspace.full.human[id]).length;
   const au=auditStats();
   $('check-summary').innerHTML=[conflicts.length?'<span class="'+(open?'warn':'ok')+'">'+open+' conflict'+(open===1?'':'s')+' to resolve</span> of '+conflicts.length:'',
-    !queue.length?(workspace.full.check==='sample'&&!aiFinished()?'The random sample of agreed exclusions is drawn when both AI passes have finished.':Object.keys(workspace.full.ai).length?'No agreed records to check in this scope.':'Records appear here as the AI screens them.'):
+    !queue.length?(workspace.full.check==='sample'&&!aiFinished()?'The random sample of agreed exclusions is drawn when both AI passes have finished.':Object.keys(workspace.full.ai).length?'No records to check in this scope.':'Records appear here as the AI screens them.'):
     todo.length+' to check · '+done.length+' checked'+(au.n?' · <span class="'+(au.wrong?'warn':'ok')+'">'+au.wrong+' of '+au.n+' checked AI exclusions were wrong</span> (95% upper bound '+(au.upper<0.1?(au.upper*100).toFixed(1)+'%':pct(au.upper))+(au.exclusions?'; up to about '+Math.ceil(au.upper*au.exclusions)+' of the '+au.exclusions+' unchecked exclusions':'')+')':'')].filter(Boolean).join(' · ');
   $('check-escalate').hidden=!(au.wrong&&workspace.full.check==='sample');
   // Open conflicts come first until the reviewer picks a list.
@@ -1183,6 +1220,7 @@ function renderFull(){
   const list=view==='conflicts'?conflicts:view==='done'?done:todo;
   $('check-list').innerHTML=list.slice(0,fullShown).map(fullCard).join('')+(list.length>fullShown?'<button class="btn small" type="button" id="check-more">Show '+Math.min(20,list.length-fullShown)+' more</button>':'')+
     ((conflicts.length||queue.length)&&!list.length?'<p class="hint">'+(view==='conflicts'?'No conflicts between the two passes.':view==='done'?'No records checked yet.':'Every record in this scope has been checked.')+'</p>':'');
+  $('check-abs-tools').hidden=!list.length;$('check-abs-all').textContent=allCheckAbstractsOpen?'Collapse all abstracts':'Expand all abstracts';$('check-abs-all').setAttribute('aria-pressed',String(allCheckAbstractsOpen));
   updateExportCount();
   // The end-of-run message follows conflicts and Human check as they progress.
   const endMsg=$('full-message').textContent;
@@ -1203,11 +1241,11 @@ function download(name,mime,body){
 function stamp(){return new Date().toISOString().slice(0,10)}
 function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
 function downloadCSV(records,option){
-  const headers=['Record ID','Title','Authors','Abstract','Journal','Year','DOI','PMID','URL','Databases','Final decision','Decision source','Conflict','AI pass 1 decision','AI pass 1 criterion judgments','AI pass 1 reason','AI pass 2 decision','AI pass 2 criterion judgments','AI pass 2 reason','AI model','Human decision','Pilot reviewer vote','Criteria fingerprint','Pass 1 prompt fingerprint','Pass 2 prompt fingerprint','Decided at'];
+  const headers=['Record ID','Title','Authors','Abstract','Journal','Year','DOI','PMID','URL','Databases','Final decision','Exclusion reason','Exclusion criteria','Exclusion evidence','Decision source','Conflict','AI pass 1 decision','AI pass 1 criterion judgments','AI pass 1 reason','AI pass 2 decision','AI pass 2 criterion judgments','AI pass 2 reason','AI model','Human decision','Pilot reviewer vote','Criteria fingerprint','Pass 1 prompt fingerprint','Pass 2 prompt fingerprint','Decided at'];
   const rows=records.map(r=>{
     const a=fullAI(r.uid)||workspace.pilot.ai[r.uid],b=fullAI2(r.uid),h=workspace.full.human[r.uid],pv=pilotVoteOf(r.uid);
     const judged=x=>(x?.criteria||[]).map(c=>c.dimension+': '+c.judgment+(c.quote?' ("'+c.quote+'")':'')).join(' | ');
-    return [r.uid,r.title,r.authors.join('; '),r.abstract,r.journal,r.year,r.doi,r.pmid,r.url,sourceDatabases(r).join('; '),label(finalDecision(r.uid)),decisionSource(r.uid),isConflict(r.uid)?'Yes':'No',
+    return [r.uid,r.title,r.authors.join('; '),r.abstract,r.journal,r.year,r.doi,r.pmid,r.url,sourceDatabases(r).join('; '),label(finalDecision(r.uid)),exclusionDetails(r.uid).reason,exclusionDetails(r.uid).criteria.join('; '),exclusionDetails(r.uid).evidence.map(e=>e.quote).join(' | '),decisionSource(r.uid),isConflict(r.uid)?'Yes':'No',
       a?.decision||'',judged(a),a?.reason||'',b?.decision||'',judged(b),b?.reason||'',a?.model||b?.model||'',h?.decision||'',pv?.decision||'',a?.criteriaSig||'',a?.promptHash||'',b?.promptHash||'',h?.at||pv?.at||b?.at||a?.at||''].map(csvCell).join(',');
   });
   download('title-abstract-'+option+'-'+stamp()+'.csv','text/csv;charset=utf-8','﻿'+[headers.map(csvCell).join(','),...rows].join('\r\n'));
@@ -1217,7 +1255,8 @@ function downloadRIS(records,option,format){
     const fields=[['TY','JOUR'],['TI',r.title],...r.authors.map(a=>['AU',a]),['AB',r.abstract],
       ['PY',r.year],['JO',r.journal],['DO',r.doi],['ID',r.pmid||r.uid],['UR',r.url],
       ...(format==='revman'?[['NS',r.uid]]:[]),
-      ['N1','Title/abstract: '+label(finalDecision(r.uid))+' ('+decisionSource(r.uid)+')']];
+      ['N1','Title/abstract: '+label(finalDecision(r.uid))+' ('+decisionSource(r.uid)+')'],
+      ...(finalDecision(r.uid)==='no'?[['N1','Exclusion reason: '+exclusionDetails(r.uid).reason]]:[])];
     return fields.filter(([,v])=>v).map(([tag,v])=>tag+'  - '+risSafe(v)).join('\r\n')+'\r\nER  - ';
   }).join('\r\n\r\n')+'\r\n';
   download('title-abstract-'+option+'-'+format+'-'+stamp()+'.ris','application/x-research-info-systems;charset=utf-8',out);
@@ -1238,8 +1277,8 @@ function exportResults(){
   const option=$('export-option').value==='exclude'?'exclude':'include',format=$('export-format').value,records=selectedExportRecords();
   if(!records.length){toast('No records with this decision yet.');return}
   if(format==='csv')downloadCSV(records,option);
-  else if(format==='bib')download('title-abstract-'+option+'-'+stamp()+'.bib','application/x-bibtex;charset=utf-8',sourceBibTeX(records));
-  else if(format==='json')download('title-abstract-'+option+'-'+stamp()+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-title-abstract-results/v1',project:projectId,option,exportedAt:now(),model:workspace.pilot?.approved?.model||'',records:records.map(r=>({...r,databases:sourceDatabases(r),finalDecision:finalDecision(r.uid),decisionSource:decisionSource(r.uid),conflict:isConflict(r.uid),aiPass1:fullAI(r.uid)||null,aiPass2:fullAI2(r.uid)||null,human:workspace.full.human[r.uid]||null,pilotVote:pilotVoteOf(r.uid)}))},null,2));
+  else if(format==='bib')download('title-abstract-'+option+'-'+stamp()+'.bib','application/x-bibtex;charset=utf-8',sourceBibTeX(records,true));
+  else if(format==='json')download('title-abstract-'+option+'-'+stamp()+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-title-abstract-results/v1',project:projectId,option,exportedAt:now(),model:workspace.pilot?.approved?.model||'',records:records.map(r=>({...r,databases:sourceDatabases(r),finalDecision:finalDecision(r.uid),exclusionReason:exclusionDetails(r.uid).reason,exclusionDetails:exclusionDetails(r.uid),decisionSource:decisionSource(r.uid),conflict:isConflict(r.uid),aiPass1:fullAI(r.uid)||null,aiPass2:fullAI2(r.uid)||null,human:workspace.full.human[r.uid]||null,pilotVote:pilotVoteOf(r.uid)}))},null,2));
   else downloadRIS(records,option,format==='revman'?'revman':'ris');
   log('results-exported',{option,format,records:records.length});save().catch(()=>{});
   toast(records.length.toLocaleString()+' '+option+' records exported.');
@@ -1678,13 +1717,13 @@ function sourceCSV(records){
   const head=['Record ID','Title','Authors','Year','Journal','Volume','Issue','Pages','DOI','PMID','URL','Abstract','Databases'];
   return '\uFEFF'+[head,...records.map(r=>[r.uid,r.title,r.authors.join('; '),r.year,r.journal,r.volume,r.issue,r.pages,r.doi,r.pmid,r.url,r.abstract,sourceDatabases(r).join('; ')])].map(row=>row.map(csvCell).join(',')).join('\r\n');
 }
-function sourceBibTeX(records){
+function sourceBibTeX(records,screening=false){
   const tex=v=>String(v??'').replace(/\s+/g,' ').trim().replace(/[\\{}]/g,c=>c==='\\'?'\\textbackslash{}':'\\'+c).replace(/([&%$#_])/g,'\\$1');
   const used=new Map();
   return records.map(r=>{
     const base=((String(r.authors[0]||'').split(/[ ,]/)[0]||'record').normalize('NFKD').replace(/[^A-Za-z0-9]/g,'').toLowerCase()||'record')+(String(r.year).match(/\d{4}/)?.[0]||'');
     const n=(used.get(base)||0)+1;used.set(base,n);
-    const fields=[['title',r.title],['author',r.authors.join(' and ')],['journal',r.journal],['year',r.year],['volume',r.volume],['number',r.issue],['pages',String(r.pages||'').replace(/\s*[-–—]+\s*/,'--')],['doi',r.doi],['pmid',r.pmid],['url',r.url],['abstract',r.abstract],['note','Databases: '+sourceDatabases(r).join('; ')]];
+    const fields=[['title',r.title],['author',r.authors.join(' and ')],['journal',r.journal],['year',r.year],['volume',r.volume],['number',r.issue],['pages',String(r.pages||'').replace(/\s*[-–—]+\s*/,'--')],['doi',r.doi],['pmid',r.pmid],['url',r.url],['abstract',r.abstract],['note','Databases: '+sourceDatabases(r).join('; ')+(screening?' | Title/abstract: '+label(finalDecision(r.uid))+(finalDecision(r.uid)==='no'?' | Exclusion reason: '+exclusionDetails(r.uid).reason:''):'')]];
     return '@article{'+base+(n>1?String.fromCharCode(96+n):'')+',\n'+fields.filter(([,v])=>String(v||'').trim()).map(([k,v])=>'  '+k+' = {'+tex(v)+'}').join(',\n')+'\n}';
   }).join('\n\n')+'\n';
 }
@@ -1845,13 +1884,16 @@ $('pilot-list').addEventListener('click',e=>{
 // Abstracts that fit in the three-line preview need no toggle.
 function trimAbstractToggles(list){list.querySelectorAll('.abs-wrap:not(.open)').forEach(w=>{const p=w.querySelector('.abstract');if(p.scrollHeight<=p.clientHeight+2){w.classList.add('open');w.querySelector('.abs-toggle')?.remove()}})}
 $('pilot-abs-all').addEventListener('click',()=>{allAbstractsOpen=!allAbstractsOpen;openAbstracts.clear();renderPilot()});
+$('pilot-list').addEventListener('input',captureExclusionReason);
+$('check-list').addEventListener('input',captureExclusionReason);
 $('pilot-list').addEventListener('change',e=>{if(e.target.matches('[data-pnote]'))pilotNote(e.target.dataset.pnote,e.target.value)});
 $('start-screening').addEventListener('click',()=>runFull().catch(e=>showNotice('full-message','Could not start screening: '+e.message,'error')));
 $('stop-full').addEventListener('click',()=>controller?.abort());
-$('check-scope').addEventListener('change',()=>{workspace.full.check=CHECK_SCOPES[$('check-scope').value]?$('check-scope').value:'sample';fullShown=20;log('human-check-scope',{check:workspace.full.check});maybeComplete();save().then(render).catch(()=>{})});
+$('check-scope').addEventListener('change',()=>{workspace.full.check=CHECK_SCOPES[$('check-scope').value]?$('check-scope').value:'unresolved';workspace.full.checkPolicy=2;fullShown=20;log('human-check-scope',{check:workspace.full.check});maybeComplete();save().then(render).catch(()=>{})});
 $('check-escalate').addEventListener('click',()=>{$('check-scope').value='exclusions';$('check-scope').dispatchEvent(new Event('change'))});
 $('check-filter').addEventListener('click',e=>{const b=e.target.closest('[data-cfilter]');if(!b)return;fullFilter=b.dataset.cfilter;fullShown=20;renderFull()});
-$('check-list').addEventListener('click',e=>{const b=e.target.closest('[data-fvote]');if(b){castFullVote(b.dataset.id,b.dataset.fvote);return}if(e.target.id==='check-more'){fullShown+=20;renderFull()}});
+$('check-abs-all').addEventListener('click',()=>{allCheckAbstractsOpen=!allCheckAbstractsOpen;openCheckAbstracts.clear();renderFull()});
+$('check-list').addEventListener('click',e=>{const t=e.target.closest('[data-abs]');if(t){const id=t.dataset.abs,wrap=t.closest('.abs-wrap'),open=!wrap.classList.contains('open');wrap.classList.toggle('open',open);if(open)openCheckAbstracts.add(id);else{openCheckAbstracts.delete(id);allCheckAbstractsOpen=false;}$('check-abs-all').textContent=allCheckAbstractsOpen?'Collapse all abstracts':'Expand all abstracts';$('check-abs-all').setAttribute('aria-pressed',String(allCheckAbstractsOpen));t.setAttribute('aria-expanded',String(open));t.textContent=open?'Hide full abstract':'Show full abstract';return;}const b=e.target.closest('[data-fvote]');if(b){castFullVote(b.dataset.id,b.dataset.fvote);return}if(e.target.id==='check-more'){fullShown+=20;renderFull()}});
 $('export-option').addEventListener('change',updateExportCount);
 $('export-results').addEventListener('click',exportResults);
 let refreshPromise=null;
