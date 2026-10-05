@@ -349,3 +349,53 @@ Source-only bibliographic exports remain unchanged.
 Regression checks: `node tools/test_screening_workflow.cjs` covers minimum pilot
 gating, criterion-level conflicts, missing evidence, review scope migration,
 abstract controls, reviewer reasons and every result export format.
+
+
+## Learning from pilot corrections
+
+This is project-scoped in-context calibration, not model weight training. Every
+completed pilot disagreement needs a reviewer-selected criterion (or Overall)
+and a correction rationale. An entered exclusion reason can supply that rationale.
+Optional evidence must exactly match the original title/abstract. The application
+does not invent or summarize clinical rules with another model: confirmed reviewer
+wording and outcomes become versioned lessons in the existing project workspace.
+
+`app/screening-calibration.js` builds deterministic calibration snapshots. Every
+pilot round freezes feedback from previous completed rounds. Pilot approval freezes
+all confirmed feedback for formal screening. At request time, relevance ranking
+selects up to 12 rules and 4 worked examples within a 20,000-character budget; all
+lessons remain saved, and any shortened example abstract is explicitly marked.
+The current record's original criteria always take precedence; examples must not
+supply missing facts, new thresholds or quotations for a different record.
+
+Both local chat prompts and TypeSafe's judgment/evidence-selection requests receive
+the same `reviewerCalibration` block. Each result records the calibration hash,
+selected lesson IDs and total lesson count. CSV includes version and selected IDs;
+JSON exports include the frozen approved calibration. Download calibration also
+exports the feedback and optional correction-replay results.
+
+Check corrections replays the corrected records with the selected model. It keeps
+the original blinded pilot readings and agreement metrics unchanged. This is an
+adherence check on examples supplied to the model, not independent validation or
+proof of improved screening accuracy. It is optional; further fresh pilot rounds
+remain the user's choice.
+
+Editing votes, feedback, criterion mapping or supporting quotes invalidates the
+approval through its fingerprint. Reapproval with a different calibration archives
+any previous formal run (with user confirmation) and starts a new formal run;
+outputs with a different calibration hash cannot be reused as current results.
+Legacy approvals require review and reapproval; existing pilot records are retained.
+Keys are never part of a calibration snapshot.
+
+Regression checks:
+
+```bash
+node tools/test_screening_calibration.cjs
+node tools/test_calibration_runtime.cjs
+node tools/test_screening_workflow.cjs
+python3 tools/test_typesafe_model.py
+```
+
+All automated checks use synthetic records and mocked model responses. A real
+provider replay is initiated by the reviewer in the page; no accuracy gain is
+claimed without such evaluation and a separate fresh sample.

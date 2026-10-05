@@ -73,6 +73,24 @@ class TypeSafeTest(unittest.TestCase):
         with patch.object(ts,'request',return_value={'models':[]}):
             with self.assertRaises(ValueError):ts.models('key')
 
+    def test_calibration_is_sent_to_judgment_and_evidence_requests(self):
+        feedback = {'version':'reviewer-calibration-v1','hash':'synthetic-feedback',
+                    'rules':[{'criterion':'Population','correction':'Children do not satisfy the adult population criterion.'}],
+                    'examples':[]}
+        self.payload['input']['reviewerCalibration'] = feedback
+        seen = []
+        def respond(path, key, body):
+            seen.append(body)
+            question = body['questions']['c0']
+            return {'answers':{'c0':answer('not_met' if len(seen)==1 else 's1',question['criteria'])}}
+        with patch.object(ts,'request',side_effect=respond):
+            self.assertEqual(ts.screen(self.payload)['value']['decision'],'exclude')
+        self.assertEqual(len(seen),2)
+        for request in seen:
+            self.assertEqual(request['state']['reviewerCalibration'], feedback)
+            self.assertIn('reviewerCalibration',request['questions']['c0']['instructions'])
+            self.assertNotIn('synthetic-key',json.dumps(request))
+
     def test_fixed_destination_and_bearer_auth(self):
         from unittest.mock import MagicMock
         response=MagicMock();response.__enter__.return_value.read.return_value=b'{"models":[]}'
