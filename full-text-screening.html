@@ -271,6 +271,18 @@ if(project?.id===projectId&&project.name){
   $('project-name').hidden=false;
 }
 const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').replace(/\/+$/,'');
+// Chrome 142 and later refuse to let a page on the public web reach this
+// computer. A plain fetch to http://127.0.0.1 from an https:// page fails the
+// mixed content check before the browser ever asks, so the Allow prompt never
+// appears; the request has to declare where it is going (MDN, Local network
+// access). The declaration is checked against the address actually resolved,
+// so it goes on loopback targets only -- putting it on a public URL would
+// block that request instead, which is why every call goes through here
+// rather than setting the option at the call sites. Browsers without the
+// feature ignore the unknown member, so one call path serves both.
+const LOOPBACK_HOSTS=['localhost','127.0.0.1','[::1]','::1'];
+function isLoopback(url){try{return LOOPBACK_HOSTS.includes(new URL(url,location.href).hostname)}catch(e){return false}}
+function localFetch(url,options){return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
 const AI_WORKERS=4;
 let pilotModel=null;
 const squash=v=>String(v||'').toLowerCase().replace(/\s+/g,' ').trim();
@@ -427,8 +439,8 @@ function wilson(k,n){if(!n)return null;const z=1.959964,p=k/n,d=1+z*z/n,c=(p+z*z
 async function resolvePilotModel(signal){
   if(pilotModel)return pilotModel;
   const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];if(!bases.includes(LOCAL_SERVER+'/api/eligibility'))bases.push(LOCAL_SERVER+'/api/eligibility');
-  for(const base of bases){try{const r=await fetch(base+'/health',{signal});if(r.ok){const h=await r.json();if(h.service==='aimstep-local-eligibility')return pilotModel={provider:'backend',base,name:text(h.model||'local model',200)}}}catch(e){if(signal?.aborted)throw e}}
-  const base='http://127.0.0.1:11434',r=await fetch(base+'/api/tags',{signal});if(!r.ok)throw new Error('The local model service returned HTTP '+r.status+'.');
+  for(const base of bases){try{const r=await localFetch(base+'/health',{signal});if(r.ok){const h=await r.json();if(h.service==='aimstep-local-eligibility')return pilotModel={provider:'backend',base,name:text(h.model||'local model',200)}}}catch(e){if(signal?.aborted)throw e}}
+  const base='http://127.0.0.1:11434',r=await localFetch(base+'/api/tags',{signal});if(!r.ok)throw new Error('The local model service returned HTTP '+r.status+'.');
   const name=((await r.json()).models||[]).map(m=>String(m?.name||'')).find(n=>n&&!/:cloud(?:$|[-_])|embed/i.test(n));
   if(!name)throw new Error('No installed local Ollama model was found.');
   return pilotModel={provider:'ollama',base,name};
@@ -439,7 +451,7 @@ async function explainUnreachable(){
   const base='Cannot reach the local model. On this computer, start Ollama and run python3 tools/local_model_server.py in the AIM-STEP site folder, then allow local network access if the browser asks.';
   if(['localhost','127.0.0.1','[::1]'].includes(location.hostname))return base;
   if(!window.isSecureContext&&location.protocol==='http:'){let here=location.href;try{if(top.location.origin===location.origin)here=top.location.href}catch(e){}return 'This page was opened over http://, and browsers never let an http page reach this computer. Open '+here.replace(/^http:/,'https:')+' instead.'+direct}
-  try{const state=(await navigator.permissions.query({name:'loopback-network'})).state;if(state==='denied')return 'The browser has blocked this site from reaching this computer. Allow local network access for this site, then reload.'+direct;if(state==='prompt')return 'The browser did not grant local network access. Click Start again and choose Allow when asked.'+direct}catch(e){}
+  try{const state=(await navigator.permissions.query({name:'loopback-network'})).state;if(state==='denied')return 'The browser has blocked this site from reaching this computer. Allow local network access for this site, then reload.'+direct;if(state==='prompt')return 'The browser has not granted local network access. Click Start again and choose Allow when the browser asks.'+direct}catch(e){}
   return base+direct;
 }
 async function pilotModelJSON(messages,schema,signal){
@@ -447,7 +459,7 @@ async function pilotModelJSON(messages,schema,signal){
   const body=model.provider==='backend'?{messages,format:schema}:{model:model.name,messages,stream:false,format:schema,options:{temperature:0}};
   const timer=new AbortController(),stop=()=>timer.abort(),t=setTimeout(stop,600000);signal?.addEventListener('abort',stop,{once:true});
   let res;
-  try{res=await fetch(model.base+(model.provider==='backend'?'/model':'/api/chat'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:timer.signal})}
+  try{res=await localFetch(model.base+(model.provider==='backend'?'/model':'/api/chat'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:timer.signal})}
   catch(e){if(signal?.aborted)throw new DOMException('Stopped','AbortError');if(isUnreachable(e)){pilotModel=null;throw new Error(await explainUnreachable())}if(timer.signal.aborted)throw new Error('The local model did not answer within 10 minutes.');throw e}
   finally{clearTimeout(t);signal?.removeEventListener('abort',stop)}
   if(!res.ok)throw new Error('Local model HTTP '+res.status+': '+(await res.text()).slice(0,300));
@@ -715,7 +727,7 @@ async function resolveEmbed(signal){
   if(embedInfo)return embedInfo;
   const model=await resolvePilotModel(signal);
   if(model.provider==='backend'){
-    try{const h=await (await fetch(model.base+'/health',{signal})).json();embedInfo=h.embedModel?{url:model.base+'/embed',model:h.embedModel,direct:false}:{none:true}}catch(e){embedInfo={none:true}}
+    try{const h=await (await localFetch(model.base+'/health',{signal})).json();embedInfo=h.embedModel?{url:model.base+'/embed',model:h.embedModel,direct:false}:{none:true}}catch(e){embedInfo={none:true}}
   }else embedInfo={url:model.base+'/api/embed',model:'embeddinggemma',direct:true};
   return embedInfo;
 }
@@ -725,7 +737,7 @@ async function embedTexts(texts,signal){
   for(let i=0;i<texts.length;i+=64){
     const t=new AbortController(),stop=()=>t.abort(),timer=setTimeout(stop,120000);signal?.addEventListener('abort',stop,{once:true});
     try{
-      const r=await fetch(info.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(info.direct?{model:info.model,input:texts.slice(i,i+64)}:{input:texts.slice(i,i+64)}),signal:t.signal});
+      const r=await localFetch(info.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(info.direct?{model:info.model,input:texts.slice(i,i+64)}:{input:texts.slice(i,i+64)}),signal:t.signal});
       if(!r.ok)throw new Error('embedding HTTP '+r.status);
       out.push(...((await r.json()).embeddings||[]));
     }finally{clearTimeout(timer);signal?.removeEventListener('abort',stop)}

@@ -447,7 +447,7 @@ if(id==='ovid')notes.push('Truncation uses $ (Ovid). Fields .ti,ab,kf. = title, 
 notes.push('Check field tags and test recall against known eligible studies. Exclusion rules were not added as NOT clauses; only validated filters contain NOT.');return {text:id==='ovid'?blocks.join('\nand '):blocks.join('\nAND '),notes:[...new Set(notes)],source:'Rule-based translation of the selected concepts',generatedAt:now(),hash:draftHash(),manualEdited:false}}
 
 const wait=(ms,signal)=>new Promise((resolve,reject)=>{if(signal?.aborted)return reject(new DOMException('Stopped','AbortError'));let timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve()},ms);function abort(){clearTimeout(timer);reject(new DOMException('Stopped','AbortError'))}signal?.addEventListener('abort',abort,{once:true})});
-async function remote(url,options={},signal,timeout=40000){for(let attempt=0;attempt<3;attempt++){if(signal?.aborted)throw new DOMException('Stopped','AbortError');const c=new AbortController(),forward=()=>c.abort(signal.reason),timer=setTimeout(()=>c.abort(new DOMException('Request timed out','TimeoutError')),timeout);signal?.addEventListener('abort',forward,{once:true});let retry=0;try{const response=await fetch(url,{...options,mode:'cors',credentials:'omit',signal:c.signal});const body=await response.arrayBuffer();if(!response.ok){if([429,500,502,503,504].includes(response.status)&&attempt<2){retry=Math.min(10000,Math.max(1500*(attempt+1),Number(response.headers.get('Retry-After'))*1000||0))}else{let msg=new TextDecoder().decode(body).slice(0,500);throw new Error(`Server returned HTTP ${response.status}${msg?' · '+msg:''}`)}}else return new Response(body,{status:response.status,headers:response.headers})}catch(e){if(signal?.aborted)throw new DOMException('Stopped','AbortError');if(c.signal.aborted)throw new Error('The request timed out. Saved records can be continued from Search history.');throw e}finally{clearTimeout(timer);signal?.removeEventListener('abort',forward)}if(retry)await wait(retry,signal)}throw new Error('The server is temporarily unavailable. Try again later.')}
+async function remote(url,options={},signal,timeout=40000){for(let attempt=0;attempt<3;attempt++){if(signal?.aborted)throw new DOMException('Stopped','AbortError');const c=new AbortController(),forward=()=>c.abort(signal.reason),timer=setTimeout(()=>c.abort(new DOMException('Request timed out','TimeoutError')),timeout);signal?.addEventListener('abort',forward,{once:true});let retry=0;try{const response=await localFetch(url,{...options,mode:'cors',credentials:'omit',signal:c.signal});const body=await response.arrayBuffer();if(!response.ok){if([429,500,502,503,504].includes(response.status)&&attempt<2){retry=Math.min(10000,Math.max(1500*(attempt+1),Number(response.headers.get('Retry-After'))*1000||0))}else{let msg=new TextDecoder().decode(body).slice(0,500);throw new Error(`Server returned HTTP ${response.status}${msg?' · '+msg:''}`)}}else return new Response(body,{status:response.status,headers:response.headers})}catch(e){if(signal?.aborted)throw new DOMException('Stopped','AbortError');if(c.signal.aborted)throw new Error('The request timed out. Saved records can be continued from Search history.');throw e}finally{clearTimeout(timer);signal?.removeEventListener('abort',forward)}if(retry)await wait(retry,signal)}throw new Error('The server is temporarily unavailable. Try again later.')}
 let machineWordTimer=null,machineWordPending=null,machineWordError='',machineWordAttempt='';
 function machineWordCriteria(){const snapshot=state.criteriaSnapshot;return (snapshot?.rows||[]).map((row,index)=>({key:index+':'+row.id,criterionId:row.id,title:row.title,eligibilityRule:row.condition,exclusionRule:row.uncertain,otherRule:row.definition}))}
 function machineWordKey(){return fingerprint({criteria:comparableSnapshot(state.criteriaSnapshot),framework:currentFramework(),input:state.machineInput||'',sources:state.machineSourceRevision||0})}
@@ -546,25 +546,37 @@ function querySchema(ids){return {type:'object',additionalProperties:false,prope
 // model chosen on the Settings page on a private address, otherwise Ollama on
 // this computer. There are no model settings on this page.
 const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').replace(/\/+$/,'');
+// Chrome 142 and later refuse to let a page on the public web reach this
+// computer. A plain fetch to http://127.0.0.1 from an https:// page fails the
+// mixed content check before the browser ever asks, so the Allow prompt never
+// appears; the request has to declare where it is going (MDN, Local network
+// access). The declaration is checked against the address actually resolved,
+// so it goes on loopback targets only -- putting it on a public URL would
+// block that request instead, which is why every call goes through here
+// rather than setting the option at the call sites. Browsers without the
+// feature ignore the unknown member, so one call path serves both.
+const LOOPBACK_HOSTS=['localhost','127.0.0.1','[::1]','::1'];
+function isLoopback(url){try{return LOOPBACK_HOSTS.includes(new URL(url,location.href).hostname)}catch(e){return false}}
+function localFetch(url,options){return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
 let resolvedModel=null,lastModel=null;
 function privateModelAddress(address){try{const host=new URL(address).hostname.toLowerCase();return host==='localhost'||host==='127.0.0.1'||host==='[::1]'||/^10\./.test(host)||/^192\.168\./.test(host)||/^172\.(?:1[6-9]|2\d|3[01])\./.test(host)}catch(e){return false}}
 async function resolveLocalModel(needsVision,signal){
   if(resolvedModel&&(!needsVision||resolvedModel.vision))return resolvedModel;
   const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];const local=LOCAL_SERVER+'/api/eligibility';if(!bases.includes(local))bases.push(local);
-  for(const base of bases){try{const health=await fetch(base+'/health',{signal});if(health.ok&&(await health.json()).service==='aimstep-local-eligibility')return resolvedModel={provider:'backend',base,name:'local',vision:true}}catch(error){if(signal?.aborted)throw error}}
+  for(const base of bases){try{const health=await localFetch(base+'/health',{signal});if(health.ok&&(await health.json()).service==='aimstep-local-eligibility')return resolvedModel={provider:'backend',base,name:'local',vision:true}}catch(error){if(signal?.aborted)throw error}}
   let settings=null;try{settings=JSON.parse(localStorage.getItem(modelSettingsKey)||'null')}catch(e){}
   let configured={provider:'ollama',base:'http://127.0.0.1:11434'};
   for(const [slot,m] of [['A',settings?.modelA],['B',settings?.modelB]])if(m?.name&&privateModelAddress(m.base)){configured={...m,slot};break}
   const provider=configured.provider==='compatible'?'compatible':'ollama';
   let base=String(configured.base||'http://127.0.0.1:11434').trim().replace(/\/+$/,'').replace(/\/(?:api\/(?:chat|tags)|(?:v1\/)?chat\/completions)$/,'');
   const token=configured.slot?sessionStorage.getItem('aimstep-screen-token:'+configured.slot+':'+scope)||'':'';
-  if(provider==='compatible'){if(!/\/v1$/.test(base))base+='/v1';let name=String(configured.name||'').trim();if(!name){const r=await fetch(base+'/models',{signal,headers:token?{Authorization:'Bearer '+token}:{}});if(!r.ok)throw new Error('The local model service returned HTTP '+r.status+'.');name=String(((await r.json()).data||[]).find(m=>m.id)?.id||'')}if(!name)throw new Error('No local text model is available.');return resolvedModel={provider,base,name,token,vision:false}}
-  const r=await fetch(base+'/api/tags',{signal});if(!r.ok)throw new Error('The local model service returned HTTP '+r.status+'.');
+  if(provider==='compatible'){if(!/\/v1$/.test(base))base+='/v1';let name=String(configured.name||'').trim();if(!name){const r=await localFetch(base+'/models',{signal,headers:token?{Authorization:'Bearer '+token}:{}});if(!r.ok)throw new Error('The local model service returned HTTP '+r.status+'.');name=String(((await r.json()).data||[]).find(m=>m.id)?.id||'')}if(!name)throw new Error('No local text model is available.');return resolvedModel={provider,base,name,token,vision:false}}
+  const r=await localFetch(base+'/api/tags',{signal});if(!r.ok)throw new Error('The local model service returned HTTP '+r.status+'.');
   const models=((await r.json()).models||[]).map(m=>String(m?.name||m?.model||'').trim()).filter(n=>n&&!/:cloud(?:$|[-_])/i.test(n));
   if(!models.length)throw new Error('No installed local Ollama model was found. Start Ollama and install a text model.');
   const preferred=String(configured.name||'').trim(),candidates=preferred?models.filter(n=>n===preferred||n===preferred+':latest'):models;
   if(preferred&&!candidates.length)throw new Error('The configured local model is not installed in Ollama.');
-  for(const name of candidates){const d=await fetch(base+'/api/show',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:name}),signal});if(!d.ok)continue;const caps=(await d.json()).capabilities;if(Array.isArray(caps)&&!caps.includes('completion'))continue;const vision=!Array.isArray(caps)||caps.includes('vision');if(needsVision&&!vision)continue;return resolvedModel={provider,base,name,vision}}
+  for(const name of candidates){const d=await localFetch(base+'/api/show',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:name}),signal});if(!d.ok)continue;const caps=(await d.json()).capabilities;if(Array.isArray(caps)&&!caps.includes('completion'))continue;const vision=!Array.isArray(caps)||caps.includes('vision');if(needsVision&&!vision)continue;return resolvedModel={provider,base,name,vision}}
   throw new Error(needsVision?'No installed local model supports image input. Install a vision model or use text documents.':'No installed local text-generation model is available.');
 }
 async function explainUnreachable(){
@@ -572,7 +584,7 @@ async function explainUnreachable(){
   const base='Cannot reach the local model. On this computer, start Ollama and run python3 tools/local_model_server.py in the AIM-STEP site folder, then allow local network access if the browser asks.';
   if(['localhost','127.0.0.1','[::1]'].includes(location.hostname))return base;
   if(!window.isSecureContext&&location.protocol==='http:'){let here=location.href;try{if(top.location.origin===location.origin)here=top.location.href}catch(e){}return 'This page was opened over http://, and browsers never let an http page reach this computer. Open '+here.replace(/^http:/,'https:')+' instead.'+direct}
-  try{const permission=(await navigator.permissions.query({name:'loopback-network'})).state;if(permission==='denied')return 'The browser has blocked this site from reaching this computer. Allow local network access for this site, then reload.'+direct;if(permission==='prompt')return 'The browser did not grant local network access. Click Start again and choose Allow when asked; if nothing is asked, check that tools/local_model_server.py is running.'+direct}catch(e){}
+  try{const permission=(await navigator.permissions.query({name:'loopback-network'})).state;if(permission==='denied')return 'The browser has blocked this site from reaching this computer. Allow local network access for this site, then reload.'+direct;if(permission==='prompt')return 'The browser has not granted local network access. Click Start again and choose Allow when the browser asks; if nothing is asked, check that tools/local_model_server.py is running.'+direct}catch(e){}
   return base+direct;
 }
 // Only the browsers' own network-failure messages count: a TypeError from a

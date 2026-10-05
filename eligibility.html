@@ -205,12 +205,23 @@ function localModelConfig(){
 // published origin by CORS. A developer may override it with
 // window.AIMSTEP_LOCAL_SERVER='http://127.0.0.1:9000'.
 const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').replace(/\/+$/,'');
+// Chrome 142 and later refuse to let a page on the public web reach this
+// computer. A plain fetch to http://127.0.0.1 from an https:// page fails the
+// mixed content check before the browser ever asks, so the Allow prompt never
+// appears; the request has to declare where it is going (MDN, Local network
+// access). The declaration is checked against the address actually resolved,
+// so it goes on loopback targets only -- putting it on the same-origin probe
+// in findLocalBackend would block that request instead. Browsers without the
+// feature ignore the unknown member, so one call path serves both.
+const LOOPBACK_HOSTS=['localhost','127.0.0.1','[::1]','::1'];
+function isLoopback(url){try{return LOOPBACK_HOSTS.includes(new URL(url,location.href).hostname)}catch(e){return false}}
+function localFetch(url,options){return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
 async function findLocalBackend(signal){
   const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];
   const local=LOCAL_SERVER+'/api/eligibility';if(!bases.includes(local))bases.push(local);
   for(const base of bases){
     try{
-      const health=await fetch(base+'/health',{signal});
+      const health=await localFetch(base+'/health',{signal});
       if(health.ok&&(await health.json()).service==='aimstep-local-eligibility')return {provider:'backend',base,name:'local',slot:'local'};
     }catch(error){if(signal.aborted)throw error}
   }
@@ -234,7 +245,7 @@ async function explainUnreachable(){
       return 'This embedded view is not allowed to reach this computer. Reload with Cmd/Ctrl+Shift+R, or open eligibility.html directly.'+direct;
     const state=(await navigator.permissions.query({name:'loopback-network'})).state;
     if(state==='denied')return 'The browser has blocked this site from reaching this computer. Click the site icon left of the address bar, set Local network access to Allow, then reload.'+direct;
-    if(state==='prompt')return 'The browser did not grant local network access. Click Start again and choose Allow when asked; if nothing is asked, check that tools/local_model_server.py is running.'+direct;
+    if(state==='prompt')return 'The browser has not granted local network access. Click Start again and choose Allow when the browser asks.'+direct;
   }catch(e){}
   return unreachableModelMessage+direct;
 }
@@ -248,11 +259,11 @@ async function resolveLocalModel(needsVision,signal){
   if(provider==='compatible'){
     if(!/\/v1$/.test(base))base+='/v1';
     let name=String(configured.name||'').trim();
-    if(!name){const response=await fetch(base+'/models',{signal});if(!response.ok)throw new Error('The local model service returned HTTP '+response.status+'.');const models=(await response.json()).data||[];name=String(models.find(item=>item.id)?.id||'')}
+    if(!name){const response=await localFetch(base+'/models',{signal});if(!response.ok)throw new Error('The local model service returned HTTP '+response.status+'.');const models=(await response.json()).data||[];name=String(models.find(item=>item.id)?.id||'')}
     if(!name)throw new Error('No local text model is available.');
     return {provider,base,name,slot:configured.slot||'local'};
   }
-  const response=await fetch(base+'/api/tags',{signal});
+  const response=await localFetch(base+'/api/tags',{signal});
   if(!response.ok)throw new Error('The local model service returned HTTP '+response.status+'.');
   const listed=(await response.json()).models;
   const models=(Array.isArray(listed)?listed:[]).map(item=>String(item?.name||item?.model||'').trim()).filter(name=>name&&!/:cloud(?:$|[-_])/i.test(name));
@@ -262,7 +273,7 @@ async function resolveLocalModel(needsVision,signal){
   if(preferred&&!installed)throw new Error('The configured local model is not installed in Ollama.');
   const candidates=preferred?[installed]:models;
   for(const name of candidates){
-    const details=await fetch(base+'/api/show',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:name}),signal});
+    const details=await localFetch(base+'/api/show',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:name}),signal});
     if(!details.ok)continue;
     const capabilities=(await details.json()).capabilities;
     if(Array.isArray(capabilities)&&(!capabilities.includes('completion')||(needsVision&&!capabilities.includes('vision'))))continue;
@@ -284,7 +295,7 @@ async function requestMachineCriteria(model,input,reviewType,signal){
   if(token)headers.Authorization='Bearer '+token;
   const endpoint=model.base+(backend?'/model':ollama?'/api/chat':'/chat/completions');
   async function post(){
-    const response=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(body),signal});
+    const response=await localFetch(endpoint,{method:'POST',headers,body:JSON.stringify(body),signal});
     if(!response.ok){const raw=(await response.text()).slice(0,250);let message=raw;try{message=JSON.parse(raw).error||raw}catch(e){}const error=new Error('Local model HTTP '+response.status+': '+message);error.status=response.status;throw error}
     return response.json();
   }
@@ -301,7 +312,7 @@ async function callCriteriaJson(model,system,payload,signal){
   const headers={'Content-Type':'application/json'},token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
   async function post(){
-    const response=await fetch(model.base+(backend?'/model':ollama?'/api/chat':'/chat/completions'),{method:'POST',headers,body:JSON.stringify(body),signal});
+    const response=await localFetch(model.base+(backend?'/model':ollama?'/api/chat':'/chat/completions'),{method:'POST',headers,body:JSON.stringify(body),signal});
     if(!response.ok){const raw=(await response.text()).slice(0,250);let message=raw;try{message=JSON.parse(raw).error||raw}catch(e){}throw new Error('Local model HTTP '+response.status+': '+message)}
     return response.json();
   }
