@@ -4,51 +4,121 @@
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:880px;margin:40px auto;padding:0 20px;line-height:1.5}
 pre{white-space:pre-wrap;background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:14px}
+h1{font-size:1.4rem}
+#summary{font-weight:500}
+#advice{margin:0 0 20px}
 .ok{color:#116329}.bad{color:#cf222e}
 </style>
 <h1>AIM-STEP local model diagnostic</h1>
 <p id="summary">Running checks...</p>
+<p id="advice"></p>
 <pre id="out"></pre>
 <script>
-const out=document.getElementById('out');
-const summary=document.getElementById('summary');
+// Why this page exists: curl says whether the server is up, which is not the
+// same question as whether the browser is allowed to reach it. The two differ
+// on the mixed content and local network access rules, and the workflow pages
+// can only report "Cannot reach the local model" without saying which link in
+// the chain broke. This page walks the chain the pages walk and names the step
+// that failed.
+const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').replace(/\/+$/,'');
+const LOOPBACK_HOSTS=['localhost','127.0.0.1','[::1]','::1'];
+function isLoopback(url){try{return LOOPBACK_HOSTS.includes(new URL(url,location.href).hostname)}catch(e){return false}}
+// Same rule as the workflow pages: a public https page needs the target
+// address space declared or the request fails the mixed content check before
+// the permission prompt can appear. Declaring it on a public URL would block
+// that request instead, so only loopback targets get it.
+function localFetch(url,options){return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
+
+const out=document.getElementById('out'),summary=document.getElementById('summary'),advice=document.getElementById('advice');
 const lines=[];
 function log(label,value){
   lines.push(label+': '+(typeof value==='string'?value:JSON.stringify(value,null,2)));
   out.textContent=lines.join('\n\n');
 }
+async function permission(name){
+  try{return (await navigator.permissions.query({name})).state}
+  catch(e){return 'unsupported'}
+}
+// The published site has no backend, so the same-origin probe 404s there and
+// the loopback one decides. Opened from the local server they are the same
+// address and the first one answers.
+async function probe(base){
+  try{
+    const r=await localFetch(base+'/health',{cache:'no-store'});
+    const text=await r.text();
+    log('GET '+base+'/health',{status:r.status,ok:r.ok,text:text.slice(0,300)});
+    return {responded:true,status:r.status,ok:r.ok&&/aimstep-local-eligibility/.test(text)};
+  }catch(e){
+    log('GET '+base+'/health failed',String(e&&e.message||e));
+    return {responded:false,status:null,ok:false};
+  }
+}
 async function check(){
-  let ok=true;
   log('page',location.href);
   log('isSecureContext',String(window.isSecureContext));
+  const loopback=await permission('loopback-network');
+  log('permission loopback-network',loopback);
+  log('permission local-network',await permission('local-network'));
   log('userAgent',navigator.userAgent);
-  try{
-    const r=await fetch('/api/eligibility/health',{cache:'no-store'});
-    const text=await r.text();
-    log('GET /api/eligibility/health',{status:r.status,ok:r.ok,text});
-    ok=ok&&r.ok&&/aimstep-local-eligibility/.test(text);
-  }catch(e){
-    ok=false;
-    log('GET /api/eligibility/health error',String(e&&e.stack||e));
+
+  const sameOrigin=new URL('api/eligibility',location.href).href.replace(/\/+$/,'');
+  const local=LOCAL_SERVER+'/api/eligibility';
+  const bases=sameOrigin===local?[local]:[sameOrigin,local];
+  let base=null,onPort=null;
+  for(const candidate of bases){
+    const result=await probe(candidate);
+    if(candidate===local)onPort=result;          // what the loopback port itself did
+    if(result.ok){base=candidate;break}
   }
-  try{
-    const r=await fetch('/api/eligibility/model',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:[
-        {role:'system',content:'Return JSON only.'},
-        {role:'user',content:'Return {"ok":true}.'}
-      ]})
-    });
-    const text=await r.text();
-    log('POST /api/eligibility/model',{status:r.status,ok:r.ok,text:text.slice(0,800)});
-    ok=ok&&r.ok;
-  }catch(e){
-    ok=false;
-    log('POST /api/eligibility/model error',String(e&&e.stack||e));
+
+  let modelOk=false;
+  if(base){
+    try{
+      const r=await localFetch(base+'/model',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages:[
+          {role:'system',content:'Return JSON only.'},
+          {role:'user',content:'Return {"ok":true}.'}
+        ]})
+      });
+      const text=await r.text();
+      log('POST '+base+'/model',{status:r.status,ok:r.ok,text:text.slice(0,800)});
+      modelOk=r.ok;
+    }catch(e){
+      log('POST '+base+'/model failed',String(e&&e.message||e));
+    }
   }
-  summary.textContent=ok?'Local model is reachable from this browser.':'Local model is NOT reachable from this browser.';
-  summary.className=ok?'ok':'bad';
+
+  if(modelOk){
+    summary.textContent='Local model is reachable from this browser.';
+    summary.className='ok';
+    advice.textContent='Served through '+base+'. The workflow pages will find it the same way.';
+    return;
+  }
+  summary.textContent='Local model is NOT reachable from this browser.';
+  summary.className='bad';
+  advice.textContent=explain(base,loopback,onPort);
+}
+// One cause per outcome, so the page never blames the permission for a server
+// that is not running. A refused connection and a request blocked pending
+// permission both surface as "Failed to fetch", so where they cannot be told
+// apart the advice says so rather than guessing.
+function explain(base,loopback,onPort){
+  if(base)return 'The server answered on '+base+' but the model request failed. Read the POST status above: the server is reachable, so the problem is Ollama or the model, not the browser. Check that Ollama is running and the configured model is installed.';
+  if(!window.isSecureContext&&location.protocol==='http:')
+    return 'This page was opened over http://, and browsers never let an http page reach this computer. Open it over https://, or open '+LOCAL_SERVER+'/local-model-diagnostic.html directly from the local server.';
+  if(onPort&&onPort.responded)
+    return 'Something answered on '+LOCAL_SERVER+' with HTTP '+onPort.status+' but did not identify itself as the AIM-STEP local model server. So the browser was allowed through and the permission is not the problem. Either another program holds that port, or the server refused this page: it serves its own address and the origins passed to --allow-origin (aimsetp.com by default). Open '+LOCAL_SERVER+'/local-model-diagnostic.html instead.';
+  if(LOOPBACK_HOSTS.includes(location.hostname))
+    return 'This page is served from '+location.origin+', which is already on this computer, so no permission is involved. Either nothing is listening on '+LOCAL_SERVER+' -- start Ollama and python3 tools/local_model_server.py, then reload -- or the server is running and refused this page: it answers its own address and the origins passed to --allow-origin, and a refusal carries no CORS headers, so the browser reports it as a plain failure. Opening '+LOCAL_SERVER+'/local-model-diagnostic.html rules that out.';
+  if(loopback==='denied')
+    return 'The browser has blocked this site from reaching this computer. Click the site icon left of the address bar, set Local network access to Allow, then reload.';
+  if(loopback==='granted')
+    return 'Local network access is already granted, so the permission is not the problem: nothing answered on '+LOCAL_SERVER+'. Start Ollama and python3 tools/local_model_server.py on the computer running this browser, or forward the port from the machine that has the model.';
+  if(loopback==='prompt')
+    return 'Local network access has not been granted. The browser only asks once the connection succeeds, so if it never asked, nothing was listening on '+LOCAL_SERVER+' on the computer running this browser — start Ollama and python3 tools/local_model_server.py there, or forward the port from the machine that has the model. If it did ask and you dismissed it, reload and choose Allow.';
+  return 'This browser does not report a local network access permission. Nothing answered on '+LOCAL_SERVER+'; check that Ollama and python3 tools/local_model_server.py are running on the computer running this browser, and prefer Chrome.';
 }
 check();
 </script>
