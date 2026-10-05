@@ -381,6 +381,36 @@ class ServerTest(unittest.TestCase):
             api.assert_not_called()
             self.assertNotIn('secret', json.dumps(body))
 
+    def test_typesafe_discovery_bypasses_text_generation(self):
+        with patch.object(srv.typesafe_model, 'models', return_value={'models':['test-model']}) as models, patch.object(srv.api_model, 'chat') as chat:
+            status, body = self.req('POST', srv.MODEL, {'provider':'typesafe','action':'models','apiKey':'synthetic-key'})
+            self.assertEqual(status, 200)
+            self.assertEqual(body['models'], ['test-model'])
+            models.assert_called_once_with('synthetic-key')
+            chat.assert_not_called()
+            self.assertEqual(FakeOllama.seen, [])
+
+    def test_typesafe_http_errors_do_not_expose_provider_body(self):
+        import io
+        failure = srv.urllib.error.HTTPError('https://api.typesafe.ai',401,'Unauthorized',{},io.BytesIO(b'synthetic-secret'))
+        with patch.object(srv.typesafe_model, 'models', side_effect=failure):
+            status, body = self.req('POST', srv.MODEL, {'provider':'typesafe','action':'models','apiKey':'synthetic-key'})
+            self.assertEqual(status, 502)
+            self.assertIn('Invalid TypeSafe API key', body['error'])
+            self.assertNotIn('synthetic-secret', json.dumps(body))
+
+    def test_typesafe_health_is_available_without_ollama(self):
+        with patch.object(srv, 'check_model', return_value=(False,'offline')):
+            status, body = self.req('GET',srv.HEALTH)
+            self.assertEqual(status, 503)
+            self.assertTrue(body['typesafe']['available'])
+
+    def test_typesafe_origin_guard_applies(self):
+        with patch.object(srv.typesafe_model,'models') as models:
+            status, _ = self.req('POST',srv.MODEL,{'provider':'typesafe','action':'models','apiKey':'test'}, {'Origin':'https://untrusted.example'})
+            self.assertEqual(status,403)
+            models.assert_not_called()
+
     def test_unknown_provider_rejected(self):
         status, _ = self.req('POST', srv.MODEL, dict(self.MSG, provider='other'))
         self.assertEqual(status, 400)

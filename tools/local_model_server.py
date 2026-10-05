@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import api_model
+import typesafe_model
 import json
 import os
 import sys
@@ -324,6 +325,7 @@ class Handler(SimpleHTTPRequestHandler):
                 "service": SERVICE if ok else SERVICE + "-unavailable",
                 "model": self.model, "ollama": self.ollama, "status": msg,
                 "embedModel": self.embed_model if embed_ok else "",
+                "typesafe": {"available": True, "version": typesafe_model.VERSION},
                 "api": {"acceptsKey": api_model.status("configuration-check")[0],
                         "ready": api_model.status()[0], "status": api_model.status()[1],
                         "model": api_model.config()["model"]}})
@@ -361,6 +363,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self._send_json(200, {"embeddings": vectors, "model": self.embed_model})
         try:
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            if isinstance(payload, dict) and payload.get("provider") == "typesafe":
+                return self._typesafe(payload)
             messages = clean_messages(payload)
             fmt = clean_format(payload)
             provider = payload.get("provider", "local")
@@ -396,6 +400,26 @@ class Handler(SimpleHTTPRequestHandler):
             "reply": content})
         return self._send_json(200, {"message": {"role": "assistant", "content": content},
                                      "model": used_model, "provider": provider})
+
+    def _typesafe(self, payload):
+        try:
+            action = payload.get('action', 'screen')
+            if action == 'models':
+                result = typesafe_model.models(payload.get('apiKey'))
+            elif action == 'screen':
+                result = typesafe_model.screen(payload)
+            else:
+                raise ValueError('Unknown TypeSafe action.')
+            return self._send_json(200, result)
+        except urllib.error.HTTPError as e:
+            messages = {401: 'Invalid TypeSafe API key.', 403: 'This TypeSafe key is not permitted to access the requested model.',
+                        402: 'TypeSafe credits are insufficient.', 429: 'TypeSafe rate limit or quota reached. Wait before resuming.',
+                        422: 'TypeSafe rejected this request. Check the selected model and screening input.'}
+            return self._send_json(502, {'error': messages.get(e.code, 'TypeSafe returned HTTP %d. Try again later.' % e.code), 'fatal': e.code in (401, 402, 403, 429)})
+        except (urllib.error.URLError, OSError):
+            return self._send_json(502, {'error': 'Cannot reach TypeSafe or the request timed out.'})
+        except (ValueError, TypeError, KeyError, AttributeError):
+            return self._send_json(400, {'error': 'Invalid TypeSafe input or response. Check your key, model and criteria; no screening decision was saved.'})
 
     def end_headers(self):
         # Static pages change while you work on them; never serve a stale copy.

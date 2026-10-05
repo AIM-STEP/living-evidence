@@ -176,7 +176,21 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2>Pilot screening</h2><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available when a round has been compared">Approved</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
 <div class="panel-body" id="pilot-body">
-<ol class="pilot-steps"><li>Start a round: the local AI screens a random sample of records.</li><li>Vote Yes / Maybe / No on the same records. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Click Approved when you are satisfied. Formal screening then unlocks.</li></ol>
+<div class="model-connection" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)">
+<label class="label" for="screen-model-source">Model source</label>
+<select class="select" id="screen-model-source"><option value="local">Local model</option><option value="typesafe">API</option></select>
+<div id="screen-api-settings" hidden>
+<p class="hint">TypeSafe screens each criterion using the title and abstract. Your records and criteria will be sent to TypeSafe. Keep the Mac Studio connection running.</p>
+<label class="label" for="screen-api-key">TypeSafe API key</label>
+<input class="input" type="password" id="screen-api-key" placeholder="Paste your TypeSafe API key" autocomplete="off" spellcheck="false" aria-describedby="screen-api-help">
+<p class="hint" id="screen-api-help">Your key stays in this tab and is cleared on refresh. Confirm checks account access and loads available models.</p>
+<button class="btn" type="button" id="screen-api-confirm">Confirm</button>
+<label class="label" for="screen-api-model">API model</label><select class="select" id="screen-api-model"><option value="">Confirm your key to load models</option></select>
+<p class="hint" id="screen-api-status" role="status" aria-live="polite"></p>
+</div><button class="btn small" type="button" id="screen-model-archives" hidden>Download previous model runs</button>
+</div>
+
+<ol class="pilot-steps"><li>Start a round: the selected AI model screens a random sample of records.</li><li>Vote Yes / Maybe / No on the same records. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Click Approved when you are satisfied. Formal screening then unlocks.</li></ol>
 <div class="pilot-controls"><label class="label" for="sample-size">Records per round</label><input class="input" id="sample-size" type="number" min="5" max="100" step="1" value="20"><button class="btn primary" id="run-pilot" type="button">Start round 1</button><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-calibration" type="button">Restart pilot</button></div>
 <div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div>
 <div class="notice" id="pilot-message" hidden role="status"></div>
@@ -635,9 +649,9 @@ async function runPool(items,n,fn,controller){
   const worker=async()=>{while(!fatal&&!controller.signal.aborted&&next<items.length){const item=items[next++];
     try{await fn(item);inARow=0}
     catch(e){
-      if(e.name==='AbortError'||/^(Cannot reach|The browser|This page was opened)/.test(e.message)){stopRun(e);break}
+      if(e.fatal||e.name==='AbortError'||/^(Cannot reach|The browser|This page was opened)/.test(e.message)){stopRun(e);break}
       failed.push({item,message:text(e.message,300)});inARow++;
-      if(inARow>=n+2)stopRun(new Error('The local model failed '+inARow+' times in a row: '+e.message));
+      if(inARow>=n+2)stopRun(new Error('The selected model failed '+inARow+' times in a row: '+e.message));
     }}};
   await Promise.all(Array.from({length:Math.min(n,items.length)},worker));
   if(fatal)throw fatal;
@@ -695,12 +709,80 @@ function pilotMetrics(ids){
 }
 const pct=v=>v===null?'—':Math.round(v*100)+'%';
 function pilotCriteriaSig(){return fingerprint({criteriaSig:source.criteriaSig,prompt:PILOT_PROMPT})}
-function pilotApprovalValid(){const a=workspace?.pilot?.approved;return !!a&&a.criteriaSig===pilotCriteriaSig()&&!stale()}
+function pilotApprovalValid(){const a=workspace?.pilot?.approved;return !!a&&(a.provider||'local')===screeningProvider()&&a.criteriaSig===pilotCriteriaSig()&&!stale()}
 function pilotHasProgress(){return !!workspace?.pilot?.rounds?.length}
+
+// TypeSafe credentials live only in this page closure, never in workspace/storage.
+let typesafeKey='',typesafeBackend='',typesafeConfirmController=null;
+function screeningProvider(){return workspace?.screeningProvider==='typesafe'?'typesafe':'local'}
+function clearTypesafeKey(){typesafeKey='';typesafeBackend='';pilotModel=null;if(typesafeConfirmController)typesafeConfirmController.abort();typesafeConfirmController=null;$('screen-api-confirm').disabled=false;$('screen-api-confirm').textContent='Confirm';}
+function renderModelSelection(){
+  $('screen-model-source').value=screeningProvider();
+  $('screen-api-settings').hidden=screeningProvider()!=='typesafe';
+  for(const id of ['screen-model-source','screen-api-key','screen-api-model','screen-api-confirm'])$(id).disabled=!!busy||(id==='screen-api-confirm'&&!!typesafeConfirmController);
+  $('screen-model-archives').hidden=!workspace?.modelArchives?.length;
+}
+async function setScreeningModel(provider,name=''){
+  if(busy)throw new Error('Stop screening before changing models.');
+  const previous=screeningProvider(),oldName=workspace.screeningModel||'';
+  if(previous===provider&&oldName===name)return true;
+  const progress=pilotHasProgress()||Object.keys(workspace.full?.ai||{}).length||Object.keys(workspace.full?.human||{}).length;
+  if(progress){
+    if(!confirm('Changing models requires a new pilot. Archive the current pilot and screening results and start a new run?'))return false;
+    (workspace.modelArchives??=[]).push({at:now(),provider:previous,model:oldName,sourceSig:source.sourceSig,criteriaSig:source.criteriaSig,pilot:structuredClone(workspace.pilot),full:structuredClone(workspace.full)});
+    workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
+  }
+  workspace.screeningProvider=provider;workspace.screeningModel=name;pilotModel=null;
+  log('screening-model-selected',{provider,model:name});await save();render();return true;
+}
+async function findTypesafeBackend(signal){
+  const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];
+  if(!bases.includes(LOCAL_SERVER+'/api/eligibility'))bases.push(LOCAL_SERVER+'/api/eligibility');
+  for(const base of bases){try{const r=await localFetch(base+'/health',{signal});const h=await r.json();if(h.typesafe?.available)return base;}catch(e){if(signal.aborted)throw e;}}
+  throw new Error('Cannot reach the TypeSafe-enabled AIM-STEP backend. Keep the Mac Studio service and SSH connection running.');
+}
+async function typesafeRequest(base,body,signal){
+  const timeout=new AbortController(),stop=()=>timeout.abort(),timer=setTimeout(stop,600000);signal?.addEventListener('abort',stop,{once:true});
+  try{
+    if(signal?.aborted)throw new DOMException('Stopped','AbortError');
+    const r=await localFetch(base+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'typesafe',...body}),signal:timeout.signal});
+    const data=await r.json();if(!r.ok){const error=new Error(data.error||'TypeSafe request failed.');error.fatal=!!data.fatal;throw error;}return data;
+  }finally{clearTimeout(timer);signal?.removeEventListener('abort',stop);}
+}
+$('screen-model-source').addEventListener('change',async()=>{
+  try{if(await setScreeningModel($('screen-model-source').value,'')){clearTypesafeKey();$('screen-api-key').value='';$('screen-api-status').textContent='';$('screen-api-model').replaceChildren(new Option('Confirm your key to load models',''));}}
+  catch(e){$('screen-api-status').textContent=e.message;}finally{renderModelSelection();}
+});
+$('screen-api-key').addEventListener('input',()=>{clearTypesafeKey();$('screen-api-status').textContent='Click Confirm to check this key.';});
+$('screen-api-confirm').addEventListener('click',async()=>{
+  if(busy)return;
+  clearTypesafeKey();const key=$('screen-api-key').value.trim();
+  if(!key){$('screen-api-status').textContent='Paste your TypeSafe API key first.';return;}
+  const ctl=new AbortController();typesafeConfirmController=ctl;const timer=setTimeout(()=>ctl.abort(),30000);
+  $('screen-api-confirm').disabled=true;$('screen-api-confirm').textContent='Checking…';$('screen-api-status').textContent='Checking your key and loading TypeSafe models…';
+  try{
+    const base=await findTypesafeBackend(ctl.signal),data=await typesafeRequest(base,{action:'models',apiKey:key},ctl.signal);
+    if(typesafeConfirmController!==ctl)return;
+    const names=data.models;if(!Array.isArray(names)||!names.length)throw new Error('No TypeSafe models are available.');
+    const name=names.includes(workspace.screeningModel)?workspace.screeningModel:names[0];
+    if(!await setScreeningModel('typesafe',name)){$('screen-api-status').textContent='Model change cancelled.';return;}
+    if(typesafeConfirmController!==ctl)return;
+    typesafeKey=key;typesafeBackend=base;$('screen-api-key').value='';
+    $('screen-api-model').replaceChildren(...names.map(n=>new Option(n,n)));$('screen-api-model').value=name;
+    $('screen-api-status').textContent='Key confirmed. Select a model, then start a pilot round. Screening requests use TypeSafe credits.';
+  }catch(e){if(typesafeConfirmController===ctl)$('screen-api-status').textContent=e.name==='AbortError'?'Connection check timed out. Try again.':isUnreachable(e)?'Cannot reach the backend. Check the Mac Studio connection.':e.message;}
+  finally{clearTimeout(timer);if(typesafeConfirmController===ctl){typesafeConfirmController=null;$('screen-api-confirm').textContent='Confirm';renderModelSelection();}}
+});
+$('screen-api-model').addEventListener('change',async()=>{try{if(!typesafeKey)throw new Error('Confirm your API key first.');await setScreeningModel('typesafe',$('screen-api-model').value);}catch(e){$('screen-api-status').textContent=e.message;}finally{$('screen-api-model').value=workspace.screeningModel||'';}});
+$('screen-model-archives').addEventListener('click',()=>download('screening-model-archives.json','application/json',JSON.stringify(workspace.modelArchives||[],null,2)));
 
 /* Local model: the same local server as the Eligibility criteria and Search
    strategy steps, or Ollama directly when this page is opened locally. */
 async function resolvePilotModel(signal){
+  if(screeningProvider()==='typesafe'){
+    if(!typesafeKey||!typesafeBackend||!workspace.screeningModel)throw new Error('Select API, paste your TypeSafe key, and click Confirm before screening.');
+    return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
+  }
   if(pilotModel)return pilotModel;
   const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];if(!bases.includes(LOCAL_SERVER+'/api/eligibility'))bases.push(LOCAL_SERVER+'/api/eligibility');
   for(const base of bases){try{const r=await localFetch(base+'/health',{signal});if(r.ok){const h=await r.json();if(h.service==='aimstep-local-eligibility')return pilotModel={provider:'backend',base,name:text(h.model||'local model',200)}}}catch(e){if(signal?.aborted)throw e}}
@@ -767,7 +849,7 @@ function pilotDecision(value,record){
   const list=Array.isArray(value?.criteria)?value.criteria:Array.isArray(value?.criteriaJudgments)?value.criteriaJudgments:[];
   const judged=list.slice(0,30).map(c=>{
     const dim=pick(c,['dimension','criterion','name','domain']),quote=text(pick(c,['quote','evidence','quotation','text']),500).trim(),found=!!quote&&corpus.includes(squash(quote));
-    return {dimension:titles.get(squash(dim))||text(dim,200),known:titles.has(squash(dim)),judgment:verdict(pick(c,['judgment','judgement','result','status','assessment','met'])),quote:found?quote:'',quoteMissing:!!quote&&!found,reason:text(pick(c,['reason','explanation','rationale']),600)};
+    return {dimension:titles.get(squash(dim))||text(dim,200),known:titles.has(squash(dim)),judgment:verdict(pick(c,['judgment','judgement','result','status','assessment','met'])),quote:found?quote:'',quoteMissing:!!quote&&!found,reason:text(pick(c,['reason','explanation','rationale']),600),...(c.probabilities?{probabilities:c.probabilities,confidence:c.confidence}:{})};
   });
   const notMet=judged.filter(c=>c.judgment==='not met'&&c.known&&c.quote),allMet=rows.every(r=>judged.some(c=>c.dimension===r.title&&c.judgment==='met'));
   let decision=notMet.length&&record.abstract?'no':allMet?'yes':'maybe',note='';
@@ -777,8 +859,14 @@ function pilotDecision(value,record){
   return {decision,modelDecision:said,criteria:judged,reason:text(value?.reason,1000),note};
 }
 async function screenPilotRecord(record,round,signal,variant=1){
-  const prompt=pilotPrompt(record,round,variant),{value,raw,model}=await pilotModelJSON([{role:'system',content:pilotSystem},{role:'user',content:prompt}],pilotSchema,signal);
-  return {...pilotDecision(value,record),round,model,prompt:PILOT_PROMPT+(variant===2?'-reading-2':''),promptHash:fingerprint([pilotSystem,prompt]),criteriaSig:source.criteriaSig,at:now(),raw};
+  const prompt=pilotPrompt(record,round,variant),selected=await resolvePilotModel(signal);
+  if(selected.provider==='typesafe'){
+    const result=await typesafeRequest(selected.base,{action:'screen',apiKey:typesafeKey,model:workspace.screeningModel,input:JSON.parse(prompt)},signal);
+    return {...pilotDecision(result.value,record),round,model:selected.name,resolvedModel:result.model,provider:'typesafe',
+      prompt:result.version+(variant===2?'-reading-2':''),promptHash:fingerprint([result.version,prompt]),criteriaSig:source.criteriaSig,at:now(),raw:JSON.stringify(result.raw),usage:result.usage};
+  }
+  const {value,raw,model}=await pilotModelJSON([{role:'system',content:pilotSystem},{role:'user',content:prompt}],pilotSchema,signal);
+  return {...pilotDecision(value,record),round,model,provider:'local',prompt:PILOT_PROMPT+(variant===2?'-reading-2':''),promptHash:fingerprint([pilotSystem,prompt]),criteriaSig:source.criteriaSig,at:now(),raw};
 }
 // A fresh random sample: records not used in earlier rounds, shuffled by a
 // seed recorded with the round so the sample can be reproduced.
@@ -788,6 +876,7 @@ function pilotSample(size,seed){
 }
 async function startPilotRound(){
   if(busy||stale()||!readySource())return;
+  if(screeningProvider()==='typesafe'&&(!typesafeKey||!workspace.screeningModel))throw new Error('Paste your TypeSafe API key and click Confirm before starting a pilot.');
   const p=workspace.pilot,last=p.rounds.length-1;
   let i=last;
   if(last<0||pilotRoundState(last).revealed){
@@ -802,9 +891,9 @@ async function startPilotRound(){
   if(!ids.length){render();return}
   busy='pilot';controller=new AbortController();render();
   try{
-    const progress=()=>showNotice('pilot-message','The local AI model is screening round '+(i+1)+': '+pilotRoundState(i).ai+' / '+pilotRoundState(i).ids.length+' done. You can vote while it works; its results stay hidden until you finish.');
+    const progress=()=>showNotice('pilot-message','The selected AI model is screening round '+(i+1)+': '+pilotRoundState(i).ai+' / '+pilotRoundState(i).ids.length+' done. You can vote while it works; its results stay hidden until you finish.');
     progress();
-    const failed=await runPool(ids,AI_WORKERS,async id=>{
+    const failed=await runPool(ids,screeningProvider()==='typesafe'?1:AI_WORKERS,async id=>{
       const result=await screenPilotRecord(recordById.get(id),i,controller.signal);
       workspace.pilot.ai[id]=result;
       log('pilot-ai',{round:i+1,recordId:id,decision:result.decision,modelDecision:result.modelDecision,model:result.model,promptHash:result.promptHash});
@@ -843,7 +932,7 @@ async function approvePilotRound(){
   if(busy||stale()||!st?.revealed)return;
   const m=pilotMetrics(st.ids);
   if(!m.recommended&&!confirm('Round '+(i+1)+' does not meet the recommended standard'+(m.fn?' ('+m.fn+' false exclusion'+(m.fn===1?'':'s')+')':'')+'. Approve anyway and use these settings for formal screening?'))return;
-  p.approved={round:i,at:now(),criteriaSig:pilotCriteriaSig(),model:st.ids.map(id=>p.ai[id]?.model).find(Boolean)||'',prompt:PILOT_PROMPT,metrics:m,recommendedMet:m.recommended};
+  p.approved={round:i,at:now(),provider:screeningProvider(),criteriaSig:pilotCriteriaSig(),model:st.ids.map(id=>p.ai[id]?.model).find(Boolean)||'',prompt:PILOT_PROMPT,metrics:m,recommendedMet:m.recommended};
   log('pilot-approved',{round:i+1,model:p.approved.model,agreement:m.agreement,kappa:m.kappa,falseExclusions:m.fn,recommendedMet:m.recommended});
   await save();
   showNotice('pilot-message','Pilot approved. Formal screening is unlocked.','success');render();
@@ -853,7 +942,7 @@ function pilotCard(rec,st,index){
   const quotes=show?a.criteria.map(c=>c.quote).filter(Boolean):[],differ=show&&h&&a.decision!==h.decision,falseEx=show&&h&&a.decision==='no'&&forward(h.decision);
   const latest=index===workspace.pilot.rounds.length-1,canVote=latest&&!stale();
   const buttons='<div class="decision-buttons" role="group" aria-label="Your decision">'+['yes','maybe','no'].map(d=>'<button type="button" class="vote '+d+(h?.decision===d?' selected':'')+'" data-pvote="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'"'+(canVote?'':' disabled')+'>'+label(d)+'</button>').join('')+'</div>';
-  const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+c.judgment.replace(' ','-')+'">'+esc(c.judgment)+'</span>'+(c.reason?' — '+esc(c.reason):'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
+  const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+c.judgment.replace(' ','-')+'">'+esc(c.judgment)+'</span>'+(c.reason?' — '+esc(c.reason):'')+(c.probabilities?'<br><span class="hint">TypeSafe probabilities: '+esc(JSON.stringify(c.probabilities))+'</span>':'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
   const ai=!st.revealed?'':a?'<div class="audit"><div class="toolbar"><strong>AI</strong>'+colored(a.decision)+(differ?'<span class="badge differ">'+(falseEx?'False exclusion':'Differs from you')+'</span>':'')+'<span class="hint">'+esc(a.model)+'</span></div>'+
     (a.criteria.length?'<ul class="evidence-list">'+a.criteria.map(judge).join('')+'</ul>':'')+(a.reason?'<p class="hint">'+esc(a.reason)+'</p>':'')+(a.note?'<p class="hint">'+esc(a.note)+'</p>':'')+
     (h&&latest?'<label class="pilot-note">Note for the AI<input class="input" data-pnote="'+esc(id)+'" value="'+esc(h.note||'')+'" placeholder="'+(differ?'Why is your decision right? Used as an example in the next round':'Optional')+'"></label>':h?.note?'<p class="hint">Note: '+esc(h.note)+'</p>':'')+'</div>':'';
@@ -885,7 +974,7 @@ function renderPilot(){
   $('pilot-detail').innerHTML=shown?
     'Recall of records you would keep: '+(m.recall===null?'not assessable (you kept none)':pct(m.recall)+' (95% CI '+pct(m.recallCI[0])+'–'+pct(m.recallCI[1])+')')+' · AI kept '+m.fp+' you excluded · Exact Yes / Maybe / No match '+m.exact+' / '+m.n+'<br>'+
     '<span class="'+(m.recommended?'ok':'warn')+'">'+(m.recommended?'✓ Meets':'✗ Does not meet')+' the recommended standard</span>: no false exclusions, and Cohen\'s κ ≥ 0.6 or agreement ≥ 75%.':
-    st?'Agreement is shown when you and the AI have both finished this round. The AI result stays hidden until then.':'Start a round: the local AI screens a random sample of records while you vote on the same records without seeing its answers.';
+    st?'Agreement is shown when you and the AI have both finished this round. The AI result stays hidden until then.':'Start a round: the selected AI model screens a random sample of records while you vote on the same records without seeing its answers.';
   $('pilot-filter').hidden=!shown;
   $('pilot-filter').querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===pilotFilter)));
   let ids=st?st.ids:[];
@@ -1000,13 +1089,13 @@ async function runFull(){
   busy='full';controller=new AbortController();render();
   try{
     const model=await resolvePilotModel(controller.signal);
-    if(approved.model&&model.name!==approved.model&&!/^local/.test(model.name))throw new Error('The pilot was approved with '+approved.model+', but the local server now runs '+model.name+'. Run and approve a pilot round with this model first.');
+    if(approved.model&&model.name!==approved.model&&!/^local/.test(model.name))throw new Error('The pilot was approved with '+approved.model+', but the selected model is '+model.name+'. Run and approve a pilot round with this model first.');
     if(!workspace.full.startedAt)workspace.full.startedAt=now();
     log('full-run-started',{remaining:ids.length,model:approved.model,pilotRound:approved.round+1,check:workspace.full.check,passes:2});
     // Both readings of every record still to read, run AI_WORKERS at a time.
     const tasks=ids.flatMap(id=>[1,2].filter(pass=>!(pass===1?fullAI(id):fullAI2(id))).map(pass=>[id,pass]));
     fullDone.length=0;
-    const failed=await runPool(tasks,AI_WORKERS,async([id,pass])=>{
+    const failed=await runPool(tasks,screeningProvider()==='typesafe'?1:AI_WORKERS,async([id,pass])=>{
       const record=recordById.get(id);if(!record)return;
       const key=id+'|'+pass;fullNow.set(key,'Pass '+pass+' of 2: '+(record.title||'(untitled record)'));safely(renderFull);
       try{
@@ -1036,7 +1125,7 @@ function castFullVote(id,decision){
   maybeComplete();save().then(render).catch(()=>{});
 }
 function aiDetails(a){
-  const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+c.judgment.replace(' ','-')+'">'+esc(c.judgment)+'</span>'+(c.reason?' — '+esc(c.reason):'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
+  const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+c.judgment.replace(' ','-')+'">'+esc(c.judgment)+'</span>'+(c.reason?' — '+esc(c.reason):'')+(c.probabilities?'<br><span class="hint">TypeSafe probabilities: '+esc(JSON.stringify(c.probabilities))+'</span>':'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
   return (a.criteria?.length?'<ul class="evidence-list">'+a.criteria.map(judge).join('')+'</ul>':'')+(a.reason?'<p class="hint">'+esc(a.reason)+'</p>':'')+(a.note?'<p class="hint">'+esc(a.note)+'</p>':'');
 }
 // Conflicts show both readings at once (the reviewer settles a disagreement);
@@ -1104,7 +1193,7 @@ function renderFull(){
 function approvalsValid(){return pilotApprovalValid()}
 function render(){
   if(!workspace)return;
-  renderSource();renderPilot();renderFull();
+  renderModelSelection();renderSource();renderPilot();renderFull();
 }
 function download(name,mime,body){
   const url=URL.createObjectURL(new Blob([body],{type:mime}));

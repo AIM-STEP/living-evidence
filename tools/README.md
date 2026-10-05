@@ -282,3 +282,46 @@ switching model source, or refreshing clears confirmation. No browser storage or
 contain the pasted key. Each API request carries its own key; it never changes the
 server environment or another user's credentials. The server environment key remains
 available to existing non-UI clients. Confirm may incur a small provider charge.
+
+
+## Title and abstract screening: TypeSafe API
+
+The Pilot screening panel has the same Local model / API choice and password-style
+API key + Confirm controls as Eligibility. Here API means **TypeSafe**, using fixed
+`https://api.typesafe.ai/v1/models` and `/v1/systemone` destinations. No API URL,
+server API model environment variable, or server API key is required. Confirm
+checks account access and loads model names; it does not claim to test inference.
+The key remains in tab memory and travels only through the guarded model backend
+to TypeSafe. Reloading or changing the key requires confirmation again. No keys
+are persisted to workspace, audit logs or exported results. Existing SSH / private
+remote access to Mac Studio is still required. Ollama need not be running for API
+mode; AIM-STEP's Python backend must be running.
+
+TypeSafe uses one named choice question per eligibility criterion: met, not_met,
+unclear. Its probabilities are shown as model output, not evidence certainty or a
+validated clinical threshold. For not_met, a second request selects an exact
+source span from a fixed menu; it cannot invent a quote. No supporting span means
+unclear. The existing page rule still prevents exclusion without an abstract and
+requires an exact matching quotation. Reasons are application labels, not
+model-generated explanations. JSON exports retain probabilities, provider,
+requested/resolved model, adapter version, raw responses and token usage.
+
+Both pilot and formal screening use the selected provider. TypeSafe runs one
+record request at a time, and authentication/credits/rate-limit errors stop the
+run for the user to resolve. The two formal passes use the same model with a
+changed question order, not two independent reviewers. Human pilot approval and
+existing human checks remain required. Changing provider/model asks to archive
+the current pilot and full-screening results, resets the active run, and requires
+a new pilot. Archived runs can be downloaded from the model panel.
+
+Validation (synthetic inputs / mocked API; no real credentials):
+
+```bash
+python3 tools/test_typesafe_model.py
+python3 tools/test_local_model_server.py
+python3 tools/test_remote_model_server.py
+node tools/test_typesafe_screening.cjs
+```
+
+API contract: https://api.typesafe.ai/openapi.json (checked 2026-10-05).
+A real authenticated screening run still needs the user's key in the UI.
