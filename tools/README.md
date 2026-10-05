@@ -196,7 +196,7 @@ python3 tools/test_remote_model_server.py -v
 ## 测试
 
 ```bash
-python3 tools/test_local_model_server.py     # 20 项，用假 Ollama，无需真实模型
+python3 tools/test_local_model_server.py     # 30 项，用假 Ollama，无需真实模型
 python3 tools/test_remote_model_server.py    # 22 项，不需要端口权限、Tailscale 或真实模型
 ```
 
