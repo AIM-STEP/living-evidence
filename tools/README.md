@@ -270,3 +270,15 @@ TypeSafe 的 `/v1/systemone` 是判断接口，不支持本页文本生成，会
 不会修改已经运行的 launchd 服务。健康接口的 api.ready 仅确认配置齐全，
 不是远端认证或推理测试成功。云端模式会把本次任务内容发送给所配置服务商。
 无真实凭证时仅用模拟服务验证；接入真实服务后需另做端到端验证。
+
+
+### API key confirmation in Eligibility
+
+The English-only page shows a password input and Confirm button when API is selected.
+Configure `AIMSTEP_API_URL` and `AIMSTEP_API_MODEL` on the server first. The page accepts
+an API key for this tab, then sends a short JSON test through the backend. Successful
+confirmation clears the input and keeps the key only in tab memory. Editing the key,
+switching model source, or refreshing clears confirmation. No browser storage or logs
+contain the pasted key. Each API request carries its own key; it never changes the
+server environment or another user's credentials. The server environment key remains
+available to existing non-UI clients. Confirm may incur a small provider charge.

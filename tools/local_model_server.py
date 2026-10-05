@@ -324,7 +324,8 @@ class Handler(SimpleHTTPRequestHandler):
                 "service": SERVICE if ok else SERVICE + "-unavailable",
                 "model": self.model, "ollama": self.ollama, "status": msg,
                 "embedModel": self.embed_model if embed_ok else "",
-                "api": {"ready": api_model.status()[0], "status": api_model.status()[1],
+                "api": {"acceptsKey": api_model.status("configuration-check")[0],
+                        "ready": api_model.status()[0], "status": api_model.status()[1],
                         "model": api_model.config()["model"]}})
         return super().do_GET()
 
@@ -363,6 +364,7 @@ class Handler(SimpleHTTPRequestHandler):
             messages = clean_messages(payload)
             fmt = clean_format(payload)
             provider = payload.get("provider", "local")
+            api_key = api_model.clean_key(payload["apiKey"]) if provider == "api" and "apiKey" in payload else None
             if provider not in ("local", "api"):
                 raise BadRequest("Unknown model provider")
         except (ValueError, BadRequest) as e:
@@ -370,7 +372,7 @@ class Handler(SimpleHTTPRequestHandler):
         started = time.time()
         attempts = []
         try:
-            reply = api_model.chat(messages) if provider == "api" else chat(self.ollama, self.model, messages, attempts=attempts, fmt=fmt)
+            reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else chat(self.ollama, self.model, messages, attempts=attempts, fmt=fmt)
         except (ValueError, KeyError, TypeError) as e:
             return self._send_json(502, {"error": str(e) if provider == "local" else "API request failed: " + str(e)})
         except urllib.error.HTTPError as e:

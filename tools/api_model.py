@@ -10,8 +10,10 @@ def config():
             for k in ('url', 'model', 'key')}
 
 
-def status():
+def status(key=None):
     c = config()
+    if key is not None:
+        c["key"] = clean_key(key)
     host = (urlsplit(c['url']).hostname or '').lower()
     if host == 'typesafe.ai' or host.endswith('.typesafe.ai'):
         return False, 'TypeSafe supports structured decisions, not criteria text generation. Choose a text-generation API or the local model.'
@@ -28,11 +30,19 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def chat(messages, timeout=600):
-    ready, reason = status()
+def clean_key(key):
+    if not isinstance(key, str) or not key.strip() or len(key) > 4096 or any(ord(ch) < 32 or ord(ch) > 126 for ch in key):
+        raise ValueError('Enter a valid API key without line breaks.')
+    return key.strip()
+
+
+def chat(messages, timeout=600, key=None):
+    ready, reason = status(key)
     if not ready:
         raise ValueError(reason)
     c = config()
+    if key is not None:
+        c["key"] = clean_key(key)
     converted = []
     for message in messages:
         item = {'role': message['role'], 'content': message['content']}

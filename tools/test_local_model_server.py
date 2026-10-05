@@ -352,6 +352,35 @@ class ServerTest(unittest.TestCase):
             self.assertNotIn('synthetic-secret', json.dumps(health))
             self.assertTrue(health['api']['ready'])
 
+    def test_pasted_key_is_request_scoped_and_not_logged(self):
+        key = 'synthetic-browser-key'
+        with patch.object(srv.api_model, 'chat', return_value={'message': {'content': '{}'}}) as api:
+            status, body = self.req('POST', srv.MODEL, dict(self.MSG, provider='api', apiKey=key))
+            self.assertEqual(status, 200)
+            api.assert_called_once_with(self.MSG['messages'], key=key)
+            self.assertNotIn(key, json.dumps(body))
+        for name in os.listdir(self.logs):
+            with open(os.path.join(self.logs, name)) as f:
+                self.assertNotIn(key, f.read())
+        with patch.dict(os.environ, {}, clear=True):
+            status, _ = self.req('POST', srv.MODEL, dict(self.MSG, provider='api'))
+            self.assertEqual(status, 502)
+
+    def test_key_confirmation_requires_endpoint_and_model(self):
+        with patch.dict(os.environ, {'AIMSTEP_API_URL':'https://example.test/v1/chat/completions',
+                                     'AIMSTEP_API_MODEL':'test'}, clear=True):
+            _, body = self.req('GET', srv.HEALTH)
+            self.assertTrue(body['api']['acceptsKey'])
+            self.assertFalse(body['api']['ready'])
+            self.assertTrue(srv.api_model.status('test-key')[0])
+
+    def test_pasted_key_rejects_header_injection(self):
+        with patch.object(srv.api_model, 'chat') as api:
+            status, body = self.req('POST', srv.MODEL, dict(self.MSG, provider='api', apiKey='secret\nInjected: yes'))
+            self.assertEqual(status, 400)
+            api.assert_not_called()
+            self.assertNotIn('secret', json.dumps(body))
+
     def test_unknown_provider_rejected(self):
         status, _ = self.req('POST', srv.MODEL, dict(self.MSG, provider='other'))
         self.assertEqual(status, 400)
