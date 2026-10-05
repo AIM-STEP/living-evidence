@@ -372,7 +372,7 @@ async function explainUnreachable(){
   const base='Cannot reach the local model. On this computer, start Ollama and run python3 tools/local_model_server.py in the AIM-STEP site folder, then allow local network access if the browser asks.';
   if(['localhost','127.0.0.1','[::1]'].includes(location.hostname))return base;
   if(!window.isSecureContext&&location.protocol==='http:'){let here=location.href;try{if(top.location.origin===location.origin)here=top.location.href}catch(e){}return 'This page was opened over http://, and browsers never let an http page reach this computer. Open '+here.replace(/^http:/,'https:')+' instead.'+direct}
-  try{const state=(await navigator.permissions.query({name:'loopback-network'})).state;if(state==='denied')return 'The browser has blocked this site from reaching this computer. Allow local network access for this site, then reload.'+direct;if(state==='prompt')return 'The browser has not granted local network access. Click Start again and choose Allow when the browser asks.'+direct}catch(e){}
+  try{const state=(await navigator.permissions.query({name:'loopback-network'})).state;if(state==='denied')return 'The browser has blocked this site from reaching this computer. Allow local network access for this site, then reload.'+direct;if(state==='prompt')return 'The browser has not granted local network access. If it asked, click Start again and choose Allow. If it never asked, nothing was listening on '+LOCAL_SERVER+': the prompt appears only once the connection succeeds, so start Ollama and tools/local_model_server.py on the computer running this browser.'+direct}catch(e){}
   return base+direct;
 }
 async function pilotModelJSON(messages,schema,signal){
