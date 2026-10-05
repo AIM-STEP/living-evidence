@@ -26,6 +26,7 @@
 <div class="layout"><section class="panel editor" aria-label="Criteria editor">
 <div class="section"><div class="section-head"><div><h2>Review type</h2></div></div><label class="field-label" for="review-type">Review type</label><select class="select" id="review-type"><option>Literature Review</option><option>Systematic Review</option><option>Network/Meta-analysis</option><option>Scoping Review</option><option>Other Review</option></select></div>
 <div class="section"><label class="field-label" for="generation-method">Generation Method</label><select class="select" id="generation-method"><option value="" hidden></option><option value="machine">Machine generate</option><option value="manual">Manual generate</option></select></div>
+<div class="section"><label class="field-label" for="model-source">Model source / 模型来源</label><select class="select" id="model-source" aria-describedby="model-source-note"><option value="local">Local model / 本地模型</option><option value="api">API / 接入 API</option></select><p class="hint" id="model-source-note" role="status">Uses the model running on Mac Studio. 使用 Mac Studio 本地模型。</p></div>
 <div class="section" id="machine-generate-panel" hidden><div class="section-head"><div><h2>Machine generate</h2></div></div><div class="machine-input"><textarea id="question" class="textarea" aria-label="Review question for automatic criteria generation" placeholder="What population, intervention or phenomenon are you studying?"></textarea><div class="machine-input-tools"><button class="machine-tool" id="add-source" type="button" aria-label="Upload Word, PDF, text or image" title="Upload a document or image">＋</button><button class="machine-tool" id="voice-toggle" type="button" aria-label="Start voice input" aria-pressed="false" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg></button><input id="source-files" type="file" accept=".docx,.pdf,.txt,.md,.csv,image/png,image/jpeg,image/webp" multiple hidden></div></div><div id="machine-attachments" class="machine-attachments" aria-live="polite" hidden></div><div class="machine-actions"><button class="btn" id="clear-question" type="button">Clear</button><button class="btn btn-primary" id="start-machine" type="button">Start</button></div><div id="generation-status" class="hint machine-status" role="status" aria-live="polite" hidden></div></div>
 <div class="section" id="manual-generate-panel" hidden><div class="section-head"><div><h2>Manual generate</h2></div><div class="manual-actions"><button class="btn" id="manual-generate" type="button" aria-label="Clear all entered eligibility content">Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker">＋ Add criterion</button></div></div><label class="field-label">Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden><strong>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other">Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading" style="margin-top:18px">Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label">Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date">Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date">End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language">Language</label><select id="language" class="select"><option value="">Select language</option><option value="Chinese">Chinese</option><option value="English">English</option></select></div><div><label class="field-label" for="limits-other">Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div class="manual-refine-controls"><button class="btn btn-primary" id="refine-manual" type="button">Standardize</button></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
@@ -222,8 +223,15 @@ async function findLocalBackend(signal){
   for(const base of bases){
     try{
       const health=await localFetch(base+'/health',{signal});
-      if(health.ok&&(await health.json()).service==='aimstep-local-eligibility')return {provider:'backend',base,name:'local',slot:'local'};
-    }catch(error){if(signal.aborted)throw error}
+      const info=await health.json();
+      if(String(info.service||'').startsWith('aimstep-local-eligibility')){
+        if($('model-source').value==='api'){
+          if(!info.api?.ready){const error=new Error(info.api?.status||'This backend needs the API update and server configuration.');error.configuration=true;throw error}
+          return {provider:'backend',source:'api',base,name:info.api.model,slot:'api'};
+        }
+        if(health.ok)return {provider:'backend',source:'local',base,name:info.model||'local',slot:'local'};
+      }
+    }catch(error){if(signal.aborted||error.configuration)throw error}
   }
   return null;
 }
@@ -250,7 +258,8 @@ async function explainUnreachable(){
   return unreachableModelMessage+direct;
 }
 async function resolveLocalModel(needsVision,signal){
-  const backend=await findLocalBackend(signal);if(backend)return backend;
+  const backend=await findLocalBackend(signal);if(backend){if(backend.source==='api'&&needsVision)throw new Error('API mode accepts text documents only. Use the local model for images or scanned PDFs.');return backend;}
+  if($('model-source').value==='api')throw new Error('Cannot reach the AIM-STEP backend. API mode also needs the Mac Studio connection or SSH tunnel.');
   const configured=localModelConfig(),provider=configured.provider==='compatible'?'compatible':'ollama';
   let base=String(configured.base||'http://127.0.0.1:11434').trim().replace(/\/+$/,'');
   let address;try{address=new URL(base)}catch(e){throw new Error('The local model address is invalid.')}
@@ -289,39 +298,39 @@ async function requestMachineCriteria(model,input,reviewType,signal){
   const user=ollama?{role:'user',content:prompt,...(input.images.length?{images:input.images.map(image=>image.dataUrl.split(',')[1])}:{})}:
     {role:'user',content:input.images.length?[{type:'text',text:prompt},...input.images.map(image=>({type:'image_url',image_url:{url:image.dataUrl}}))]:prompt};
   const messages=[{role:'system',content:system},user];
-  const body=backend?{messages}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'}};
+  const body=backend?{messages,provider:model.source||'local'}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'}};
   const headers={'Content-Type':'application/json'};
   const token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
   const endpoint=model.base+(backend?'/model':ollama?'/api/chat':'/chat/completions');
   async function post(){
     const response=await localFetch(endpoint,{method:'POST',headers,body:JSON.stringify(body),signal});
-    if(!response.ok){const raw=(await response.text()).slice(0,250);let message=raw;try{message=JSON.parse(raw).error||raw}catch(e){}const error=new Error('Local model HTTP '+response.status+': '+message);error.status=response.status;throw error}
+    if(!response.ok){const raw=(await response.text()).slice(0,250);let message=raw;try{message=JSON.parse(raw).error||raw}catch(e){}const error=new Error('Model HTTP '+response.status+': '+message);error.status=response.status;throw error}
     return response.json();
   }
   let data;try{data=await post()}catch(error){if(!ollama&&error.status===400&&/response.format|json.object|json mode/i.test(error.message)){delete body.response_format;data=await post()}else throw error}
   const content=ollama?data.message?.content:data.choices?.[0]?.message?.content;
   const raw=typeof content==='string'?content:Array.isArray(content)?content.filter(part=>part.type==='text').map(part=>part.text).join(''):'';
-  if(!raw)throw new Error('The local model returned no criteria.');
-  try{return JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''))}catch(e){throw new Error('The local model returned invalid JSON. Revise the question and try again.')}
+  if(!raw)throw new Error('The selected model returned no criteria.');
+  try{return JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''))}catch(e){throw new Error('The selected model returned invalid JSON. Revise the question and try again.')}
 }
 async function callCriteriaJson(model,system,payload,signal){
   const backend=model.provider==='backend',ollama=model.provider!=='compatible';
   const messages=[{role:'system',content:system},{role:'user',content:JSON.stringify(payload)}];
-  const body=backend?{messages}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0,num_ctx:8192}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'},temperature:0};
+  const body=backend?{messages,provider:model.source||'local'}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0,num_ctx:8192}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'},temperature:0};
   const headers={'Content-Type':'application/json'},token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
   async function post(){
     const response=await localFetch(model.base+(backend?'/model':ollama?'/api/chat':'/chat/completions'),{method:'POST',headers,body:JSON.stringify(body),signal});
-    if(!response.ok){const raw=(await response.text()).slice(0,250);let message=raw;try{message=JSON.parse(raw).error||raw}catch(e){}throw new Error('Local model HTTP '+response.status+': '+message)}
+    if(!response.ok){const raw=(await response.text()).slice(0,250);let message=raw;try{message=JSON.parse(raw).error||raw}catch(e){}throw new Error('Model HTTP '+response.status+': '+message)}
     return response.json();
   }
   let data;try{data=await post()}catch(error){if(!ollama&&/response.format|json.object|json mode/i.test(error.message)){delete body.response_format;data=await post()}else throw error}
   const content=ollama?data.message?.content:data.choices?.[0]?.message?.content;
   const raw=typeof content==='string'?content:Array.isArray(content)?content.filter(part=>part.type==='text').map(part=>part.text).join(''):'';
-  if(!raw)throw new Error('The local model returned no criteria.');
+  if(!raw)throw new Error('The selected model returned no criteria.');
   try{return JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''))}
-  catch{throw new Error('The local model returned invalid JSON. Try a shorter input or a stronger local model.')}
+  catch{throw new Error('The selected model returned invalid JSON. Try a shorter input or a stronger local model.')}
 }
 // Adapt AutoCriteria's preprocessing to study-level review rules: separate inclusion,
 // exclusion and conditional notes, then preserve sentence boundaries in 200-word chunks.
@@ -486,7 +495,7 @@ async function refineManualCriteria(){
   const input={framework:state.framework,reviewType:state.reviewType,criteria:state.criteria.map(({title,condition,uncertain,definition})=>({dimension:title,eligibilityRule:condition||'',exclusionRule:uncertain||'',otherRule:definition||''})),limits:{startDate:dateToInput(state.dateRange?.start,'start'),endDate:dateToInput(state.dateRange?.end,'end'),language:state.language||'',other:state.limitsOther||''}};
   if(JSON.stringify(input).length>24000){setManualStatus('Shorten the manual rules before standardizing.',true);return}
   stopManualRefinement();const run=++manualRefinementNonce,controller=new AbortController(),signature=manualSourceSignature();manualRefinementController=controller;manualRunSignature=signature;
-  const button=$('refine-manual');button.disabled=true;button.textContent='Standardizing…';setManualStatus('Connecting to the local model…');
+  const button=$('refine-manual');button.disabled=true;button.textContent='Standardizing…';setManualStatus('Connecting to the selected model…');
   let timedOut=false;const timer=setTimeout(()=>{timedOut=true;controller.abort()},600000);
   try{
     const model=await resolveLocalModel(false,controller.signal);
@@ -495,7 +504,7 @@ async function refineManualCriteria(){
     if(run!==manualRefinementNonce||controller.signal.aborted||manualSourceSignature()!==signature)return;
     state.manualRefinement=refinement;
     state.confirmed=false;const saved=save();setManualStatus(saved?'Source-linked draft generated. Review the pending items and original sentences.':'Draft generated, but could not be saved on this device.',!saved);
-  }catch(error){if(run===manualRefinementNonce)setManualStatus(timedOut?'Local model request timed out after 10 minutes.':error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);if(run===manualRefinementNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===manualRefinementNonce&&!manualRefinementController)setManualStatus(message,true)})}
+  }catch(error){if(run===manualRefinementNonce)setManualStatus(timedOut?'Model request timed out after 10 minutes.':error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);if(run===manualRefinementNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===manualRefinementNonce&&!manualRefinementController)setManualStatus(message,true)})}
   finally{clearTimeout(timer);if(run===manualRefinementNonce){manualRefinementController=null;button.disabled=false;button.textContent='Standardize'}}
 }
 function normalizeMachineCriteria(answer){
@@ -520,13 +529,13 @@ async function generateMachineCriteria(){
   const question=$('question').value.trim(),reviewType=$('review-type').value,files=attachedFiles.slice(),sourceRevision=Number(state.machineSourceRevision)||0;
   if(!question&&!files.length){setMachineStatus('Enter text, record speech, or attach a document or image before starting.',true);$('question').focus();return}
   stopMachineGeneration();const run=++generationNonce,controller=new AbortController();generationController=controller;
-  const button=$('start-machine');button.disabled=true;button.textContent='Generating…';setMachineStatus(files.length?'Reading attached files…':'Connecting to the local model…');
+  const button=$('start-machine');button.disabled=true;button.textContent='Generating…';setMachineStatus(files.length?'Reading attached files…':'Connecting to the selected model…');
   state.confirmed=false;save();
   let timedOut=false;const timer=setTimeout(()=>{timedOut=true;controller.abort()},600000);
   try{
     const input=await prepareSources(question,files,controller.signal);
     if(run!==generationNonce||controller.signal.aborted)return;
-    setMachineStatus('Connecting to the local model…');
+    setMachineStatus('Connecting to the selected model…');
     const model=await resolveLocalModel(!!input.images.length,controller.signal);
     if(run!==generationNonce||controller.signal.aborted)return;
     setMachineStatus('Generating criteria…');
@@ -543,7 +552,7 @@ async function generateMachineCriteria(){
     document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));
     const saved=save();setMachineStatus(saved?'Criteria generated. Check the source trace and original question.':'Criteria generated, but could not be saved on this device.',!saved);
   }catch(error){
-    if(run===generationNonce)setMachineStatus(timedOut?'Local model request timed out after 10 minutes.':error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);
+    if(run===generationNonce)setMachineStatus(timedOut?'Model request timed out after 10 minutes.':error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);
     if(run===generationNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===generationNonce&&!generationController)setMachineStatus(message,true)});
   }finally{clearTimeout(timer);if(run===generationNonce){generationController=null;button.disabled=false;button.textContent='Start'}}
 }
@@ -672,6 +681,12 @@ function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setT
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';const reviewOption=[...$('review-type').options].find(option=>option.value.toLowerCase()===String(state.reviewType||'Systematic Review').toLowerCase());$('review-type').value=reviewOption?reviewOption.value:'Systematic Review';document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});
 $('generation-method').addEventListener('change',()=>{stopMachineGeneration();stopManualRefinement();abortVoiceInput();setMachineStatus('');setManualStatus('');const mode=$('generation-method').value;state.generationMethodChoice=mode;state.activeGenerator=mode;state.generationMode=mode==='machine'?'machine':mode==='manual'?'manual':'';$('machine-generate-panel').hidden=mode!=='machine';$('manual-generate-panel').hidden=mode!=='manual';renderPreview();save()});
+$('model-source').addEventListener('change',()=>{
+  stopMachineGeneration();stopManualRefinement();setMachineStatus('');setManualStatus('');
+  $('model-source-note').textContent=$('model-source').value==='api'
+    ?'研究内容将发送给服务器配置的 API 服务商。需配置支持文本生成的 API；TypeSafe 当前不支持生成纳入标准。API keys stay on the server.'
+    :'Uses the model running on Mac Studio. 使用 Mac Studio 本地模型。';
+});
 $('start-machine').addEventListener('click',generateMachineCriteria);
 $('refine-manual').addEventListener('click',refineManualCriteria);
 $('add-source').addEventListener('click',()=>$('source-files').click());

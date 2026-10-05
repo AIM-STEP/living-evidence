@@ -30,9 +30,8 @@ a web page elsewhere cannot use it to reach the model. The one exception is the
 project's own published site (--allow-origin, default aimsetp.com): opened
 there, eligibility.html finds no backend on GitHub Pages and falls back to
 this server at http://127.0.0.1:8765, so that origin gets CORS headers and
-preflight answers. Any other origin is still refused. No key, no account, no
-third-party service: research text goes from the browser to this process to
-Ollama on the same machine, and nowhere else.
+preflight answers. Any other origin is still refused. Local mode sends research text only to Ollama on this machine. Explicit API
+mode sends it to the server-configured HTTPS provider; keys stay server-side.
 
 AUDIT. --log-dir DIR appends every exchange (messages in, reply out, model,
 timing) to DIR/eligibility-YYYY-MM-DD.jsonl, so a draft can be traced back to
@@ -45,6 +44,7 @@ Standard library only; Python 3.8+.
 from __future__ import annotations
 
 import argparse
+import api_model
 import json
 import os
 import sys
@@ -323,7 +323,9 @@ class Handler(SimpleHTTPRequestHandler):
             return self._send_json(200 if ok else 503, {
                 "service": SERVICE if ok else SERVICE + "-unavailable",
                 "model": self.model, "ollama": self.ollama, "status": msg,
-                "embedModel": self.embed_model if embed_ok else ""})
+                "embedModel": self.embed_model if embed_ok else "",
+                "api": {"ready": api_model.status()[0], "status": api_model.status()[1],
+                        "model": api_model.config()["model"]}})
         return super().do_GET()
 
     def do_HEAD(self):
@@ -360,13 +362,20 @@ class Handler(SimpleHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             messages = clean_messages(payload)
             fmt = clean_format(payload)
+            provider = payload.get("provider", "local")
+            if provider not in ("local", "api"):
+                raise BadRequest("Unknown model provider")
         except (ValueError, BadRequest) as e:
             return self._send_json(400, {"error": str(e)})
         started = time.time()
         attempts = []
         try:
-            reply = chat(self.ollama, self.model, messages, attempts=attempts, fmt=fmt)
+            reply = api_model.chat(messages) if provider == "api" else chat(self.ollama, self.model, messages, attempts=attempts, fmt=fmt)
+        except (ValueError, KeyError, TypeError) as e:
+            return self._send_json(502, {"error": str(e) if provider == "local" else "API request failed: " + str(e)})
         except urllib.error.HTTPError as e:
+            if provider == "api":
+                return self._send_json(502, {"error": "API provider returned HTTP %d. Check server credentials, quota and model compatibility." % e.code})
             detail = e.read().decode("utf-8", "replace")[:300]
             try:
                 detail = json.loads(detail).get("error", detail)
@@ -374,16 +383,17 @@ class Handler(SimpleHTTPRequestHandler):
                 pass
             return self._send_json(502, {"error": "Ollama HTTP %d: %s" % (e.code, detail)})
         except (urllib.error.URLError, OSError) as e:
-            return self._send_json(502, {"error": "Ollama is not reachable: %s" % e})
+            return self._send_json(502, {"error": "API provider is unreachable or timed out." if provider == "api" else "Ollama is not reachable: %s" % e})
+        used_model = api_model.config()["model"] if provider == "api" else self.model
         content = reply.get("message", {}).get("content", "")
         write_log(self.log_dir, {
             "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "seconds": round(time.time() - started, 1),
-            "model": self.model, "options": ollama_body(self.model, [])["options"], "attempts": attempts,
+            "model": used_model, "provider": provider, "options": {} if provider == "api" else ollama_body(self.model, [])["options"], "attempts": attempts,
             "messages": [{k: (v if k != "images" else ["<%d base64 chars>" % len(i) for i in v])
                           for k, v in m.items()} for m in messages],
             "reply": content})
         return self._send_json(200, {"message": {"role": "assistant", "content": content},
-                                     "model": self.model})
+                                     "model": used_model, "provider": provider})
 
     def end_headers(self):
         # Static pages change while you work on them; never serve a stale copy.

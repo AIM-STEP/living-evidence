@@ -17,6 +17,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch, MagicMock
 from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -313,6 +314,48 @@ class ServerTest(unittest.TestCase):
 
     def test_other_post_paths_are_404(self):
         self.assertEqual(self.req("POST", "/api/other", self.MSG)[0], 404)
+
+    def test_api_routes_without_calling_ollama(self):
+        with patch.object(srv.api_model, 'chat', return_value={'message': {'content': '{"ok":true}'}}) as api:
+            status, body = self.req('POST', srv.MODEL, dict(self.MSG, provider='api'))
+        self.assertEqual(status, 200)
+        api.assert_called_once_with(self.MSG['messages'])
+        self.assertEqual(body['provider'], 'api')
+        self.assertEqual(FakeOllama.seen, [])
+
+    def test_missing_api_does_not_fall_back(self):
+        with patch.dict(os.environ, {}, clear=True):
+            status, body = self.req('POST', srv.MODEL, dict(self.MSG, provider='api'))
+        self.assertEqual(status, 502)
+        self.assertIn('not configured', body['error'])
+        self.assertEqual(FakeOllama.seen, [])
+
+    def test_typesafe_generation_is_blocked(self):
+        with patch.dict(os.environ, {'AIMSTEP_API_URL': 'https://api.typesafe.ai/v1/systemone'}, clear=True):
+            ready, reason = srv.api_model.status()
+        self.assertFalse(ready)
+        self.assertIn('TypeSafe', reason)
+
+    def test_api_key_only_in_upstream_authorization(self):
+        env = {'AIMSTEP_API_URL': 'https://example.test/v1/chat/completions',
+               'AIMSTEP_API_MODEL': 'test', 'AIMSTEP_API_KEY': 'synthetic-secret'}
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b'{"choices":[{"message":{"content":"{}"}}]}'
+        with patch.dict(os.environ, env, clear=True), patch.object(srv.api_model.urllib.request, 'build_opener') as factory:
+            factory.return_value.open.return_value = response
+            result = srv.api_model.chat(self.MSG['messages'])
+            req = factory.return_value.open.call_args.args[0]
+            self.assertEqual(req.get_header('Authorization'), 'Bearer synthetic-secret')
+            self.assertNotIn(b'synthetic-secret', req.data)
+            self.assertNotIn('synthetic-secret', json.dumps(result))
+            status, health = self.req('GET', srv.HEALTH)
+            self.assertNotIn('synthetic-secret', json.dumps(health))
+            self.assertTrue(health['api']['ready'])
+
+    def test_unknown_provider_rejected(self):
+        status, _ = self.req('POST', srv.MODEL, dict(self.MSG, provider='other'))
+        self.assertEqual(status, 400)
+        self.assertEqual(FakeOllama.seen, [])
 
     def test_static_pages_are_served(self):
         status, raw = self.req("GET", "/eligibility.html")

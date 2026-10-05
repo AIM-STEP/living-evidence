@@ -248,3 +248,25 @@ model the page falls back to keyword scoring and records that it did.
 
 PDF text is read in the browser with pdf.js 4.10.38 (`vendor/pdfjs/`,
 Apache-2.0); open-access articles come from Europe PMC as JATS XML.
+
+## Eligibility: 本地模型 / 接入 API
+
+Eligibility 页面新增 Model source，作用于 Machine generate 和 Standardize。
+默认使用本地模型；切换会停止当前生成。API 请求经本后端转发，失败不会切回本地。
+远端访问仍需要 SSH 转发或既有私有入口。
+
+API 模式支持 HTTPS 的 Chat Completions 兼容接口，要求支持
+`messages`、`response_format: {"type":"json_object"}` 和
+`choices[0].message.content`。目前仅支持文本输入；图片和扫描 PDF 使用本地模式。
+TypeSafe 的 `/v1/systemone` 是判断接口，不支持本页文本生成，会明确拒绝。
+
+在运行后端的 Mac Studio 进程环境中设置：
+
+- `AIMSTEP_API_URL`：完整 HTTPS 接口地址，包含 `/chat/completions`。
+- `AIMSTEP_API_MODEL`：服务商提供的文本生成模型名称。
+- `AIMSTEP_API_KEY`：密钥，仅存于服务端环境。不要写进网站目录或提交到 Git。
+
+配置后重启后端；launchd 服务必须在自己的进程环境中配置，普通终端的 export
+不会修改已经运行的 launchd 服务。健康接口的 api.ready 仅确认配置齐全，
+不是远端认证或推理测试成功。云端模式会把本次任务内容发送给所配置服务商。
+无真实凭证时仅用模拟服务验证；接入真实服务后需另做端到端验证。
