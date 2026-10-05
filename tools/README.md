@@ -200,6 +200,10 @@ python3 tools/test_local_model_server.py     # 20 项，用假 Ollama，无需�
 python3 tools/test_remote_model_server.py    # 22 项，不需要端口权限、Tailscale 或真实模型
 ```
 
+要确认浏览器这一侧也通，从本机服务打开 `http://127.0.0.1:8765/local-model-diagnostic.html`。
+它检查健康接口，并发一次真实的模型请求，最后报告是否可达。它用的是相对地址，所以只诊断
+“从本机服务打开”这一种情况；隧道和 Tailscale 两种做法仍按上文各自的第 3 步确认。
+
 ## Faster screening: Ollama in parallel
 
 Title and abstract screening sends up to 4 model requests at once

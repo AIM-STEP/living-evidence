@@ -1,0 +1,54 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>AIM-STEP local model diagnostic</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:880px;margin:40px auto;padding:0 20px;line-height:1.5}
+pre{white-space:pre-wrap;background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:14px}
+.ok{color:#116329}.bad{color:#cf222e}
+</style>
+<h1>AIM-STEP local model diagnostic</h1>
+<p id="summary">Running checks...</p>
+<pre id="out"></pre>
+<script>
+const out=document.getElementById('out');
+const summary=document.getElementById('summary');
+const lines=[];
+function log(label,value){
+  lines.push(label+': '+(typeof value==='string'?value:JSON.stringify(value,null,2)));
+  out.textContent=lines.join('\n\n');
+}
+async function check(){
+  let ok=true;
+  log('page',location.href);
+  log('isSecureContext',String(window.isSecureContext));
+  log('userAgent',navigator.userAgent);
+  try{
+    const r=await fetch('/api/eligibility/health',{cache:'no-store'});
+    const text=await r.text();
+    log('GET /api/eligibility/health',{status:r.status,ok:r.ok,text});
+    ok=ok&&r.ok&&/aimstep-local-eligibility/.test(text);
+  }catch(e){
+    ok=false;
+    log('GET /api/eligibility/health error',String(e&&e.stack||e));
+  }
+  try{
+    const r=await fetch('/api/eligibility/model',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:[
+        {role:'system',content:'Return JSON only.'},
+        {role:'user',content:'Return {"ok":true}.'}
+      ]})
+    });
+    const text=await r.text();
+    log('POST /api/eligibility/model',{status:r.status,ok:r.ok,text:text.slice(0,800)});
+    ok=ok&&r.ok;
+  }catch(e){
+    ok=false;
+    log('POST /api/eligibility/model error',String(e&&e.stack||e));
+  }
+  summary.textContent=ok?'Local model is reachable from this browser.':'Local model is NOT reachable from this browser.';
+  summary.className=ok?'ok':'bad';
+}
+check();
+</script>
