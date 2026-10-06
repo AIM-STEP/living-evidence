@@ -190,6 +190,7 @@ th{background:#f4f4f4}
 .pilot-heading{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
 .source-panel-head{flex-wrap:wrap;gap:12px}
 .source-panel-head>.source-actions{margin-left:auto}
+.full-summary>div:has(.full-category){padding:0}.full-category{display:block;width:100%;height:100%;border:0;border-bottom:2px solid transparent;padding:8px 12px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}.full-category:hover{background:#f0eaf3}.full-category[aria-pressed="true"]{background:#eee4f1;border-bottom-color:var(--plum)}.full-category:focus-visible{outline:2px solid var(--plum);outline-offset:-3px}
 </style>
 </head>
 <body>
@@ -231,18 +232,13 @@ th{background:#f4f4f4}
 <div class="panel-head pilot-panel-head"><div class="pilot-title-actions"><h2>All records screening</h2><button class="pilot-help-button" id="full-help-button" type="button" aria-label="How all records screening works" aria-describedby="full-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-screening" type="button" disabled title="Approve the pilot first.">Start</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse All records screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse All records screening</span></button></div></div>
 <div class="panel-body" id="full-body">
 
-<div class="source-summary pilot-summary full-summary"><div><strong id="full-screened">0 / 0</strong><span>Decided</span></div><div><strong id="full-yes">0</strong><span>Yes</span></div><div><strong id="full-maybe">0</strong><span>Maybe</span></div><div><strong id="full-no">0</strong><span>No</span></div><div><strong id="full-conflicts">0 / 0</strong><span>Conflicts resolved</span></div><div><strong id="full-check">0 / 0</strong><span>Human check</span></div></div>
+<div class="source-summary pilot-summary full-summary" id="full-categories"><div><strong id="full-screened">0 / 0</strong><span>Completed</span></div><div><button class="full-category" type="button" data-full-category="yes" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-yes">0</strong><span>Yes</span></button></div><div><button class="full-category" type="button" data-full-category="maybe" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-maybe">0</strong><span>Maybe</span></button></div><div><button class="full-category" type="button" data-full-category="no" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-no">0</strong><span>No</span></button></div><div><button class="full-category" type="button" data-full-category="conflicts" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-conflicts">0</strong><span>Conflicts</span></button></div><div><button class="full-category" type="button" data-full-category="check" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-check">0</strong><span>Check</span></button></div></div>
 <div class="team-track full-track" role="progressbar" aria-label="Screening complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="team-track"><span id="team-bar" style="width:0"></span></div>
 <p class="hint" id="full-progress" hidden></p>
 <p class="full-now" id="full-now" hidden></p>
 <div class="notice" id="full-message" hidden role="status"></div>
 <div id="full-feed-wrap" hidden><h3 class="sub-head">Latest AI readings</h3><ol class="full-feed" id="full-feed"></ol></div>
-<div class="check-head"><h3 class="sub-head">Conflicts and Human check</h3><label class="label inline" for="check-scope">Check</label><select class="select compact" id="check-scope"><option value="unresolved">Conflicts and uncertain records only</option><option value="sample">A random 300 AI exclusions (all if fewer)</option><option value="exclusions">All AI exclusions</option><option value="uncertain">All AI exclusions and Maybe records</option></select></div>
-<p class="hint">By default, review only conflicting or uncertain records. Clear, supported exclusions do not require a human check. You can optionally sample or review all AI exclusions using Check. Your decision overrides the AI's.</p>
-<p class="hint check-summary" id="check-summary"></p>
-<button class="btn small" type="button" id="check-escalate" hidden>Some AI exclusions were wrong: check all AI exclusions</button>
-<div class="toolbar pilot-filter" id="check-filter" hidden><button class="btn small" type="button" data-cfilter="conflicts" aria-pressed="false">Conflicts <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="todo" aria-pressed="true">To check <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="done" aria-pressed="false">Checked <span class="count">0</span></button></div>
-<div class="toolbar" id="check-abs-tools" hidden><button class="btn small" type="button" id="check-abs-all" aria-pressed="false">Expand all abstracts</button></div><div class="pilot-list" id="check-list"></div>
+<div class="pilot-list" id="check-list" hidden></div>
 </div>
 <div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Records</label><select class="select compact" id="export-option"><option value="include">Include (Yes and Maybe)</option><option value="exclude">Exclude (No)</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan (RIS)</option><option value="csv">CSV (Excel, with screening decisions)</option><option value="bib">BibTeX</option><option value="json">JSON (with screening decisions)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div><a class="step-btn next" data-fulltext href="full-text-screening.html">Next: Full-text assess <span aria-hidden="true">→</span></a></div>
 </section>
@@ -1133,6 +1129,7 @@ function captureExclusionReason(event){
   const input=event.target;if(!input.matches('[data-exclusion-id]')||['full','calibration-check'].includes(busy)&&input.dataset.exclusionStage==='pilot')return;
   const {exclusionId:id,exclusionStage:stage}=input.dataset;
   exclusionDrafts.set(stage+'|'+id,input.value);
+  if(stage==='full')return; // Apply the draft only with a saved Yes/No decision.
   const vote=stage==='pilot'?workspace.pilot.human[id]:workspace.full.human[id];
   if(vote&&input.value.trim()){
     vote.exclusionReason=text(input.value,2000).trim();
@@ -1218,7 +1215,9 @@ function renderPilot(){
    optional; the default queue covers conflicts and uncertain records. */
 const CHECK_SCOPES={unresolved:'Conflicts and uncertain records',sample:'Random sample of AI exclusions',exclusions:'All AI exclusions',uncertain:'All AI exclusions and Maybe records'};
 const AUDIT_SIZE=300;
-const fullNow=new Map(),fullDone=[];let fullFilter='auto',fullShown=20;
+const fullNow=new Map(),fullDone=[];let fullFilter='',fullShown=20;
+const expandedFullAssessments=new Set(),collapsedFullAssessments=new Set();let fullReviewSaving=false;
+const fullReviewErrors=new Map();
 function newFull(){return {version:3,ai:{},ai2:{},human:{},check:'unresolved',checkPolicy:2,startedAt:'',completedAt:'',times:[]}}
 function validFull(f){
   if(!f||f.version!==3)return newFull();
@@ -1294,7 +1293,7 @@ function maybeComplete(){
 const remainingCalls=()=>aiRecords().reduce((n,r)=>n+(fullAI(r.uid)?0:1)+(fullAI2(r.uid)?0:1),0);
 function endMessage(s){
   const open=s.conflicts-s.conflictsResolved,check=s.humanCheck-s.humanChecked;
-  return open||check?'The AI has screened every record twice. Below, '+[open?'resolve '+open+' conflict'+(open===1?'':'s'):'',check?'check '+check+' record'+(check===1?'':'s'):''].filter(Boolean).join(' and ')+'.':'Screening is complete. Use Download for the records to include or exclude.';
+  return open||check?'The AI has screened every record twice. Select the categories above to '+[open?'resolve '+open+' conflict'+(open===1?'':'s'):'',check?'check '+check+' record'+(check===1?'':'s'):''].filter(Boolean).join(' and ')+'.':'Screening is complete. Use Download for the records to include or exclude.';
 }
 async function runFull(){
   if(busy||!readySource()||!approvalsValid())return;
@@ -1333,30 +1332,45 @@ async function runFull(){
     else{log('model-error',{stage:'full',message:text(e.message,500)});showNotice('full-message',e.message,'error')}
   }finally{busy='';controller=null;fullNow.clear();await save().catch(()=>{});render()}
 }
-function castFullVote(id,decision){
-  if(!recordById.has(id)||!['yes','maybe','no'].includes(decision)||stale())return;
-  const prev=workspace.full.human[id],exclusionReason=reviewerExclusionReason(id,'full',prev);
-  if(decision==='no'&&!exclusionReason){toast('Enter an exclusion reason before choosing No.');return;}
+async function castFullVote(id,decision){
+  if(!recordById.has(id)||!['yes','no'].includes(decision)||stale()||busy||fullReviewSaving)return;
+  const prev=workspace.full.human[id],prior=prev?structuredClone(prev):null,previousCompletion=workspace.full.completedAt;
+  const exclusionReason=decision==='no'?reviewerExclusionReason(id,'full',prev||pilotVoteOf(id)):'';
+  if(decision==='no'&&!exclusionReason){fullReviewErrors.set(id,'Enter an exclusion reason before choosing No.');renderFull();return;}
+  fullReviewSaving=true;fullReviewErrors.delete(id);
   workspace.full.human[id]={decision,exclusionReason,note:prev?.note||'',at:now()};
-  log(isConflict(id)?'conflict-resolved':'human-check',{recordId:id,decision,previous:prev?.decision||'',pass1:fullAI(id)?.decision||'',pass2:fullAI2(id)?.decision||''});
-  maybeComplete();save().then(render).catch(()=>{});
+  try{
+    log(isConflict(id)?'conflict-resolved':'human-check',{recordId:id,decision,previous:prev?.decision||'',pass1:fullAI(id)?.decision||'',pass2:fullAI2(id)?.decision||''});
+    maybeComplete();await save();
+  }catch(e){
+    if(prior)workspace.full.human[id]=prior;else delete workspace.full.human[id];
+    workspace.full.completedAt=previousCompletion;publishSummary();
+    fullReviewErrors.set(id,'Could not save: '+e.message+'. Please retry.');
+  }finally{fullReviewSaving=false;render();}
 }
 function aiDetails(a){
   const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+c.judgment.replace(' ','-')+'">'+esc(c.judgment)+'</span>'+(c.reason?' — '+esc(c.reason):'')+(c.probabilities?'<br><span class="hint">TypeSafe probabilities: '+esc(JSON.stringify(c.probabilities))+'</span>':'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
   return (a.criteria?.length?'<ul class="evidence-list">'+a.criteria.map(judge).join('')+'</ul>':'')+(a.reason?'<p class="hint">'+esc(a.reason)+'</p>':'')+(a.note?'<p class="hint">'+esc(a.note)+'</p>':'');
 }
-// Conflicts show both readings at once (the reviewer settles a disagreement);
-// agreed records are checked blind and show the AI after the vote.
+// Every category uses the pilot record layout, including records assessed in the pilot.
+function fullCategoryIds(category){
+  if(['yes','maybe','no'].includes(category))return source.records.filter(r=>finalDecision(r.uid)===category).map(r=>r.uid);
+  const ids=category==='conflicts'?conflictIds():category==='check'?checkIds():[];
+  return ids.slice().sort((a,b)=>!!workspace.full.human[a]-!!workspace.full.human[b]);
+}
 function fullCard(id){
-  const rec=recordById.get(id),a=fullAI(id),b=fullAI2(id),h=workspace.full.human[id];if(!rec||!a||!b)return '';
-  const conflict=aiPair(id)==='conflict',show=conflict||!!h,quotes=show?[...a.criteria,...b.criteria].map(c=>c.quote).filter(Boolean):[];
-  const wrong=h&&!conflict&&aiPair(id)==='no'&&forward(h.decision);
-  const pass=(x,n)=>'<div class="audit"><div class="toolbar"><strong>AI pass '+n+'</strong>'+colored(x.decision)+'<span class="hint">'+esc(x.model)+'</span></div>'+aiDetails(x)+'</div>';
-  return '<article class="record'+(wrong||conflict&&!h?' differ':'')+'"><div class="record-head"><div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div>'+
-    '<div class="badges">'+(conflict?'<span class="badge differ">Conflict</span>':'')+(h?colored(h.decision)+(wrong?'<span class="badge differ">AI exclusion overturned</span>':''):'<span class="badge">'+(conflict?'To decide':'To check')+'</span>')+'</div></div>'+
-    abstractBlock(id,rec.abstract,quotes,true)+
-    '<div class="decision-buttons" role="group" aria-label="Your decision">'+['yes','maybe','no'].map(d=>'<button type="button" class="vote '+d+(h?.decision===d?' selected':'')+'" data-fvote="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'">'+label(d)+'</button>').join('')+'</div>'+
-    exclusionReasonField(id,'full',h)+(show?pass(a,1)+pass(b,2):'<p class="hint">Decide without the AI\'s judgment; it is shown after your vote.</p>')+'</article>';
+  const rec=recordById.get(id);if(!rec)return '';
+  const a=fullAI(id),b=fullAI2(id),pv=pilotVoteOf(id),h=workspace.full.human[id]||pv;
+  const readings=[a,b].filter(Boolean),pilot=workspace.pilot.ai[id];if(!readings.length&&pilot)readings.push(pilot);
+  const conflict=isConflict(id),quotes=readings.flatMap(x=>(x.criteria||[]).map(c=>c.quote).filter(Boolean));
+  const assessmentId='full-assessment-'+encodeURIComponent(id),collapsed=collapsedFullAssessments.has(id)||(!!h&&!expandedFullAssessments.has(id));
+  const outcome=pv?pilotAIOutcome(pilot):aiPair(id),names={yes:'Include',no:'Exclude',maybe:'Unclear',conflict:'Conflicting assessments'};
+  const assessment='<div class="audit"><strong>AI decision: '+esc(names[outcome]||'Pending')+'</strong>'+readings.map((x,i)=>(readings.length>1?'<p class="hint">AI pass '+(i+1)+' · '+esc(label(x.decision))+'</p>':'')+aiDetails(x)).join('')+'</div>';
+  const canReview=!busy&&!stale()&&!fullReviewSaving;
+  return '<article class="record'+(conflict&&!h?' differ':'')+'"><div class="record-head"><div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div><button class="badge pilot-review-toggle" type="button" data-toggle-full-assessment="'+esc(id)+'" aria-expanded="'+!collapsed+'" aria-controls="'+esc(assessmentId)+'">'+(h?'Assessed: '+esc(label(h.decision)):conflict?'Conflict':'AI assessed')+'<span class="review-chevron" aria-hidden="true">⌄</span></button></div>'+
+    abstractBlock(id,rec.abstract,quotes,true)+'<div id="'+esc(assessmentId)+'" data-full-assessment'+(collapsed?' hidden':'')+'>'+assessment+'</div>'+exclusionReasonField(id,'full',h)+
+    '<div class="decision-buttons" role="group" aria-label="Your decision">'+['yes','no'].map(d=>'<button type="button" class="vote '+d+(h?.decision===d?' selected':'')+'" data-fvote="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'"'+(canReview?'':' disabled')+'>'+label(d)+'</button>').join('')+'</div>'+
+    (fullReviewErrors.has(id)?'<p class="notice error" role="alert">'+esc(fullReviewErrors.get(id))+'</p>':'')+'</article>';
 }
 function fmtDuration(ms){const m=Math.round(ms/60000);return m<1?'under a minute':m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'}
 function renderFull(){
@@ -1364,9 +1378,9 @@ function renderFull(){
   const s=summary(),valid=approvalsValid()&&!stale(),share=s.sourceCount?Math.floor(s.done/s.sourceCount*100):0,calls=remainingCalls();
   $('full-screened').textContent=s.done.toLocaleString()+' / '+s.sourceCount.toLocaleString();
   $('full-yes').textContent=s.yes.toLocaleString();$('full-maybe').textContent=s.maybe.toLocaleString();$('full-no').textContent=s.no.toLocaleString();
-  $('full-conflicts').textContent=s.conflictsResolved.toLocaleString()+' / '+s.conflicts.toLocaleString();
+  $('full-conflicts').textContent=s.conflicts.toLocaleString();
   $('full-conflicts').parentElement.classList.toggle('alert',s.conflicts>s.conflictsResolved);
-  $('full-check').textContent=s.humanChecked.toLocaleString()+' / '+s.humanCheck.toLocaleString();
+  $('full-check').textContent=s.humanCheck.toLocaleString();
   $('team-bar').style.width=share+'%';$('team-track').setAttribute('aria-valuenow',String(share));
   const times=workspace.full.times||[],avg=fullDone.length>=4?(fullDone.at(-1)-fullDone[0])/(fullDone.length-1):times.length?times.reduce((a,b)=>a+b,0)/times.length/(screeningProvider()==='typesafe'?1:AI_WORKERS):0;
   $('full-progress').textContent=share+'% · '+s.done.toLocaleString()+' of '+s.sourceCount.toLocaleString()+' records decided · AI passes '+s.aiScreened.toLocaleString()+' / '+aiRecords().length.toLocaleString()+' records'+(calls&&avg?' · '+(avg*calls<60000?'under a minute':'about '+fmtDuration(avg*calls))+' of AI screening left':'')+(s.humanReviewed?' · '+s.humanReviewed.toLocaleString()+' decided by you':'');
@@ -1386,22 +1400,13 @@ function renderFull(){
     return '<li><span class="feed-pass">Pass '+pass+'</span>'+colored(a.decision)+(pass===2&&aiPair(id)==='conflict'?'<span class="badge differ">Conflict</span>':'')+'<span class="feed-title" title="'+esc(r.title)+'">'+esc(r.title||'(untitled record)')+'</span><span class="feed-why">'+esc(why?why.dimension+': '+why.judgment:a.decision==='yes'?'All criteria met':'')+'</span></li>'}).join(''):'<li class="hint">Readings appear here as the AI screens.</li>';
   // Keep the saved reading audit available internally without showing a live feed.
   $('full-feed-wrap').hidden=true;
-  // Conflicts and Human check
-  $('check-scope').value=workspace.full.check;$('check-scope').disabled=!!busy;
-  const conflicts=conflictIds().sort((x,y)=>!!workspace.full.human[x]-!!workspace.full.human[y]),queue=checkIds(),todo=queue.filter(id=>!workspace.full.human[id]),done=queue.filter(id=>workspace.full.human[id]),open=conflicts.filter(id=>!workspace.full.human[id]).length;
-  const au=auditStats();
-  $('check-summary').innerHTML=[conflicts.length?'<span class="'+(open?'warn':'ok')+'">'+open+' conflict'+(open===1?'':'s')+' to resolve</span> of '+conflicts.length:'',
-    !queue.length?(workspace.full.check==='sample'&&!aiFinished()?'The random sample of agreed exclusions is drawn when both AI passes have finished.':Object.keys(workspace.full.ai).length?'No records to check in this scope.':'Records appear here as the AI screens them.'):
-    todo.length+' to check · '+done.length+' checked'+(au.n?' · <span class="'+(au.wrong?'warn':'ok')+'">'+au.wrong+' of '+au.n+' checked AI exclusions were wrong</span> (95% upper bound '+(au.upper<0.1?(au.upper*100).toFixed(1)+'%':pct(au.upper))+(au.exclusions?'; up to about '+Math.ceil(au.upper*au.exclusions)+' of the '+au.exclusions+' unchecked exclusions':'')+')':'')].filter(Boolean).join(' · ');
-  $('check-escalate').hidden=!(au.wrong&&workspace.full.check==='sample');
-  // Open conflicts come first until the reviewer picks a list.
-  const counts={conflicts:conflicts.length,todo:todo.length,done:done.length},view=fullFilter==='auto'?(open?'conflicts':'todo'):fullFilter;
-  $('check-filter').querySelectorAll('[data-cfilter]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.cfilter===view));b.querySelector('.count').textContent=counts[b.dataset.cfilter]});
-  $('check-filter').hidden=!conflicts.length&&!queue.length;
-  const list=view==='conflicts'?conflicts:view==='done'?done:todo;
-  $('check-list').innerHTML=list.slice(0,fullShown).map(fullCard).join('')+(list.length>fullShown?'<button class="btn small" type="button" id="check-more">Show '+Math.min(20,list.length-fullShown)+' more</button>':'')+
-    ((conflicts.length||queue.length)&&!list.length?'<p class="hint">'+(view==='conflicts'?'No conflicts between the two passes.':view==='done'?'No records checked yet.':'Every record in this scope has been checked.')+'</p>':'');
-  $('check-abs-tools').hidden=!list.length;$('check-abs-all').textContent=allCheckAbstractsOpen?'Collapse all abstracts':'Expand all abstracts';$('check-abs-all').setAttribute('aria-pressed',String(allCheckAbstractsOpen));
+  const list=fullCategoryIds(fullFilter);
+  $('full-categories').querySelectorAll('[data-full-category]').forEach(button=>{
+    const selected=button.dataset.fullCategory===fullFilter;
+    button.setAttribute('aria-pressed',String(selected));button.setAttribute('aria-expanded',String(selected));
+  });
+  $('check-list').hidden=!fullFilter;
+  $('check-list').innerHTML=!fullFilter?'':list.slice(0,fullShown).map(fullCard).join('')+(list.length>fullShown?'<button class="btn small" type="button" id="check-more">Show '+Math.min(20,list.length-fullShown)+' more</button>':'')+(!list.length?'<p class="hint">No records in this category.</p>':'');
   updateExportCount();
   // The end-of-run message follows conflicts and Human check as they progress.
   const endMsg=$('full-message').textContent;
@@ -2104,11 +2109,19 @@ $('check-list').addEventListener('input',captureExclusionReason);
 
 $('start-screening').addEventListener('click',()=>runFull().catch(e=>showNotice('full-message','Could not start screening: '+e.message,'error')));
 $('stop-full').addEventListener('click',()=>controller?.abort());
-$('check-scope').addEventListener('change',()=>{workspace.full.check=CHECK_SCOPES[$('check-scope').value]?$('check-scope').value:'unresolved';workspace.full.checkPolicy=2;fullShown=20;log('human-check-scope',{check:workspace.full.check});maybeComplete();save().then(render).catch(()=>{})});
-$('check-escalate').addEventListener('click',()=>{$('check-scope').value='exclusions';$('check-scope').dispatchEvent(new Event('change'))});
-$('check-filter').addEventListener('click',e=>{const b=e.target.closest('[data-cfilter]');if(!b)return;fullFilter=b.dataset.cfilter;fullShown=20;renderFull()});
-$('check-abs-all').addEventListener('click',()=>{allCheckAbstractsOpen=!allCheckAbstractsOpen;openCheckAbstracts.clear();renderFull()});
-$('check-list').addEventListener('click',e=>{const t=e.target.closest('[data-abs]');if(t){const id=t.dataset.abs,wrap=t.closest('.abs-wrap'),open=!wrap.classList.contains('open');wrap.classList.toggle('open',open);if(open)openCheckAbstracts.add(id);else{openCheckAbstracts.delete(id);allCheckAbstractsOpen=false;}$('check-abs-all').textContent=allCheckAbstractsOpen?'Collapse all abstracts':'Expand all abstracts';$('check-abs-all').setAttribute('aria-pressed',String(allCheckAbstractsOpen));t.setAttribute('aria-expanded',String(open));t.textContent=open?'Hide full abstract':'Show full abstract';return;}const b=e.target.closest('[data-fvote]');if(b){castFullVote(b.dataset.id,b.dataset.fvote);return}if(e.target.id==='check-more'){fullShown+=20;renderFull()}});
+$('full-categories').addEventListener('click',e=>{
+  const button=e.target.closest('[data-full-category]');if(!button)return;
+  const category=button.dataset.fullCategory;if(!['yes','maybe','no','conflicts','check'].includes(category))return;
+  fullFilter=fullFilter===category?'':category;fullShown=20;renderFull();
+});
+$('check-list').addEventListener('click',e=>{
+  const toggle=e.target.closest('[data-toggle-full-assessment]');
+  if(toggle){const id=toggle.dataset.toggleFullAssessment,body=toggle.closest('.record').querySelector('[data-full-assessment]');if(body){body.hidden=!body.hidden;if(body.hidden){expandedFullAssessments.delete(id);collapsedFullAssessments.add(id);}else{expandedFullAssessments.add(id);collapsedFullAssessments.delete(id);}toggle.setAttribute('aria-expanded',String(!body.hidden));}return;}
+  const t=e.target.closest('[data-abs]');
+  if(t){const id=t.dataset.abs,wrap=t.closest('.abs-wrap'),open=!wrap.classList.contains('open');wrap.classList.toggle('open',open);if(open)openCheckAbstracts.add(id);else openCheckAbstracts.delete(id);t.setAttribute('aria-expanded',String(open));t.textContent=open?'Hide full abstract':'Show full abstract';return;}
+  const button=e.target.closest('[data-fvote]');if(button){castFullVote(button.dataset.id,button.dataset.fvote);return;}
+  if(e.target.id==='check-more'){fullShown+=20;renderFull();}
+});
 $('export-option').addEventListener('change',updateExportCount);
 $('export-results').addEventListener('click',exportResults);
 let refreshPromise=null;
