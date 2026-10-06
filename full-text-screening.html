@@ -180,7 +180,7 @@ th{background:#f4f4f4}
 <div class="notice" id="source-notice" hidden role="status"></div>
 <div class="table-wrap results-like doc-table"><table><thead><tr><th scope="col">Report</th><th scope="col" class="num-col">Year</th><th scope="col">Full text</th><th scope="col" class="act-col"><span class="sr-only">Actions</span></th></tr></thead><tbody id="doc-rows"></tbody></table></div>
 <button class="btn small" type="button" id="docs-more" hidden>Show all reports</button>
-<div class="toolbar source-foot"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button><button class="btn small" id="sync-source" type="button" hidden>Update from title and abstract screening</button></div>
+<div class="toolbar source-foot"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div>
 </div>
 </section>
 <section class="panel">
@@ -1186,8 +1186,8 @@ function renderSource(){
       (has?'<button class="abs-toggle" type="button" data-read="'+esc(r.uid)+'">Read</button><button class="remove-import" type="button" data-remove-doc="'+esc(r.uid)+'" title="Remove this full text" aria-label="Remove the full text">×</button>':'<button class="abs-toggle" type="button" data-upload-for="'+esc(r.uid)+'">Upload PDF</button>'+(d?.kind!=='not-retrievable'?'<button class="abs-toggle" type="button" data-missing="'+esc(r.uid)+'">Not retrievable</button>':''))+'</td></tr>'}).join('')||'<tr><td colspan="4" class="empty">No reports yet. Use Import from title and abstract screening.</td></tr>';
   $('docs-more').hidden=rows.length<=docsShown;$('docs-more').textContent='Show all '+rows.length+' reports';
   for(const b of ['import-ta','find-oa','upload-pdfs'])$(b).disabled=!!busy;
-  const changed=handoffChanged();$('sync-source').hidden=!changed;
-  if(changed&&!busy&&!$('source-notice').textContent)showNotice('source-notice','Title and abstract screening has changed since the reports were imported. Use Update from title and abstract screening.','warning');
+  const changed=handoffChanged();
+  if(changed&&!busy&&!$('source-notice').textContent)showNotice('source-notice','Title and abstract screening has changed since the reports were imported. Use Import from title and abstract screening to refresh the reports.','warning');
 }
 function renderPilot(){
   if(document.activeElement?.matches?.('input, textarea, select')&&document.activeElement.closest('#pilot-list'))return;
@@ -1361,7 +1361,6 @@ collapsible('toggle-source','source-body','Full-text source','ft-source');
 collapsible('toggle-pilot','pilot-body','Pilot full-text screening','ft-pilot');
 collapsible('toggle-full','full-body','All reports full-text screening','ft-full');
 $('import-ta').addEventListener('click',()=>importFromScreening().catch(e=>showNotice('source-notice',e.message,'error')));
-$('sync-source').addEventListener('click',()=>importFromScreening().catch(e=>showNotice('source-notice',e.message,'error')));
 $('stop-find').addEventListener('click',()=>controller?.abort());
 $('check-scope').addEventListener('change',()=>{if(busy)return;workspace.full.check=$('check-scope').value;maybeComplete();save().then(render);});
 $('find-oa').addEventListener('click',()=>findOpenAccess());
