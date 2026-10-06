@@ -211,7 +211,7 @@ th{background:#f4f4f4}
 <div class="panel-body" id="source-body">
 <div id="source-background" hidden>
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
-<p class="hint" id="source-hint"></p><details id="retrieval-settings" hidden><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC full-text XML and publisher links, OpenAlex repository/publisher PDFs, Semantic Scholar open-access PDFs, Unpaywall, and arXiv PDFs for arXiv DOIs. Retrieval starts automatically while this page is open and idle. Sources are tried in order until a readable file is found; unreadable or mismatched files are skipped. Failed lookups retry after six hours (five minutes when the backend is unavailable). Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent to these services; downloads pass through the Mac Studio backend.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
+<p class="hint" id="source-hint"></p><details id="retrieval-settings" hidden><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC and PubMed Central, OpenAlex, Semantic Scholar, Crossref publisher links, Unpaywall, arXiv, and saved full-text links. Retrieval starts automatically while this page is open and idle. Sources are tried in order until a readable file is found; unreadable or mismatched files are skipped. Failed lookups retry after six hours; Download retries immediately. Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent directly to these services. Downloads use your browser and current network without an AI model or local server. Browser cross-origin rules and website access permissions still apply.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
 <div class="notice" id="source-notice" hidden role="status"></div>
 </div>
 <div class="source-record-list" id="doc-rows" role="list" aria-label="Reports for full-text screening"></div>
@@ -314,6 +314,7 @@ th{background:#f4f4f4}
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="app/screening-calibration.js"></script>
+<script src="app/fulltext-browser.js"></script>
 <script>
 'use strict';
 (() => {
@@ -1047,36 +1048,11 @@ function retrievalDue(rec){
   const d=workspace.docs[rec.uid];
   return !hasDoc(rec.uid)&&d?.kind!=='not-retrievable'&&(!d?.retryAt||Date.parse(d.retryAt)<=Date.now()||d.lookupSig!==fingerprint([rec.title,rec.doi,rec.pmid]));
 }
-async function retrieveReadable(rec,base,signal,email,{pdfOnly=false}={}){
-  let attempts=[],skipUrls=[];
-  if(!base){
-    if(pdfOnly)throw new Error('Connect the Mac Studio backend to download full-text PDFs.');
-    const got=await epmcFullText(rec,signal);
-    attempts.push({source:'Other free sources',status:'unavailable',detail:'Connect the Mac Studio backend to try all configured sources.'});
-    return {got:got&&chunkParagraphs(got.paras).length>=3?got:null,attempts};
-  }
-  // A downloaded file can be unreadable or mismatched. Continue to other URLs.
-  for(let i=0;i<24;i++){
-    const r=await localFetch(base+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'fulltext',record:{doi:rec.doi,pmid:rec.pmid,title:rec.title,year:rec.year},email,skipUrls}),signal});
-    const data=await r.json();if(!r.ok)throw new Error(data.error||'Full-text retrieval failed.');
-    attempts.push(...(data.attempts||[]));
-    if(data.kind==='none')return {got:null,attempts};
-    if(!data.url||skipUrls.includes(data.url))throw new Error('The retrieval service needs updating to try alternative files.');
-    skipUrls.push(data.url);
-    if(pdfOnly&&data.kind!=='pdf'){attempts.push({source:data.source||'Full text',status:'skipped-xml',detail:'Searching for an original PDF.'});continue;}
-    try{
-      let got;
-      if(data.kind==='xml')got={kind:'xml',source:data.source,paras:jatsParagraphs(data.xml),url:data.url};
-      if(data.kind==='pdf'){
-        const file=new Blob([Uint8Array.from(atob(data.base64),c=>c.charCodeAt(0))],{type:'application/pdf'}),pages=await pdfPages(file);
-        if(!matchPdf(pages.map(p=>p.text).join('\n'),[rec]))throw new Error('PDF does not match this report.');
-        got={kind:'pdf',source:data.source,paras:pdfParagraphs(pages),file,url:data.url};
-      }
-      if(!got||chunkParagraphs(got.paras).length<3)throw new Error('Insufficient readable full text; trying another source.');
-      return {got,attempts};
-    }catch(e){if(signal.aborted)throw e;attempts.push({source:data.source||'Downloaded file',status:'not-readable',detail:text(e.message,200)});}
-  }
-  return {got:null,attempts:[...attempts,{source:'Retrieval',status:'deferred',detail:'Remaining candidates will be retried later.'}]};
+async function retrieveReadable(rec,base,signal,email){
+  return globalThis.AimstepFulltextBrowser.retrieve(rec,{signal,email,extraUrl:workspace.fulltextLinks?.[rec.uid]?.url||'',
+    readPdf:async(file,record)=>{const pages=await pdfPages(file);if(!matchPdf(pages.map(p=>p.text).join('\n'),[record]))throw new Error('PDF does not match this report.');const paras=pdfParagraphs(pages);if(chunkParagraphs(paras).length<3)throw new Error('Insufficient readable text.');return paras;},
+    extractLinks:(html,url)=>{const doc=new DOMParser().parseFromString(html,'text/html'),values=[...doc.querySelectorAll('meta[name="citation_pdf_url"],meta[name="wkhealth_pdf_url"]')].map(el=>el.getAttribute('content'));for(const a of doc.querySelectorAll('a[href]'))if(/\.pdf(?:$|[?#])|\/pdf(?:\/|$|[?#])/i.test(a.getAttribute('href')))values.push(a.getAttribute('href'));return values.map(v=>{try{return new URL(v,url).href}catch{return '';}});}
+  });
 }
 async function findOpenAccess(){
   if(!workspace||busy||syncingSource||retrievalRunning||!workspace.records.length||document.hidden||navigator.onLine===false)return;
@@ -1088,7 +1064,7 @@ async function findOpenAccess(){
   const email=$('oa-email').checkValidity()?$('oa-email').value.trim():'';
   try{
     retrievalStatus='Automatically checking free full-text sources…';renderRetrievalStatus();
-    try{base=await findTypesafeBackend(ctl.signal)}catch(e){if(ctl.signal.aborted)throw e;}
+    base='browser';
     for(const rec of todo){
       if(ctl.signal.aborted||busy||!workspace.records.length||document.hidden)break;
       if(!recordById.has(rec.uid)||hasDoc(rec.uid))continue;
@@ -1106,7 +1082,7 @@ async function findOpenAccess(){
       workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,lookupSig,retryAt:new Date(Date.now()+(base?RETRIEVAL_RETRY_MS:5*60*1000)).toISOString(),url:got?.url||''};
       done++;retrievalStatus='Background retrieval: '+done+' / '+todo.length+' checked · '+found+' full texts added.';await save();render();
     }
-    retrievalStatus='Background retrieval: '+found+' full texts added.'+(todo.some(r=>!hasDoc(r.uid))?' Missing files will be retried automatically.':'')+(!base?' Connect the Mac Studio backend to enable all configured sources.':'');
+    retrievalStatus='Background retrieval: '+found+' full texts added.'+(todo.some(r=>!hasDoc(r.uid))?' Missing files will be retried automatically.':'');
   }catch(e){retrievalStatus=ctl.signal.aborted?'Background retrieval paused; it resumes when the page is visible and screening is idle.':'Automatic retrieval: '+text(e.message,200);}
   finally{clearTimeout(timeout);retrievalRunning=false;retrievalController=null;finishRetrieval();safely(renderRetrievalStatus);}
 }
@@ -1124,8 +1100,7 @@ async function downloadFulltextPdfs(){
     const todo=[];
     for(const rec of workspace.records){const doc=hasDoc(rec.uid)?await loadDoc(rec.uid):null;if(!doc?.pdf)todo.push(rec);}
     if(!todo.length){toast('Every report already has a saved PDF.');return;}
-    const base=await findTypesafeBackend(ctl.signal);
-    if(!base)throw new Error('Connect the Mac Studio backend to download full-text PDFs.');
+    const base='browser';
     const email=$('oa-email').checkValidity()?$('oa-email').value.trim():'';
     for(const rec of todo){
       if(ctl.signal.aborted)throw new DOMException('Stopped','AbortError');
@@ -1142,7 +1117,7 @@ async function downloadFulltextPdfs(){
       }catch(e){workspace=before;indexRecords();if(old)await saveDoc(old);else{await deleteKey(docStore,docKey(rec.uid));docCache.delete(rec.uid);}publishSummary();throw e;}
       checked++;$('download-source').textContent='Stop ('+checked+'/'+todo.length+')';renderSource();
     }
-    toast(found+' PDF'+(found===1?'':'s')+' downloaded; '+(checked-found)+' not available from the configured free sources.');
+    toast(found+' PDF'+(found===1?'':'s')+' downloaded; '+(checked-found)+' could not be downloaded automatically on this network.');
   }catch(e){toast(ctl.signal.aborted?'PDF download stopped. Saved files are retained.':e.message);}
   finally{clearTimeout(timeout);busy='';controller=null;render();}
 }

@@ -163,9 +163,9 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  await ft.downloadFulltextPdfs();assert.equal(manualLookups.join(','),'r,missing');assert.equal(w.docs.r.kind,'pdf');assert.equal(w.docs.saved.kind,'pdf');assert.equal(w.docs.missing.kind,'not-retrievable');
  await ft.downloadFulltextPdfs();assert.equal(manualLookups.join(','),'r,missing,missing','Manual retry ignores prior failed attempt');
  ft.bindRetrieval(async()=>({got:null,attempts:[]}));w.docs.r={kind:'xml',source:'Existing XML'};ft.setDoc('r',{...doc,uid:'r',kind:'xml',pdf:null});await ft.downloadFulltextPdfs();assert.equal(w.docs.r.kind,'xml','Failed PDF download must preserve XML evidence');
- // The transport passes over XML and requests alternative provider URLs in PDF-only mode.
- const requests=[];ft.bindTransport(async(url,options)=>{requests.push(JSON.parse(options.body));return {ok:true,json:async()=>requests.length===1?{kind:'xml',url:'https://example.org/fullTextXML',source:'Synthetic XML',xml:'unused'}:{kind:'none',attempts:[]}}});
- const pdfSearch=await ft.realRetrieveReadable(rec,'/backend',new AbortController().signal,'',{pdfOnly:true});assert.equal(pdfSearch.got,null);assert.equal(requests.length,2);assert.equal(requests[1].skipUrls[0],'https://example.org/fullTextXML');
+ // Retrieval uses the browser module, without model/local-backend discovery.
+ assert(!between(html,'async function downloadFulltextPdfs(){','// A PDF is matched').includes('findTypesafeBackend'));
+ assert(!between(html,'async function findOpenAccess(){','async function downloadFulltextPdfs(){').includes('findTypesafeBackend'));
  assert(html.indexOf('id="download-source"')<html.indexOf('id="doc-rows"'));assert(html.indexOf('id="clear-source"')>html.indexOf('id="doc-rows"'));
 
  // Record actions respect local provenance and suppress stale handoffs after a return.
