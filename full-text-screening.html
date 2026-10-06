@@ -1454,9 +1454,10 @@ function releaseReaderPdf(){
   $('reader-pdf').hidden=true;$('reader-pdf').removeAttribute('href');
   if(readerObjectUrl){URL.revokeObjectURL(readerObjectUrl);readerObjectUrl='';}
 }
-async function openReader(id){
+async function openReader(id,originalOnly=false){
   const request=++readerRequest;
   const doc=await loadDoc(id),rec=recordById.get(id);if(request!==readerRequest||!doc||!rec)return;
+  if(originalOnly&&!doc.pdf){toast('No original PDF is saved for this report. Upload it in Manage full text.');return;}
   releaseReaderPdf();
   $('reader-title').textContent=rec.title||'Full text';
   $('reader-body').innerHTML='';$('reader-body').hidden=!!doc.pdf;
@@ -1482,9 +1483,10 @@ const sourceDetailsOpen=new Set();
 function fulltextPrimaryBadge(documents){
   return documents.filter(d=>d?.kind==='pdf').length>=2?'<span class="source-file-primary">Primary</span>':'';
 }
-function fulltextFilename(id){return workspace.docs[id]?.filename||docCache.get(id)?.pdf?.name||'';}
+function fulltextFilename(id){return docCache.get(id)?.pdf?.name||workspace.docs[id]?.filename||'';}
+function hasOriginalPdf(id){return !!docCache.get(id)?.pdf;}
 function sourceRecordCard(r,index){
-  const d=workspace.docs[r.uid],has=hasDoc(r.uid),authors=Array.isArray(r.authors)?r.authors.filter(Boolean).join(', '):String(r.authors||'');
+  const d=workspace.docs[r.uid],has=hasOriginalPdf(r.uid),authors=Array.isArray(r.authors)?r.authors.filter(Boolean).join(', '):String(r.authors||'');
   const citation=[r.year,[r.volume,r.issue?'('+r.issue+')':''].filter(Boolean).join('')].filter(Boolean).join('; ')+(r.pages?': '+r.pages:'');
   const bibliography=[r.journal,citation].filter(Boolean).join(' · ');
   const expanded=kind=>sourceDetailsOpen.has(r.uid+'|'+kind);
@@ -1493,11 +1495,11 @@ function sourceRecordCard(r,index){
 
   let filename=fulltextFilename(r.uid);
   try{const url=new URL(d?.url||'');if(['https:','http:'].includes(url.protocol)){
-    if(!filename){const name=decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1)||'');if(/\.(pdf|xml)$/i.test(name))filename=name;}
+    if(!filename){const name=decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1)||'');if(/\.pdf$/i.test(name))filename=name;}
   }}catch(e){}
-  const label=filename||'Full text';
-  const fileLink='<button class="source-file-link" type="button" data-read="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="reader-dialog">'+esc(label)+'</button>';
-  const file=has?'<div class="source-file-row">'+fileLink+fulltextPrimaryBadge([d])+'</div><p class="source-file-origin">'+esc(d.source==='Uploaded locally'?'Full text uploaded locally':d.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">No full text available yet.</p>';
+  const label=filename||'Saved PDF';
+  const fileLink='<button class="source-file-link" type="button" data-original-pdf="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="reader-dialog">'+esc(label)+'</button>';
+  const file=has?'<div class="source-file-row">'+fileLink+fulltextPrimaryBadge([d])+'</div><p class="source-file-origin">'+esc(d?.source==='Uploaded locally'?'Full text uploaded locally':d?.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">'+(hasDoc(r.uid)&&!docCache.has(r.uid)?'Loading saved file…':'No PDF saved yet.')+'</p>';
   const manage='<button class="source-manage" id="source-manage-button-'+index+'" type="button" data-manage="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="manage-dialog"><svg viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="19" rx="2"/><rect x="8" y="2" width="8" height="6" rx="2" fill="white"/></svg>Manage full text</button>';
   const savedLink=workspace.fulltextLinks?.[r.uid];
   const external=savedLink&&safeFulltextLink(savedLink.url)?'<p><a class="source-file-link" href="'+esc(safeFulltextLink(savedLink.url))+'" target="_blank" rel="noopener noreferrer">Link to full text ↗</a></p>':'';
@@ -1696,7 +1698,7 @@ function renderFulltextManager(){
   $('manage-link').value=link?.url||'';
   const row=(body,meta,kind,primary)=>'<div class="manage-file-row"><div class="manage-file-main">'+body+'<p class="hint">'+esc(meta)+'</p></div>'+(primary?fulltextPrimaryBadge([d]):'')+'<button class="manage-remove" type="button" data-manage-remove="'+kind+'" aria-label="Remove '+(kind==='file'?'saved full text':'full-text link')+'" title="Remove"><svg width="18" height="21" viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M6 6l1 17h10l1-17M10 10v9m4-9v9"/></svg></button></div>';
   let html='';
-  if(hasDoc(manageId))html+=row('<button class="source-file-link" type="button" data-manage-read="true">'+esc(fulltextFilename(manageId)||'Full text')+'</button>',(d.source||'Saved full text')+(d.at?' · '+new Date(d.at).toLocaleDateString('en-GB'):''),'file',true);
+  if(hasOriginalPdf(manageId))html+=row('<button class="source-file-link" type="button" data-manage-read="true">'+esc(fulltextFilename(manageId)||'Saved PDF')+'</button>',(d.source||'Saved full text')+(d.at?' · '+new Date(d.at).toLocaleDateString('en-GB'):''),'file',true);
   if(link&&safeFulltextLink(link.url))html+=row('<a class="source-file-link" href="'+esc(safeFulltextLink(link.url))+'" target="_blank" rel="noopener noreferrer">'+esc(link.url)+' ↗</a>','Saved link · upload a readable PDF to use it for AI screening','link',false);
   $('manage-files').innerHTML=html;
   for(const id of ['manage-choose','manage-file','manage-add-link','manage-link','manage-close','manage-done'])$(id).disabled=manageWorking;
@@ -1749,7 +1751,7 @@ $('manage-add-link').addEventListener('click',()=>{const value=$('manage-link').
 $('manage-drop').addEventListener('dragover',e=>{e.preventDefault();if(!manageWorking)$('manage-drop').classList.add('drag-over');});
 $('manage-drop').addEventListener('dragleave',()=>$('manage-drop').classList.remove('drag-over'));
 $('manage-drop').addEventListener('drop',e=>{e.preventDefault();$('manage-drop').classList.remove('drag-over');if(manageWorking)return;const files=e.dataTransfer?.files;if(files?.length!==1)return showNotice('manage-message','Drop one PDF for this report.','warning');manageOperation(()=>uploadManagedPdf(files[0]));});
-$('manage-files').addEventListener('click',e=>{const remove=e.target.closest('[data-manage-remove]');if(remove)return manageOperation(()=>removeManagedItem(remove.dataset.manageRemove));if(e.target.closest('[data-manage-read]'))openReader(manageId).catch(e=>showNotice('manage-message',e.message,'error'));});
+$('manage-files').addEventListener('click',e=>{const remove=e.target.closest('[data-manage-remove]');if(remove)return manageOperation(()=>removeManagedItem(remove.dataset.manageRemove));if(e.target.closest('[data-manage-read]'))openReader(manageId,true).catch(e=>showNotice('manage-message',e.message,'error'));});
 $('manage-close').addEventListener('click',closeFulltextManager);$('manage-done').addEventListener('click',closeFulltextManager);
 $('manage-dialog').addEventListener('cancel',e=>{e.preventDefault();closeFulltextManager();});
 $('manage-dialog').addEventListener('click',e=>{if(e.target===$('manage-dialog'))closeFulltextManager();});
@@ -1789,6 +1791,7 @@ $('oa-email').addEventListener('change',()=>{if(!$('oa-email').checkValidity())r
 $('docs-more').addEventListener('click',()=>{docsShown=1e9;renderSource()});
 $('doc-rows').addEventListener('click',e=>{const t=e.target,button=t.closest('[data-source-toggle]');
   if(button){const key=button.dataset.sourceRecord+'|'+button.dataset.sourceToggle,id=button.id;sourceDetailsOpen.has(key)?sourceDetailsOpen.delete(key):sourceDetailsOpen.add(key);renderSource();$(id)?.focus();if(button.dataset.sourceToggle==='fulltext'&&sourceDetailsOpen.has(key)&&hasDoc(button.dataset.sourceRecord))loadDoc(button.dataset.sourceRecord).then(()=>renderSource()).catch(e=>toast(e.message));return;}
+  const pdf=t.closest('[data-original-pdf]');if(pdf)return openReader(pdf.dataset.originalPdf,true).catch(e=>toast(e.message));
   const manage=t.closest('[data-manage]');if(manage)return openFulltextManager(manage.dataset.manage);
   if(t.dataset.read)return openReader(t.dataset.read);
   if(t.dataset.removeDoc)return removeDoc(t.dataset.removeDoc);

@@ -69,14 +69,14 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  assert.equal(ft.fulltextPrimaryBadge([{kind:'pdf'}]),'');
  assert(ft.fulltextPrimaryBadge([{kind:'pdf'},{kind:'pdf'}]).includes('Primary'));
  // Full-text links use real source metadata and reject executable URL schemes.
- w=setup();w.docs.r={kind:'pdf',source:'Synthetic repository',url:'https://example.org/synthetic-report.pdf'};
- card=ft.sourceRecordCard(rec,0);assert(card.includes('data-read="r" aria-haspopup="dialog" aria-controls="reader-dialog"'));assert(card.includes('synthetic-report.pdf'));assert(card.includes('Full text retrieved from Synthetic repository'));assert(!card.includes('>Primary</span>'));assert(card.includes('data-manage="r" aria-haspopup="dialog" aria-controls="manage-dialog"'));
- w.docs.r.url='javascript:alert(1)';card=ft.sourceRecordCard(rec,0);assert(!card.includes('javascript:'));assert(card.includes('class="source-file-link" type="button" data-read="r"'));
- w.docs={};card=ft.sourceRecordCard(rec,0);assert(!card.includes('>Primary</span>'));assert(card.includes('No full text available yet.'));
+ w=setup();w.docs.r={kind:'pdf',source:'Synthetic repository',url:'https://example.org/synthetic-report.pdf'};ft.setDoc('r',{...doc,pdf:new Blob(['%PDF-1.7 synthetic'])});
+ card=ft.sourceRecordCard(rec,0);assert(card.includes('data-original-pdf="r" aria-haspopup="dialog" aria-controls="reader-dialog"'));assert(card.includes('synthetic-report.pdf'));assert(card.includes('Full text retrieved from Synthetic repository'));assert(!card.includes('>Primary</span>'));assert(card.includes('data-manage="r" aria-haspopup="dialog" aria-controls="manage-dialog"'));
+ w.docs.r.url='javascript:alert(1)';card=ft.sourceRecordCard(rec,0);assert(!card.includes('javascript:'));assert(card.includes('class="source-file-link" type="button" data-original-pdf="r"'));
+ w.docs={};ft.setDoc('r',{...doc,pdf:null});card=ft.sourceRecordCard(rec,0);assert(!card.includes('>Primary</span>'));assert(card.includes('No PDF saved yet.'));
  // Uploaded names are shown verbatim; legacy File names are recovered from saved content.
- w=setup();w.docs.r={kind:'pdf',filename:'Original full title 2026.pdf'};assert(ft.sourceRecordCard(rec,0).includes('Original full title 2026.pdf'));
+ w=setup();w.docs.r={kind:'pdf',filename:'Original full title 2026.pdf'};ft.setDoc('r',{...doc,pdf:new Blob(['%PDF synthetic'])});assert(ft.sourceRecordCard(rec,0).includes('Original full title 2026.pdf'));
  delete w.docs.r.filename;ft.setDoc('r',{...doc,pdf:{name:'Legacy original name.pdf'}});assert(ft.sourceRecordCard(rec,0).includes('Legacy original name.pdf'));
- w.docs.r={kind:'xml'};ft.setDoc('r',{...doc,pdf:null});card=ft.sourceRecordCard(rec,0);assert(!card.includes('Full text (XML)'));assert(card.includes('aria-controls="reader-dialog">Full text</button>'));
+ w.docs.r={kind:'xml'};ft.setDoc('r',{...doc,pdf:null});card=ft.sourceRecordCard(rec,0);assert(!card.includes('Full text (XML)'));assert(!card.includes('data-original-pdf='));assert(card.includes('No PDF saved yet.'));
  // The entire import dialog and parser block match the preceding page.
  const ta=fs.readFileSync(require('node:path').join(__dirname,'../title-abstract-screening.html'),'utf8');
  const between=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));
@@ -124,12 +124,13 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  // Saved original PDF bytes are embedded, while XML stays clearly labelled as extracted text.
  await Promise.resolve();await Promise.resolve();
  w=setup();ft.bindManagerStorage();const originalPdf=new Blob(['%PDF-1.7 synthetic original bytes'],{type:'application/pdf'});
- ft.setDoc('r',{...doc,uid:'r',kind:'pdf',pdf:originalPdf});await ft.openReader('r');
+ ft.setDoc('r',{...doc,uid:'r',kind:'pdf',pdf:originalPdf});await ft.openReader('r',true);
  assert.equal(el('reader-original').hidden,false);assert.equal(el('reader-body').hidden,true);assert.match(el('reader-original').src,/^blob:/);assert.equal(el('reader-original').src,el('reader-pdf').href);
  assert.equal(await (await fetch(el('reader-original').src)).text(),await originalPdf.text(),'Viewer must use the original PDF bytes');
  const oldPdfUrl=el('reader-original').src;ft.setDoc('r',{...doc,uid:'r',kind:'xml',pdf:null});await ft.openReader('r');
  assert.equal(el('reader-original').hidden,true);assert.equal(el('reader-body').hidden,false);assert.match(el('reader-meta').textContent,/Only XML full text is saved/);assert(el('reader-body').innerHTML.includes('All participants were children'));
  await assert.rejects(fetch(oldPdfUrl));ft.releaseReaderPdf();
+ el('reader-body').innerHTML='unchanged';await ft.openReader('r',true);assert.equal(el('reader-body').innerHTML,'unchanged','Original PDF action must never fall back to XML');
 
  const known=new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));for(const id of elements.keys())assert(known.has(id),'Missing UI element: '+id);
  console.log('PASS: full-text startup bindings, evidence validation, criterion conflicts, review scopes, five exports, calibration, snapshots, model requests, reason gating and bounded retrieval');
