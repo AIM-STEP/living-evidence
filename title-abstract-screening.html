@@ -157,6 +157,10 @@ th{background:#f4f4f4}
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.pc-btn:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.pc-btn:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
 .pilot-panel-head{flex-wrap:wrap}.pilot-help-button{display:inline-grid;place-items:center;width:22px;height:22px;padding:1px;border:0;background:none;color:#a081ad;cursor:pointer}.pilot-help-button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round}.pilot-help-button .pilot-help-dot{fill:currentColor;stroke:none}.pilot-help-button:focus-visible{outline:2px solid var(--plum);outline-offset:2px;border-radius:50%}.pilot-help-tooltip{position:fixed;z-index:1000;width:min(470px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;padding:15px 17px;background:#fff;border:1px solid #e6dfea;border-radius:8px;box-shadow:0 5px 20px #24152c20}.pilot-help-tooltip .pilot-steps{margin:0}.pilot-help-tooltip .pilot-steps li+li{margin-top:8px}.pilot-title-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}.pilot-title-actions h2{margin:0}.pilot-panel-head>.toolbar{margin-left:auto}
+.pilot-controls .pilot-rounds{margin:0;flex:1 1 220px;min-width:0}
+.pilot-controls #reset-calibration{margin-left:auto;flex-shrink:0}
+.pilot-rounds .round.current{border-color:#a27da0;background:#eadce9;color:#5c004d}
+.pilot-rounds .round.current span{color:#5c004d}
 </style>
 </head>
 <body>
@@ -186,9 +190,8 @@ th{background:#f4f4f4}
 <button class="btn small" type="button" id="screen-model-archives" hidden>Download previous screening runs</button>
 
 
-<div class="pilot-controls"><label class="label" for="sample-size">Records per round</label><input class="input" id="sample-size" type="number" min="5" max="100" step="1" value="20"><button class="btn primary" id="run-pilot" type="button">Start round 1</button><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-calibration" type="button">Restart pilot</button></div>
+<div class="pilot-controls"><label class="label" for="sample-size">Records per round</label><input class="input" id="sample-size" type="number" min="5" max="100" step="1" value="20"><button class="btn primary" id="run-pilot" type="button">Start round 1</button><div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-calibration" type="button">Restart pilot</button></div>
 <div class="audit" id="calibration-panel" hidden><h3 class="sub-head">Learning from pilot corrections</h3><p class="hint">Confirm the criterion and correction for each disagreement. All corrections are saved; relevant rules and examples are selected for each subsequent request. The screening model uses this feedback; model weights are not changed. Approval freezes the feedback for formal screening.</p><p class="hint" id="calibration-summary" role="status"></p><ul id="calibration-pending"></ul><details><summary>Confirmed correction rules</summary><ul id="calibration-rules"></ul></details><div class="toolbar"><button class="btn small" id="calibration-check" type="button">Check corrections (optional)</button><button class="btn small" id="calibration-stop" type="button" hidden>Stop check</button><button class="btn small" id="calibration-download" type="button">Download calibration</button></div><p class="hint" id="calibration-check-status" role="status" aria-live="polite"></p></div>
-<div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div>
 <div class="notice" id="pilot-message" hidden role="status"></div>
 <p class="hint pilot-detail" id="pilot-detail" hidden></p>
 <div class="toolbar pilot-filter" id="pilot-filter" hidden><button class="btn small" type="button" data-filter="all" aria-pressed="true">All records</button><button class="btn small" type="button" data-filter="differ" aria-pressed="false">Mistakes</button></div>
@@ -1145,7 +1148,7 @@ function renderPilot(){
   const st=pilotRoundState(pilotView),lastSt=pilotRoundState(last),ready=readySource()&&!stale();
   $('rounds').innerHTML=p.rounds.map((r,i)=>{
     const state=pilotRoundState(i),editing=state.ids.some(id=>pilotReviewDrafts.has(id)),complete=state.revealed&&!editing&&!(pilotReviewSaving&&i===last);
-    return '<button class="round'+(i===pilotView?' current':'')+(complete?' done':'')+'" type="button" data-round="'+i+'"><b>Round '+(i+1)+(p.approved?.round===i?' ✓':'')+'</b><span>'+(complete?'Reviewed · AI accuracy: '+pct(pilotMetrics(state.ids).accuracy):'In progress')+'</span></button>';
+    return '<button class="round'+(i===pilotView?' current':'')+(complete?' done':'')+'" type="button" data-round="'+i+'" aria-pressed="'+(i===pilotView)+'"><b>Round '+(i+1)+(p.approved?.round===i?' ✓':'')+'</b><span>'+(complete?'Reviewed AI accuracy '+pct(pilotMetrics(state.ids).accuracy):'In progress')+'</span></button>';
   }).join('');
   $('rounds').hidden=!p.rounds.length;
   $('sample-size').value=p.size;
