@@ -233,8 +233,8 @@ th{background:#f4f4f4}
 
 <div class="source-summary pilot-summary full-summary"><div><strong id="full-screened">0 / 0</strong><span>Decided</span></div><div><strong id="full-yes">0</strong><span>Yes</span></div><div><strong id="full-maybe">0</strong><span>Maybe</span></div><div><strong id="full-no">0</strong><span>No</span></div><div><strong id="full-conflicts">0 / 0</strong><span>Conflicts resolved</span></div><div><strong id="full-check">0 / 0</strong><span>Human check</span></div></div>
 <div class="team-track full-track" role="progressbar" aria-label="Screening complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="team-track"><span id="team-bar" style="width:0"></span></div>
-<p class="hint" id="full-progress" aria-live="polite"></p>
-<p class="full-now" id="full-now" hidden aria-live="polite"></p>
+<p class="hint" id="full-progress" hidden></p>
+<p class="full-now" id="full-now" hidden></p>
 <div class="notice" id="full-message" hidden role="status"></div>
 <div id="full-feed-wrap" hidden><h3 class="sub-head">Latest AI readings</h3><ol class="full-feed" id="full-feed"></ol></div>
 <div class="check-head"><h3 class="sub-head">Conflicts and Human check</h3><label class="label inline" for="check-scope">Check</label><select class="select compact" id="check-scope"><option value="unresolved">Conflicts and uncertain records only</option><option value="sample">A random 300 AI exclusions (all if fewer)</option><option value="exclusions">All AI exclusions</option><option value="uncertain">All AI exclusions and Maybe records</option></select></div>
@@ -1374,7 +1374,7 @@ function renderFull(){
   const why=new Map();for(const r of aiRecords()){if(aiPair(r.uid)!=='no'||workspace.full.human[r.uid])continue;const c=[...unmetCriteria(r.uid,fullAI(r.uid)),...unmetCriteria(r.uid,fullAI2(r.uid))][0]?.dimension||'Other';why.set(c,(why.get(c)||0)+1)}
   if(why.size)$('full-progress').textContent+=' · AI No by criterion: '+[...why].sort((a,b)=>b[1]-a[1]).map(([c,n])=>c+' '+n).join(', ');
   const inFlight=[...fullNow.values()];
-  $('full-now').hidden=!inFlight.length;$('full-now').innerHTML=inFlight.map(t=>'<span class="now-item"><span class="pulse" aria-hidden="true"></span>'+esc(t)+'</span>').join('');
+  $('full-now').hidden=true;$('full-now').innerHTML=inFlight.map(t=>'<span class="now-item"><span class="pulse" aria-hidden="true"></span>'+esc(t)+'</span>').join('');
   const start=$('start-screening');
   start.textContent=workspace.full.startedAt&&calls?'Resume':'Start';
   start.disabled=!valid||!readySource()||!!busy||!calls;
@@ -1384,7 +1384,8 @@ function renderFull(){
   const latest=[...Object.entries(workspace.full.ai),...Object.entries(workspace.full.ai2)].filter(([id,a])=>recordById.has(id)&&a.criteriaSig===source.criteriaSig).sort((x,y)=>String(y[1].at).localeCompare(String(x[1].at))).slice(0,8);
   $('full-feed').innerHTML=latest.length?latest.map(([id,a])=>{const r=recordById.get(id),why=a.criteria.find(c=>c.judgment==='not met'&&c.quote)||a.criteria.find(c=>c.judgment==='unclear'),pass=a.pass||1;
     return '<li><span class="feed-pass">Pass '+pass+'</span>'+colored(a.decision)+(pass===2&&aiPair(id)==='conflict'?'<span class="badge differ">Conflict</span>':'')+'<span class="feed-title" title="'+esc(r.title)+'">'+esc(r.title||'(untitled record)')+'</span><span class="feed-why">'+esc(why?why.dimension+': '+why.judgment:a.decision==='yes'?'All criteria met':'')+'</span></li>'}).join(''):'<li class="hint">Readings appear here as the AI screens.</li>';
-  $('full-feed-wrap').hidden=!latest.length&&!busy;
+  // Keep the saved reading audit available internally without showing a live feed.
+  $('full-feed-wrap').hidden=true;
   // Conflicts and Human check
   $('check-scope').value=workspace.full.check;$('check-scope').disabled=!!busy;
   const conflicts=conflictIds().sort((x,y)=>!!workspace.full.human[x]-!!workspace.full.human[y]),queue=checkIds(),todo=queue.filter(id=>!workspace.full.human[id]),done=queue.filter(id=>workspace.full.human[id]),open=conflicts.filter(id=>!workspace.full.human[id]).length;
