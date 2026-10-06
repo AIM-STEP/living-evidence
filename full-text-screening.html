@@ -309,7 +309,7 @@ th{background:#f4f4f4}
 </div></dialog>
 <dialog id="reader-dialog" class="dialog reader-dialog" aria-labelledby="reader-title">
 <div class="panel-head"><h2 id="reader-title">Full text</h2><div class="toolbar"><a class="btn small" id="reader-pdf" target="_blank" rel="noopener" hidden>Open the PDF</a><button class="btn small" type="button" id="close-reader">Close</button></div></div>
-<div class="panel-body"><p class="hint" id="reader-meta"></p><div id="reader-body" class="reader-body"></div></div>
+<div class="panel-body"><p class="hint" id="reader-meta"></p><iframe id="reader-original" title="Original full-text PDF" hidden style="display:block;width:100%;height:70vh;border:0"></iframe><div id="reader-body" class="reader-body"></div></div>
 </dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -1448,15 +1448,32 @@ function reportCard(id,opts){
     (reveal?ai.map((a,i)=>a?aiBlock(a,ai.length>1?'AI reading '+(i+1):'AI'):'').join(''):'<p class="hint">'+(opts.blindNote||'')+'</p>')+'</article>';
 }
 async function ensureDocs(ids){await Promise.all(ids.filter(id=>!docCache.has(id)&&hasDoc(id)).map(id=>loadDoc(id)))}
+let readerObjectUrl='',readerRequest=0;
+function releaseReaderPdf(){
+  $('reader-original').src='about:blank';$('reader-original').hidden=true;
+  $('reader-pdf').hidden=true;$('reader-pdf').removeAttribute('href');
+  if(readerObjectUrl){URL.revokeObjectURL(readerObjectUrl);readerObjectUrl='';}
+}
 async function openReader(id){
-  const doc=await loadDoc(id),rec=recordById.get(id);if(!doc)return;
-  const quotes=[workspace.pilot.ai[id],ftAI(workspace.full.ai,id),ftAI(workspace.full.ai2,id)].flatMap(a=>a?a.criteria.map(c=>c.quote).filter(Boolean):[]);
-  const hi=new Set(Object.values(doc.evidence?.byCriterion||{}).flat().map(e=>e.id));
-  $('reader-title').textContent=rec.title||'Full text';$('reader-meta').textContent=doc.source+' · '+doc.chunks.length+' passages · highlighted: the passages selected as evidence';
-  let section='';
-  $('reader-body').innerHTML=doc.chunks.map(c=>{const head=c.section!==section?'<h4>'+esc(section=c.section)+'</h4>':'';return head+'<p class="'+(hi.has(c.id)?'ev-hit':'')+'"><span class="ev-meta">'+esc(c.id)+(c.page?' · p. '+c.page:'')+'</span>'+excerpt(c.text,quotes)+'</p>'}).join('');
-  const link=$('reader-pdf');if(doc.pdf){link.href=URL.createObjectURL(doc.pdf);link.hidden=false}else link.hidden=true;
-  $('reader-dialog').showModal();
+  const request=++readerRequest;
+  const doc=await loadDoc(id),rec=recordById.get(id);if(request!==readerRequest||!doc||!rec)return;
+  releaseReaderPdf();
+  $('reader-title').textContent=rec.title||'Full text';
+  $('reader-body').innerHTML='';$('reader-body').hidden=!!doc.pdf;
+  if(doc.pdf){
+    // Render the saved bytes directly, preserving the original PDF page layout.
+    readerObjectUrl=URL.createObjectURL(doc.pdf.type==='application/pdf'?doc.pdf:doc.pdf.slice(0,doc.pdf.size,'application/pdf'));
+    $('reader-original').src=readerObjectUrl;$('reader-original').hidden=false;
+    $('reader-pdf').href=readerObjectUrl;$('reader-pdf').hidden=false;
+    $('reader-meta').textContent='Original PDF · '+(workspace.docs[id]?.filename||doc.source||'Saved full text');
+  }else{
+    const quotes=[workspace.pilot.ai[id],ftAI(workspace.full.ai,id),ftAI(workspace.full.ai2,id)].flatMap(a=>a?(a.criteria||[]).map(c=>c.quote).filter(Boolean):[]);
+    const hi=new Set(Object.values(doc.evidence?.byCriterion||{}).flat().map(e=>e.id));
+    $('reader-meta').textContent=(doc.kind==='xml'?'Only XML full text is saved.':'The original PDF is not saved.')+' To view the original page layout, upload the PDF in Manage full text. The text below is extracted content.';
+    let section='';
+    $('reader-body').innerHTML=doc.chunks.map(c=>{const head=c.section!==section?'<h4>'+esc(section=c.section)+'</h4>':'';return head+'<p class="'+(hi.has(c.id)?'ev-hit':'')+'"><span class="ev-meta">'+esc(c.id)+(c.page?' · p. '+c.page:'')+'</span>'+excerpt(c.text,quotes)+'</p>'}).join('');
+  }
+  if(!$('reader-dialog').open)$('reader-dialog').showModal();
 }
 
 /* ---------------- Rendering ---------------- */
@@ -1473,13 +1490,12 @@ function sourceRecordCard(r,index){
   const disclosureButton=(kind,label)=>'<button class="btn small" id="source-'+kind+'-button-'+index+'" type="button" data-source-toggle="'+kind+'" data-source-record="'+esc(r.uid)+'" aria-expanded="'+expanded(kind)+'" aria-controls="source-'+kind+'-'+index+'">'+label+'<span class="source-chevron" aria-hidden="true"></span></button>';
   const disclosurePanel=(kind,label,body)=>'<section class="source-disclosure-body" id="source-'+kind+'-'+index+'" aria-label="'+label+'"'+(expanded(kind)?'':' hidden')+'>'+body+'</section>';
 
-  let fileUrl='',filename=d?.filename||'';
+  let filename=d?.filename||'';
   try{const url=new URL(d?.url||'');if(['https:','http:'].includes(url.protocol)){
-    fileUrl=url.href;
     if(!filename){const name=decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1)||'');if(/\.(pdf|xml)$/i.test(name))filename=name;}
   }}catch(e){}
   const label=filename||('Full text ('+(d?.kind==='pdf'?'PDF':'XML')+')');
-  const fileLink=fileUrl?'<a class="source-file-link" href="'+esc(fileUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+' <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>':'<button class="source-file-link" type="button" data-read="'+esc(r.uid)+'">'+esc(label)+'</button>';
+  const fileLink='<button class="source-file-link" type="button" data-read="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="reader-dialog">'+esc(label)+'</button>';
   const file=has?'<div class="source-file-row">'+fileLink+fulltextPrimaryBadge([d])+'</div><p class="source-file-origin">'+esc(d.source==='Uploaded locally'?'Full text uploaded locally':d.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">No full text available yet.</p>';
   const manage='<button class="source-manage" id="source-manage-button-'+index+'" type="button" data-manage="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="manage-dialog"><svg viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="19" rx="2"/><rect x="8" y="2" width="8" height="6" rx="2" fill="white"/></svg>Manage full text</button>';
   const savedLink=workspace.fulltextLinks?.[r.uid];
@@ -1778,6 +1794,7 @@ $('doc-rows').addEventListener('click',e=>{const t=e.target,button=t.closest('[d
   if(t.dataset.missing)return markNotRetrievable(t.dataset.missing);
 });
 $('close-reader').addEventListener('click',()=>$('reader-dialog').close());
+$('reader-dialog').addEventListener('close',()=>{readerRequest++;releaseReaderPdf();});
 $('open-criteria').addEventListener('click',()=>{
   closeCriteriaEditor();$('edit-criteria').disabled=!!busy;$('crit-restore').disabled=!!busy||!handoff?.criteria;
   $('criteria-origin').textContent=workspace.criteriaEdited?'Edited for full-text screening. Upstream criteria are unchanged.':workspace.criteria?'From Title and abstract screening (the criteria in use there when the reports were imported).':'';
