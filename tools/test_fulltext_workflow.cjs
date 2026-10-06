@@ -65,6 +65,12 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  let card=ft.sourceRecordCard(cardRecord,30);assert(card.includes('#31'));assert(card.includes('A complete title &lt;with markup&gt;'));assert(card.includes('First Author, Second Author'));assert(card.includes('12(3): 45–51'));assert(card.includes('aria-expanded="false"'));assert(card.includes('Abstract &lt;content&gt;'));
  ft.sourceDetailsOpen.add('r|abstract');card=ft.sourceRecordCard(cardRecord,30);assert(card.includes('aria-expanded="true" aria-controls="source-abstract-30"'));assert(card.includes('id="source-abstract-30" aria-label="Abstract">'));assert(!html.includes('<tbody id="doc-rows">'));
 
+ // Full-text links use real source metadata and reject executable URL schemes.
+ w=setup();w.docs.r={kind:'pdf',source:'Synthetic repository',url:'https://example.org/synthetic-report.pdf'};
+ card=ft.sourceRecordCard(rec,0);assert(card.includes('href="https://example.org/synthetic-report.pdf"'));assert(card.includes('synthetic-report.pdf'));assert(card.includes('Full text retrieved from Synthetic repository'));assert(card.includes('>Primary</span>'));assert(card.includes('id="source-manage-0" aria-label="Manage full text" hidden'));
+ w.docs.r.url='javascript:alert(1)';card=ft.sourceRecordCard(rec,0);assert(!card.includes('javascript:'));assert(card.includes('class="source-file-link" type="button" data-read="r"'));
+ ft.sourceDetailsOpen.add('r|manage');card=ft.sourceRecordCard(rec,0);assert(card.includes('id="source-manage-0" aria-label="Manage full text">'));ft.sourceDetailsOpen.delete('r|manage');
+ w.docs={};card=ft.sourceRecordCard(rec,0);assert(!card.includes('>Primary</span>'));assert(card.includes('No full text available yet.'));
  // The entire import dialog and parser block match the preceding page.
  const ta=fs.readFileSync(require('node:path').join(__dirname,'../title-abstract-screening.html'),'utf8');
  const between=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));

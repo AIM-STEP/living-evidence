@@ -184,6 +184,13 @@ th{background:#f4f4f4}
 .source-chevron{display:inline-block;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);margin:0 3px}.source-record-actions [aria-expanded="true"] .source-chevron{transform:translateY(2px) rotate(225deg)}
 .source-disclosure-body{min-width:0;margin-top:10px;padding:12px 14px;background:#fafafb;border-radius:6px;overflow-wrap:anywhere}
 .source-disclosure-body p{margin:0 0 10px}.source-disclosure-body p:last-child{margin-bottom:0}.source-abstract{white-space:pre-wrap;line-height:1.7;font-size:13px;color:var(--ink2)}.source-file-status{font-size:12px;color:var(--muted)}.source-retrieval-log{font-size:12px;color:var(--muted);margin-top:12px}.source-retrieval-log ul{padding-left:20px}
+.source-disclosure-body[aria-label="Full text"]{padding:0;background:transparent}
+.source-file-row{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px}
+.source-file-link{border:0;padding:0;background:none;color:#005bd3;font:inherit;font-size:15px;text-decoration:underline;cursor:pointer;text-align:left;overflow-wrap:anywhere}
+.source-file-primary{background:#0757cf;color:#fff;font-size:11px;font-weight:650;padding:2px 5px;border-radius:2px}
+.source-file-origin{color:#087532;font-size:14px;margin:3px 0 12px!important}
+.source-manage{display:inline-flex;align-items:center;gap:8px;border:0;background:none;color:#123c70;padding:4px 0;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.source-manage svg{width:17px;height:19px;flex:none}.source-file-link:focus-visible,.source-manage:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 @media(max-width:600px){.source-record-title{font-size:16px}.source-record-meta{font-size:13px}.source-record{padding:16px 0}.source-disclosure-body{padding:10px}}
 </style>
 </head>
@@ -983,7 +990,7 @@ async function storeText(uid,got,file){
   const hash=fingerprint(chunks);
   if(hasDoc(uid)&&workspace.docs[uid].hash!==hash)invalidateDocument(uid);
   await saveDoc({uid,kind:got.kind,source:got.source,chunks,fullText:chunks.map(c=>c.text).join(' '),pdf:file||null,evidence:null});
-  workspace.docs[uid]={hash,kind:got.kind,source:got.source,chunks:chunks.length,at:now()};
+  workspace.docs[uid]={hash,kind:got.kind,source:got.source,chunks:chunks.length,at:now(),filename:file?.name||got.filename||''};
   log('full-text-added',{recordId:uid,kind:got.kind,source:got.source,chunks:chunks.length});
 }
 const RETRIEVAL_RETRY_MS=6*60*60*1000;
@@ -1452,9 +1459,19 @@ function sourceRecordCard(r,index){
   const disclosureButton=(kind,label)=>'<button class="btn small" id="source-'+kind+'-button-'+index+'" type="button" data-source-toggle="'+kind+'" data-source-record="'+esc(r.uid)+'" aria-expanded="'+expanded(kind)+'" aria-controls="source-'+kind+'-'+index+'">'+label+'<span class="source-chevron" aria-hidden="true"></span></button>';
   const disclosurePanel=(kind,label,body)=>'<section class="source-disclosure-body" id="source-'+kind+'-'+index+'" aria-label="'+label+'"'+(expanded(kind)?'':' hidden')+'>'+body+'</section>';
 
-  const full=has?'<p class="source-file-status"><span class="ok-dot" aria-hidden="true"></span>'+esc(d.source||'Full text available')+(d.chunks?' · '+esc(d.chunks)+' passages':'')+'</p><div class="toolbar"><button class="btn small" type="button" data-read="'+esc(r.uid)+'">Read full text</button><button class="btn small" type="button" data-remove-doc="'+esc(r.uid)+'">Remove saved full text</button></div>':'<p class="hint">'+esc(d?.source||(retrievalRunning?'Checking free full-text sources…':'Full text will be retrieved automatically.'))+'</p>'+(d?.kind!=='not-retrievable'?'<button class="btn small" type="button" data-missing="'+esc(r.uid)+'">Mark as not retrievable</button>':'');
+  let fileUrl='',filename=d?.filename||'';
+  try{const url=new URL(d?.url||'');if(['https:','http:'].includes(url.protocol)){
+    fileUrl=url.href;
+    if(!filename){const name=decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1)||'');if(/\.(pdf|xml)$/i.test(name))filename=name;}
+  }}catch(e){}
+  const label=filename||('Full text ('+(d?.kind==='pdf'?'PDF':'XML')+')');
+  const fileLink=fileUrl?'<a class="source-file-link" href="'+esc(fileUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+' <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>':'<button class="source-file-link" type="button" data-read="'+esc(r.uid)+'">'+esc(label)+'</button>';
+  const file=has?'<div class="source-file-row">'+fileLink+'<span class="source-file-primary">Primary</span></div><p class="source-file-origin">'+esc(d.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">No full text available yet.</p>';
   const logs=d?.attempts?.length?'<details class="source-retrieval-log"><summary>Retrieval details</summary><ul>'+d.attempts.map(a=>'<li>'+esc(a.source+': '+a.status+(a.detail?' — '+a.detail:''))+'</li>').join('')+'</ul></details>':'';
-  return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-heading"><div class="source-record-number">#'+(index+1)+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3></div><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+esc(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full+logs)+disclosurePanel('abstract','Abstract',r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint">No abstract is available for this report.</p>')+'</article>';
+  const controls=has?'<div class="toolbar"><button class="btn small" type="button" data-read="'+esc(r.uid)+'">Read full text</button><button class="btn small" type="button" data-remove-doc="'+esc(r.uid)+'">Remove saved full text</button></div>':'<p class="hint">'+esc(d?.source||'Full text will be retrieved automatically.')+'</p>'+(d?.kind!=='not-retrievable'?'<button class="btn small" type="button" data-missing="'+esc(r.uid)+'">Mark as not retrievable</button>':'');
+  const manage='<button class="source-manage" id="source-manage-button-'+index+'" type="button" data-source-toggle="manage" data-source-record="'+esc(r.uid)+'" aria-expanded="'+expanded('manage')+'" aria-controls="source-manage-'+index+'"><svg viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="19" rx="2"/><rect x="8" y="2" width="8" height="6" rx="2" fill="white"/></svg>Manage full text</button>';
+  const full=file+manage+disclosurePanel('manage','Manage full text',controls+logs);
+  return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-heading"><div class="source-record-number">#'+(index+1)+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3></div><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+esc(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full)+disclosurePanel('abstract','Abstract',r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint">No abstract is available for this report.</p>')+'</article>';
 }
 
 let docsShown=30;
