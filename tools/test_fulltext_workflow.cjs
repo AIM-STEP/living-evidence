@@ -73,6 +73,10 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  card=ft.sourceRecordCard(rec,0);assert(card.includes('data-read="r" aria-haspopup="dialog" aria-controls="reader-dialog"'));assert(card.includes('synthetic-report.pdf'));assert(card.includes('Full text retrieved from Synthetic repository'));assert(!card.includes('>Primary</span>'));assert(card.includes('data-manage="r" aria-haspopup="dialog" aria-controls="manage-dialog"'));
  w.docs.r.url='javascript:alert(1)';card=ft.sourceRecordCard(rec,0);assert(!card.includes('javascript:'));assert(card.includes('class="source-file-link" type="button" data-read="r"'));
  w.docs={};card=ft.sourceRecordCard(rec,0);assert(!card.includes('>Primary</span>'));assert(card.includes('No full text available yet.'));
+ // Uploaded names are shown verbatim; legacy File names are recovered from saved content.
+ w=setup();w.docs.r={kind:'pdf',filename:'Original full title 2026.pdf'};assert(ft.sourceRecordCard(rec,0).includes('Original full title 2026.pdf'));
+ delete w.docs.r.filename;ft.setDoc('r',{...doc,pdf:{name:'Legacy original name.pdf'}});assert(ft.sourceRecordCard(rec,0).includes('Legacy original name.pdf'));
+ w.docs.r={kind:'xml'};ft.setDoc('r',{...doc,pdf:null});card=ft.sourceRecordCard(rec,0);assert(!card.includes('Full text (XML)'));assert(card.includes('aria-controls="reader-dialog">Full text</button>'));
  // The entire import dialog and parser block match the preceding page.
  const ta=fs.readFileSync(require('node:path').join(__dirname,'../title-abstract-screening.html'),'utf8');
  const between=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));

@@ -1482,6 +1482,7 @@ const sourceDetailsOpen=new Set();
 function fulltextPrimaryBadge(documents){
   return documents.filter(d=>d?.kind==='pdf').length>=2?'<span class="source-file-primary">Primary</span>':'';
 }
+function fulltextFilename(id){return workspace.docs[id]?.filename||docCache.get(id)?.pdf?.name||'';}
 function sourceRecordCard(r,index){
   const d=workspace.docs[r.uid],has=hasDoc(r.uid),authors=Array.isArray(r.authors)?r.authors.filter(Boolean).join(', '):String(r.authors||'');
   const citation=[r.year,[r.volume,r.issue?'('+r.issue+')':''].filter(Boolean).join('')].filter(Boolean).join('; ')+(r.pages?': '+r.pages:'');
@@ -1490,11 +1491,11 @@ function sourceRecordCard(r,index){
   const disclosureButton=(kind,label)=>'<button class="btn small" id="source-'+kind+'-button-'+index+'" type="button" data-source-toggle="'+kind+'" data-source-record="'+esc(r.uid)+'" aria-expanded="'+expanded(kind)+'" aria-controls="source-'+kind+'-'+index+'">'+label+'<span class="source-chevron" aria-hidden="true"></span></button>';
   const disclosurePanel=(kind,label,body)=>'<section class="source-disclosure-body" id="source-'+kind+'-'+index+'" aria-label="'+label+'"'+(expanded(kind)?'':' hidden')+'>'+body+'</section>';
 
-  let filename=d?.filename||'';
+  let filename=fulltextFilename(r.uid);
   try{const url=new URL(d?.url||'');if(['https:','http:'].includes(url.protocol)){
     if(!filename){const name=decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1)||'');if(/\.(pdf|xml)$/i.test(name))filename=name;}
   }}catch(e){}
-  const label=filename||('Full text ('+(d?.kind==='pdf'?'PDF':'XML')+')');
+  const label=filename||'Full text';
   const fileLink='<button class="source-file-link" type="button" data-read="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="reader-dialog">'+esc(label)+'</button>';
   const file=has?'<div class="source-file-row">'+fileLink+fulltextPrimaryBadge([d])+'</div><p class="source-file-origin">'+esc(d.source==='Uploaded locally'?'Full text uploaded locally':d.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">No full text available yet.</p>';
   const manage='<button class="source-manage" id="source-manage-button-'+index+'" type="button" data-manage="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="manage-dialog"><svg viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="19" rx="2"/><rect x="8" y="2" width="8" height="6" rx="2" fill="white"/></svg>Manage full text</button>';
@@ -1695,7 +1696,7 @@ function renderFulltextManager(){
   $('manage-link').value=link?.url||'';
   const row=(body,meta,kind,primary)=>'<div class="manage-file-row"><div class="manage-file-main">'+body+'<p class="hint">'+esc(meta)+'</p></div>'+(primary?fulltextPrimaryBadge([d]):'')+'<button class="manage-remove" type="button" data-manage-remove="'+kind+'" aria-label="Remove '+(kind==='file'?'saved full text':'full-text link')+'" title="Remove"><svg width="18" height="21" viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M6 6l1 17h10l1-17M10 10v9m4-9v9"/></svg></button></div>';
   let html='';
-  if(hasDoc(manageId))html+=row('<button class="source-file-link" type="button" data-manage-read="true">'+esc(d.filename||('Full text ('+d.kind.toUpperCase()+')'))+'</button>',(d.source||'Saved full text')+(d.at?' · '+new Date(d.at).toLocaleDateString('en-GB'):''),'file',true);
+  if(hasDoc(manageId))html+=row('<button class="source-file-link" type="button" data-manage-read="true">'+esc(fulltextFilename(manageId)||'Full text')+'</button>',(d.source||'Saved full text')+(d.at?' · '+new Date(d.at).toLocaleDateString('en-GB'):''),'file',true);
   if(link&&safeFulltextLink(link.url))html+=row('<a class="source-file-link" href="'+esc(safeFulltextLink(link.url))+'" target="_blank" rel="noopener noreferrer">'+esc(link.url)+' ↗</a>','Saved link · upload a readable PDF to use it for AI screening','link',false);
   $('manage-files').innerHTML=html;
   for(const id of ['manage-choose','manage-file','manage-add-link','manage-link','manage-close','manage-done'])$(id).disabled=manageWorking;
@@ -1703,7 +1704,7 @@ function renderFulltextManager(){
 }
 function openFulltextManager(id){
   if(busy||syncingSource||!recordById.has(id))return toast('Wait for the current operation to finish.');
-  manageId=id;busy='manage';pauseRetrieval();render();$('manage-file').value='';showNotice('manage-message','');renderFulltextManager();$('manage-dialog').showModal();
+  manageId=id;busy='manage';pauseRetrieval();render();$('manage-file').value='';showNotice('manage-message','');renderFulltextManager();$('manage-dialog').showModal();if(hasDoc(id))loadDoc(id).then(()=>{if(manageId===id)renderFulltextManager();}).catch(e=>showNotice('manage-message',e.message,'error'));
 }
 function closeFulltextManager(){if(manageWorking)return;$('manage-dialog').close();manageId='';busy='';render();refreshSource();}
 async function manageOperation(action){
@@ -1787,7 +1788,7 @@ $('check-scope').addEventListener('change',()=>{if(busy)return;workspace.full.ch
 $('oa-email').addEventListener('change',()=>{if(!$('oa-email').checkValidity())return;pauseRetrieval();for(const r of workspace.records)if(!hasDoc(r.uid)&&workspace.docs[r.uid]?.kind==='none')delete workspace.docs[r.uid].retryAt;save().then(scheduleRetrieval);});
 $('docs-more').addEventListener('click',()=>{docsShown=1e9;renderSource()});
 $('doc-rows').addEventListener('click',e=>{const t=e.target,button=t.closest('[data-source-toggle]');
-  if(button){const key=button.dataset.sourceRecord+'|'+button.dataset.sourceToggle,id=button.id;sourceDetailsOpen.has(key)?sourceDetailsOpen.delete(key):sourceDetailsOpen.add(key);renderSource();$(id)?.focus();return;}
+  if(button){const key=button.dataset.sourceRecord+'|'+button.dataset.sourceToggle,id=button.id;sourceDetailsOpen.has(key)?sourceDetailsOpen.delete(key):sourceDetailsOpen.add(key);renderSource();$(id)?.focus();if(button.dataset.sourceToggle==='fulltext'&&sourceDetailsOpen.has(key)&&hasDoc(button.dataset.sourceRecord))loadDoc(button.dataset.sourceRecord).then(()=>renderSource()).catch(e=>toast(e.message));return;}
   const manage=t.closest('[data-manage]');if(manage)return openFulltextManager(manage.dataset.manage);
   if(t.dataset.read)return openReader(t.dataset.read);
   if(t.dataset.removeDoc)return removeDoc(t.dataset.removeDoc);
