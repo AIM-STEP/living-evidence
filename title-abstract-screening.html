@@ -900,8 +900,9 @@ function renderPilotApproval(){
 }
 async function checkCalibration(){
   if(busy||stale())return;
-  const bundle=currentCalibration();if(bundle.pending.length||!bundle.lessons.length)return;
+  let bundle=currentCalibration();if(bundle.pending.length||!bundle.lessons.length)return;
   await resolvePilotModel();if(busy)return;
+  bundle=currentCalibration();if(bundle.pending.length||!bundle.lessons.length)return;
   busy='calibration-check';controller=new AbortController();render();
   const result={hash:bundle.hash,at:now(),total:bundle.lessons.length,matched:0,failed:0,records:[]};
   try{
@@ -1234,7 +1235,7 @@ function endMessage(s){
 }
 async function runFull(){
   if(busy||!readySource()||!approvalsValid())return;
-  await resolvePilotModel();if(busy)return;
+  await resolvePilotModel();if(busy||!approvalsValid())return;
   const approved=workspace.pilot.approved;
   const ids=aiRecords().map(r=>r.uid).filter(id=>!fullAI(id)||!fullAI2(id));
   if(!ids.length){maybeComplete();await save();render();return}

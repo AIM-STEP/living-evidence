@@ -1465,7 +1465,7 @@ function publishSummary(){publishForRob();try{localStorage.setItem(summaryKey,JS
 function maybeComplete(){const s=summary(),done=s.assessed>0&&!s.pending&&aiDone();if(done&&!workspace.full.completedAt){workspace.full.completedAt=now();log('full-text-screening-complete',{included:s.include,excluded:s.exclude,awaiting:s.unclear})}else if(!done)workspace.full.completedAt=''}
 async function runFull(){
   if(busy||!approvalsValid())return;
-  await resolvePilotModel();if(busy)return;
+  await resolvePilotModel();if(busy||!approvalsValid())return;
   const approved=workspace.pilot.approved,tasks=screenable().flatMap(r=>[1,2].filter(v=>!ftAI(v===1?workspace.full.ai:workspace.full.ai2,r.uid)).map(v=>[r.uid,v]));
   if(!tasks.length){maybeComplete();await save();render();return}
   busy='full';controller=new AbortController();render();
@@ -1748,8 +1748,9 @@ function updateCalibration(id,field,value){
   h[field]=text(value,1200);h.feedbackAt=now();log('pilot-correction',{recordId:id,field});save().then(render);
 }
 async function checkCalibration(){
-  const bundle=currentCalibration();if(busy||bundle.pending.length||!bundle.lessons.length)return;
+  let bundle=currentCalibration();if(busy||bundle.pending.length||!bundle.lessons.length)return;
   await resolvePilotModel();if(busy)return;
+  bundle=currentCalibration();if(bundle.pending.length||!bundle.lessons.length)return;
   busy='calibration-check';controller=new AbortController();render();
   const ids=[...new Set(bundle.lessons.map(l=>l.recordId))],result={hash:bundle.hash,total:ids.length,matched:0,failed:0,completed:false,records:[],at:now()};
   try{
