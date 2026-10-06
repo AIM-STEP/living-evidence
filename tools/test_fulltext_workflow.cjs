@@ -77,7 +77,7 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  assert.equal(ft.firstAuthorGivenName({authors:['John Smith']}),'John');
  assert.equal(ft.firstAuthorGivenName({authors:['Smith JA']}),'JA');
  assert.equal(ft.firstAuthorGivenName({authors:[]}),'');
- assert(card.includes(' · First · 2024</div>'));assert(card.indexOf(' · First · 2024')<card.indexOf('<h3'));
+ assert(card.includes(' · First 2024</div>'));assert(card.indexOf(' · First 2024')<card.indexOf('<h3'));
  const fullPanel=card.match(/id="source-fulltext-30"[^>]*>([\s\S]*?)<\/section>/)[1];
  const abstractPanel=card.match(/id="source-abstract-30"[^>]*>([\s\S]*?)<\/section>/)[1];
  assert(abstractPanel.includes('<div class="source-abstract-fulltext">'+fullPanel+'</div>'));

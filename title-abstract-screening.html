@@ -191,6 +191,7 @@ th{background:#f4f4f4}
 .source-panel-head{flex-wrap:wrap;gap:12px}
 .source-panel-head>.source-actions{margin-left:auto}
 .full-summary>div:has(.full-category){padding:0}.full-category{display:block;width:100%;height:100%;border:0;border-bottom:2px solid transparent;padding:8px 12px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}.full-category:hover{background:#f0eaf3}.full-category[aria-pressed="true"]{background:#eee4f1;border-bottom-color:var(--plum)}.full-category:focus-visible{outline:2px solid var(--plum);outline-offset:-3px}
+.source-record-number{font-size:12px;color:#5f6069;margin-bottom:5px;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -518,6 +519,35 @@ async function applyFulltextReturns(entries){
   try{await save();render();}catch(e){workspace=before;publishSummary();throw e;}
 }
 
+function assignSourceNumbers(){
+  const numbers=workspace.sourceNumbers??={next:1,byUid:{},byKey:{}};
+  const reserved=new Set(Object.values(numbers.byUid).filter(Number.isSafeInteger));
+  numbers.next=[...reserved].reduce((next,n)=>Math.max(next,n+1),numbers.next||1);
+  const active=new Set(source.records.map(r=>numbers.byUid['uid:'+r.uid]).filter(Number.isSafeInteger));
+  let changed=false;
+  for(const r of source.records){
+    const uid='uid:'+r.uid,keys=recordKeys(cleanRecord(r));
+    if(!Number.isSafeInteger(numbers.byUid[uid])){
+      const previous=keys.map(k=>numbers.byKey[k]).find(n=>Number.isSafeInteger(n)&&!active.has(n));
+      const number=previous??numbers.next++;
+      numbers.byUid[uid]=number;active.add(number);changed=true;
+    }
+    for(const key of keys)if(!Number.isSafeInteger(numbers.byKey[key]))numbers.byKey[key]=numbers.byUid[uid];
+  }
+  return changed;
+}
+function firstAuthorGivenName(r){
+  const first=Array.isArray(r.authors)?r.authors[0]:String(r.authors||'').split(';')[0];
+  if(!first)return '';
+  if(typeof first==='object')return String(first.givenName||first.given||first.firstName||'').trim().split(/\s+/)[0]||'';
+  const name=String(first).trim(),comma=name.indexOf(',');
+  if(comma>=0)return name.slice(comma+1).trim().split(/\s+/)[0]||name.slice(0,comma).trim();
+  const parts=name.split(/\s+/),last=parts.at(-1);
+  // PubMed-style names commonly end with given-name initials (e.g. Smith JA).
+  return parts.length>1&&/^(?:[A-Z]\.?){1,3}$/.test(last)?last:parts[0];
+}
+function recordHeadingMeta(r){if(!workspace.sourceNumbers?.byUid?.['uid:'+r.uid])assignSourceNumbers();return ['#'+workspace.sourceNumbers.byUid['uid:'+r.uid],[firstAuthorGivenName(r),r.year].filter(Boolean).join(' ')].filter(Boolean).join(' · ');}
+
 async function loadSource(){
   sourceError='';
   const returned=await pendingFulltextReturns();await prepareFulltextReturns(returned);
@@ -579,7 +609,9 @@ async function loadSource(){
     criteriaSig:fingerprint(criteria)};
   recordById.clear();
   records.forEach(r=>recordById.set(r.uid,r));
+  const numbersChanged=assignSourceNumbers();
   await applyFulltextReturns(returned);
+  if(numbersChanged)await save();
 }
 function stale(){return !!workspace&&(workspace.sourceSig!==source.sourceSig||workspace.criteriaSig!==source.criteriaSig)}
 function readySource(){return !stale()&&source.records.length>=3&&!!source.criteria?.rows?.length}
@@ -1166,7 +1198,7 @@ function pilotCard(rec,st,index){
   const ai=available?'<div class="audit"><strong>AI decision: '+decisionLabel(outcome)+'</strong>'+(explanation?'<p class="hint">'+esc(explanation)+'</p>':'')+((a.criteria||[]).length?'<ul class="evidence-list">'+a.criteria.map(judge).join('')+'</ul>':'')+'</div>':'<p class="hint">Waiting for the AI assessment.</p>';
   const buttons=available?'<div class="decision-buttons" role="group" aria-label="Review AI decision">'+['agree','mistake'].map(choice=>'<button type="button" class="vote '+(choice==='agree'?'yes':'no')+((draft?choice==='mistake':saved&&h.review===choice)?' selected':'')+'" data-review="'+choice+'" data-id="'+esc(id)+'" aria-pressed="'+(draft?choice==='mistake':saved&&h.review===choice)+'"'+(canReview?'':' disabled')+'>'+(choice==='agree'?'Agree':'Mistake')+'</button>').join('')+'</div>':'';
   const correction=draft?'<p class="hint">Your corrected decision: '+decisionLabel(outcome==='yes'?'no':'yes')+'</p><label class="pilot-note">Reason<textarea class="textarea" data-review-reason="'+esc(id)+'" maxlength="1200" placeholder="Explain which eligibility criterion the AI applied incorrectly and why."'+(canReview?'':' disabled')+'>'+esc(draft.note)+'</textarea></label><button class="btn primary small" type="button" data-review-save="'+esc(id)+'"'+(canReview?'':' disabled')+'>Save</button>':saved&&h.review==='mistake'?'<p class="hint">Your corrected decision: '+decisionLabel(h.decision)+' · '+esc(h.note)+'</p>':'';
-  return '<article id="pilot-record-'+esc(id)+'" class="record'+(saved&&h.review==='mistake'?' differ':'')+'"><div class="record-head"><div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div>'+(saved?'<button type="button" class="badge pilot-review-toggle" data-toggle-assessment="'+esc(id)+'" aria-expanded="'+!collapsed+'" aria-controls="'+esc(assessmentId)+'">'+(h.review==='agree'?'Agreed':'Corrected')+'<span class="review-chevron" aria-hidden="true">⌄</span></button>':'')+'</div>'+abstractBlock(id,rec.abstract,quotes)+'<div id="'+esc(assessmentId)+'" data-pilot-assessment'+(collapsed?' hidden':'')+'>'+ai+buttons+correction+(pilotReviewErrors.has(id)?'<p class="notice error" role="alert">'+esc(pilotReviewErrors.get(id))+'</p>':'')+'</div></article>';
+  return '<article id="pilot-record-'+esc(id)+'" class="record'+(saved&&h.review==='mistake'?' differ':'')+'"><div class="record-head"><div><div class="source-record-number">'+esc(recordHeadingMeta(rec))+'</div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div>'+(saved?'<button type="button" class="badge pilot-review-toggle" data-toggle-assessment="'+esc(id)+'" aria-expanded="'+!collapsed+'" aria-controls="'+esc(assessmentId)+'">'+(h.review==='agree'?'Agreed':'Corrected')+'<span class="review-chevron" aria-hidden="true">⌄</span></button>':'')+'</div>'+abstractBlock(id,rec.abstract,quotes)+'<div id="'+esc(assessmentId)+'" data-pilot-assessment'+(collapsed?' hidden':'')+'>'+ai+buttons+correction+(pilotReviewErrors.has(id)?'<p class="notice error" role="alert">'+esc(pilotReviewErrors.get(id))+'</p>':'')+'</div></article>';
 }
 function renderPilot(){
   if(!workspace?.pilot)return;
@@ -1367,7 +1399,7 @@ function fullCard(id){
   const outcome=pv?pilotAIOutcome(pilot):aiPair(id),names={yes:'Include',no:'Exclude',maybe:'Unclear',conflict:'Conflicting assessments'};
   const assessment='<div class="audit"><strong>AI decision: '+esc(names[outcome]||'Pending')+'</strong>'+readings.map((x,i)=>(readings.length>1?'<p class="hint">AI pass '+(i+1)+' · '+esc(label(x.decision))+'</p>':'')+aiDetails(x)).join('')+'</div>';
   const canReview=!busy&&!stale()&&!fullReviewSaving;
-  return '<article class="record'+(conflict&&!h?' differ':'')+'"><div class="record-head"><div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div><button class="badge pilot-review-toggle" type="button" data-toggle-full-assessment="'+esc(id)+'" aria-expanded="'+!collapsed+'" aria-controls="'+esc(assessmentId)+'">'+(h?'Assessed: '+esc(label(h.decision)):conflict?'Conflict':'AI assessed')+'<span class="review-chevron" aria-hidden="true">⌄</span></button></div>'+
+  return '<article class="record'+(conflict&&!h?' differ':'')+'"><div class="record-head"><div><div class="source-record-number">'+esc(recordHeadingMeta(rec))+'</div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div><button class="badge pilot-review-toggle" type="button" data-toggle-full-assessment="'+esc(id)+'" aria-expanded="'+!collapsed+'" aria-controls="'+esc(assessmentId)+'">'+(h?'Assessed: '+esc(label(h.decision)):conflict?'Conflict':'AI assessed')+'<span class="review-chevron" aria-hidden="true">⌄</span></button></div>'+
     abstractBlock(id,rec.abstract,quotes,true)+'<div id="'+esc(assessmentId)+'" data-full-assessment'+(collapsed?' hidden':'')+'>'+assessment+'</div>'+exclusionReasonField(id,'full',h)+
     '<div class="decision-buttons" role="group" aria-label="Your decision">'+['yes','no'].map(d=>'<button type="button" class="vote '+d+(h?.decision===d?' selected':'')+'" data-fvote="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'"'+(canReview?'':' disabled')+'>'+label(d)+'</button>').join('')+'</div>'+
     (fullReviewErrors.has(id)?'<p class="notice error" role="alert">'+esc(fullReviewErrors.get(id))+'</p>':'')+'</article>';
