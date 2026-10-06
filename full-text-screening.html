@@ -294,8 +294,8 @@ th{background:#f4f4f4}
 </dialog>
 <dialog id="criteria-dialog" class="dialog" aria-labelledby="criteria-title">
 <div class="panel-head criteria-dialog-head">
-<div class="criteria-heading"><h2 id="criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" type="button" id="crit-restore">Use title and abstract criteria</button><button class="criteria-source-link" type="button" id="crit-import">Import from local</button></div><input type="file" id="crit-import-file" accept=".docx,.xlsx,.csv,.tsv,.txt,.md,.json,.html,.htm" aria-label="Import local eligibility criteria" hidden></div>
-<div class="criteria-head-actions"><button class="btn small" type="button" id="edit-criteria">Edit</button><button class="criteria-close" type="button" id="close-criteria" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
+<div class="criteria-heading"><h2 id="criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" type="button" id="crit-restore">Use title and abstract criteria</button><button class="criteria-source-link" type="button" id="crit-import">Import from local</button><button class="criteria-source-link" type="button" id="edit-criteria">Edit</button></div><input type="file" id="crit-import-file" accept=".docx,.xlsx,.csv,.tsv,.txt,.md,.json,.html,.htm" aria-label="Import local eligibility criteria" hidden></div>
+<div class="criteria-head-actions"><button class="criteria-close" type="button" id="close-criteria" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
 </div>
 <div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div class="notice" id="crit-import-message" role="status" hidden></div><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Edits apply only to Full-text assess. Existing runs are archived and a new pilot is required.</p><label class="label" for="crit-question">Review question</label><textarea class="textarea" id="crit-question" rows="2"></textarea><p class="hint" id="crit-editor-loading" role="status">Loading manual editor…</p><iframe id="crit-manual-frame" title="Manual eligibility criteria editor" allow="local-network-access; local-network; loopback-network" style="width:100%;height:62vh;border:0" hidden></iframe><div class="notice error" id="crit-error" role="alert" tabindex="-1" hidden></div><div class="toolbar"><button class="btn small" id="crit-cancel" type="button">Cancel</button><button class="btn primary small" id="crit-save" type="button">Save criteria</button></div></div><p class="hint" id="reason-order"></p></div>
 </dialog>
@@ -1926,12 +1926,6 @@ $('crit-manual-frame').addEventListener('load',()=>{
     $('crit-manual-frame').hidden=false;$('crit-editor-loading').hidden=true;
   }catch(e){$('crit-editor-loading').hidden=true;setCriteriaError(e.message);}
 });
-function openCriteriaEditor(){
-  if(busy)return toast('Stop screening before editing criteria.');
-  pendingCriteriaImport='';showNotice('crit-import-message','');
-  $('crit-question').value=workspace.criteria?.question||'';loadManualCriteriaEditor(workspace.criteria||{});
-  $('criteria-editor').hidden=false;$('criteria-view').hidden=true;setCriteriaError('');
-}
 function closeCriteriaEditor(){ $('crit-manual-frame').contentWindow?.aimstepManualEditor?.stop();manualEditorReady=false;manualEditorDraft=null;pendingCriteriaImport='';showNotice('crit-import-message','');$('criteria-editor').hidden=true;$('criteria-view').hidden=false;}
 function setCriteriaError(message){
   const el=$('crit-error');el.textContent=message;el.hidden=!message;
@@ -1976,7 +1970,7 @@ async function saveCriteria(){
     $('crit-save').textContent='Save criteria';render();
   }
 }
-$('edit-criteria').addEventListener('click',openCriteriaEditor);
+$('edit-criteria').addEventListener('click',()=>{if(busy)return;location.href=pageLink('eligibility.html');});
 $('crit-cancel').addEventListener('click',closeCriteriaEditor);
 $('crit-save').addEventListener('click',()=>saveCriteria().catch(e=>setCriteriaError(e.message)));
 $('crit-restore').addEventListener('click',async()=>{
