@@ -174,6 +174,16 @@ th{background:#f4f4f4}
 .full-feed .feed-pass{width:64px;white-space:nowrap}
 .brand-text{display:flex;flex-direction:column;line-height:1}.brand .brand-main{font-size:16px;letter-spacing:.08em;line-height:1.05}.brand .brand-sub{display:block;margin-top:3px;font-size:11px;line-height:1.2;letter-spacing:.01em;font-weight:500;color:#5f5862;text-transform:none;white-space:nowrap}
 .step-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid var(--plum);border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.2;letter-spacing:0;text-decoration:none;white-space:nowrap;cursor:pointer}.step-btn:hover{text-decoration:none}.step-btn.back{background:#fff;color:var(--plum)}.step-btn.back:hover{background:#f8eff6}.step-btn.next{background:var(--plum);color:#fff}.step-btn.next:hover{background:#470039;color:#fff}.step-tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:#f8eff6;color:var(--plum);font-size:11px;font-weight:600;vertical-align:1px}
+
+/* Bibliographic records with expandable Full text and Abstract, matching the reference layout. */
+.source-record-list{margin-top:18px}.source-record{padding:20px 0 22px;border-bottom:1px solid var(--soft)}.source-record:first-child{padding-top:0}.source-record:last-child{border-bottom:0}
+.source-record-number{font-size:13px;color:#5f6069;margin-bottom:8px}.source-record-title{margin:0 0 10px;font-size:18px;line-height:1.45;font-weight:650;color:#30394c;overflow-wrap:anywhere}
+.source-record-meta{font-size:14px;line-height:1.65;color:#687188;overflow-wrap:anywhere}.source-record-meta p{margin:0}.source-record-id{font-size:12px;margin-top:3px!important}
+.source-record-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:16px}.source-record-actions .btn{gap:10px}
+.source-chevron{display:inline-block;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);margin:0 3px}.source-record-actions [aria-expanded="true"] .source-chevron{transform:translateY(2px) rotate(225deg)}
+.source-disclosure-body{min-width:0;margin-top:10px;padding:12px 14px;background:#fafafb;border-radius:6px;overflow-wrap:anywhere}
+.source-disclosure-body p{margin:0 0 10px}.source-disclosure-body p:last-child{margin-bottom:0}.source-abstract{white-space:pre-wrap;line-height:1.7;font-size:13px;color:var(--ink2)}.source-file-status{font-size:12px;color:var(--muted)}.source-retrieval-log{font-size:12px;color:var(--muted);margin-top:12px}.source-retrieval-log ul{padding-left:20px}
+@media(max-width:600px){.source-record-title{font-size:16px}.source-record-meta{font-size:13px}.source-record{padding:16px 0}.source-disclosure-body{padding:10px}}
 </style>
 </head>
 <body>
@@ -193,7 +203,7 @@ th{background:#f4f4f4}
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
 <p class="hint" id="source-hint"></p><details id="retrieval-settings" hidden><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC full-text XML and publisher links, OpenAlex repository/publisher PDFs, Semantic Scholar open-access PDFs, Unpaywall, and arXiv PDFs for arXiv DOIs. Retrieval starts automatically while this page is open and idle. Sources are tried in order until a readable file is found; unreadable or mismatched files are skipped. Failed lookups retry after six hours (five minutes when the backend is unavailable). Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent to these services; downloads pass through the Mac Studio backend.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
 <div class="notice" id="source-notice" hidden role="status"></div>
-<div class="table-wrap results-like doc-table"><table><thead><tr><th scope="col">Report</th><th scope="col" class="num-col">Year</th><th scope="col">Full text</th><th scope="col" class="act-col"><span class="sr-only">Actions</span></th></tr></thead><tbody id="doc-rows"></tbody></table></div>
+<div class="source-record-list" id="doc-rows" role="list" aria-label="Reports for full-text screening"></div>
 <button class="btn small" type="button" id="docs-more" hidden>Show all reports</button>
 </div>
 </section>
@@ -1225,15 +1235,27 @@ async function openReader(id){
 }
 
 /* ---------------- Rendering ---------------- */
+const sourceDetailsOpen=new Set();
+function sourceRecordCard(r,index){
+  const d=workspace.docs[r.uid],has=hasDoc(r.uid),authors=Array.isArray(r.authors)?r.authors.filter(Boolean).join(', '):String(r.authors||'');
+  const citation=[r.year,[r.volume,r.issue?'('+r.issue+')':''].filter(Boolean).join('')].filter(Boolean).join('; ')+(r.pages?': '+r.pages:'');
+  const bibliography=[r.journal,citation].filter(Boolean).join(' · ');
+  const expanded=kind=>sourceDetailsOpen.has(r.uid+'|'+kind);
+  const disclosureButton=(kind,label)=>'<button class="btn small" id="source-'+kind+'-button-'+index+'" type="button" data-source-toggle="'+kind+'" data-source-record="'+esc(r.uid)+'" aria-expanded="'+expanded(kind)+'" aria-controls="source-'+kind+'-'+index+'">'+label+'<span class="source-chevron" aria-hidden="true"></span></button>';
+  const disclosurePanel=(kind,label,body)=>'<section class="source-disclosure-body" id="source-'+kind+'-'+index+'" aria-label="'+label+'"'+(expanded(kind)?'':' hidden')+'>'+body+'</section>';
+
+  const full=has?'<p class="source-file-status"><span class="ok-dot" aria-hidden="true"></span>'+esc(d.source||'Full text available')+(d.chunks?' · '+esc(d.chunks)+' passages':'')+'</p><div class="toolbar"><button class="btn small" type="button" data-read="'+esc(r.uid)+'">Read full text</button><button class="btn small" type="button" data-remove-doc="'+esc(r.uid)+'">Remove saved full text</button></div>':'<p class="hint">'+esc(d?.source||(retrievalRunning?'Checking free full-text sources…':'Full text will be retrieved automatically.'))+'</p>'+(d?.kind!=='not-retrievable'?'<button class="btn small" type="button" data-missing="'+esc(r.uid)+'">Mark as not retrievable</button>':'');
+  const logs=d?.attempts?.length?'<details class="source-retrieval-log"><summary>Retrieval details</summary><ul>'+d.attempts.map(a=>'<li>'+esc(a.source+': '+a.status+(a.detail?' — '+a.detail:''))+'</li>').join('')+'</ul></details>':'';
+  return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-number">#'+(index+1)+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+esc(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full+logs)+disclosurePanel('abstract','Abstract',r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint">No abstract is available for this report.</p>')+'</article>';
+}
+
 let docsShown=30;
 function renderSource(){
   const s=summary();
   $('stat-sought').textContent=s.sought;$('stat-retrieved').textContent=s.retrieved;$('stat-missing').textContent=s.notRetrieved;$('stat-toscreen').textContent=s.pending;
   $('source-hint').textContent=workspace.records.length?'Reports are the records you decided Yes or Maybe in Title and abstract screening. Retrieved full texts are stored in this browser.':workspace.sourceCleared?'Results cleared. Restore results to display the latest selection from the previous step.':'Records marked Yes or Maybe in Title and abstract screening appear here automatically.';
-  const rows=workspace.records.slice().sort((a,b)=>hasDoc(a.uid)-hasDoc(b.uid));
-  $('doc-rows').innerHTML=rows.slice(0,docsShown).map(r=>{const d=workspace.docs[r.uid],has=hasDoc(r.uid);
-    return '<tr><td class="doc-title">'+esc((r.title||'(untitled)').slice(0,160))+'</td><td class="num-col">'+esc(r.year||'')+'</td><td>'+(has?'<span class="ok-dot"></span>'+esc(d.source)+' <span class="hint">('+d.chunks+' passages)</span>':'<span class="hint">'+esc(d?.source||'Not yet')+'</span>')+(d?.attempts?.length?'<details><summary>Retrieval log</summary>'+d.attempts.map(a=>'<div>'+esc(a.source+': '+a.status+(a.detail?' — '+a.detail:''))+'</div>').join('')+'</details>':'')+'</td><td class="act-col">'+
-      (has?'<button class="abs-toggle" type="button" data-read="'+esc(r.uid)+'">Read</button><button class="remove-import" type="button" data-remove-doc="'+esc(r.uid)+'" title="Remove this full text" aria-label="Remove the full text">×</button>':(d?.kind!=='not-retrievable'?'<button class="abs-toggle" type="button" data-missing="'+esc(r.uid)+'">Not retrievable</button>':''))+'</td></tr>'}).join('')||'<tr><td colspan="4" class="empty">No reports to display. Eligible records from the previous step appear here automatically unless cleared.</td></tr>';
+  const rows=workspace.records;
+  $('doc-rows').innerHTML=rows.slice(0,docsShown).map(sourceRecordCard).join('')||'<p class="empty">No reports to display. Eligible records from the previous step appear here automatically unless cleared.</p>';
   $('docs-more').hidden=rows.length<=docsShown;$('docs-more').textContent='Show all '+rows.length+' reports';
   for(const b of ['clear-source','restore-source'])$(b).disabled=!!busy||syncingSource;
   $('clear-source').disabled=!!busy||syncingSource||!workspace.records.length;
@@ -1416,7 +1438,8 @@ $('restore-source').addEventListener('click',()=>restoreSource().catch(e=>showNo
 $('check-scope').addEventListener('change',()=>{if(busy)return;workspace.full.check=$('check-scope').value;maybeComplete();save().then(render);});
 $('oa-email').addEventListener('change',()=>{if(!$('oa-email').checkValidity())return;pauseRetrieval();for(const r of workspace.records)if(!hasDoc(r.uid)&&workspace.docs[r.uid]?.kind==='none')delete workspace.docs[r.uid].retryAt;save().then(scheduleRetrieval);});
 $('docs-more').addEventListener('click',()=>{docsShown=1e9;renderSource()});
-$('doc-rows').addEventListener('click',e=>{const t=e.target;
+$('doc-rows').addEventListener('click',e=>{const t=e.target,button=t.closest('[data-source-toggle]');
+  if(button){const key=button.dataset.sourceRecord+'|'+button.dataset.sourceToggle,id=button.id;sourceDetailsOpen.has(key)?sourceDetailsOpen.delete(key):sourceDetailsOpen.add(key);renderSource();$(id)?.focus();return;}
   if(t.dataset.read)return openReader(t.dataset.read);
   if(t.dataset.removeDoc)return removeDoc(t.dataset.removeDoc);
   if(t.dataset.missing)return markNotRetrievable(t.dataset.missing);
