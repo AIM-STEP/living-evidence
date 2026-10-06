@@ -812,7 +812,7 @@ function sameSourceRecord(a,b){return a.uid===b.uid||recordKeys(cleanRecord(a)).
 function isLocalSourceRecord(r){return !r.taDecision&&(workspace.imports||[]).some(run=>(run.records||[]).some(x=>sameSourceRecord(x,r)));}
 function allowedReturnedRecord(r){return !(workspace.returnedRecords||[]).some(entry=>sameSourceRecord(entry.record,r)&&r.returnId!==entry.id);}
 async function removeSourceRecord(id,move=false){
-  if(busy||syncingSource)return;
+  if(busy||pdfDownloading||syncingSource)return;
   const rec=recordById.get(id);if(!rec||(!move&&!isLocalSourceRecord(rec)))return;
   busy='source-action';pauseRetrieval();render();
   const before=structuredClone(workspace);
@@ -1554,7 +1554,7 @@ function sourceRecordCard(r,index){
   const citation=[r.year,[r.volume,r.issue?'('+r.issue+')':''].filter(Boolean).join('')].filter(Boolean).join('; ')+(r.pages?': '+r.pages:'');
   const bibliography=[r.journal,citation].filter(Boolean).join(' · ');
   const headingMeta=['#'+(index+1),firstAuthorGivenName(r),r.year].filter(Boolean).join(' · ');
-  const local=isLocalSourceRecord(r),locked=!!busy||syncingSource;
+  const local=isLocalSourceRecord(r),locked=!!busy||pdfDownloading||syncingSource;
   const actions='<div class="source-record-tools"><button class="source-move" type="button" data-move-screening="'+esc(r.uid)+'"'+(locked?' disabled':'')+'><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m8 4-5 5 5 5M3 9h9a5 5 0 0 1 5 5v2"/></svg>Move to screening</button><button class="source-delete" type="button" data-delete-source="'+esc(r.uid)+'" aria-label="Delete locally imported record" title="'+(local?'Delete this locally imported record':'Only locally imported records can be deleted here')+'"'+(locked||!local?' disabled':'')+'>×</button></div>';
 
   const expanded=kind=>sourceDetailsOpen.has(r.uid+'|'+kind);

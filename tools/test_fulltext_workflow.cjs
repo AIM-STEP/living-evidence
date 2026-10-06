@@ -186,7 +186,10 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  assert.equal(ft.pdfDownloadState().busy,'');assert.equal(ft.pdfDownloadState().running,true);ft.renderSource();assert.equal(el('clear-source').disabled,true);assert.equal(el('open-import').disabled,false);
  assert(ft.sourceRecordCard(rec,0).includes('aria-controls="manage-dialog" disabled'));
  await ft.clearSource();assert.equal(w.records.length,1);ft.openFulltextManager('r');assert.equal(ft.manager().id,'');
- await ft.removeSourceRecord('r',true);assert.equal(w.records.length,0,'Return remains available during download');
+ await ft.removeSourceRecord('r',true);assert.equal(w.records.length,1,'Return is disabled during download');
+ assert(ft.sourceRecordCard(rec,0).includes('data-move-screening="r" disabled'));
+ // Simulate an independent upstream removal while the request is in flight.
+ w.records=[];ft.set(w);
  releaseDownload({got:{kind:'pdf',file:originalPdf,paras:pages,source:'Synthetic'},attempts:[]});await downloading;assert.equal(w.records.length,0,'Completed download must not restore a returned record');
  w=setup();w.docs.r={kind:'xml'};ft.setDoc('r',{...doc,uid:'r',kind:'xml',pdf:null});let startedAgain;const beganAgain=new Promise(resolve=>startedAgain=resolve);
  ft.bindRetrieval(async(rec,base,signal)=>{startedAgain();return new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(new DOMException('Stopped','AbortError')),{once:true}))});
