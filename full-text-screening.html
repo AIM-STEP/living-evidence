@@ -187,10 +187,10 @@ th{background:#f4f4f4}
 <div class="layout">
 <div class="stack">
 <section class="panel">
-<div class="panel-head fulltext-source-head"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="clear-source" title="Clear the previous step’s results from this page">Clear</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="btn small" type="button" id="find-oa">Find open-access full texts</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
+<div class="panel-head fulltext-source-head"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="clear-source" title="Clear the previous step’s results from this page">Clear</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
 <div class="panel-body" id="source-body">
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
-<p class="hint" id="source-hint"></p><details><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC full-text XML and publisher links, OpenAlex repository/publisher PDFs, Semantic Scholar open-access PDFs, Unpaywall, and arXiv PDFs for arXiv DOIs. Sources are tried in order until a readable file is found. Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI / PMID lookups are sent to these services; downloads pass through the Mac Studio backend.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><button class="btn small" id="stop-find" type="button" hidden>Stop retrieval</button>
+<p class="hint" id="source-hint"></p><details><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC full-text XML and publisher links, OpenAlex repository/publisher PDFs, Semantic Scholar open-access PDFs, Unpaywall, and arXiv PDFs for arXiv DOIs. Retrieval starts automatically while this page is open and idle. Sources are tried in order until a readable file is found; unreadable or mismatched files are skipped. Failed lookups retry after six hours (five minutes when the backend is unavailable). Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent to these services; downloads pass through the Mac Studio backend.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
 <div class="notice" id="source-notice" hidden role="status"></div>
 <div class="table-wrap results-like doc-table"><table><thead><tr><th scope="col">Report</th><th scope="col" class="num-col">Year</th><th scope="col">Full text</th><th scope="col" class="act-col"><span class="sr-only">Actions</span></th></tr></thead><tbody id="doc-rows"></tbody></table></div>
 <button class="btn small" type="button" id="docs-more" hidden>Show all reports</button>
@@ -635,7 +635,7 @@ async function importFromScreening(){
     handoff=next;
     const signature=handoffSig(next),previous=workspace.sourceHandoffSig||handoffSig({criteriaSig:workspace.upstreamCriteriaSig||workspace.criteriaSig,records:workspace.records});
     if(signature===previous)return;
-    changed=true;
+    changed=true;pauseRetrieval();
     const before=workspace.records.length,criteriaChanged=workspace.criteriaSig&&workspace.criteriaSig!==next.criteriaSig&&!workspace.criteriaEdited;
     const incoming=new Map(next.records.map(r=>[r.uid,r]));
     const existingChanged=workspace.records.some(r=>incoming.has(r.uid)&&fingerprint(r)!==fingerprint(incoming.get(r.uid)));
@@ -654,10 +654,11 @@ async function importFromScreening(){
     indexRecords();log('reports-synchronized',{reports:workspace.records.length,previous:before,criteriaSig:workspace.criteriaSig});
     await save();render();
     showNotice('source-notice',workspace.records.length+' reports from Title and abstract screening.'+(next.pending?' '+next.pending+' records in the previous step still have no final decision.':'')+((criteriaChanged||existingChanged||pilotRemoved)?' Previous screening runs were archived; complete a new pilot.':''),next.pending?'warning':'success');
-  }finally{syncingSource=false;if(changed&&workspace)safely(renderSource);}
+  }finally{syncingSource=false;if(changed&&workspace)safely(renderSource);scheduleRetrieval();}
 }
 async function clearSource(){
   if(busy||syncingSource)return;
+  pauseRetrieval();retrievalStatus='';
   archiveRun('Upstream results cleared from full-text screening');
   workspace.sourceCleared=true;workspace.records=[];workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
   indexRecords();log('source-cleared');await save();showNotice('source-notice','Results cleared from this page. The previous step and saved full-text files are unchanged. Select Restore results to show the latest results again.');render();
@@ -761,41 +762,87 @@ async function storeText(uid,got,file){
   const chunks=chunkParagraphs(got.paras);
   if(chunks.length<3)throw new Error('too little readable text (a scanned PDF needs OCR first)');
   const hash=fingerprint(chunks);
-  if(workspace.docs[uid]&&workspace.docs[uid].hash!==hash)invalidateDocument(uid);
+  if(hasDoc(uid)&&workspace.docs[uid].hash!==hash)invalidateDocument(uid);
   await saveDoc({uid,kind:got.kind,source:got.source,chunks,fullText:chunks.map(c=>c.text).join(' '),pdf:file||null,evidence:null});
   workspace.docs[uid]={hash,kind:got.kind,source:got.source,chunks:chunks.length,at:now()};
   log('full-text-added',{recordId:uid,kind:got.kind,source:got.source,chunks:chunks.length});
 }
+const RETRIEVAL_RETRY_MS=6*60*60*1000;
+let retrievalRunning=false,retrievalController=null,retrievalTimer=null,retrievalStatus='';
+function pauseRetrieval(){retrievalController?.abort();clearTimeout(retrievalTimer);}
+function scheduleRetrieval(){
+  clearTimeout(retrievalTimer);
+  if(!workspace||busy||syncingSource||workspace.sourceCleared||document.hidden||navigator.onLine===false)return;
+  retrievalTimer=setTimeout(()=>findOpenAccess().catch(e=>{retrievalStatus='Automatic retrieval paused: '+text(e.message,200);safely(renderRetrievalStatus);}),1000);
+}
+function renderRetrievalStatus(){
+  const missing=workspace.records.filter(r=>!hasDoc(r.uid));
+  $('retrieval-status').textContent=retrievalStatus||(missing.length?'Full texts are retrieved automatically from available free sources.':'All displayed reports have full texts.');
+  $('retrieval-status').hidden=!workspace.records.length;
+}
+function retrievalDue(rec){
+  const d=workspace.docs[rec.uid];
+  return !hasDoc(rec.uid)&&d?.kind!=='not-retrievable'&&(!d?.retryAt||Date.parse(d.retryAt)<=Date.now()||d.lookupSig!==fingerprint([rec.title,rec.doi,rec.pmid]));
+}
+async function retrieveReadable(rec,base,signal,email){
+  let attempts=[],skipUrls=[];
+  if(!base){
+    const got=await epmcFullText(rec,signal);
+    attempts.push({source:'Other free sources',status:'unavailable',detail:'Connect the Mac Studio backend to try all configured sources.'});
+    return {got:got&&chunkParagraphs(got.paras).length>=3?got:null,attempts};
+  }
+  // A downloaded file can be unreadable or mismatched. Continue to other URLs.
+  for(let i=0;i<24;i++){
+    const r=await localFetch(base+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'fulltext',record:{doi:rec.doi,pmid:rec.pmid,title:rec.title,year:rec.year},email,skipUrls}),signal});
+    const data=await r.json();if(!r.ok)throw new Error(data.error||'Full-text retrieval failed.');
+    attempts.push(...(data.attempts||[]));
+    if(data.kind==='none')return {got:null,attempts};
+    if(!data.url||skipUrls.includes(data.url))throw new Error('The retrieval service needs updating to try alternative files.');
+    skipUrls.push(data.url);
+    try{
+      let got;
+      if(data.kind==='xml')got={kind:'xml',source:data.source,paras:jatsParagraphs(data.xml),url:data.url};
+      if(data.kind==='pdf'){
+        const file=new Blob([Uint8Array.from(atob(data.base64),c=>c.charCodeAt(0))],{type:'application/pdf'}),pages=await pdfPages(file);
+        if(!matchPdf(pages.map(p=>p.text).join('\n'),[rec]))throw new Error('PDF does not match this report.');
+        got={kind:'pdf',source:data.source,paras:pdfParagraphs(pages),file,url:data.url};
+      }
+      if(!got||chunkParagraphs(got.paras).length<3)throw new Error('Insufficient readable full text; trying another source.');
+      return {got,attempts};
+    }catch(e){if(signal.aborted)throw e;attempts.push({source:data.source||'Downloaded file',status:'not-readable',detail:text(e.message,200)});}
+  }
+  return {got:null,attempts:[...attempts,{source:'Retrieval',status:'deferred',detail:'Remaining candidates will be retried later.'}]};
+}
 async function findOpenAccess(){
-  if(busy)return;
-  const todo=workspace.records.filter(r=>!hasDoc(r.uid)&&workspace.docs[r.uid]?.kind!=='not-retrievable'&&(r.doi||r.pmid));
-  if(!todo.length){showNotice('source-notice','No reports with DOI or PMID need retrieval. Automatic retrieval requires a DOI or PMID.','warning');return}
-  if(!$('oa-email').checkValidity())return $('oa-email').reportValidity();
-  busy='find';controller=new AbortController();$('stop-find').hidden=false;render();let found=0,done=0;
+  if(!workspace||busy||syncingSource||retrievalRunning||workspace.sourceCleared||document.hidden||navigator.onLine===false)return;
+  const todo=workspace.records.filter(retrievalDue);if(!todo.length)return;
+  retrievalRunning=true;const ctl=new AbortController();retrievalController=ctl;
+  const timeout=setTimeout(()=>ctl.abort(),10*60*1000);
+  let done=0,found=0,base='';
+  const email=$('oa-email').checkValidity()?$('oa-email').value.trim():'';
   try{
-    let base='';try{base=await findTypesafeBackend(controller.signal)}catch(e){if(controller.signal.aborted)throw e;}
-    const failed=await runPool(todo,2,async rec=>{
+    retrievalStatus='Automatically checking free full-text sources…';renderRetrievalStatus();
+    try{base=await findTypesafeBackend(ctl.signal)}catch(e){if(ctl.signal.aborted)throw e;}
+    for(const rec of todo){
+      if(ctl.signal.aborted||busy||workspace.sourceCleared||document.hidden)break;
+      if(!recordById.has(rec.uid)||hasDoc(rec.uid))continue;
       let got=null,attempts=[];
-      if(base){
-        const r=await localFetch(base+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'fulltext',record:{doi:rec.doi,pmid:rec.pmid},email:$('oa-email').value.trim()}),signal:controller.signal});
-        const data=await r.json();if(!r.ok)throw new Error(data.error||'Full-text retrieval failed.');
-        attempts=data.attempts||[];
-        if(data.kind==='xml'){const paras=jatsParagraphs(data.xml);if(paras.length)got={kind:'xml',source:data.source,paras,url:data.url};}
-        if(data.kind==='pdf'){
-          const bytes=Uint8Array.from(atob(data.base64),c=>c.charCodeAt(0)),file=new Blob([bytes],{type:'application/pdf'}),pages=await pdfPages(file);
-          // Metadata links can point to the wrong file: require identifier/title matching.
-          if(!matchPdf(pages.map(p=>p.text).join('\n'),[rec]))throw new Error('Downloaded PDF could not be matched to this report and was not added.');
-          got={kind:'pdf',source:data.source,paras:pdfParagraphs(pages),file,url:data.url};
-        }
-      }else{got=await epmcFullText(rec,controller.signal);attempts=[{source:'Other sources',status:'unavailable',detail:'Connect the Mac Studio backend for multi-source retrieval'}];}
+      const lookupSig=fingerprint([rec.title,rec.doi,rec.pmid]);
+      try{
+        if(!rec.doi&&!rec.pmid&&!rec.title)attempts=[{source:'Automatic retrieval',status:'missing-identifier',detail:'A DOI, PMID or title is needed. Update this record in the previous step.'}];
+        else ({got,attempts}=await retrieveReadable(rec,base,ctl.signal,email));
+      }catch(e){if(ctl.signal.aborted)throw e;attempts.push({source:'Automatic retrieval',status:'failed',detail:text(e.message,200)});}
+      if(ctl.signal.aborted||workspace.sourceCleared||busy)break;
+      const current=recordById.get(rec.uid);
+      if(!current||fingerprint([current.title,current.doi,current.pmid])!==lookupSig)continue;
       if(got){await storeText(rec.uid,got,got.file);found++;}
-      else if(!hasDoc(rec.uid))workspace.docs[rec.uid]={kind:'none',source:'No readable open-access full text found; retry later',at:now()};
-      workspace.docs[rec.uid].attempts=attempts;workspace.docs[rec.uid].url=got?.url||'';
-      done++;showNotice('source-notice','Retrieving full texts: '+done+' / '+todo.length+' · '+found+' found.');await save();safely(renderSource);
-    },controller);
-    showNotice('source-notice',found+' of '+todo.length+' full texts retrieved.'+(failed.length?' '+failed.length+' lookups failed; retry later.':' Remaining reports have no readable full text yet.')+(!base?' Only Europe PMC was available: connect the Mac Studio backend for other sources.':''),found?'success':'warning');
-  }catch(e){showNotice('source-notice',e.name==='AbortError'?'Stopped. Retrieved files are saved.':e.message,'error')}
-  finally{busy='';controller=null;$('stop-find').hidden=true;await save().catch(()=>{});render()}
+      else workspace.docs[rec.uid]={kind:'none',source:!rec.doi&&!rec.pmid&&!rec.title?'DOI, PMID or title required':'No readable free full text yet; automatic retry scheduled',at:now()};
+      workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,lookupSig,retryAt:new Date(Date.now()+(base?RETRIEVAL_RETRY_MS:5*60*1000)).toISOString(),url:got?.url||''};
+      done++;retrievalStatus='Background retrieval: '+done+' / '+todo.length+' checked · '+found+' full texts added.';await save();render();
+    }
+    retrievalStatus='Background retrieval: '+found+' full texts added.'+(todo.some(r=>!hasDoc(r.uid))?' Missing files will be retried automatically.':'')+(!base?' Connect the Mac Studio backend to enable all configured sources.':'');
+  }catch(e){retrievalStatus=ctl.signal.aborted?'Background retrieval paused; it resumes when the page is visible and screening is idle.':'Automatic retrieval: '+text(e.message,200);}
+  finally{clearTimeout(timeout);retrievalRunning=false;retrievalController=null;safely(renderRetrievalStatus);}
 }
 
 // A PDF is matched to a report by DOI on its first pages, else by its title:
@@ -1187,7 +1234,7 @@ function renderSource(){
     return '<tr><td class="doc-title">'+esc((r.title||'(untitled)').slice(0,160))+'</td><td class="num-col">'+esc(r.year||'')+'</td><td>'+(has?'<span class="ok-dot"></span>'+esc(d.source)+' <span class="hint">('+d.chunks+' passages)</span>':'<span class="hint">'+esc(d?.source||'Not yet')+'</span>')+(d?.attempts?.length?'<details><summary>Retrieval log</summary>'+d.attempts.map(a=>'<div>'+esc(a.source+': '+a.status+(a.detail?' — '+a.detail:''))+'</div>').join('')+'</details>':'')+'</td><td class="act-col">'+
       (has?'<button class="abs-toggle" type="button" data-read="'+esc(r.uid)+'">Read</button><button class="remove-import" type="button" data-remove-doc="'+esc(r.uid)+'" title="Remove this full text" aria-label="Remove the full text">×</button>':(d?.kind!=='not-retrievable'?'<button class="abs-toggle" type="button" data-missing="'+esc(r.uid)+'">Not retrievable</button>':''))+'</td></tr>'}).join('')||'<tr><td colspan="4" class="empty">No reports to display. Eligible records from the previous step appear here automatically unless cleared.</td></tr>';
   $('docs-more').hidden=rows.length<=docsShown;$('docs-more').textContent='Show all '+rows.length+' reports';
-  for(const b of ['clear-source','restore-source','find-oa'])$(b).disabled=!!busy||syncingSource;
+  for(const b of ['clear-source','restore-source'])$(b).disabled=!!busy||syncingSource;
   $('clear-source').disabled=!!busy||syncingSource||!workspace.records.length;
   $('clear-source').hidden=!!workspace.sourceCleared;$('restore-source').hidden=!workspace.sourceCleared;
 
@@ -1250,7 +1297,7 @@ function renderPrisma(s){
   const rows=[['Reports sought for retrieval',s.sought],['Reports not retrieved',s.notRetrieved],['Reports assessed for eligibility',s.assessed],['Reports excluded',s.exclude],...s.reasons.sort((a,b)=>b[1]-a[1]).map(([r,n])=>['  '+r,n]),['Awaiting classification',s.unclear],['Reports included',s.include],['Not yet decided',s.pending]];
   $('prisma-rows').innerHTML=rows.map(([k,v])=>'<tr><th scope="row"'+(k.startsWith('  ')?' class="indent"':'')+'>'+esc(k.trim())+'</th><td class="num-col">'+v+'</td></tr>').join('');
 }
-function render(){if(!workspace)return;safely(renderModelSelection);safely(renderCalibration);safely(renderSource);safely(renderPilot);safely(renderFull)}
+function render(){if(!workspace)return;if(busy)pauseRetrieval();else scheduleRetrieval();safely(renderRetrievalStatus);safely(renderModelSelection);safely(renderCalibration);safely(renderSource);safely(renderPilot);safely(renderFull)}
 
 /* ---------------- Export ---------------- */
 function exportRecords(){
@@ -1365,9 +1412,8 @@ collapsible('toggle-pilot','pilot-body','Pilot full-text screening','ft-pilot');
 collapsible('toggle-full','full-body','All reports full-text screening','ft-full');
 $('clear-source').addEventListener('click',()=>clearSource().catch(e=>showNotice('source-notice',e.message,'error')));
 $('restore-source').addEventListener('click',()=>restoreSource().catch(e=>showNotice('source-notice',e.message,'error')));
-$('stop-find').addEventListener('click',()=>controller?.abort());
 $('check-scope').addEventListener('change',()=>{if(busy)return;workspace.full.check=$('check-scope').value;maybeComplete();save().then(render);});
-$('find-oa').addEventListener('click',()=>findOpenAccess());
+$('oa-email').addEventListener('change',()=>{if(!$('oa-email').checkValidity())return;pauseRetrieval();for(const r of workspace.records)if(!hasDoc(r.uid)&&workspace.docs[r.uid]?.kind==='none')delete workspace.docs[r.uid].retryAt;save().then(scheduleRetrieval);});
 $('docs-more').addEventListener('click',()=>{docsShown=1e9;renderSource()});
 $('doc-rows').addEventListener('click',e=>{const t=e.target;
   if(t.dataset.read)return openReader(t.dataset.read);
@@ -1418,7 +1464,9 @@ $('export-results').addEventListener('click',exportResults);
 document.querySelectorAll('[data-screening]').forEach(a=>a.href=pageLink('title-abstract-screening.html'));
 document.querySelectorAll('[data-extraction]').forEach(a=>a.href=pageLink('extraction.html'));
 window.addEventListener('focus',refreshSource);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSource();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseRetrieval();else{refreshSource();scheduleRetrieval();}});
+window.addEventListener('pagehide',pauseRetrieval);
+window.addEventListener('online',scheduleRetrieval);
 async function init(){
   try{
     store=await openDB('aimstep-fulltext');docStore=await openDB('aimstep-fulltext-docs');
@@ -1428,7 +1476,8 @@ async function init(){
     if(workspace.pilot.rounds.some(r=>r.prompt!==FT_PROMPT)||Object.values(workspace.full.ai).some(a=>!a.prompt?.startsWith(FT_PROMPT))){archiveRun('Upgrade to calibrated full-text screening');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();await save();}
     indexRecords();await ensureDocs(workspace.pilot.rounds.flatMap(r=>r.ids));handoff=await readHandoff();
     await importFromScreening();
-    setInterval(()=>{if(!document.hidden)refreshSource();},5000);
+    setInterval(()=>{if(!document.hidden){refreshSource();scheduleRetrieval();}},5000);
+    scheduleRetrieval();
     render();publishSummary();document.body.dataset.ready='true';
   }catch(e){showNotice('source-notice','The full-text workspace could not be opened: '+e.message,'error')}
 }

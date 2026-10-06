@@ -8,6 +8,7 @@ import json
 import re
 import socket
 import ssl
+import unicodedata
 from urllib.parse import quote, urlencode, urlsplit, urljoin
 
 LIMIT = 24 * 1024 * 1024
@@ -65,12 +66,16 @@ def retrieve(payload):
         raise ValueError('Invalid DOI.')
     if pmid and not re.fullmatch(r'\d{1,12}', pmid):
         raise ValueError('Invalid PMID.')
-    if not doi and not pmid:
-        raise ValueError('A DOI or PMID is required for automatic retrieval.')
+    title = str(record.get('title') or '').strip()[:1000]
+    if not doi and not pmid and len(title) < 12:
+        raise ValueError('A DOI, PMID or descriptive title is required for automatic retrieval.')
     email = str(payload.get('email') or '').strip()
     if email and not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+', email):
         raise ValueError('Enter a valid contact email for Unpaywall.')
-    attempts, candidates, seen = [], [], set()
+    skipped = payload.get('skipUrls', [])
+    if not isinstance(skipped, list) or len(skipped) > 24 or any(not isinstance(u, str) or len(u) > 4000 for u in skipped):
+        raise ValueError('Invalid skipped source list.')
+    attempts, candidates, seen = [], [], set(skipped)
 
     def add(source, url):
         if isinstance(url, str) and url.startswith('https://') and url not in seen:
@@ -114,8 +119,40 @@ def retrieve(payload):
         for loc in data.get('oa_locations', []):
             add('Unpaywall publisher/repository', loc.get('url_for_pdf'))
 
+    # Resolve missing identifiers using an exact normalized title, never a fuzzy first hit.
+    def title_key(value):
+        return re.sub(r'[^\w]+', '', unicodedata.normalize('NFKC', value).casefold())
+
+    if not doi and not pmid:
+        def identify_epmc():
+            nonlocal doi, pmid
+            data = metadata('https://www.ebi.ac.uk/europepmc/webservices/rest/search?' + urlencode({'format':'json','resultType':'core','pageSize':5,'query':'TITLE:"' + title.replace('"','') + '"'}))
+            hits = [h for h in data.get('resultList',{}).get('result',[]) if title_key(h.get('title','')) == title_key(title) and (not record.get('year') or str(h.get('pubYear','')) == str(record['year']))]
+            if len(hits) != 1:
+                return
+            hit = hits[0]
+            candidate = hit.get('doi','')
+            if re.fullmatch(r'10\.\d{4,9}/[^\s<>"\x00-\x1f]{1,220}', candidate, re.I): doi = candidate
+            if hit.get('source') == 'MED' and re.fullmatch(r'\d{1,12}',str(hit.get('id',''))): pmid = str(hit['id'])
+            pmc = hit.get('pmcid','')
+            if re.fullmatch(r'PMC\d+',pmc) and hit.get('isOpenAccess') == 'Y': add('Europe PMC','https://www.ebi.ac.uk/europepmc/webservices/rest/'+pmc+'/fullTextXML')
+        provider('Europe PMC title lookup', identify_epmc)
+        if not doi and not pmid:
+            def identify_openalex():
+                nonlocal doi
+                data = metadata('https://api.openalex.org/works?' + urlencode({'search':title,'per-page':5}))
+                hits = [h for h in data.get('results',[]) if title_key(h.get('title') or '') == title_key(title) and (not record.get('year') or str(h.get('publication_year','')) == str(record['year']))]
+                if len(hits) != 1:
+                    return
+                hit = hits[0]
+                candidate = (hit.get('doi') or '').removeprefix('https://doi.org/')
+                if re.fullmatch(r'10\.\d{4,9}/[^\s<>"\x00-\x1f]{1,220}',candidate,re.I): doi = candidate
+                for loc in hit.get('locations',[]):
+                    if loc.get('is_oa'): add('OpenAlex publisher/repository',loc.get('pdf_url'))
+            provider('OpenAlex title lookup', identify_openalex)
+
     # Europe PMC often supplies directly usable XML, avoiding unnecessary calls.
-    providers = [('Europe PMC', epmc), ('OpenAlex', openalex), ('Semantic Scholar', semantic)]
+    providers = [('Europe PMC', epmc), ('OpenAlex', openalex), ('Semantic Scholar', semantic)] if doi or pmid else [('Title-matched free sources', lambda: None)]
     arxiv = re.fullmatch(r'10\.48550/arxiv\.(\d{4}\.\d{4,5}(?:v\d+)?)', doi, re.I)
     if arxiv:
         providers.insert(0, ('arXiv', lambda: add('arXiv', 'https://arxiv.org/pdf/' + arxiv.group(1))))
@@ -126,7 +163,7 @@ def retrieve(payload):
     tried = set()
     for name, fn in providers:
         provider(name, fn)
-        for source, url in candidates[:12]:
+        for source, url in candidates:
             if url in tried:
                 continue
             tried.add(url)

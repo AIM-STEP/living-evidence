@@ -461,3 +461,23 @@ Restore results re-enables synchronization. Empty upstream selections remove old
 reports too. Record/criterion changes invalidate affected screening results;
 page-local criteria edits are retained. The workflow regression covers automatic
 updates, persistent clear, restoration, empty sources and deferral during runs.
+
+### Automatic full-text retrieval
+
+The Find open-access full texts button was removed. Missing reports are queued
+automatically while the page is open, visible and idle. Separate retrieval state
+keeps Clear and the model controls usable. Starting model screening, clearing the
+source or hiding the page aborts retrieval; late results cannot repopulate a
+cleared source. Existing readable files are skipped. Unsuccessful attempts are
+logged per report and retried after six hours, or five minutes if the backend is
+unavailable. A DOI/PMID/title change or a valid contact-email change enables a
+new lookup. Explicit reviewer “Not retrievable” marks are respected.
+
+The backend tries configured free sources until a readable matching document is
+found. A file rejected by browser extraction or identity checks is skipped in
+subsequent requests so alternative sources can be tried. Missing identifiers
+trigger exact normalized-title lookup in Europe PMC and OpenAlex, also requiring
+a matching year when supplied. Ambiguous or near matches are not accepted.
+Unpaywall requires a real contact email; the other configured sources run without
+it. Background work requires this page to remain open and the Mac Studio backend
+for multi-source retrieval; this is not a server-side job after closing the page.

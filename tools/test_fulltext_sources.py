@@ -21,6 +21,36 @@ class RetrievalTests(unittest.TestCase):
                 with self.assertRaises(ValueError): ft.fetch('https://example.org/p.pdf')
                 connect.assert_not_called()
 
+    def test_skip_rejected_pdf_and_continue_other_provider(self):
+        def data(url):
+            if 'openalex' in url:return {'locations':[{'is_oa':True,'pdf_url':'https://repo.example/rejected.pdf'}]}
+            if 'semanticscholar' in url:return {'openAccessPdf':{'url':'https://repo.example/good.pdf'}}
+            return {}
+        with patch.object(ft,'metadata',side_effect=data), patch.object(ft,'fetch',return_value=b'%PDF-1.7') as fetch:
+            result=ft.retrieve({'record':{'doi':'10.1234/example'},'skipUrls':['https://repo.example/rejected.pdf']})
+        self.assertIn('Semantic Scholar',result['source'])
+        fetch.assert_called_once_with('https://repo.example/good.pdf')
+
+    def test_skip_urls_are_not_download_targets(self):
+        with patch.object(ft,'metadata',return_value={}),patch.object(ft,'fetch') as fetch:
+            ft.retrieve({'record':{'pmid':'123'},'skipUrls':['https://127.0.0.1/private']})
+        fetch.assert_not_called()
+
+    def test_title_only_exact_match_can_download(self):
+        def data(url):
+            if 'openalex' in url:return {'results':[{'title':'A uniquely named report','publication_year':2024,'locations':[{'is_oa':True,'pdf_url':'https://repo.example/report.pdf'}]}]}
+            return {}
+        with patch.object(ft,'metadata',side_effect=data),patch.object(ft,'fetch',return_value=b'%PDF-1.7'):
+            result=ft.retrieve({'record':{'title':'A uniquely named report','year':'2024'}})
+        self.assertEqual(result['kind'],'pdf')
+
+    def test_title_similarity_or_wrong_year_cannot_download(self):
+        for title,year in [('A different report',2024),('A uniquely named report',2023)]:
+            with patch.object(ft,'metadata',return_value={'results':[{'title':title,'publication_year':year,'locations':[{'is_oa':True,'pdf_url':'https://repo.example/wrong.pdf'}]}]}),patch.object(ft,'fetch') as fetch:
+                result=ft.retrieve({'record':{'title':'A uniquely named report','year':'2024'}})
+            self.assertEqual(result['kind'],'none')
+            fetch.assert_not_called()
+
     def test_arxiv_doi_direct_pdf(self):
         with patch.object(ft, 'metadata') as meta, patch.object(ft, 'fetch', return_value=b'%PDF-1.7 content') as fetch:
             result=ft.retrieve({'record':{'doi':'10.48550/arXiv.1706.03762'}})
