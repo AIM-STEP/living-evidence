@@ -148,6 +148,7 @@ th{background:#f4f4f4}
 .pilot-steps{margin:0 0 12px;padding-left:20px;font-size:12px;color:var(--ink2);line-height:1.7}.pilot-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}.pilot-controls .label{margin:0}.pilot-controls .input{width:76px}.pilot-rounds{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.pilot-rounds .round{min-width:132px}.pilot-summary{grid-template-columns:repeat(5,minmax(0,1fr))}.pilot-summary>div.alert strong{color:var(--red)}.pilot-detail{margin:8px 0}.pilot-detail .ok{color:var(--green);font-weight:700}.pilot-detail .warn{color:var(--amber);font-weight:700}.pilot-filter [aria-pressed="true"]{border-color:var(--plum);color:var(--plum);background:var(--pale)}.record.differ{border-color:#e3b4ad}.badge.differ{background:#fff0ef;color:var(--red)}.judg{font-weight:700}.judg.met{color:var(--green)}.judg.not-met{color:var(--red)}.judg.unclear{color:var(--amber)}.pilot-note{display:block;font-size:11px;font-weight:700;margin-top:8px}.pilot-note .input{margin-top:4px}
 @media(max-width:760px){.pilot-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.pilot-summary>div{border-left:0;border-top:1px solid var(--line)}}
 .export-source{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.export-source .label{margin:0;font-size:12px}.select.compact{width:auto;min-height:30px;padding:3px 8px;font-size:12px}
+.doi-link{color:inherit;text-decoration:underline;text-underline-offset:2px}.doi-link:hover{color:var(--plum)}
 .source-counts{margin:0;padding:10px 19px 0;font-size:12px;color:#777680;line-height:1.5}@media(max-width:600px){.source-counts{padding-left:14px;padding-right:14px}}
 .source-title-actions{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap}.source-title-actions h2{margin:0}
 /* Shared neutral button treatment; semantic selection colors remain visible. */
@@ -1516,7 +1517,7 @@ function evidenceHtml(doc,quotes){
 function reportCard(id,opts){
   const rec=recordById.get(id),doc=docCache.get(id),meta=workspace.docs[id];if(!rec)return '';
   const {human,attr,reveal,ai,badges}=opts,quotes=reveal?ai.flatMap(a=>a?a.criteria.map(c=>c.quote).filter(Boolean):[]):[],open=openEvidence.has(id);
-  return '<article class="record'+(opts.differ?' differ':'')+'"><div class="record-head"><div><h3>'+esc(rec.title||'(untitled report)')+'</h3><div class="meta">'+esc([rec.authors?.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div><div class="meta">Full text: '+esc(meta?.source||'—')+'</div></div><div class="badges">'+(badges||'')+(human?.decision?ftBadge(human.decision):'<span class="badge">Decision pending</span>')+'</div></div>'+
+  return '<article class="record'+(opts.differ?' differ':'')+'"><div class="record-head"><div><h3>'+esc(rec.title||'(untitled report)')+'</h3><div class="meta">'+[esc([rec.authors?.slice(0,3).join(', '),rec.year,rec.journal].filter(Boolean).join(' · ')),rec.doi?'DOI: '+doiLink(rec.doi):''].filter(Boolean).join(' · ')+'</div><div class="meta">Full text: '+esc(meta?.source||'—')+'</div></div><div class="badges">'+(badges||'')+(human?.decision?ftBadge(human.decision):'<span class="badge">Decision pending</span>')+'</div></div>'+
     '<div class="toolbar ev-tools"><button type="button" class="abs-toggle" data-ev="'+esc(id)+'" aria-expanded="'+open+'">'+(open?'Hide evidence passages':'Show evidence passages')+'</button><button type="button" class="abs-toggle" data-read="'+esc(id)+'">Open full text</button></div>'+
     (open?'<div class="evidence">'+evidenceHtml(doc,quotes)+'</div>':'')+
     (rec.abstract?'<button type="button" class="abs-toggle" data-abstract="'+esc(id)+'" aria-expanded="'+openAbstracts.has(id)+'">'+(openAbstracts.has(id)?'Hide abstract':'Show abstract')+'</button>'+(openAbstracts.has(id)?'<p class="abstract">'+esc(rec.abstract)+'</p>':''):'')+
@@ -1559,6 +1560,12 @@ const sourceDetailsOpen=new Set(),sourceDetailsInitialized=new Set();
 function fulltextPrimaryBadge(documents){
   return documents.filter(d=>d?.kind==='pdf').length>=2?'<span class="source-file-primary">Primary</span>':'';
 }
+function doiLink(value){
+  const label=String(value||'').trim(),doi=label.replace(/^doi:\s*/i,'').replace(/^https?:\/\/(?:dx\.)?doi\.org\//i,'').trim();
+  if(!/^10\.\d{4,9}\/\S+$/i.test(doi))return esc(label);
+  const href='https://doi.org/'+doi.split('/').map(encodeURIComponent).join('/');
+  return '<a class="doi-link" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>';
+}
 function fulltextFilename(id){return docCache.get(id)?.pdf?.name||workspace.docs[id]?.filename||'';}
 function hasOriginalPdf(id){return !!docCache.get(id)?.pdf;}
 function firstAuthorGivenName(r){
@@ -1595,7 +1602,7 @@ function sourceRecordCard(r,index){
   const savedLink=workspace.fulltextLinks?.[r.uid];
   const external=savedLink&&safeFulltextLink(savedLink.url)?'<p><a class="source-file-link" href="'+esc(safeFulltextLink(savedLink.url))+'" target="_blank" rel="noopener noreferrer">Link to full text ↗</a></p>':'';
   const full=(has?file:external||file)+manage;
-  return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-heading"><div class="source-record-top"><div class="source-record-number">'+esc(headingMeta)+'</div>'+actions+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3></div><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+esc(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full)+disclosurePanel('abstract','Abstract',(r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint">No abstract is available for this report.</p>')+'<div class="source-abstract-fulltext">'+full+'</div>')+'</article>';
+  return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-heading"><div class="source-record-top"><div class="source-record-number">'+esc(headingMeta)+'</div>'+actions+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3></div><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+doiLink(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full)+disclosurePanel('abstract','Abstract',(r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint">No abstract is available for this report.</p>')+'<div class="source-abstract-fulltext">'+full+'</div>')+'</article>';
 }
 
 let docsShown=30;
