@@ -199,7 +199,7 @@ th{background:#f4f4f4}
 <div class="layout">
 <div class="stack">
 <section class="panel">
-<div class="panel-head fulltext-source-head"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="clear-source" title="Clear the previous step’s results from this page">Clear</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
+<div class="panel-head fulltext-source-head"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="btn small" type="button" id="clear-source" title="Clear results from this page">Clear</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
 <div class="panel-body" id="source-body">
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
 <p class="hint" id="source-hint"></p><details id="retrieval-settings" hidden><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC full-text XML and publisher links, OpenAlex repository/publisher PDFs, Semantic Scholar open-access PDFs, Unpaywall, and arXiv PDFs for arXiv DOIs. Retrieval starts automatically while this page is open and idle. Sources are tried in order until a readable file is found; unreadable or mismatched files are skipped. Failed lookups retry after six hours (five minutes when the backend is unavailable). Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent to these services; downloads pass through the Mac Studio backend.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
@@ -271,6 +271,16 @@ th{background:#f4f4f4}
 </ul>
 </details>
 </main>
+<dialog id="import-dialog" class="dialog" aria-labelledby="import-title">
+<div class="panel-head"><h2 id="import-title">Import search results</h2><button class="btn small" type="button" id="close-import">Close</button></div>
+<div class="panel-body">
+<label class="label" for="import-database">Database or source</label><input class="input" id="import-database" type="text" maxlength="150" placeholder="e.g. Embase, Scopus, Web of Science" required>
+<label class="label" for="import-file">Search results file</label><input class="input" id="import-file" type="file" accept=".ris,.nbib,.txt,.medline,.enw,.ciw,.csv,.tsv,.json,text/plain" aria-describedby="import-formats">
+<p class="hint" id="import-formats">RIS, NBIB, CSV, TSV, JSON (including a Search strategy backup) or text (.txt): PubMed (PubMed format or Abstract text), Web of Science plain text or tab-delimited, EndNote tagged, RIS or CSV saved as text.</p>
+<div class="notice" id="import-message" hidden role="status"></div>
+<div class="toolbar"><button class="btn primary" id="confirm-import" type="button">Import records</button></div>
+</div>
+</dialog>
 <dialog id="criteria-dialog" class="dialog" aria-labelledby="criteria-title">
 <div class="panel-head criteria-dialog-head">
 <div class="criteria-heading"><h2 id="criteria-title">Eligibility criteria</h2><button class="criteria-source-link" type="button" id="crit-restore">Use title and abstract criteria</button></div>
@@ -613,7 +623,7 @@ let workspace=null,store=null,docStore=null,busy='',controller=null,saveChain=Pr
 const recordById=new Map(),docCache=new Map();
 function newPilot(size=8){return {version:1,size,rounds:[],ai:{},human:{},approved:null}}
 function newFull(){return {version:2,check:'unresolved',ai:{},ai2:{},human:{},startedAt:'',completedAt:'',times:[]}}
-function defaults(){return {version:1,records:[],criteria:null,criteriaSig:'',handoffAt:'',docs:{},pilot:newPilot(),full:newFull(),audit:[]}}
+function defaults(){return {version:1,records:[],imports:[],criteria:null,criteriaSig:'',handoffAt:'',docs:{},pilot:newPilot(),full:newFull(),audit:[]}}
 function log(action,detail={}){workspace.audit.push({at:now(),action,...detail});if(workspace.audit.length>5000)workspace.audit.splice(0,workspace.audit.length-5000)}
 function getKey(db,key){return new Promise((resolve,reject)=>{const tx=db.transaction('projects','readonly'),req=tx.objectStore('projects').get(key);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)})}
 function deleteKey(db,key){return new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').delete(key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
@@ -633,6 +643,200 @@ function reasonRank(title){const i=REASON_ORDER.indexOf(title);return i<0?REASON
 function orderedCriteria(){return criteriaRows().map((r,i)=>[r,i]).sort((a,b)=>reasonRank(a[0].title)-reasonRank(b[0].title)||a[1]-b[1]).map(([r])=>r)}
 const hasDoc=uid=>['xml','pdf'].includes(workspace.docs[uid]?.kind);
 
+
+/* Local bibliography import: same dialog and file parsers as title/abstract screening. */
+const importDialog=$('import-dialog');
+let importing=false;
+function cleanRecord(r,uid){
+  if(!r||typeof r!=='object')return null;
+  return {uid:text(uid||r.uid||r.pmid||r.doi||fingerprint([r.title,r.abstract]),300),
+    title:text(r.title||r.articleTitle,20000),abstract:text(r.abstract||r.abstractText,500000),
+    authors:Array.isArray(r.authors)?r.authors.map(a=>text(a,500)):text(r.authors||'',10000).split(/;\s*/).filter(Boolean),
+    year:text(r.year||r.pubYear,50),journal:text(r.journal||r.journalTitle,1000),
+    doi:text(r.doi,300),pmid:text(r.pmid,100),url:text(r.url,2000),volume:text(r.volume,100),issue:text(r.issue||r.number,100),pages:text(r.pages||r.page||r.pageInfo,100),
+    provenance:Array.isArray(r.provenance)?r.provenance.slice():[]};
+}
+function recordKeys(r){
+  const doi=r.doi.toLowerCase().replace(/^https?:\/\/(?:dx\.)?doi\.org\//,'').replace(/^doi:\s*/,'').trim();
+  const pmid=r.pmid.trim();
+  const title=r.title.toLowerCase().replace(/\s+/g,' ').trim();
+  return [doi&&'doi:'+doi,pmid&&'pmid:'+pmid,title&&'title:'+title+'|'+r.year].filter(Boolean);
+}
+function csvRows(contents,separator=','){
+  const rows=[];let fields=[],cell='',quoted=false;
+  for(let i=0;i<contents.length;i++){
+    const c=contents[i];
+    if(c==='"'){
+      if(quoted&&contents[i+1]==='"'){cell+='"';i++}
+      else if(!cell||quoted)quoted=!quoted;
+      else cell+=c;
+    }else if(c===separator&&!quoted){fields.push(cell);cell=''}
+    else if((c==='\n'||c==='\r')&&!quoted){
+      if(c==='\r'&&contents[i+1]==='\n')i++;
+      fields.push(cell);if(fields.some(x=>x.trim()))rows.push(fields);
+      fields=[];cell='';
+    }else cell+=c;
+  }
+  if(quoted)throw new Error('The file has an unclosed quoted field.');
+  fields.push(cell);if(fields.some(x=>x.trim()))rows.push(fields);
+  return rows;
+}
+function resultCsv(contents,separator){
+  const rows=csvRows(contents,separator);
+  if(!rows.length)return [];
+  const norm=v=>String(v||'').toLowerCase().replace(/[\s_.\-·()（）]/g,'');
+  const headers=rows.shift().map(norm);
+  if(!headers.some(h=>['title','articletitle','documenttitle','ti','标题','题名'].includes(h)))
+    throw new Error('The file needs a Title / Article title column.');
+  const get=(r,...keys)=>{const i=headers.findIndex(h=>keys.includes(h));return i<0?'':r[i]||''};
+  return rows.map(r=>({
+    title:get(r,'title','articletitle','documenttitle','ti','标题','题名'),
+    abstract:get(r,'abstract','abstracttext','ab','摘要'),
+    authors:get(r,'authors','author','authornames','af','au','作者').split(/;\s*/).filter(Boolean),
+    doi:get(r,'doi','digitalobjectidentifier','di'),pmid:get(r,'pmid','pubmedid','pm'),
+    journal:get(r,'journal','journaltitle','sourcetitle','publicationtitle','so','期刊'),
+    year:get(r,'year','publicationyear','pubyear','py','年份'),
+    volume:get(r,'volume','vl'),issue:get(r,'issue','is'),pages:get(r,'pages','pagestart','bp'),
+    url:get(r,'url','link'),nativeId:get(r,'nativeid','eid','ut','accessionnumber','id')
+  })).filter(r=>r.title||r.doi||r.pmid);
+}
+/* Plain-text exports. A .txt file (or .enw, .ciw, .medline) is recognised by
+   its content: RIS, PubMed / MEDLINE tags, Web of Science plain text, Web of
+   Science or other tab-delimited text, EndNote / Refer tags, CSV, or the
+   PubMed "Abstract (text)" format. */
+function wosRecords(contents){
+  const out=[];let tags={},last='';
+  const flush=()=>{if(!Object.keys(tags).length)return;const f=k=>(tags[k]||[]).join(' ').trim(),many=k=>tags[k]||[];
+    out.push({title:f('TI'),abstract:f('AB'),authors:many('AF').length?many('AF'):many('AU'),journal:f('SO'),year:(f('PY').match(/\d{4}/)||[''])[0],doi:f('DI'),pmid:f('PM'),volume:f('VL'),issue:f('IS'),pages:[f('BP'),f('EP')].filter(Boolean).join('-'),nativeId:f('UT')});tags={};last=''};
+  for(const line of contents.replace(/\r\n?/g,'\n').split('\n')){
+    const m=line.match(/^([A-Z][A-Z0-9]) (.*)$/);
+    if(m&&m[1]==='ER'){flush();continue}
+    if(m&&!['FN','VR','EF'].includes(m[1])){last=m[1];(tags[last]||=[]).push(m[2].trim());continue}
+    if(/^ER\s*$/.test(line)){flush();continue}
+    if(last&&/^\s{2,}\S/.test(line)){const t=line.trim();if(['AU','AF','CR'].includes(last))tags[last].push(t);else tags[last][tags[last].length-1]+=' '+t}
+  }
+  flush();return out.filter(r=>r.title||r.doi||r.pmid);
+}
+function referRecords(contents){
+  const out=[];let tags={},last='';
+  const flush=()=>{if(!Object.keys(tags).length)return;const f=k=>(tags[k]||[]).join(' ').trim();
+    out.push({title:f('T'),abstract:f('X'),authors:tags.A||[],journal:f('J')||f('B'),year:(f('D').match(/\d{4}/)||[''])[0],doi:f('R').replace(/^https?:\/\/(dx\.)?doi\.org\//i,''),url:f('U'),volume:f('V'),issue:f('N'),pages:f('P'),pmid:(f('M').match(/^\d+$/)||[''])[0],nativeId:f('M')});tags={};last=''};
+  for(const line of contents.replace(/\r\n?/g,'\n').split('\n')){
+    const m=line.match(/^%(\S)\s?(.*)$/);
+    if(m){if(m[1]==='0'&&Object.keys(tags).length)flush();last=m[1];(tags[last]||=[]).push(m[2].trim());continue}
+    if(!line.trim()){flush();continue}
+    if(last)tags[last][tags[last].length-1]+=' '+line.trim();
+  }
+  flush();return out.filter(r=>r.title||r.doi);
+}
+// PubMed "Abstract (text)": numbered blocks; paragraphs are citation, title,
+// authors, author information, abstract, then DOI / PMID lines.
+function pubmedAbstractText(contents){
+  const out=[];
+  for(const block of contents.replace(/\r\n?/g,'\n').split(/\n(?=\d+\.\s+\S)/)){
+    const pmid=block.match(/PMID:\s*(\d+)/)?.[1]||'';if(!pmid&&!/DOI:/i.test(block))continue;
+    const paras=block.trim().split(/\n\s*\n/).map(p=>p.replace(/\s*\n\s*/g,' ').trim()).filter(Boolean);
+    if(paras.length<2)continue;
+    const cite=paras[0].replace(/^\d+\.\s*/,''),body=paras.slice(1).filter(p=>!/^(Author information|Comment in|Erratum in|Update of|Collaborators):?/i.test(p)&&!/^(DOI|PMID|PMCID|Copyright|©|Conflict of interest|Trial registration)\b/i.test(p));
+    // PubMed lists authors as "Surname AB(1), Surname C."
+    const authorList=/^[A-Za-zÀ-ÿ'’\- ]+ [A-Z]{1,4}(\(\d+\))?(, [A-Za-zÀ-ÿ'’\- ]+ [A-Z]{1,4}(\(\d+\))?)*(;.*)?\.?$/;
+    const isAuthors=p=>!!p&&(authorList.test(p)||(p.length<3000&&/[A-Z]{1,4}\(\d+\)/.test(p)));
+    const title=body[0]||'',authors=isAuthors(body[1])?body[1].replace(/\(\d+\)/g,'').replace(/\.$/,'').split(/,\s*/).map(a=>a.trim()).filter(Boolean):[];
+    const abstract=body.slice(authors.length?2:1).join('\n');
+    out.push({title,authors,abstract,journal:cite.split('. ')[0],year:(cite.match(/\b(19|20)\d{2}\b/)||[''])[0],doi:(block.match(/DOI:\s*(\S+?)\.?(\s|$)/i)||['',''])[1],pmid});
+  }
+  return out.filter(r=>r.title);
+}
+function textRecords(contents){
+  const t=contents.replace(/^﻿/,''),first=t.split(/\r?\n/).find(l=>l.trim())||'';
+  if(/^TY {2}- /m.test(t))return risRecords(t,false);
+  if(/^PMID- /m.test(t))return risRecords(t,true);
+  if(/^(FN |PT [A-Z])/m.test(t)&&/^ER\s*$/m.test(t))return wosRecords(t);
+  if(/^%[0ATJD] /m.test(t))return referRecords(t);
+  if(first.includes('\t'))return resultCsv(t,'\t');
+  if(first.includes(',')&&/title/i.test(first))return resultCsv(t,',');
+  if(/^\d+\.\s+\S/m.test(t)&&/PMID:\s*\d+/.test(t))return pubmedAbstractText(t);
+  throw new Error('This text file is not a recognised export. Use RIS, PubMed (MEDLINE or Abstract text), Web of Science plain text or tab-delimited, EndNote tagged, CSV or TSV.');
+}
+function risRecords(contents,nbib=false){
+  const out=[];let tags={},last='';
+  const add=(key,value)=>{(tags[key]||=[]).push(value);last=key};
+  const flush=()=>{
+    if(!Object.keys(tags).length)return;
+    const first=key=>tags[key]?.[0]||'',many=(...keys)=>keys.flatMap(key=>tags[key]||[]);
+    const doi=nbib?(many('AID','LID').find(value=>/\[doi\]/i.test(value))||'').replace(/\s*\[doi\].*$/i,''):first('DO');
+    const pmid=nbib?first('PMID'):many('N1').map(value=>value.match(/PMID\s*[:=]\s*(\d+)/i)?.[1]).find(Boolean)||'';
+    const date=first(nbib?'DP':'PY')||first('Y1');
+    out.push({title:first('TI')||first('T1'),abstract:many('AB',...(nbib?[]:['N2'])).join('\n'),
+      authors:many(...(nbib&&tags.FAU?['FAU']:tags.AU?['AU']:['A1'])),
+      doi,pmid,journal:first(nbib?'JT':'JO')||first('JF')||first('T2')||first('TA'),
+      year:date.match(/\d{4}/)?.[0]||'',url:first('UR'),nativeId:first('ID')||first('UT')});
+    tags={};last='';
+  };
+  for(const line of contents.replace(/\r\n?/g,'\n').split('\n')){
+    const match=nbib?line.match(/^([A-Z0-9]{2,5})\s*-\s?(.*)$/):line.match(/^([A-Z0-9]{2})\s*-\s?(.*)$/);
+    if(match){
+      if((nbib&&match[1]==='PMID'&&tags.PMID)||(!nbib&&match[1]==='TY'&&Object.keys(tags).length))flush();
+      if(!nbib&&match[1]==='ER')flush();else add(match[1],match[2]);
+    }else if(nbib&&!line.trim())flush();
+    else if(last&&line.trim()&&(!nbib||/^\s/.test(line)))tags[last][tags[last].length-1]+=' '+line.trim();
+  }
+  flush();
+  return out.filter(r=>r.title||r.pmid||r.doi);
+}
+
+// Keep local records when the upstream selection changes. Existing IDs retain saved
+// documents and decisions; only exact identifiers or title/year are deduplicated.
+function mergeLocalRecords(upstream, runs=workspace.imports||[]){
+  const previous=new Map(),keys=new Map(),used=new Set(),records=[];
+  for(const r of workspace.records){previous.set('uid:'+r.uid,r.uid);for(const k of recordKeys(cleanRecord(r)))if(!previous.has(k))previous.set(k,r.uid);}
+  for(const [i,raw] of [...upstream,...runs.flatMap(run=>run.records||[])].entries()){
+    const normalized=cleanRecord(raw),rk=recordKeys(normalized);
+    if(i>=upstream.length&&rk.some(k=>keys.has(k)))continue;
+    let uid=previous.has('uid:'+raw.uid)?raw.uid:rk.map(k=>previous.get(k)).find(id=>id&&!used.has(id))||raw.uid;
+    if(used.has(uid))uid='local-'+fingerprint([uid,records.length]);
+    const r={...structuredClone(raw),uid};records.push(r);used.add(uid);
+    for(const k of rk)keys.set(k,uid);
+  }
+  return records;
+}
+async function importFile(file,dbName){
+  if(!file)throw new Error('Select a search results file.');
+  if(file.size>80*1024*1024)throw new Error('Result files must be 80 MB or smaller.');
+  const ext=file.name.split('.').at(-1).toLowerCase();
+  const contents=(await file.text()).replace(/^\uFEFF/,'');
+  let raw;
+  if(ext==='ris'||ext==='nbib')raw=risRecords(contents,ext==='nbib');
+  else if(ext==='csv'||ext==='tsv')raw=resultCsv(contents,ext==='tsv'?'\t':',');
+  else if(ext==='json'){
+    const parsed=JSON.parse(contents);
+    raw=Array.isArray(parsed)?parsed:Array.isArray(parsed?.records)?parsed.records:parsed?.source?.records;
+    if(!Array.isArray(raw))throw new Error('The JSON file needs a records array.');
+  }else if(['txt','text','medline','enw','ciw'].includes(ext))raw=textRecords(contents);
+  else throw new Error('Upload RIS, NBIB, text (.txt), CSV, TSV or JSON.');
+  if(!raw.length)throw new Error('No bibliographic records were found in this file.');
+  const runId='import-'+(globalThis.crypto?.randomUUID?.()||now()+'-'+Math.random().toString(36).slice(2));
+  const at=now();
+  const records=raw.map((r,i)=>{
+    if(!r||typeof r!=='object')return null;
+    const provenance=[...(Array.isArray(r.provenance)?r.provenance:[]),
+      {db:dbName,runId,date:at,nativeId:text(r.nativeId||r.pmid||r.doi,300),nativeSource:'import',file:file.name}];
+    return cleanRecord({...r,provenance},runId+'-'+i);
+  }).filter(r=>r&&(r.title||r.doi||r.pmid));
+  if(!records.length)throw new Error('No valid title or identifier was found.');
+
+  const before=structuredClone(workspace);
+  const run={id:runId,db:dbName,startedAt:at,downloaded:records.length,added:0,file:file.name,records};
+  (workspace.imports??=[]).push(run);
+  workspace.records=mergeLocalRecords(workspace.records);
+  run.added=workspace.records.length-before.records.length;
+  if(run.added)workspace.full.completedAt='';
+  indexRecords();
+  log('local-results-imported',{runId,database:dbName,file:file.name,records:run.downloaded,added:run.added});
+  try{await save()}catch(e){workspace=before;indexRecords();publishSummary();throw e}
+  render();return run;
+}
+
 /* ---------------- Hand-off from Title and abstract screening ---------------- */
 async function readHandoff(){
   try{const db=await openDB('aimstep-fulltext-input');const v=await getProject(db);db.close();return v&&Array.isArray(v.records)?v:null}catch(e){return null}
@@ -649,7 +853,8 @@ async function importFromScreening(){
     if(signature===previous)return;
     changed=true;pauseRetrieval();
     const before=workspace.records.length,criteriaChanged=workspace.criteriaSig&&workspace.criteriaSig!==next.criteriaSig&&!workspace.criteriaEdited;
-    const incoming=new Map(next.records.map(r=>[r.uid,r]));
+    const merged=mergeLocalRecords(next.records);
+    const incoming=new Map(merged.map(r=>[r.uid,r]));
     const existingChanged=workspace.records.some(r=>incoming.has(r.uid)&&fingerprint(r)!==fingerprint(incoming.get(r.uid)));
     const pilotRemoved=workspace.pilot.rounds.some(r=>r.ids.some(id=>!incoming.has(id)));
     const removed=workspace.records.filter(r=>!incoming.has(r.uid));
@@ -660,19 +865,19 @@ async function importFromScreening(){
       for(const r of removed){delete workspace.full.ai[r.uid];delete workspace.full.ai2[r.uid];delete workspace.full.human[r.uid];}
     }
     workspace.upstreamCriteriaSig=next.criteriaSig;
-    workspace.records=structuredClone(next.records);
+    workspace.records=merged;
     if(!workspace.criteriaEdited){workspace.criteria=structuredClone(next.criteria);workspace.criteriaSig=next.criteriaSig;}
     workspace.handoffAt=next.updatedAt;workspace.sourceHandoffSig=signature;workspace.full.completedAt='';
     indexRecords();log('reports-synchronized',{reports:workspace.records.length,previous:before,criteriaSig:workspace.criteriaSig});
     await save();render();
-    showNotice('source-notice',workspace.records.length+' reports from Title and abstract screening.'+(next.pending?' '+next.pending+' records in the previous step still have no final decision.':'')+((criteriaChanged||existingChanged||pilotRemoved)?' Previous screening runs were archived; complete a new pilot.':''),next.pending?'warning':'success');
+    showNotice('source-notice',workspace.records.length+' reports, including local imports and Title and abstract screening results.'+(next.pending?' '+next.pending+' records in the previous step still have no final decision.':'')+((criteriaChanged||existingChanged||pilotRemoved)?' Previous screening runs were archived; complete a new pilot.':''),next.pending?'warning':'success');
   }finally{syncingSource=false;if(changed&&workspace)safely(renderSource);scheduleRetrieval();}
 }
 async function clearSource(){
   if(busy||syncingSource)return;
   pauseRetrieval();retrievalStatus='';
   archiveRun('Upstream results cleared from full-text screening');
-  workspace.sourceCleared=true;workspace.records=[];workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
+  workspace.sourceCleared=true;workspace.records=[];workspace.imports=[];workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
   indexRecords();log('source-cleared');await save();showNotice('source-notice','Results cleared from this page. The previous step and saved full-text files are unchanged. Select Restore results to show the latest results again.');render();
 }
 async function restoreSource(){
@@ -784,7 +989,7 @@ let retrievalRunning=false,retrievalController=null,retrievalTimer=null,retrieva
 function pauseRetrieval(){retrievalController?.abort();clearTimeout(retrievalTimer);}
 function scheduleRetrieval(){
   clearTimeout(retrievalTimer);
-  if(!workspace||busy||syncingSource||workspace.sourceCleared||document.hidden||navigator.onLine===false)return;
+  if(!workspace||busy||syncingSource||!workspace.records.length||document.hidden||navigator.onLine===false)return;
   retrievalTimer=setTimeout(()=>findOpenAccess().catch(e=>{retrievalStatus='Automatic retrieval paused: '+text(e.message,200);safely(renderRetrievalStatus);}),1000);
 }
 function renderRetrievalStatus(){
@@ -826,7 +1031,7 @@ async function retrieveReadable(rec,base,signal,email){
   return {got:null,attempts:[...attempts,{source:'Retrieval',status:'deferred',detail:'Remaining candidates will be retried later.'}]};
 }
 async function findOpenAccess(){
-  if(!workspace||busy||syncingSource||retrievalRunning||workspace.sourceCleared||document.hidden||navigator.onLine===false)return;
+  if(!workspace||busy||syncingSource||retrievalRunning||!workspace.records.length||document.hidden||navigator.onLine===false)return;
   const todo=workspace.records.filter(retrievalDue);if(!todo.length)return;
   retrievalRunning=true;const ctl=new AbortController();retrievalController=ctl;
   const timeout=setTimeout(()=>ctl.abort(),10*60*1000);
@@ -836,7 +1041,7 @@ async function findOpenAccess(){
     retrievalStatus='Automatically checking free full-text sources…';renderRetrievalStatus();
     try{base=await findTypesafeBackend(ctl.signal)}catch(e){if(ctl.signal.aborted)throw e;}
     for(const rec of todo){
-      if(ctl.signal.aborted||busy||workspace.sourceCleared||document.hidden)break;
+      if(ctl.signal.aborted||busy||!workspace.records.length||document.hidden)break;
       if(!recordById.has(rec.uid)||hasDoc(rec.uid))continue;
       let got=null,attempts=[];
       const lookupSig=fingerprint([rec.title,rec.doi,rec.pmid]);
@@ -844,7 +1049,7 @@ async function findOpenAccess(){
         if(!rec.doi&&!rec.pmid&&!rec.title)attempts=[{source:'Automatic retrieval',status:'missing-identifier',detail:'A DOI, PMID or title is needed. Update this record in the previous step.'}];
         else ({got,attempts}=await retrieveReadable(rec,base,ctl.signal,email));
       }catch(e){if(ctl.signal.aborted)throw e;attempts.push({source:'Automatic retrieval',status:'failed',detail:text(e.message,200)});}
-      if(ctl.signal.aborted||workspace.sourceCleared||busy)break;
+      if(ctl.signal.aborted||!workspace.records.length||busy)break;
       const current=recordById.get(rec.uid);
       if(!current||fingerprint([current.title,current.doi,current.pmid])!==lookupSig)continue;
       if(got){await storeText(rec.uid,got,got.file);found++;}
@@ -1255,13 +1460,13 @@ function renderSource(){
   $('source-body').classList.toggle('source-empty',workspace.records.length===0);
   const s=summary();
   $('stat-sought').textContent=s.sought;$('stat-retrieved').textContent=s.retrieved;$('stat-missing').textContent=s.notRetrieved;$('stat-toscreen').textContent=s.pending;
-  $('source-hint').textContent=workspace.records.length?'Reports are the records you decided Yes or Maybe in Title and abstract screening. Retrieved full texts are stored in this browser.':workspace.sourceCleared?'Results cleared. Restore results to display the latest selection from the previous step.':'Records marked Yes or Maybe in Title and abstract screening appear here automatically.';
+  $('source-hint').textContent=workspace.records.length?'Reports include local imports and records marked Yes or Maybe in Title and abstract screening. Retrieved full texts are stored in this browser.':workspace.sourceCleared?'Results cleared. Restore results to display the latest selection from the previous step.':'Records marked Yes or Maybe in Title and abstract screening appear here automatically.';
   const rows=workspace.records;
   $('doc-rows').innerHTML=rows.slice(0,docsShown).map(sourceRecordCard).join('');
   $('docs-more').hidden=rows.length<=docsShown;$('docs-more').textContent='Show all '+rows.length+' reports';
-  for(const b of ['clear-source','restore-source'])$(b).disabled=!!busy||syncingSource;
+  for(const b of ['open-import','clear-source','restore-source'])$(b).disabled=!!busy||syncingSource;
   $('clear-source').disabled=!!busy||syncingSource||!workspace.records.length;
-  $('clear-source').hidden=!!workspace.sourceCleared;$('restore-source').hidden=!workspace.sourceCleared;
+  $('clear-source').hidden=!!workspace.sourceCleared&&!workspace.records.length;$('restore-source').hidden=!workspace.sourceCleared;
 
 }
 function renderPilot(){
@@ -1435,6 +1640,30 @@ $('calibration-pending').addEventListener('click',e=>{const b=e.target.closest('
 collapsible('toggle-source','source-body','Full-text source','ft-source');
 collapsible('toggle-pilot','pilot-body','Pilot full-text screening','ft-pilot');
 collapsible('toggle-full','full-body','All reports full-text screening','ft-full');
+$('open-import').addEventListener('click',()=>{
+  if(busy||syncingSource){toast('Stop screening before importing additional results.');return}
+  $('import-database').value=(workspace.imports||[]).at(-1)?.db||'';
+  $('import-file').value='';
+  showNotice('import-message','');
+  importDialog.showModal();
+});
+$('close-import').addEventListener('click',()=>{if(!importing)importDialog.close()});
+importDialog.addEventListener('click',event=>{if(event.target===importDialog&&!importing)importDialog.close()});
+$('confirm-import').addEventListener('click',async()=>{
+  if(importing||busy||syncingSource)return;
+  const dbName=$('import-database').value.trim(),file=$('import-file').files[0];
+  if(!dbName){showNotice('import-message','Enter the database or source name.','warning');return}
+  if(!file){showNotice('import-message','Choose a search results file.','warning');return}
+  importing=true;busy='import';pauseRetrieval();render();$('confirm-import').disabled=true;
+  showNotice('import-message','Importing records…');
+  try{
+    const run=await importFile(file,dbName);
+    importDialog.close();
+    toast(run.downloaded.toLocaleString()+' imported; '+run.added.toLocaleString()+' new unique records.');
+  }catch(e){showNotice('import-message',e.message,'error')}
+  finally{importing=false;busy='';$('confirm-import').disabled=false;render();refreshSource();}
+});
+importDialog.addEventListener('cancel',event=>{if(importing)event.preventDefault()});
 $('clear-source').addEventListener('click',()=>clearSource().catch(e=>showNotice('source-notice',e.message,'error')));
 $('restore-source').addEventListener('click',()=>restoreSource().catch(e=>showNotice('source-notice',e.message,'error')));
 $('check-scope').addEventListener('change',()=>{if(busy)return;workspace.full.check=$('check-scope').value;maybeComplete();save().then(render);});
