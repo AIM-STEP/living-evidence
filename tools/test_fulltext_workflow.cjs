@@ -169,9 +169,11 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  assert(html.indexOf('id="download-source"')<html.indexOf('id="doc-rows"'));assert(html.indexOf('id="clear-source"')>html.indexOf('id="doc-rows"'));
 
  // Record actions respect local provenance and suppress stale handoffs after a return.
- w=setup();w.records[0]={...rec,taDecision:'yes'};ft.set(w);await ft.removeSourceRecord('r');assert.equal(w.records.length,1,'Upstream reports cannot be deleted locally');
+ w=setup();w.records[0]={...rec,taDecision:'yes'};ft.set(w);await ft.removeSourceRecord('r');assert.equal(w.records.length,0,'Upstream reports can be deleted');
+ ft.bindHandoff({records:[{...rec,taDecision:'yes'}],criteria:w.criteria,criteriaSig:w.criteriaSig,updatedAt:'deleted'});await ft.importFromScreening();assert.equal(w.records.length,0,'Deleted upstream record must stay deleted on sync');
+ w=setup();w.records[0]={...rec,taDecision:'yes'};ft.set(w);
  w.imports=[{id:'local',records:[{...rec,uid:'local',doi:'10.1234/local',title:'Local synthetic report'}]}];w.records.push(w.imports[0].records[0]);ft.set(w);
- assert.equal(ft.isLocalSourceRecord(w.records[1]),true);await ft.removeSourceRecord('local');assert.equal(w.records.length,1);assert.equal(w.imports[0].records.length,0);
+ assert.equal(ft.isLocalSourceRecord(w.records[1]),true);assert(ft.sourceRecordCard(w.records[1],1).includes('data-move-screening="local" disabled'));await ft.removeSourceRecord('local',true);assert.equal(w.records.length,2,'Local imports cannot move upstream');assert(!w.returnedRecords);await ft.removeSourceRecord('local');assert.equal(w.records.length,1);assert.equal(w.imports[0].records.length,0);
  w.full.human.r={decision:'include'};await ft.removeSourceRecord('r',true);assert.equal(w.records.length,0);assert.equal(w.returnedRecords.length,1);assert.equal(w.returnedRecords[0].record.title,rec.title);assert(w.modelArchives.length);
  const returnId=w.returnedRecords[0].id;assert.equal(ft.allowedReturnedRecord({...rec,taDecision:'yes'}),false);assert.equal(ft.allowedReturnedRecord({...rec,taDecision:'yes',returnId}),true);
  ft.bindHandoff({records:[{...rec,taDecision:'yes'}],criteria:w.criteria,criteriaSig:w.criteriaSig,updatedAt:'stale'});await ft.importFromScreening();assert.equal(w.records.length,0);

@@ -813,22 +813,23 @@ function isLocalSourceRecord(r){return !r.taDecision&&(workspace.imports||[]).so
 function allowedReturnedRecord(r){return !(workspace.returnedRecords||[]).some(entry=>sameSourceRecord(entry.record,r)&&r.returnId!==entry.id);}
 async function removeSourceRecord(id,move=false){
   if(busy||pdfDownloading||syncingSource)return;
-  const rec=recordById.get(id);if(!rec||(!move&&!isLocalSourceRecord(rec)))return;
+  const rec=recordById.get(id);if(!rec||(move&&isLocalSourceRecord(rec)))return;
   busy='source-action';pauseRetrieval();render();
   const before=structuredClone(workspace);
   try{
     await retrievalSettled;
-    archiveRun(move?'Returned report to title and abstract screening':'Deleted locally imported report');
+    archiveRun(move?'Returned report to title and abstract screening':'Deleted report from Full-text assess');
     if(move){
       const entry={id:'return-'+(globalThis.crypto?.randomUUID?.()||now()+'-'+Math.random().toString(36).slice(2)),at:now(),record:structuredClone(rec)};
       workspace.returnedRecords=[...(workspace.returnedRecords||[]).filter(x=>!sameSourceRecord(x.record,rec)),entry];
     }
+    if(!move&&!isLocalSourceRecord(rec))(workspace.deletedSourceRecords??=[]).push(structuredClone(rec));
     for(const run of workspace.imports||[]){run.records=(run.records||[]).filter(r=>!sameSourceRecord(r,rec));run.downloaded=run.records.length;}
     workspace.records=workspace.records.filter(r=>r.uid!==id);
     if(workspace.pilot.rounds.some(r=>r.ids.includes(id))){workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;}
     else{delete workspace.full.ai[id];delete workspace.full.ai2[id];delete workspace.full.human[id];workspace.full.completedAt='';}
-    indexRecords();log(move?'report-returned-to-screening':'local-report-deleted',{recordId:id});await save();
-    toast(move?'Moved to Title and abstract screening for a new decision.':'Local record deleted.');
+    indexRecords();log(move?'report-returned-to-screening':'source-report-deleted',{recordId:id});await save();
+    toast(move?'Moved to Title and abstract screening for a new decision.':'Record deleted from Full-text assess.');
   }catch(e){workspace=before;indexRecords();publishSummary();toast('Could not update the record: '+e.message);}
   finally{busy='';render();}
 }
@@ -837,7 +838,7 @@ function mergeLocalRecords(upstream, runs=workspace.imports||[]){
   const previous=new Map(),keys=new Map(),used=new Set(),records=[];
   for(const r of workspace.records){previous.set('uid:'+r.uid,r.uid);for(const k of recordKeys(cleanRecord(r)))if(!previous.has(k))previous.set(k,r.uid);}
   for(const [i,raw] of [...upstream,...runs.flatMap(run=>run.records||[])].entries()){
-    if(!allowedReturnedRecord(raw))continue;
+    if(!allowedReturnedRecord(raw)||(i<upstream.length&&(workspace.deletedSourceRecords||[]).some(r=>sameSourceRecord(r,raw))))continue;
     const normalized=cleanRecord(raw),rk=recordKeys(normalized);
     if(i>=upstream.length&&rk.some(k=>keys.has(k)))continue;
     let uid=previous.has('uid:'+raw.uid)?raw.uid:rk.map(k=>previous.get(k)).find(id=>id&&!used.has(id))||raw.uid;
@@ -929,7 +930,7 @@ async function clearSource(){
 }
 async function restoreSource(){
   if(busy||syncingSource)return;
-  workspace.sourceCleared=false;workspace.sourceHandoffSig='';await save();await importFromScreening();render();
+  workspace.sourceCleared=false;workspace.deletedSourceRecords=[];workspace.sourceHandoffSig='';await save();await importFromScreening();render();
 }
 function refreshSource(){importFromScreening().catch(e=>showNotice('source-notice','Could not refresh the previous screening results: '+e.message,'error'));}
 function indexRecords(){recordById.clear();workspace.records.forEach(r=>recordById.set(r.uid,r))}
@@ -1555,7 +1556,7 @@ function sourceRecordCard(r,index){
   const bibliography=[r.journal,citation].filter(Boolean).join(' · ');
   const headingMeta=['#'+(index+1),firstAuthorGivenName(r),r.year].filter(Boolean).join(' · ');
   const local=isLocalSourceRecord(r),locked=!!busy||pdfDownloading||syncingSource;
-  const actions='<div class="source-record-tools"><button class="source-move" type="button" data-move-screening="'+esc(r.uid)+'"'+(locked?' disabled':'')+'><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m8 4-5 5 5 5M3 9h9a5 5 0 0 1 5 5v2"/></svg>Move to screening</button><button class="source-delete" type="button" data-delete-source="'+esc(r.uid)+'" aria-label="Delete locally imported record" title="'+(local?'Delete this locally imported record':'Only locally imported records can be deleted here')+'"'+(locked||!local?' disabled':'')+'>×</button></div>';
+  const actions='<div class="source-record-tools"><button class="source-move" type="button" data-move-screening="'+esc(r.uid)+'"'+(locked||local?' disabled':'')+'><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m8 4-5 5 5 5M3 9h9a5 5 0 0 1 5 5v2"/></svg>Move to screening</button><button class="source-delete" type="button" data-delete-source="'+esc(r.uid)+'" aria-label="Delete record" title="Delete this record from Full-text assess"'+(locked?' disabled':'')+'>×</button></div>';
 
   const expanded=kind=>sourceDetailsOpen.has(r.uid+'|'+kind);
   const disclosureButton=(kind,label)=>'<button class="btn small" id="source-'+kind+'-button-'+index+'" type="button" data-source-toggle="'+kind+'" data-source-record="'+esc(r.uid)+'" aria-expanded="'+expanded(kind)+'" aria-controls="source-'+kind+'-'+index+'">'+label+'<span class="source-chevron" aria-hidden="true"></span></button>';
