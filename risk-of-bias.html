@@ -180,7 +180,7 @@ th{background:#f4f4f4}
 .link-btn{border:0;background:none;padding:0;color:var(--plum);font:inherit;font-weight:600;cursor:pointer}.link-btn:hover{text-decoration:underline}.q.na{padding:5px 12px}
 .tool-choice{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:4px 0 8px}.tool-choice .label{margin:0}.tc{font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 
-/* Compact neutral controls shared with Full-text screening. */
+/* Compact neutral controls shared with Full-text assess. */
 .btn:not(.primary):not(.btn-primary):not(.btn-link):not(.activated):not([aria-pressed="true"]):hover:not(:disabled),.vote:not(.selected):hover:not(:disabled),.round:not(.current):not(.done):hover:not(:disabled),.pc-btn:not(.selected):hover:not(:disabled),.collapse-toggle:hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.pc-btn:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.pc-btn:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
@@ -199,7 +199,7 @@ th{background:#f4f4f4}
 <div class="stack">
 
 <section class="panel">
-<div class="panel-head"><h2>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft">Import from full-text screening</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Included studies</span></button></div></div>
+<div class="panel-head"><h2>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft">Import from Full-text assess</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Included studies</span></button></div></div>
 <div class="panel-body" id="source-body">
 <ol class="pilot-steps">
 <li>Check each study's design, and choose the tool for each design (the recommended one is first; every study of that design uses the same tool).</li>
@@ -628,7 +628,7 @@ function statusOf(u){
 }
 const STATUS={external:'Outside this tool',design:'Choose design',todo:'Not started','ai-ready':'AI draft ready',answering:'Answering',conflicts:'Conflicts to resolve',confirm:'Ready to confirm',done:'Confirmed'};
 
-/* ---------------- Hand-off from Full-text screening ---------------- */
+/* ---------------- Hand-off from Full-text assess ---------------- */
 async function readHandoff(){try{const db=await openDB('aimstep-rob-input');const v=await getProject(db);db.close();return v&&Array.isArray(v.records)?v:null}catch(e){return null}}
 function outcomesFromCriteria(c){
   const row=(c?.rows||[]).find(r=>/^outcomes?$/i.test(r.title||''));
@@ -637,7 +637,7 @@ function outcomesFromCriteria(c){
 }
 async function importFromFullText(){
   handoff=await readHandoff();
-  if(!handoff||!handoff.records.length){showNotice('source-notice','No included studies yet. Finish Full-text screening first; studies you include there appear here.','warning');return}
+  if(!handoff||!handoff.records.length){showNotice('source-notice','No included studies yet. Finish Full-text assess first; studies you include there appear here.','warning');return}
   const before=new Set(ws.records.map(r=>r.uid));
   ws.records=handoff.records.map(r=>({...r}));ws.criteriaSig=handoff.criteriaSig||'';ws.handoffAt=now();
   if(!ws.outcomes.length)ws.outcomes=outcomesFromCriteria(handoff.criteria);
@@ -645,7 +645,7 @@ async function importFromFullText(){
   const added=ws.records.filter(r=>!before.has(r.uid)).length;
   for(const r of ws.records)if(!ws.studies[r.uid]?.design)guessDesign(r);
   log('imported',{studies:ws.records.length,added});await save();render();
-  showNotice('source-notice',`${ws.records.length} included stud${ws.records.length===1?'y':'ies'} from Full-text screening${added&&before.size?` (${added} new)`:''}.${handoff.pending?` Full-text screening still has ${handoff.pending} undecided report${handoff.pending===1?'':'s'}.`:''} Check each study design; it decides the tool.`,handoff.pending?'warning':'success');
+  showNotice('source-notice',`${ws.records.length} included stud${ws.records.length===1?'y':'ies'} from Full-text assess${added&&before.size?` (${added} new)`:''}.${handoff.pending?` Full-text assess still has ${handoff.pending} undecided report${handoff.pending===1?'':'s'}.`:''} Check each study design; it decides the tool.`,handoff.pending?'warning':'success');
 }
 /* A first guess from the title and abstract, marked as a guess; the AI
    pre-fill confirms it from the methods, and the reviewer has the last word. */
@@ -745,7 +745,7 @@ function renderStudies(){
 <td><select class="select compact" data-design="${esc(r.uid)}" aria-label="Design of ${esc(r.title||'')}"><option value="">Choose design</option>${DESIGNS.map(d=>`<option value="${d.id}"${s.design===d.id?' selected':''}>${esc(d.label)}</option>`).join('')}</select><span class="design-by">${s.designBy?esc({keywords:'Guessed from title/abstract',ai:'AI, from the methods',reviewer:'Set by reviewer'}[s.designBy]):''}</span></td>
 <td>${tool?`<b>${esc(tool.name)}</b>`:DESIGN_BY_ID[s.design]?.ext?`<span class="design-by">${esc(DESIGN_BY_ID[s.design].ext)}</span>`:'—'}${r.fullText?'':'<span class="design-by warn">No full text</span>'}</td><td class="units">${outs}</td></tr>`;
   }).join('');
-  $('study-table').innerHTML=`<thead><tr><th>Study</th><th>Design</th><th>Tool</th><th>Result${ws.outcomes.length>1?'s':''} (outcome)</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">No studies yet. Import the studies included in Full-text screening.</td></tr>'}</tbody>`;
+  $('study-table').innerHTML=`<thead><tr><th>Study</th><th>Design</th><th>Tool</th><th>Result${ws.outcomes.length>1?'s':''} (outcome)</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">No studies yet. Import the studies included in Full-text assess.</td></tr>'}</tbody>`;
 }
 function firstAuthor(r){const a=(r.authors||[])[0]||'';return String(a).split(/[ ,]/)[0]||'Study'}
 function renderAssess(){
@@ -892,8 +892,8 @@ async function init(){
     const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});
     handoff=await readHandoff();
     if(!ws.records.length&&handoff?.records?.length)await importFromFullText();
-    else if(!ws.records.length)showNotice('source-notice',handoff?`No included studies yet. Full-text screening has ${handoff.pending||0} report${handoff.pending===1?'':'s'} still undecided; studies you include there appear here.`:'No included studies yet. Studies you include in Full-text screening appear here.','warning');
-    else if(handoff&&handoff.updatedAt>ws.handoffAt&&ws.records.length)showNotice('source-notice','Full-text screening has changed since the studies were imported. Import again to update the list; assessments are kept.','warning');
+    else if(!ws.records.length)showNotice('source-notice',handoff?`No included studies yet. Full-text assess has ${handoff.pending||0} report${handoff.pending===1?'':'s'} still undecided; studies you include there appear here.`:'No included studies yet. Studies you include in Full-text assess appear here.','warning');
+    else if(handoff&&handoff.updatedAt>ws.handoffAt&&ws.records.length)showNotice('source-notice','Full-text assess has changed since the studies were imported. Import again to update the list; assessments are kept.','warning');
     bind();render();document.body.dataset.ready='true';
   }catch(e){showNotice('source-notice','The risk of bias workspace could not be opened: '+e.message,'error')}
 }

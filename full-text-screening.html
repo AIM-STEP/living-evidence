@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<meta name="description" content="Full-text screening of reports from title and abstract screening, with highlighted evidence and AI-assisted eligibility judgments.">
-<title>AIM-STEP | Full-text screening</title>
+<meta name="description" content="Full-text assessment of reports from title and abstract screening, with highlighted evidence and AI-assisted eligibility judgments.">
+<title>AIM-STEP | Full-text assess</title>
 <style>
 :root{--ink:#171a20;--ink2:#393c41;--muted:#686a70;--line:#d8d9db;--soft:#ececed;--plum:#5c004d;--pale:#f8eff6;--green:#18794e;--amber:#986500;--red:#b42318}
 *{box-sizing:border-box}
@@ -202,7 +202,7 @@ th{background:#f4f4f4}
 <a class="project-pill" id="project-name" hidden></a>
 </header>
 <main class="wrap">
-<div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Full-text screening</div>
+<div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Full-text assess</div>
 <div class="heading"><a class="step-btn back" data-screening href="title-abstract-screening.html"><span aria-hidden="true">←</span> Back: Title and abstract screening</a></div>
 <div class="layout">
 <div class="stack">
@@ -214,12 +214,12 @@ th{background:#f4f4f4}
 <p class="hint" id="source-hint"></p><details id="retrieval-settings" hidden><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC and PubMed Central, OpenAlex, Semantic Scholar, Crossref publisher links, Unpaywall, arXiv, and saved full-text links. Retrieval starts automatically while this page is open and idle. Sources are tried in order until a readable file is found; unreadable or mismatched files are skipped. Failed lookups retry after six hours; Download retries immediately. Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent directly to these services. Downloads use your browser and current network without an AI model or local server. Browser cross-origin rules and website access permissions still apply.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
 <div class="notice" id="source-notice" hidden role="status"></div>
 </div>
-<div class="source-record-list" id="doc-rows" role="list" aria-label="Reports for full-text screening"></div>
+<div class="source-record-list" id="doc-rows" role="list" aria-label="Reports for Full-text assess"></div>
 <button class="btn small" type="button" id="docs-more" hidden>Show all reports</button><div class="toolbar source-footer"><button class="btn small" type="button" id="clear-source" title="Clear results from this page">Clear</button></div>
 </div>
 </section>
 <section class="panel">
-<div class="panel-head"><h2>Pilot full-text screening</h2><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available when a round has been compared">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot full-text screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot full-text screening</span></button></div></div>
+<div class="panel-head"><h2>Pilot full-text assessment</h2><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available when a round has been compared">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot full-text assessment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot full-text assessment</span></button></div></div>
 <div class="panel-body" id="pilot-body">
 <div class="model-connection" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)">
 <label class="label" for="screen-model-source">Model source</label>
@@ -248,11 +248,11 @@ th{background:#f4f4f4}
 </div>
 </section>
 <section class="panel">
-<div class="panel-head"><h2>All reports full-text screening</h2><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-full" type="button" disabled title="Approve the pilot first.">Start</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse All reports full-text screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse All reports full-text screening</span></button></div></div>
+<div class="panel-head"><h2>All reports full-text assessment</h2><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-full" type="button" disabled title="Approve the pilot first.">Start</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse All reports full-text assessment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse All reports full-text assessment</span></button></div></div>
 <div class="panel-body" id="full-body">
 <p class="hint full-intro">The approved AI model reads every retrieved full text twice, through selected evidence passages, with two model readings (not independent reviewers). Missing evidence stays Unclear; open the full text to resolve it. One explicitly unmet criterion with a verified full-text quote is sufficient for exclusion, unless the other reading directly contradicts that criterion. Unclear reports and conflicts need human review.</p>
 <div class="source-summary pilot-summary full-summary"><div><strong id="full-decided">0 / 0</strong><span>Decided</span></div><div><strong id="full-include">0</strong><span>Included</span></div><div><strong id="full-exclude">0</strong><span>Excluded</span></div><div><strong id="full-unclear">0</strong><span>Awaiting classification</span></div><div><strong id="full-conflicts">0 / 0</strong><span>Conflicts resolved</span></div><div><strong id="full-check">0 / 0</strong><span>Human check</span></div></div>
-<div class="team-track full-track" role="progressbar" aria-label="Full-text screening complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="full-track"><span id="full-bar" style="width:0"></span></div>
+<div class="team-track full-track" role="progressbar" aria-label="Full-text assess complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="full-track"><span id="full-bar" style="width:0"></span></div>
 <p class="hint" id="full-progress" aria-live="polite"></p>
 <p class="full-now" id="full-now" hidden aria-live="polite"></p>
 <div class="notice" id="full-message" hidden role="status"></div>
@@ -296,7 +296,7 @@ th{background:#f4f4f4}
 <div class="criteria-heading"><h2 id="criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" type="button" id="crit-restore">Use title and abstract criteria</button><button class="criteria-source-link" type="button" id="crit-import">Import from local</button></div><input type="file" id="crit-import-file" accept=".docx,.xlsx,.csv,.tsv,.txt,.md,.json,.html,.htm" aria-label="Import local eligibility criteria" hidden></div>
 <div class="criteria-head-actions"><button class="btn small" type="button" id="edit-criteria">Edit</button><button class="criteria-close" type="button" id="close-criteria" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
 </div>
-<div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div class="notice" id="crit-import-message" role="status" hidden></div><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Edits apply only to full-text screening. Existing runs are archived and a new pilot is required.</p><label class="label" for="crit-question">Review question</label><textarea class="textarea" id="crit-question" rows="2"></textarea><div id="crit-rows"></div><button class="btn small" id="crit-add" type="button">Add criterion</button><p class="hint" id="crit-error" role="alert"></p><div class="toolbar"><button class="btn small" id="crit-cancel" type="button">Cancel</button><button class="btn primary small" id="crit-save" type="button">Save criteria</button></div></div><p class="hint" id="reason-order"></p></div>
+<div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div class="notice" id="crit-import-message" role="status" hidden></div><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Edits apply only to Full-text assess. Existing runs are archived and a new pilot is required.</p><label class="label" for="crit-question">Review question</label><textarea class="textarea" id="crit-question" rows="2"></textarea><div id="crit-rows"></div><button class="btn small" id="crit-add" type="button">Add criterion</button><p class="hint" id="crit-error" role="alert"></p><div class="toolbar"><button class="btn small" id="crit-cancel" type="button">Cancel</button><button class="btn primary small" id="crit-save" type="button">Save criteria</button></div></div><p class="hint" id="reason-order"></p></div>
 </dialog>
 <dialog id="manage-dialog" class="dialog manage-dialog" aria-labelledby="manage-title">
 <div class="panel-head"><h2 id="manage-title">Upload full text</h2><button class="criteria-close" id="manage-close" type="button" aria-label="Close full-text manager">×</button></div>
@@ -632,7 +632,7 @@ function collapsible(buttonId,bodyId,name,key){
   btn.addEventListener('click',()=>{const collapsed=!body.hidden;set(collapsed);try{localStorage.setItem(store,collapsed?'1':'0')}catch(e){}});
 }
 function fmtDuration(ms){const m=Math.round(ms/60000);return m<1?'under a minute':m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'}
-/* ---------------- Full-text screening: state and storage ----------------
+/* ---------------- Full-text assess: state and storage ----------------
    The reports come from Title and abstract screening (Yes and Maybe), which
    writes them with the criteria in use to aimstep-fulltext-input. The
    screening state lives in aimstep-fulltext; each report's text, passages
@@ -923,7 +923,7 @@ async function importFromScreening(){
 async function clearSource(){
   if(busy||syncingSource)return;
   pauseRetrieval();retrievalStatus='';
-  archiveRun('Upstream results cleared from full-text screening');
+  archiveRun('Upstream results cleared from Full-text assess');
   workspace.sourceCleared=true;workspace.records=[];workspace.imports=[];workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
   indexRecords();log('source-cleared');await save();showNotice('source-notice','Results cleared from this page. The previous step and saved full-text files are unchanged. Select Restore results to show the latest results again.');render();
 }
@@ -1280,7 +1280,7 @@ async function readReport(uid,round,signal,variant=1,calibration=null){
   return {...ftDecision(result.value,{...doc,chunks:evidenceChunks(doc,variant)}),round,model:selected.provider==='typesafe'?selected.name:result.model,provider:screeningProvider(),resolvedModel:result.model,variant,prompt:FT_PROMPT+(variant===2?'-reading-2':''),promptHash:fingerprint([ftSystem,prompt]),criteriaSig:workspace.criteriaSig,documentHash:workspace.docs[uid].hash,calibrationHash:input.reviewerCalibration.hash,calibrationLessonIds:input.reviewerCalibration.selectedLessonIds,evidenceMethod:doc.evidence.method,at:now()};
 }
 
-/* ---------------- Pilot full-text screening ----------------
+/* ---------------- Pilot full-text assessment ----------------
    Cochrane Handbook §4.6.4 pilots the criteria on 6-8 reports; the default
    round is 8. The reviewer decides blind (Include / Unclear / Exclude with a
    reason); the AI reading is shown when both are done. Disagreements and the
@@ -1356,14 +1356,14 @@ function pilotDecide(id,decision){
 async function approvePilot(){
   if(busy)return;
   const p=workspace.pilot;
-  if(approvalsValid()){if(!confirm('Withdraw the pilot approval? Full-text screening of all reports will be locked again.'))return;p.approved=null;log('pilot-approval-withdrawn',{});await save();render();return}
+  if(approvalsValid()){if(!confirm('Withdraw the pilot approval? Full-text assessment of all reports will be locked again.'))return;p.approved=null;log('pilot-approval-withdrawn',{});await save();render();return}
   const i=p.rounds.length-1,st=roundState(i);if(busy||!st?.revealed||!st.aiDone||!st.votesDone||!calibrationReady())return;
   const m=pilotMetrics(st.ids);
   const calibration=currentCalibration();
   if(Object.keys(workspace.full.ai).length&&p.approved?.calibration?.hash!==calibration.hash){archiveRun('Calibration changed');workspace.full=newFull();}
   p.approved={round:i,calibration,provider:screeningProvider(),at:now(),criteriaSig:approvalSig(),model:st.ids.map(id=>p.ai[id]?.model).find(Boolean)||'',prompt:FT_PROMPT,metrics:m,recommendedMet:m.recommended};
   log('pilot-approved',{round:i+1,model:p.approved.model,agreement:m.agreement,kappa:m.kappa,falseExclusions:m.fn});await save();
-  showNotice('pilot-message','Pilot approved. Full-text screening of all reports is unlocked.','success');render();
+  showNotice('pilot-message','Pilot approved. Full-text assessment of all reports is unlocked.','success');render();
 }
 
 /* ---------------- All reports ---------------- */
@@ -1452,7 +1452,7 @@ async function runFull(){
   }catch(e){showNotice('full-message',e.name==='AbortError'?'Stopped. Every finished reading is saved; click Resume to continue.':e.message,e.name==='AbortError'?'warning':'error');if(e.name!=='AbortError')log('model-error',{stage:'full',message:text(e.message,500)})}
   finally{busy='';controller=null;fullNow.clear();await save().catch(()=>{});render()}
 }
-function endMessage(s){const open=s.humanCheck-s.humanChecked;return open?'The AI has read every report twice. Below, check '+open+' report'+(open===1?'':'s')+' (unclear reports, conflicts and selected exclusions).':'Full-text screening is complete. Export the included reports, or the excluded ones with reasons.'}
+function endMessage(s){const open=s.humanCheck-s.humanChecked;return open?'The AI has read every report twice. Below, check '+open+' report'+(open===1?'':'s')+' (unclear reports, conflicts and selected exclusions).':'Full-text assess is complete. Export the included reports, or the excluded ones with reasons.'}
 function fullDecide(id,decision){
   if(busy||!recordById.has(id))return;
   if(decision==='exclude'&&!reasonDrafts.get('fvote|'+id)&&!workspace.full.human[id]?.reason)return toast('Enter a reason for exclusion first.');
@@ -1601,7 +1601,7 @@ function renderPilot(){
   const gate=$('approve-pilot'),approved=approvalsValid(),canApprove=!!lastSt?.revealed&&lastSt.aiDone&&lastSt.votesDone&&calibrationReady()&&!busy;
   gate.textContent=approved?'Pilot approved':'Approve pilot';
   gate.disabled=!!busy||!(approved||canApprove);gate.classList.toggle('activated',approved);gate.setAttribute('aria-pressed',String(approved));
-  gate.title=approved?'Approved (round '+(p.approved.round+1)+'). Click to withdraw.':canApprove?'Approve the latest round to unlock full-text screening of all reports.':'Available when a round has been compared.';
+  gate.title=approved?'Approved (round '+(p.approved.round+1)+'). Click to withdraw.':canApprove?'Approve the latest round to unlock Full-text assessment of all reports.':'Available when a round has been compared.';
   ensureDocs(ids).then(()=>{if(ids.some(id=>openEvidence.has(id)))safely(()=>{const keep=window.scrollY;renderPilotListOnly(ids,st,shown,latest);window.scrollTo(0,keep)})});
 }
 function renderPilotListOnly(ids,st,shown,latest){$('pilot-list').innerHTML=ids.map(id=>{const a=workspace.pilot.ai[id],h=workspace.pilot.human[id];return reportCard(id,{human:h,attr:'pvote',reveal:shown&&!!a,ai:[a],differ:shown&&a&&h&&a.decision!==h.decision,blindNote:st&&!shown?'The AI reading stays hidden until you and the AI have both finished this round.':''})}).join('')}
@@ -1629,7 +1629,7 @@ function renderFull(){
   draw();ensureDocs(list).then(()=>{if(list.some(id=>openEvidence.has(id)))safely(draw)});
   renderPrisma(s);updateExportCount();
   const endMsg=$('full-message').textContent;
-  if(!busy&&aiDone()&&s.assessed&&(endMsg.startsWith('The AI has read every report')||endMsg.startsWith('Full-text screening is complete')))showNotice('full-message',endMessage(s),'success');
+  if(!busy&&aiDone()&&s.assessed&&(endMsg.startsWith('The AI has read every report')||endMsg.startsWith('Full-text assess is complete')))showNotice('full-message',endMessage(s),'success');
   if(workspace.pilot.approved&&!valid)showNotice('full-message','The eligibility criteria changed after the pilot was approved. Approve a new pilot round first.','warning');
 }
 function renderPrisma(s){
@@ -1692,7 +1692,7 @@ function renderCalibration(){
 }
 function calibrationFields(id,h){
   const options=[['','Select criterion'],['*','Overall decision'],...criteriaRows().map(r=>[r.title,r.title])],disabled=busy&&busy!=='pilot'?' disabled':'';
-  return '<div class="audit"><strong>Correction for future full-text screening</strong><label class="label">Criterion<select class="select" data-calibration-field="calibrationCriterion" data-calibration-id="'+esc(id)+'"'+disabled+'>'+options.map(([v,t])=>'<option value="'+esc(v)+'"'+(h.calibrationCriterion===v?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label><label class="label">Explain how to apply the existing criterion<textarea class="textarea" maxlength="1200" data-calibration-field="note" data-calibration-id="'+esc(id)+'"'+disabled+'>'+esc(h.note||'')+'</textarea></label><label class="label">Supporting full-text quote (optional)<input class="input" maxlength="1000" data-calibration-field="calibrationQuote" data-calibration-id="'+esc(id)+'" value="'+esc(h.calibrationQuote||'')+'"'+disabled+'></label></div>';
+  return '<div class="audit"><strong>Correction for future Full-text assess</strong><label class="label">Criterion<select class="select" data-calibration-field="calibrationCriterion" data-calibration-id="'+esc(id)+'"'+disabled+'>'+options.map(([v,t])=>'<option value="'+esc(v)+'"'+(h.calibrationCriterion===v?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label><label class="label">Explain how to apply the existing criterion<textarea class="textarea" maxlength="1200" data-calibration-field="note" data-calibration-id="'+esc(id)+'"'+disabled+'>'+esc(h.note||'')+'</textarea></label><label class="label">Supporting full-text quote (optional)<input class="input" maxlength="1000" data-calibration-field="calibrationQuote" data-calibration-id="'+esc(id)+'" value="'+esc(h.calibrationQuote||'')+'"'+disabled+'></label></div>';
 }
 function updateCalibration(id,field,value){
   if(busy&&busy!=='pilot')return;
@@ -1959,8 +1959,8 @@ $('manage-dialog').addEventListener('click',e=>{if(e.target===$('manage-dialog')
 
 /* ---------------- Start-up and events ---------------- */
 collapsible('toggle-source','source-body','Full-text source','ft-source');
-collapsible('toggle-pilot','pilot-body','Pilot full-text screening','ft-pilot');
-collapsible('toggle-full','full-body','All reports full-text screening','ft-full');
+collapsible('toggle-pilot','pilot-body','Pilot full-text assessment','ft-pilot');
+collapsible('toggle-full','full-body','All reports full-text assessment','ft-full');
 $('open-import').addEventListener('click',()=>{
   if(busy||syncingSource){toast('Stop screening before importing additional results.');return}
   $('import-database').value=(workspace.imports||[]).at(-1)?.db||'';
@@ -2005,7 +2005,7 @@ $('close-reader').addEventListener('click',()=>$('reader-dialog').close());
 $('reader-dialog').addEventListener('close',()=>{readerRequest++;releaseReaderPdf();});
 $('open-criteria').addEventListener('click',()=>{
   closeCriteriaEditor();$('crit-import').disabled=!!busy;$('edit-criteria').disabled=!!busy;$('crit-restore').disabled=!!busy||!handoff?.criteria;
-  $('criteria-origin').textContent=workspace.criteriaEdited?(workspace.criteriaImportName?'Imported from '+workspace.criteriaImportName+'. Used for full-text screening.':'Edited for full-text screening. Upstream criteria are unchanged.'):workspace.criteria?'From Title and abstract screening (the criteria in use there when the reports were imported).':'';
+  $('criteria-origin').textContent=workspace.criteriaEdited?(workspace.criteriaImportName?'Imported from '+workspace.criteriaImportName+'. Used for Full-text assess.':'Edited for Full-text assess. Upstream criteria are unchanged.'):workspace.criteria?'From Title and abstract screening (the criteria in use there when the reports were imported).':'';
   $('criteria-view').innerHTML=workspace.criteria?.rows?.length?summaryHtml(summarizeCriteria(workspace.criteria)):'<p class="summary-muted">No criteria yet. Import the reports from Title and abstract screening.</p>';
   $('reason-order').textContent=workspace.criteria?.rows?.length?'Reasons for exclusion are recorded in this order (the first criterion not met is the reason): '+orderedCriteria().map(r=>r.title).join(' → ')+'.':'';
   $('criteria-dialog').showModal();
@@ -2055,7 +2055,7 @@ async function init(){
     const saved=await getProject(store);
     workspace=Object.assign(defaults(),saved?.state||{});
     workspace.pilot=Object.assign(newPilot(),workspace.pilot||{});workspace.full=Object.assign(newFull(),workspace.full||{});
-    if(workspace.pilot.rounds.some(r=>r.prompt!==FT_PROMPT)||Object.values(workspace.full.ai).some(a=>!a.prompt?.startsWith(FT_PROMPT))){archiveRun('Upgrade to calibrated full-text screening');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();await save();}
+    if(workspace.pilot.rounds.some(r=>r.prompt!==FT_PROMPT)||Object.values(workspace.full.ai).some(a=>!a.prompt?.startsWith(FT_PROMPT))){archiveRun('Upgrade to calibrated Full-text assess');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();await save();}
     indexRecords();await ensureDocs(workspace.pilot.rounds.flatMap(r=>r.ids));handoff=await readHandoff();
     await importFromScreening();
     setInterval(()=>{if(!document.hidden){refreshSource();scheduleRetrieval();}},5000);

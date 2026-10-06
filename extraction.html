@@ -174,7 +174,7 @@ th{background:#f4f4f4}
 @media(max-width:760px){.ob-head .tp{margin-left:0}.grid-fields{grid-template-columns:1fr}}
 .input.compact.cell{width:100%}.input.compact.cell.num{max-width:130px}
 
-/* Compact neutral controls shared with Full-text screening. */
+/* Compact neutral controls shared with Full-text assess. */
 .btn:not(.primary):not(.btn-primary):not(.btn-link):not(.activated):not([aria-pressed="true"]):hover:not(:disabled),.vote:not(.selected):hover:not(:disabled),.round:not(.current):not(.done):hover:not(:disabled),.pc-btn:not(.selected):hover:not(:disabled),.collapse-toggle:hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.pc-btn:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.pc-btn:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
@@ -188,12 +188,12 @@ th{background:#f4f4f4}
 </header>
 <main class="wrap">
 <div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Extraction</div>
-<div class="heading"><a class="step-btn back" data-prev href="full-text-screening.html"><span aria-hidden="true">←</span> Back: Full-text screening</a></div>
+<div class="heading"><a class="step-btn back" data-prev href="full-text-screening.html"><span aria-hidden="true">←</span> Back: Full-text assess</a></div>
 <div class="layout">
 <div class="stack">
 
 <section class="panel">
-<div class="panel-head"><h2>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft">Import from full-text screening</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Included studies</span></button></div></div>
+<div class="panel-head"><h2>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft">Import from Full-text assess</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Included studies</span></button></div></div>
 <div class="panel-body" id="source-body">
 <ol class="pilot-steps">
 <li>In Extraction form, set each outcome, its type and the time point to extract; keep, add or remove study fields.</li>
@@ -481,13 +481,13 @@ function outcomesFromCriteria(c){
 }
 async function importStudies(){
   const h=await readHandoff();
-  if(!h||!h.records.length){showNotice('source-notice','No included studies yet. Studies you include in Full-text screening appear here.','warning');return}
+  if(!h||!h.records.length){showNotice('source-notice','No included studies yet. Studies you include in Full-text assess appear here.','warning');return}
   const before=new Set(ws.records.map(r=>r.uid));
   ws.records=h.records.map(r=>({...r}));ws.handoffAt=now();
   if(!ws.form.outcomes.length)ws.form.outcomes=outcomesFromCriteria(h.criteria).map(n=>({id:uid8(),name:n.slice(0,120),type:'binary',timepoint:'',window:''}));
   log('imported',{studies:ws.records.length});await save();render();
   const added=ws.records.filter(r=>!before.has(r.uid)).length;
-  showNotice('source-notice',`${ws.records.length} included stud${ws.records.length===1?'y':'ies'} from Full-text screening${before.size&&added?` (${added} new)`:''}. Define the outcomes and their time points in Extraction form, then extract by hand or start the AI pre-fill.`,'success');
+  showNotice('source-notice',`${ws.records.length} included stud${ws.records.length===1?'y':'ies'} from Full-text assess${before.size&&added?` (${added} new)`:''}. Define the outcomes and their time points in Extraction form, then extract by hand or start the AI pre-fill.`,'success');
 }
 
 /* ---------------- AI pre-fill ---------------- */
@@ -579,7 +579,7 @@ function renderForm(){
 }
 function renderStudies(){
   $('study-table').innerHTML=`<thead><tr><th>Study</th><th>Arms</th><th>Status</th></tr></thead><tbody>${ws.records.map(r=>{const s=st(r.uid),k=statusOf(r.uid),u=unverified(r.uid);
-    return `<tr class="${current===r.uid?'current':''}"><td class="study"><button class="link-btn" type="button" data-open="${esc(r.uid)}">${esc(studyLabel(r))}</button><span>${esc(r.title||'')}</span></td><td>${s.arms.map(a=>esc(val(a.label))).join(' vs ')||'—'}</td><td><span class="st st-${k}">${STATUS[k]}${k==='check'?` (${u})`:''}</span>${r.fullText?'':'<span class="design-by warn">No full text</span>'}</td></tr>`}).join('')||'<tr><td colspan="3" class="empty">No studies yet. Import the studies included in Full-text screening.</td></tr>'}</tbody>`;
+    return `<tr class="${current===r.uid?'current':''}"><td class="study"><button class="link-btn" type="button" data-open="${esc(r.uid)}">${esc(studyLabel(r))}</button><span>${esc(r.title||'')}</span></td><td>${s.arms.map(a=>esc(val(a.label))).join(' vs ')||'—'}</td><td><span class="st st-${k}">${STATUS[k]}${k==='check'?` (${u})`:''}</span>${r.fullText?'':'<span class="design-by warn">No full text</span>'}</td></tr>`}).join('')||'<tr><td colspan="3" class="empty">No studies yet. Import the studies included in Full-text assess.</td></tr>'}</tbody>`;
 }
 const inp=(c,attrs,ph='',cls='')=>`<input class="input compact cell${c&&c.src==='ai'&&!c.ok?' ai':''}${cls}" ${attrs} value="${esc(val(c))}" placeholder="${esc(ph)}"${c?.quote?` title="${esc('AI quotation ('+(c.passage||'')+'): '+c.quote)}"`:c?.src==='ai'?' title="AI value; no quotation found in the full text"':''}>`;
 function renderStudy(){
@@ -709,8 +709,8 @@ async function init(){
     bind();
     const h=await readHandoff();
     if(!ws.records.length&&h?.records?.length)await importStudies();
-    else if(!ws.records.length)showNotice('source-notice',h?`No included studies yet. Full-text screening has ${h.pending||0} report${h.pending===1?'':'s'} still undecided; studies you include there appear here.`:'No included studies yet. Studies you include in Full-text screening appear here.','warning');
-    else if(h&&h.updatedAt>ws.handoffAt&&ws.records.length)showNotice('source-notice','Full-text screening has changed since the studies were imported. Import again to update the list; extractions are kept.','warning');
+    else if(!ws.records.length)showNotice('source-notice',h?`No included studies yet. Full-text assess has ${h.pending||0} report${h.pending===1?'':'s'} still undecided; studies you include there appear here.`:'No included studies yet. Studies you include in Full-text assess appear here.','warning');
+    else if(h&&h.updatedAt>ws.handoffAt&&ws.records.length)showNotice('source-notice','Full-text assess has changed since the studies were imported. Import again to update the list; extractions are kept.','warning');
     render();document.body.dataset.ready='true';
   }catch(e){showNotice('source-notice','The extraction workspace could not be opened: '+e.message,'error')}
 }
