@@ -190,7 +190,7 @@ th{background:#f4f4f4}
 .source-file-primary{background:#eee4f4;color:#79588b;font-size:11px;font-weight:650;padding:2px 5px;border-radius:2px}
 .source-file-origin{color:#5f6069;font-size:12px;font-weight:500;margin:2px 0 3px!important}
 .source-manage{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:#a081ad;padding:4px 0;font:inherit;font-size:12px;font-weight:500;cursor:pointer}.source-manage:hover:not(:disabled){color:#876492}.source-manage svg rect:last-child{fill:#fff}
-.source-manage svg{width:11.33px;height:12.67px;flex:none}.source-file-link:focus-visible,.source-manage:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+.source-manage:disabled{opacity:.4;cursor:default}.source-manage svg{width:11.33px;height:12.67px;flex:none}.source-file-link:focus-visible,.source-manage:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .manage-dialog{width:min(900px,calc(100vw - 28px))}.manage-dialog .panel-head{border-bottom:0}.manage-drop{border:1px dashed #cbd4e1;padding:24px 16px;text-align:center;margin-bottom:22px;border-radius:3px}.manage-drop.drag-over{background:#f0f5fc;border-color:#386ca9}.manage-drop p{margin:12px 0}.manage-upload-icon{font-size:30px;color:#687188}.manage-drop #manage-report{font-size:15px;font-weight:600}.manage-link-row{display:flex;gap:10px;align-items:center}.manage-link-row .input{flex:1;min-width:0}.manage-link-row .btn{flex:none;white-space:nowrap}.manage-files{margin-top:20px}.manage-file-row{display:flex;align-items:center;gap:12px;padding:18px 0;border-top:1px solid var(--line)}.manage-file-main{flex:1;min-width:0;overflow-wrap:anywhere}.manage-file-main .hint{margin:5px 0 0}.manage-footer{justify-content:flex-end;border-top:1px solid var(--line);padding-top:16px}.manage-remove{border:0;background:none;color:#596478;font-size:21px;cursor:pointer;padding:6px}.manage-remove:disabled{opacity:.4;cursor:default}
 @media(max-width:600px){.source-record-title{font-size:16px}.source-record-meta{font-size:13px}.source-record{padding:16px 0}.source-disclosure-body{padding:10px}}
 </style>
@@ -921,7 +921,7 @@ async function importFromScreening(){
   }finally{syncingSource=false;if(changed&&workspace)safely(renderSource);scheduleRetrieval();}
 }
 async function clearSource(){
-  if(busy||syncingSource)return;
+  if(busy||pdfDownloading||syncingSource)return;
   pauseRetrieval();retrievalStatus='';
   archiveRun('Upstream results cleared from Full-text assess');
   workspace.sourceCleared=true;workspace.records=[];workspace.imports=[];workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
@@ -1032,11 +1032,12 @@ async function storeText(uid,got,file){
   log('full-text-added',{recordId:uid,kind:got.kind,source:got.source,chunks:chunks.length});
 }
 const RETRIEVAL_RETRY_MS=6*60*60*1000;
+let pdfDownloading=false,pdfDownloadController=null;
 let retrievalRunning=false,retrievalController=null,retrievalTimer=null,retrievalStatus='',retrievalSettled=Promise.resolve();
 function pauseRetrieval(){retrievalController?.abort();clearTimeout(retrievalTimer);}
 function scheduleRetrieval(){
   clearTimeout(retrievalTimer);
-  if(!workspace||busy||syncingSource||!workspace.records.length||document.hidden||navigator.onLine===false)return;
+  if(!workspace||busy||pdfDownloading||syncingSource||!workspace.records.length||document.hidden||navigator.onLine===false)return;
   retrievalTimer=setTimeout(()=>findOpenAccess().catch(e=>{retrievalStatus='Automatic retrieval paused: '+text(e.message,200);safely(renderRetrievalStatus);}),1000);
 }
 function renderRetrievalStatus(){
@@ -1055,7 +1056,7 @@ async function retrieveReadable(rec,base,signal,email){
   });
 }
 async function findOpenAccess(){
-  if(!workspace||busy||syncingSource||retrievalRunning||!workspace.records.length||document.hidden||navigator.onLine===false)return;
+  if(!workspace||busy||pdfDownloading||syncingSource||retrievalRunning||!workspace.records.length||document.hidden||navigator.onLine===false)return;
   const todo=workspace.records.filter(retrievalDue);if(!todo.length)return;
   let finishRetrieval;retrievalSettled=new Promise(resolve=>{finishRetrieval=resolve;});
   retrievalRunning=true;const ctl=new AbortController();retrievalController=ctl;
@@ -1089,12 +1090,27 @@ async function findOpenAccess(){
 
 
 async function downloadFulltextPdfs(){
-  if(busy==='pdf-download'){controller?.abort();return;}
+  if(pdfDownloading){pdfDownloadController?.abort();return;}
   if(busy||syncingSource||!workspace.records.length)return;
-  busy='pdf-download';pauseRetrieval();render();
-  const ctl=new AbortController();controller=ctl;
+  pdfDownloading=true;pauseRetrieval();render();
+  const ctl=new AbortController();pdfDownloadController=ctl;
   const timeout=setTimeout(()=>ctl.abort(),10*60*1000);
-  let found=0,checked=0;
+  let found=0,checked=0;const pending=[];
+  const current=rec=>{const r=recordById.get(rec.uid);return r&&fingerprint([r.title,r.doi,r.pmid])===fingerprint([rec.title,rec.doi,rec.pmid]);};
+  async function applyPending(){
+    while(pending.length&&!busy&&!syncingSource){
+      const {rec,got,attempts}=pending.shift();if(!current(rec))continue;
+      const old=await loadDoc(rec.uid);if(old?.pdf||!current(rec))continue;
+      if(busy||syncingSource){pending.unshift({rec,got,attempts});return;}
+      const before=workspace.docs[rec.uid];
+      try{
+        if(got?.kind==='pdf'&&got.file){await storeText(rec.uid,got,got.file);workspace.docs[rec.uid].url=got.url||'';found++;}
+        else if(!workspace.docs[rec.uid])workspace.docs[rec.uid]={kind:'none',source:'No free PDF found',at:now()};
+        workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,pdfCheckedAt:now()};
+        log('pdf-download-retried',{recordId:rec.uid,found:got?.kind==='pdf'});await save();
+      }catch(e){if(before)workspace.docs[rec.uid]=before;else delete workspace.docs[rec.uid];if(old)await saveDoc(old);else{await deleteKey(docStore,docKey(rec.uid));docCache.delete(rec.uid);}publishSummary();throw e;}
+    }
+  }
   try{
     await retrievalSettled;
     const todo=[];
@@ -1104,22 +1120,19 @@ async function downloadFulltextPdfs(){
     const email=$('oa-email').checkValidity()?$('oa-email').value.trim():'';
     for(const rec of todo){
       if(ctl.signal.aborted)throw new DOMException('Stopped','AbortError');
-      const before=structuredClone(workspace),old=await loadDoc(rec.uid);
+      if(!current(rec))continue;
       let got=null,attempts=[];
       try{({got,attempts}=await retrieveReadable(rec,base,ctl.signal,email,{pdfOnly:true}));}
       catch(e){if(ctl.signal.aborted)throw e;attempts.push({source:'PDF retrieval',status:'failed',detail:text(e.message,200)});}
       if(ctl.signal.aborted)throw new DOMException('Stopped','AbortError');
-      try{
-        if(got?.kind==='pdf'&&got.file){await storeText(rec.uid,got,got.file);workspace.docs[rec.uid].url=got.url||'';found++;}
-        else if(!workspace.docs[rec.uid])workspace.docs[rec.uid]={kind:'none',source:'No free PDF found',at:now()};
-        workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,pdfCheckedAt:now()};
-        log('pdf-download-retried',{recordId:rec.uid,found:got?.kind==='pdf'});await save();
-      }catch(e){workspace=before;indexRecords();if(old)await saveDoc(old);else{await deleteKey(docStore,docKey(rec.uid));docCache.delete(rec.uid);}publishSummary();throw e;}
+      pending.push({rec,got,attempts});await applyPending();
       checked++;$('download-source').textContent='Stop ('+checked+'/'+todo.length+')';renderSource();
     }
+    clearTimeout(timeout);
+    while(pending.length){if(ctl.signal.aborted)throw new DOMException('Stopped','AbortError');await applyPending();if(pending.length)await new Promise(resolve=>setTimeout(resolve,100));}
     toast(found+' PDF'+(found===1?'':'s')+' downloaded; '+(checked-found)+' could not be downloaded automatically on this network.');
   }catch(e){toast(ctl.signal.aborted?'PDF download stopped. Saved files are retained.':e.message);}
-  finally{clearTimeout(timeout);busy='';controller=null;render();}
+  finally{clearTimeout(timeout);pdfDownloading=false;pdfDownloadController=null;render();}
 }
 
 // A PDF is matched to a report by DOI on its first pages, else by its title:
@@ -1555,7 +1568,7 @@ function sourceRecordCard(r,index){
   const label=filename||'Saved PDF';
   const fileLink='<button class="source-file-link" type="button" data-original-pdf="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="reader-dialog">'+esc(label)+'</button>';
   const file=has?'<div class="source-file-row">'+fileLink+fulltextPrimaryBadge([d])+'</div><p class="source-file-origin">'+esc(d?.source==='Uploaded locally'?'Full text uploaded locally':d?.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">'+(hasDoc(r.uid)&&!docCache.has(r.uid)?'Loading saved file…':'No PDF saved yet.')+'</p>';
-  const manage='<button class="source-manage" type="button" data-manage="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="manage-dialog"><svg viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="19" rx="2"/><rect x="8" y="2" width="8" height="6" rx="2" fill="white"/></svg>Manage full text</button>';
+  const manage='<button class="source-manage" type="button" data-manage="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="manage-dialog"'+(pdfDownloading?' disabled':'')+'><svg viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="19" rx="2"/><rect x="8" y="2" width="8" height="6" rx="2" fill="white"/></svg>Manage full text</button>';
   const savedLink=workspace.fulltextLinks?.[r.uid];
   const external=savedLink&&safeFulltextLink(savedLink.url)?'<p><a class="source-file-link" href="'+esc(safeFulltextLink(savedLink.url))+'" target="_blank" rel="noopener noreferrer">Link to full text ↗</a></p>':'';
   const full=(has?file:external||file)+manage;
@@ -1572,9 +1585,9 @@ function renderSource(){
   $('doc-rows').innerHTML=rows.slice(0,docsShown).map(sourceRecordCard).join('');
   $('docs-more').hidden=rows.length<=docsShown;$('docs-more').textContent='Show all '+rows.length+' reports';
   for(const b of ['open-import','clear-source','restore-source'])$(b).disabled=!!busy||syncingSource;
-  $('download-source').disabled=(!!busy&&busy!=='pdf-download')||syncingSource||!workspace.records.length;
-  if(busy!=='pdf-download')$('download-source').textContent='Download';else if(!$('download-source').textContent.startsWith('Stop ('))$('download-source').textContent='Stop download';
-  $('clear-source').disabled=!!busy||syncingSource||!workspace.records.length;
+  $('download-source').disabled=!pdfDownloading&&(!!busy||syncingSource||!workspace.records.length);
+  if(!pdfDownloading)$('download-source').textContent='Download';else if(!$('download-source').textContent.startsWith('Stop ('))$('download-source').textContent='Stop download';
+  $('clear-source').disabled=!!busy||pdfDownloading||syncingSource||!workspace.records.length;
   $('clear-source').hidden=!!workspace.sourceCleared&&!workspace.records.length;$('restore-source').hidden=!workspace.sourceCleared;
 
 }
@@ -1906,6 +1919,7 @@ function renderFulltextManager(){
   $('manage-files').querySelectorAll('button').forEach(b=>b.disabled=manageWorking);
 }
 function openFulltextManager(id){
+  if(pdfDownloading)return toast('Wait for the PDF download to finish, or stop it first.');
   if(busy||syncingSource||!recordById.has(id))return toast('Wait for the current operation to finish.');
   manageId=id;busy='manage';pauseRetrieval();render();$('manage-file').value='';showNotice('manage-message','');renderFulltextManager();$('manage-dialog').showModal();if(hasDoc(id))loadDoc(id).then(()=>{if(manageId===id)renderFulltextManager();}).catch(e=>showNotice('manage-message',e.message,'error'));
 }
