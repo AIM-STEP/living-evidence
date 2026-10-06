@@ -177,6 +177,18 @@ th{background:#f4f4f4}
 .pilot-controls>.btn{white-space:normal;line-height:1.25}
 .pilot-controls .round{justify-content:center}
 .pilot-controls .pilot-rounds{flex-basis:var(--pilot-control-width);min-width:var(--pilot-control-width)}
+#criteria-dialog .criteria-dialog-head{align-items:flex-start;gap:16px}
+.criteria-heading{min-width:0;flex:1}.criteria-heading h2{margin:0}
+.criteria-source-actions{display:flex;flex-wrap:wrap;gap:4px 16px}.criteria-source-link{display:block;margin:4px 0 0;padding:5px 0;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;line-height:1.5;text-align:left;cursor:pointer}
+.criteria-source-link:hover:not(:disabled){color:var(--plum);text-decoration:underline;text-underline-offset:3px}
+.criteria-source-link:disabled{opacity:.5;cursor:default}
+.criteria-head-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.criteria-close{display:inline-grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted);font:inherit;font-size:26px;line-height:1;cursor:pointer}
+.criteria-close:hover{background:#f3f1f4;color:var(--ink)}
+.criteria-source-link:focus-visible,.criteria-close:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+@media(max-width:420px){#criteria-dialog .criteria-dialog-head{gap:10px}.criteria-head-actions{gap:4px}.criteria-heading h2{font-size:16px}}
+.source-panel-head{flex-wrap:wrap;gap:12px}
+.source-panel-head>.source-actions{margin-left:auto}
 </style>
 </head>
 <body>
@@ -191,11 +203,11 @@ th{background:#f4f4f4}
 <div class="layout">
 <div class="stack">
 <section class="panel">
-<div class="panel-head"><h2>Screening source</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog">Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Screening source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Screening source</span></button></div></div> <div class="panel-body" id="source-body">
+<div class="panel-head source-panel-head"><div class="pilot-title-actions"><h2>Screening source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog">Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Screening source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Screening source</span></button></div></div> <div class="panel-body" id="source-body">
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span>Databases</span></div><div><strong id="stat-total">0</strong><span>Records imported</span></div><div><strong id="stat-dups">0</strong><span>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden></p>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col">Imported</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="num-col">Duplicates</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
-<div class="toolbar source-foot"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button><button class="btn small" id="upload-criteria" type="button">Upload criteria</button><input type="file" id="criteria-file-input" accept=".docx,.xlsx,.csv,.tsv,.txt,.md,.json,.html,.htm,.doc,.xls,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" hidden aria-label="Upload eligibility criteria (Word, Excel or text)"><span class="criteria-file" id="criteria-file" hidden></span><span class="criteria-upload-error" id="criteria-upload-error" role="alert" hidden></span><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button><span class="export-source"><label class="label inline" for="source-format">Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Download all records after deduplication">Export records</button></span></div>
+<div class="toolbar source-foot"><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button><span class="export-source"><label class="label inline" for="source-format">Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Download all records after deduplication">Export records</button></span></div>
 </div>
 </section>
 </div>
@@ -264,8 +276,8 @@ th{background:#f4f4f4}
 <p class="hint" id="screen-api-status" role="status" aria-live="polite"></p>
 </div></div></dialog>
 <dialog id="criteria-dialog" class="dialog" aria-labelledby="criteria-title">
-<div class="panel-head"><h2 id="criteria-title">Eligibility criteria</h2><div class="toolbar"><button class="btn small" type="button" id="edit-criteria">Edit</button><button class="btn small" type="button" id="close-criteria">Close</button></div></div>
-<div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Edits apply to screening on this page. The Eligibility criteria and Search strategy steps are not changed; delete the edit (× beside Upload criteria) to return to their criteria. One rule per line.</p><label class="label" for="crit-question">Review question (optional)</label><textarea class="textarea" id="crit-question" rows="2"></textarea><datalist id="crit-domains"><option value="Population"></option><option value="Intervention"></option><option value="Exposure"></option><option value="Comparison"></option><option value="Outcomes"></option><option value="Study design"></option><option value="Concept"></option><option value="Context"></option><option value="Phenomenon of Interest"></option><option value="Other"></option></datalist><div id="crit-rows"></div><button class="btn small" type="button" id="crit-add">Add criterion</button><p class="criteria-upload-error" id="crit-error" role="alert" hidden></p><div class="toolbar crit-actions"><button class="btn small" type="button" id="crit-cancel">Cancel</button><button class="btn small primary" type="button" id="crit-save">Save criteria</button></div></div></div>
+<div class="panel-head criteria-dialog-head"><div class="criteria-heading"><h2 id="criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" type="button" id="crit-restore">Use previous criteria</button><button class="criteria-source-link" type="button" id="crit-import">Import from local</button><button class="criteria-source-link" type="button" id="edit-criteria">Edit</button></div><input type="file" id="criteria-file-input" accept=".docx,.xlsx,.csv,.tsv,.txt,.md,.json,.html,.htm" aria-label="Import local eligibility criteria" hidden></div><div class="criteria-head-actions"><button class="criteria-close" type="button" id="close-criteria" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div></div>
+<div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><p class="criteria-upload-error" id="criteria-upload-error" role="alert" hidden></p><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Review imported criteria, then save to use them for screening.</p><label class="label" for="crit-question">Review question</label><textarea class="textarea" id="crit-question" rows="2"></textarea><p class="hint" id="crit-editor-loading" role="status">Loading manual editor…</p><iframe id="crit-manual-frame" title="Manual eligibility criteria editor" allow="local-network-access; local-network; loopback-network" style="width:100%;height:62vh;border:0" hidden></iframe><p class="criteria-upload-error" id="crit-error" role="alert" tabindex="-1" hidden></p><div class="toolbar crit-actions"><button class="btn small" type="button" id="crit-cancel">Cancel</button><button class="btn small primary" type="button" id="crit-save">Save criteria</button></div></div></div>
 </dialog>
 <dialog id="source-dialog" class="dialog source-dialog" aria-labelledby="source-dialog-title"> <div class="panel-head"><h2 id="source-dialog-title">Search results from Search strategy</h2><button class="btn small" type="button" id="close-source">Close</button></div> <div class="panel-body"> <p class="hint">Tick the searches whose records you want to screen. Records found by several searches are screened once.</p> <div class="table-wrap results-like"><table aria-label="Search results available for screening"><thead><tr><th scope="col" class="select-col"><input type="checkbox" id="source-select-all" aria-label="Select all searches"></th><th scope="col" class="date-col">Date</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th></tr></thead><tbody id="source-choice-rows"></tbody></table></div> <p class="hint" id="source-choice-summary" role="status" aria-live="polite"></p> </div> <div class="panel-footer toolbar between"><button class="btn small" type="button" id="cancel-source">Cancel</button><button class="btn primary" type="button" id="apply-source">Use selected</button></div> </dialog> <dialog id="import-dialog" class="dialog" aria-labelledby="import-title">
 <div class="panel-head"><h2 id="import-title">Import search results</h2><button class="btn small" type="button" id="close-import">Close</button></div>
@@ -1706,11 +1718,11 @@ function summaryHtml(m){
 }
 function renderCriteriaView(){
   const c=source.criteria,origin=$('criteria-origin');
-  if(!c?.rows?.length){origin.textContent='';origin.hidden=true;$('criteria-view').innerHTML='<p class="summary-muted">No eligibility rules saved for this project. Complete the Eligibility criteria step or use Upload criteria.</p>';return}
+  if(!c?.rows?.length){origin.textContent='';origin.hidden=true;$('criteria-view').innerHTML='<p class="summary-muted">No eligibility rules saved for this project. Complete the Eligibility criteria tool or select Import from local.</p>';return}
   let saved=null;
   if(criteriaOrigin?.kind==='eligibility'){try{saved=JSON.parse(localStorage.getItem(eligibilitySummaryKey)||'null')}catch(e){}if(saved?.version!==1||saved.rowsSig!==eligibilityRowsSig)saved=null}
   const k=criteriaOrigin?.kind;
-  origin.textContent=k==='edited'?'Edited on this page. Delete the edit (× beside Upload criteria) to use the criteria from the previous steps.':k==='upload'?'From the uploaded file "'+criteriaOrigin.name+'". Delete it to use the criteria from the previous steps.':
+  origin.textContent=k==='edited'?'Edited criteria in use. Select Use previous criteria to restore the criteria from the previous steps.':k==='upload'?'From the uploaded file "'+criteriaOrigin.name+'". Select Use previous criteria to restore the criteria from the previous steps.':
     k==='eligibility'?'From the Eligibility criteria step.'+(saved?'':' Open that step once to show its standardized wording here.'):
     k==='search'?'From Search strategy'+(criteriaOrigin.name?' ("'+criteriaOrigin.name+'")':'')+'.':'';
   origin.hidden=!origin.textContent;
@@ -1836,36 +1848,31 @@ function validCriteriaUpload(u){
 }
 function screeningHasProgress(){return pilotHasProgress()||Object.keys(workspace.full?.ai||{}).length>0||Object.keys(workspace.full?.human||{}).length>0||workspace.approved.some(Boolean)||Object.keys(workspace.predictions).length||Object.keys(workspace.pilotSecondPredictions).length||Object.keys(workspace.fullPredictions).length||Object.keys(workspace.secondPredictions).length||Object.keys(workspace.reviews).length}
 function renderCriteriaFile(){
-  const box=$('criteria-file'),u=validCriteriaUpload(workspace?.criteriaUpload);
-  if(!u){box.hidden=true;box.replaceChildren();return}
-  const name=document.createElement('button'),meta=document.createElement('span'),del=document.createElement('button'),n=u.snapshot.rows.length;
-  name.type='button';name.className='file-name';name.textContent=u.name;name.title=u.edited?'View the edited criteria':'View the criteria read from '+u.name;name.addEventListener('click',()=>{renderCriteriaView();criteriaDialog.showModal()});
-  meta.className='file-meta';meta.textContent='· '+n+(n===1?' criterion':' criteria')+' in use';
-  del.type='button';del.className='remove-import';del.textContent='×';del.title=u.edited?'Delete the edit':'Delete this file';del.setAttribute('aria-label','Delete the uploaded criteria file '+u.name);del.addEventListener('click',()=>{if(busy){toast('Stop screening before changing the criteria.');return}if(confirm((u.edited?'Delete the edited criteria?':'Delete "'+u.name+'"?')+' Screening will use the criteria from the previous steps.'))setCriteriaUpload(null).catch(e=>uploadError(e.message))});
-  box.replaceChildren(name,meta,del);box.hidden=false;
+  $('crit-restore').disabled=!!busy||pilotReviewSaving||!validCriteriaUpload(workspace?.criteriaUpload);
+  $('crit-import').disabled=!!busy||pilotReviewSaving;$('edit-criteria').disabled=!!busy||pilotReviewSaving;
 }
 function uploadError(message){const el=$('criteria-upload-error');el.textContent=message||'';el.hidden=!message}
 // Uploaded criteria take the place of those from the previous steps. Before
 // any screening, calibration simply restarts with them; once screening has
 // started, the source is marked out of date and Use latest source restarts it.
 async function setCriteriaUpload(upload){
-  const progress=screeningHasProgress();
-  workspace.criteriaUpload=upload;
-  await loadSource();
-  if(!progress){workspace.criteriaSig=source.criteriaSig;clearCalibration()}
-  log(upload?'criteria-uploaded':'criteria-upload-deleted',upload?{file:upload.name,rows:upload.snapshot.rows.length}:{});
-  await save();render();
-  toast(progress&&stale()?'Criteria changed. Use latest source to restart calibration with them.':upload?(upload.edited?'Criteria saved. Screening uses the edited criteria.':'Criteria uploaded. Screening uses these criteria.'):'Uploaded criteria deleted. Screening uses the criteria from the previous steps.');
-}
-$('upload-criteria').addEventListener('click',()=>{if(busy){toast('Stop screening before changing the criteria.');return}uploadError('');$('criteria-file-input').value='';$('criteria-file-input').click()});
-$('criteria-file-input').addEventListener('change',async event=>{
-  const file=event.target.files[0];if(!file)return;
-  const button=$('upload-criteria');button.disabled=true;uploadError('');
+  const progress=screeningHasProgress(),before=structuredClone(workspace),oldSource=source,oldOrigin=criteriaOrigin;
   try{
-    const snapshot=await parseCriteriaFile(file);
-    await setCriteriaUpload({name:file.name,size:file.size,uploadedAt:now(),snapshot});
-  }catch(e){uploadError('Could not read "'+file.name+'": '+e.message)}
-  finally{button.disabled=false;event.target.value=''}
+    workspace.criteriaUpload=upload;
+    await loadSource();
+    if(!progress){workspace.criteriaSig=source.criteriaSig;clearCalibration()}
+    log(upload?'criteria-uploaded':'criteria-upload-deleted',upload?{file:upload.name,rows:upload.snapshot.rows.length}:{});
+    await save();render();
+    toast(progress&&stale()?'Criteria changed. Use latest source to restart calibration with them.':upload?'Criteria saved for screening.':'Screening uses the criteria from the previous steps.');
+  }catch(e){workspace=before;source=oldSource;criteriaOrigin=oldOrigin;publishSummary();throw e;}
+}
+$('crit-import').addEventListener('click',()=>{if(busy||pilotReviewSaving)return;uploadError('');$('criteria-file-input').value='';$('criteria-file-input').click()});
+$('criteria-file-input').addEventListener('change',async event=>{
+  const file=event.target.files[0];event.target.value='';if(!file||busy||pilotReviewSaving)return;
+  busy='criteria-import';setCriteriaControls(true);uploadError('');
+  try{const snapshot=await parseCriteriaFile(file);if(snapshot.rows.length>30)throw new Error('Import up to 30 criteria.');openImportedCriteria({name:file.name,size:file.size,snapshot});}
+  catch(e){uploadError('Could not read "'+file.name+'": '+e.message)}
+  finally{busy='';setCriteriaControls(false);renderCriteriaFile();}
 });
 
 /* Export of every record after deduplication, as listed in Screening source.
@@ -1904,46 +1911,55 @@ $('export-source').addEventListener('click',()=>{
   log('source-exported',{format,records:records.length});save().catch(()=>{});
   toast(records.length.toLocaleString()+' deduplicated records exported.');
 });
-/* Editing the criteria in use. Saved edits become this step's criteria, the
-   same way as an uploaded file: the earlier steps are not changed, and
-   deleting the edit (× beside Upload criteria) returns to their criteria. */
-const DOMAIN_OPTIONS=['Population','Intervention','Exposure','Comparison','Outcomes','Study design','Concept','Context','Phenomenon of Interest','Other'];
-function editorRow(r={}){
-  return '<div class="crit-row"><div class="crit-row-head"><input class="input crit-title" list="crit-domains" value="'+esc(r.title||'')+'" placeholder="Criterion dimension, e.g. Population" aria-label="Criterion dimension"><button type="button" class="remove-import crit-remove" title="Remove this criterion" aria-label="Remove this criterion">×</button></div>'+
-    '<div class="crit-rules"><label>Inclusion rule<textarea class="textarea crit-condition" rows="3">'+esc(r.condition||'')+'</textarea></label>'+
-    '<label>Exclusion rule<textarea class="textarea crit-uncertain" rows="3">'+esc(r.uncertain||'')+'</textarea></label>'+
-    '<label>Other rule<textarea class="textarea crit-definition" rows="3">'+esc(r.definition||'')+'</textarea></label></div></div>';
+// Imports use the same isolated manual editor as Full-text assess.
+let pendingCriteriaImport=null,manualEditorReady=false;
+function setCriteriaControls(disabled){for(const id of ['crit-restore','crit-import','edit-criteria','close-criteria','crit-save','crit-cancel','crit-question'])$(id).disabled=disabled;$('crit-manual-frame').inert=disabled;}
+function criteriaEditError(message){$('crit-error').textContent=message;$('crit-error').hidden=!message;if(message)$('crit-error').focus?.();}
+function openImportedCriteria(upload){
+  pendingCriteriaImport=structuredClone(upload);pendingCriteriaImport.snapshot.framework ||= inferFramework(pendingCriteriaImport.snapshot.rows);manualEditorReady=false;criteriaEditError('');
+  $('crit-question').value=upload.snapshot.question||'';$('criteria-editor').hidden=false;$('criteria-view').hidden=true;
+  const frame=$('crit-manual-frame');frame.hidden=true;$('crit-editor-loading').hidden=false;
+  const url=new URL(pageLink('eligibility.html'));url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261006-direct');frame.src=url.href;
 }
-function openCriteriaEditor(){
-  if(busy){toast('Stop screening before changing the criteria.');return}
-  const c=source.criteria||{rows:[]};
-  $('crit-question').value=c.question||'';
-  $('crit-rows').innerHTML=(c.rows.length?c.rows:[{title:'Population'},{title:'Intervention'},{title:'Study design'}]).map(editorRow).join('');
-  $('crit-error').hidden=true;
-  $('criteria-view').hidden=true;$('criteria-origin').hidden=true;$('criteria-editor').hidden=false;$('edit-criteria').hidden=true;
-  $('crit-rows').querySelector('textarea')?.focus();
+$('crit-manual-frame').addEventListener('load',()=>{
+  if(!pendingCriteriaImport)return;
+  try{const editor=$('crit-manual-frame').contentWindow?.aimstepManualEditor;if(!editor)throw new Error('The manual editor could not load. Import the file again to retry.');editor.load(pendingCriteriaImport.snapshot);manualEditorReady=true;$('crit-manual-frame').hidden=false;}
+  catch(e){criteriaEditError(e.message)}finally{$('crit-editor-loading').hidden=true;}
+});
+function closeCriteriaEditor(){
+  $('crit-manual-frame').contentWindow?.aimstepManualEditor?.stop();pendingCriteriaImport=null;manualEditorReady=false;
+  $('criteria-editor').hidden=true;$('criteria-view').hidden=false;renderCriteriaView();
 }
-function closeCriteriaEditor(){$('criteria-editor').hidden=true;$('criteria-view').hidden=false;$('edit-criteria').hidden=false;renderCriteriaView()}
 async function saveCriteriaEdit(){
-  const rows=[...$('crit-rows').querySelectorAll('.crit-row')].map((el,i)=>({id:'ED-'+String(i+1).padStart(2,'0'),title:canonicalTitle(el.querySelector('.crit-title').value)||'Other',condition:text(el.querySelector('.crit-condition').value.trim(),5000),uncertain:text(el.querySelector('.crit-uncertain').value.trim(),5000),definition:text(el.querySelector('.crit-definition').value.trim(),5000)})).filter(r=>r.condition||r.uncertain||r.definition);
-  const err=$('crit-error');
-  if(!rows.length){err.textContent='Enter at least one inclusion or exclusion rule.';err.hidden=false;return}
-  const c=source.criteria||{};
-  const snapshot={framework:text(c.framework,100),reviewType:text(c.reviewType,150),question:text($('crit-question').value.trim(),20000),rows:rows.slice(0,60)};
-  if(fingerprint(snapshot.rows.map(r=>[r.title,r.condition,r.uncertain,r.definition]))===fingerprint((c.rows||[]).map(r=>[r.title,r.condition,r.uncertain,r.definition]))&&snapshot.question===(c.question||'')){closeCriteriaEditor();return}
-  if(screeningHasProgress()&&!confirm('Screening has already started with the current criteria. After saving, the pilot approval and AI results no longer match, and Use latest source restarts calibration and screening. Save the edited criteria?'))return;
-  try{await setCriteriaUpload({name:'Edited criteria',edited:true,size:0,uploadedAt:now(),snapshot});closeCriteriaEditor()}
-  catch(e){err.textContent='Could not save: '+e.message;err.hidden=false}
+  if(busy||pilotReviewSaving)return;criteriaEditError('');
+  if(!manualEditorReady||!pendingCriteriaImport){criteriaEditError('Wait for the manual editor to finish loading.');return;}
+  let snapshot;
+  try{
+    snapshot=$('crit-manual-frame').contentWindow.aimstepManualEditor.read();snapshot.question=$('crit-question').value.trim();
+    if(!snapshot.rows?.length||snapshot.rows.length>30)throw new Error('Enter between 1 and 30 criteria.');
+    if(snapshot.rows.some(r=>!r.title?.trim()||![r.condition,r.uncertain,r.definition].some(v=>v?.trim())))throw new Error('Each criterion needs a name and at least one rule.');
+    if(new Set(snapshot.rows.map(r=>r.title.trim().toLowerCase())).size!==snapshot.rows.length)throw new Error('Each criterion needs a unique name.');
+  }catch(e){criteriaEditError(e.message);return;}
+  busy='criteria-save';setCriteriaControls(true);$('crit-save').textContent='Saving…';
+  try{await setCriteriaUpload({...pendingCriteriaImport,uploadedAt:now(),snapshot});closeCriteriaEditor();criteriaDialog.close();}
+  catch(e){criteriaEditError('Could not save: '+e.message+'. Your draft is still here. Please retry.');}
+  finally{busy='';setCriteriaControls(false);$('crit-save').textContent='Save criteria';render();}
 }
-$('edit-criteria').addEventListener('click',openCriteriaEditor);
+$('edit-criteria').addEventListener('click',()=>{if(busy||pilotReviewSaving)return;location.href=pageLink('eligibility.html');});
+$('crit-restore').addEventListener('click',async()=>{
+  if(busy||pilotReviewSaving||!workspace.criteriaUpload)return;
+  busy='criteria-restore';setCriteriaControls(true);uploadError('');
+  try{await setCriteriaUpload(null);closeCriteriaEditor();}
+  catch(e){uploadError('Could not restore criteria: '+e.message)}
+  finally{busy='';setCriteriaControls(false);render();}
+});
 $('crit-cancel').addEventListener('click',closeCriteriaEditor);
-$('crit-save').addEventListener('click',()=>saveCriteriaEdit());
-$('crit-add').addEventListener('click',()=>{$('crit-rows').insertAdjacentHTML('beforeend',editorRow());$('crit-rows').lastElementChild.querySelector('input').focus()});
-$('crit-rows').addEventListener('click',e=>{const b=e.target.closest('.crit-remove');if(b)b.closest('.crit-row').remove()});
-criteriaDialog.addEventListener('close',()=>{if(!$('criteria-editor').hidden)closeCriteriaEditor()});
-$('open-criteria').addEventListener('click',()=>{renderCriteriaView();criteriaDialog.showModal()});
-$('close-criteria').addEventListener('click',()=>criteriaDialog.close());
-criteriaDialog.addEventListener('click',event=>{if(event.target===criteriaDialog)criteriaDialog.close()});
+$('crit-save').addEventListener('click',saveCriteriaEdit);
+criteriaDialog.addEventListener('cancel',e=>{if(busy?.startsWith('criteria-'))e.preventDefault();});
+criteriaDialog.addEventListener('close',closeCriteriaEditor);
+$('open-criteria').addEventListener('click',()=>{closeCriteriaEditor();uploadError('');renderCriteriaFile();criteriaDialog.showModal()});
+$('close-criteria').addEventListener('click',()=>{if(!busy?.startsWith('criteria-'))criteriaDialog.close()});
+criteriaDialog.addEventListener('click',event=>{if(event.target===criteriaDialog&&!busy?.startsWith('criteria-'))criteriaDialog.close()});
 
 /* ---------------- Screening source: choose the previous step's search results ---------------- */
 const sourceDialog=$('source-dialog');let sourceChoice=new Set();
