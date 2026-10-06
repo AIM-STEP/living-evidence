@@ -42,6 +42,7 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  w=setup();let incoming={criteria:w.criteria,criteriaSig:'criteria',records:[rec,{...rec,uid:'r2'}],updatedAt:'now'};
  ft.bindHandoff(incoming);await ft.importFromScreening();assert.equal(w.records.length,2);
  w.full.human.r={decision:'include'};await ft.importFromScreening();assert.equal(w.full.human.r.decision,'include');
+ const beforeCancel=JSON.stringify(w);sandbox.confirm=()=>false;await ft.clearSource();assert.equal(JSON.stringify(w),beforeCancel,'Cancelling Clear must preserve all workspace state');sandbox.confirm=()=>true;
  await ft.clearSource();assert.equal(w.records.length,0);assert.equal(w.sourceCleared,true);assert.equal(incoming.records.length,2);assert.equal(w.docs.r.kind,'pdf');assert.equal(w.modelArchives.at(-1).records.length,2);
  await ft.importFromScreening();assert.equal(w.records.length,0);
  w=structuredClone(w);ft.set(w);await ft.importFromScreening();assert.equal(w.records.length,0,'Clear persists across reload');

@@ -925,6 +925,7 @@ async function importFromScreening(){
 }
 async function clearSource(){
   if(busy||pdfDownloading||syncingSource)return;
+  if(!confirm('Clear all '+workspace.records.length+' records from Full-text assess? Current assessment results will be archived. Locally imported records will need to be imported again. Records in Title and abstract screening and saved full-text files will be kept.'))return;
   pauseRetrieval();retrievalStatus='';
   archiveRun('Upstream results cleared from Full-text assess');
   workspace.sourceCleared=true;workspace.records=[];workspace.imports=[];workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
