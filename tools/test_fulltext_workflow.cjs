@@ -209,6 +209,21 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  w.records.push({...rec,uid:'two-returned',doi:'10.1234/two',title:'Two'});ft.set(w);assert.equal(w.sourceNumbers.byUid['uid:two-returned'],2);
  await ft.clearSource();w.records=[{...rec,uid:'five',doi:'10.1234/five',title:'Five'}];ft.set(w);assert.equal(w.sourceNumbers.byUid['uid:five'],5);
 
+ // Exercise the actual Save criteria click handler, including visible failures and retry.
+ w=setup();const upstreamCriteria=structuredClone(w.criteria);let savedCriteriaState;
+ let formRow={'.crit-title':'','.crit-condition':'Adults aged 21 or older','.crit-uncertain':'','.crit-definition':''};
+ el('crit-question').value='Synthetic edited review';el('criteria-editor').hidden=false;
+ el('crit-rows').querySelectorAll=()=>[{querySelector:selector=>({value:formRow[selector]})}];
+ ft.bindSave(async()=>{savedCriteriaState=structuredClone(ft.get())});
+ await el('crit-save').handlers.click();assert.equal(el('crit-error').hidden,false);assert.match(el('crit-error').textContent,/needs a name/);assert.equal(savedCriteriaState,undefined);
+ formRow['.crit-title']='Population';ft.setBusy('full');await el('crit-save').handlers.click();assert.match(el('crit-error').textContent,/still running/);ft.setBusy('');
+ const beforeFailedSave=JSON.stringify(ft.get());ft.bindSave(async()=>{throw Error('Synthetic storage failure')});
+ await el('crit-save').handlers.click();assert.equal(JSON.stringify(ft.get()),beforeFailedSave);assert.match(el('crit-error').textContent,/Synthetic storage failure/);assert.equal(el('criteria-editor').hidden,false);assert.equal(el('crit-save').disabled,false);
+ ft.bindSave(async()=>{savedCriteriaState=structuredClone(ft.get())});
+ await el('crit-save').handlers.click();assert.equal(savedCriteriaState.criteriaEdited,true);assert.equal(savedCriteriaState.criteria.rows[0].condition,'Adults aged 21 or older');assert.equal(el('crit-error').hidden,true);
+ w=structuredClone(savedCriteriaState);ft.set(w);ft.bindHandoff({records:[rec],criteria:upstreamCriteria,criteriaSig:'upstream-changed',updatedAt:'after-save'});await ft.importFromScreening();assert.equal(w.criteria.rows[0].condition,'Adults aged 21 or older','Upstream sync must not replace edited criteria');
+ assert.equal(JSON.parse(ft.ftPrompt(rec,doc,0)).criteria[0].inclusionRule,'Adults aged 21 or older');
+ formRow['.crit-condition']='';formRow['.crit-uncertain']='Children under 21';await el('crit-save').handlers.click();assert.equal(ft.get().criteria.rows[0].uncertain,'Children under 21','An exclusion-only criterion is valid');
  const known=new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));for(const id of elements.keys())assert(known.has(id),'Missing UI element: '+id);
  console.log('PASS: full-text startup bindings, evidence validation, criterion conflicts, review scopes, five exports, calibration, snapshots, model requests, reason gating and bounded retrieval');
 })().catch(e=>{console.error(e);process.exitCode=1});
