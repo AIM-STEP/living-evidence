@@ -149,7 +149,7 @@ th{background:#f4f4f4}
 @media(max-width:760px){.pilot-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.pilot-summary>div{border-left:0;border-top:1px solid var(--line)}}
 .export-source{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.export-source .label{margin:0;font-size:12px}.select.compact{width:auto;min-height:30px;padding:3px 8px;font-size:12px}
 .doi-link{color:inherit;text-decoration:underline;text-underline-offset:2px}.doi-link:hover{color:var(--plum)}
-.source-counts{margin:0;padding:10px 19px 0;font-size:12px;color:#777680;line-height:1.5}@media(max-width:600px){.source-counts{padding-left:14px;padding-right:14px}}
+.source-title-group{min-width:0}.source-counts{display:flex;align-items:center;flex-wrap:wrap;gap:6px 16px;margin:7px 0 0;font-size:12px;color:#777680;line-height:1.5}.source-count-item{display:inline-flex;align-items:center;gap:6px}.source-count-item::before{content:"";width:7px;height:7px;border-radius:50%;background:#d8c6e7;flex:none}.source-count-item.pdf-count::before{background:#a47abd}
 .source-title-actions{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap}.source-title-actions h2{margin:0}
 /* Shared neutral button treatment; semantic selection colors remain visible. */
 .vote:not(.selected):hover:not(:disabled),.round:not(.current):not(.done):hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
@@ -209,8 +209,7 @@ th{background:#f4f4f4}
 <div class="layout">
 <div class="stack">
 <section class="panel">
-<div class="panel-head fulltext-source-head"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="btn small" type="button" id="download-source" title="Retry downloading missing full-text PDFs">Download</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
-<p class="source-counts" id="source-counts" role="status" aria-live="polite" aria-atomic="true">Total records: 0 · With full-text PDF: 0</p>
+<div class="panel-head fulltext-source-head"><div class="source-title-group"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><p class="source-counts" id="source-counts" role="status" aria-live="polite" aria-atomic="true"><span class="source-count-item">Total records 0</span><span class="source-count-item pdf-count">With full-text PDF 0</span></p></div><div class="toolbar source-actions"><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="btn small" type="button" id="download-source" title="Retry downloading missing full-text PDFs">Download</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
 <div class="panel-body" id="source-body">
 <div id="source-background" hidden>
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
@@ -1607,7 +1606,7 @@ function sourceRecordCard(r,index){
 
 let docsShown=30;
 function renderSource(){
-  $('source-counts').textContent='Total records: '+workspace.records.length+' · With full-text PDF: '+workspace.records.filter(r=>hasOriginalPdf(r.uid)).length;
+  $('source-counts').innerHTML='<span class="source-count-item">Total records '+workspace.records.length+'</span><span class="source-count-item pdf-count">With full-text PDF '+workspace.records.filter(r=>hasOriginalPdf(r.uid)).length+'</span>';
   $('source-body').classList.toggle('source-empty',workspace.records.length===0);
   const s=summary();
   $('stat-sought').textContent=s.sought;$('stat-retrieved').textContent=s.retrieved;$('stat-missing').textContent=s.notRetrieved;$('stat-toscreen').textContent=s.pending;
