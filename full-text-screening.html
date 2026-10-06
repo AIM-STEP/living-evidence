@@ -297,7 +297,7 @@ th{background:#f4f4f4}
 <div class="criteria-heading"><h2 id="criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" type="button" id="crit-restore">Use title and abstract criteria</button><button class="criteria-source-link" type="button" id="crit-import">Import from local</button></div><input type="file" id="crit-import-file" accept=".docx,.xlsx,.csv,.tsv,.txt,.md,.json,.html,.htm" aria-label="Import local eligibility criteria" hidden></div>
 <div class="criteria-head-actions"><button class="btn small" type="button" id="edit-criteria">Edit</button><button class="criteria-close" type="button" id="close-criteria" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
 </div>
-<div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div class="notice" id="crit-import-message" role="status" hidden></div><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Edits apply only to Full-text assess. Existing runs are archived and a new pilot is required.</p><label class="label" for="crit-question">Review question</label><textarea class="textarea" id="crit-question" rows="2"></textarea><div id="crit-rows"></div><button class="btn small" id="crit-add" type="button">Add criterion</button><div class="notice error" id="crit-error" role="alert" tabindex="-1" hidden></div><div class="toolbar"><button class="btn small" id="crit-cancel" type="button">Cancel</button><button class="btn primary small" id="crit-save" type="button">Save criteria</button></div></div><p class="hint" id="reason-order"></p></div>
+<div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div class="notice" id="crit-import-message" role="status" hidden></div><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Edits apply only to Full-text assess. Existing runs are archived and a new pilot is required.</p><label class="label" for="crit-question">Review question</label><textarea class="textarea" id="crit-question" rows="2"></textarea><p class="hint" id="crit-editor-loading" role="status">Loading manual editor…</p><iframe id="crit-manual-frame" title="Manual eligibility criteria editor" allow="local-network-access; local-network; loopback-network" style="width:100%;height:62vh;border:0" hidden></iframe><div class="notice error" id="crit-error" role="alert" tabindex="-1" hidden></div><div class="toolbar"><button class="btn small" id="crit-cancel" type="button">Cancel</button><button class="btn primary small" id="crit-save" type="button">Save criteria</button></div></div><p class="hint" id="reason-order"></p></div>
 </dialog>
 <dialog id="manage-dialog" class="dialog manage-dialog" aria-labelledby="manage-title">
 <div class="panel-head"><h2 id="manage-title">Upload full text</h2><button class="criteria-close" id="manage-close" type="button" aria-label="Close full-text manager">×</button></div>
@@ -1892,7 +1892,7 @@ async function importLocalCriteria(file){
   if(snapshot.rows.length>30)throw new Error('Import up to 30 criteria. Reduce the number of rows and try again.');
   pendingCriteriaImport=file.name;
   $('crit-question').value=snapshot.question||'';
-  $('crit-rows').innerHTML=snapshot.rows.map(editorRow).join('');
+  loadManualCriteriaEditor(snapshot);
   $('criteria-editor').hidden=false;$('criteria-view').hidden=true;setCriteriaError('');
   showNotice('crit-import-message','Imported '+file.name+'. Review the criteria below, then select Save criteria to apply them.','success');
 }
@@ -1905,18 +1905,34 @@ $('crit-import-file').addEventListener('change',async()=>{
   try{await importLocalCriteria(file)}catch(e){showNotice('crit-import-message',e.message,'error')}
   finally{busy='';for(const id of ['crit-import','edit-criteria','close-criteria','crit-save','crit-cancel'])$(id).disabled=false;$('crit-restore').disabled=!handoff?.criteria;render();}
 });
+$('criteria-dialog').addEventListener('close',closeCriteriaEditor);
 $('criteria-dialog').addEventListener('cancel',e=>{if(['criteria-import','criteria-save'].includes(busy))e.preventDefault();});
 
-function editorRow(r={}){
-  return '<div class="crit-row"><div class="crit-row-head"><input class="input crit-title" aria-label="Criterion name" placeholder="Criterion, e.g. Population" value="'+esc(r.title||'')+'"><button class="btn small crit-remove" type="button">Remove</button></div>'+[['condition','Inclusion rule'],['uncertain','Exclusion rule'],['definition','Operational definition']].map(([k,label])=>'<label>'+label+'<textarea class="textarea crit-'+k+'" rows="2">'+esc(r[k]||'')+'</textarea></label>').join('')+'</div>';
+let manualEditorReady=false,manualEditorDraft=null;
+function loadManualCriteriaEditor(snapshot){
+  manualEditorReady=false;manualEditorDraft=structuredClone(snapshot||{});
+  manualEditorDraft.framework||=inferFramework(manualEditorDraft.rows||[]);
+  const frame=$('crit-manual-frame');frame.hidden=true;$('crit-editor-loading').hidden=false;
+  const url=new URL('eligibility.html',location.href);url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261006');
+  if(projectId)url.searchParams.set('projectId',projectId);
+  frame.src=url.href;
 }
+$('crit-manual-frame').addEventListener('load',()=>{
+  if(!manualEditorDraft)return;
+  try{
+    const editor=$('crit-manual-frame').contentWindow?.aimstepManualEditor;
+    if(!editor)throw new Error('The manual editor could not load. Close and reopen Edit to retry.');
+    editor.load(manualEditorDraft);manualEditorReady=true;
+    $('crit-manual-frame').hidden=false;$('crit-editor-loading').hidden=true;
+  }catch(e){$('crit-editor-loading').hidden=true;setCriteriaError(e.message);}
+});
 function openCriteriaEditor(){
   if(busy)return toast('Stop screening before editing criteria.');
   pendingCriteriaImport='';showNotice('crit-import-message','');
-  $('crit-question').value=workspace.criteria?.question||'';$('crit-rows').innerHTML=(criteriaRows().length?criteriaRows():[{}]).map(editorRow).join('');
+  $('crit-question').value=workspace.criteria?.question||'';loadManualCriteriaEditor(workspace.criteria||{});
   $('criteria-editor').hidden=false;$('criteria-view').hidden=true;setCriteriaError('');
 }
-function closeCriteriaEditor(){pendingCriteriaImport='';showNotice('crit-import-message','');$('criteria-editor').hidden=true;$('criteria-view').hidden=false;}
+function closeCriteriaEditor(){ $('crit-manual-frame').contentWindow?.aimstepManualEditor?.stop();manualEditorReady=false;manualEditorDraft=null;pendingCriteriaImport='';showNotice('crit-import-message','');$('criteria-editor').hidden=true;$('criteria-view').hidden=false;}
 function setCriteriaError(message){
   const el=$('crit-error');el.textContent=message;el.hidden=!message;
   if(message){el.focus?.();el.scrollIntoView?.({block:'nearest'});}
@@ -1925,15 +1941,20 @@ async function saveCriteria(){
   setCriteriaError('');
   if(busy){setCriteriaError('An operation is still running. Wait for it to finish or stop screening, then save again.');return;}
   if(syncingSource){setCriteriaError('Source records are synchronizing. Please save again in a moment.');return;}
-  const rows=[...$('crit-rows').querySelectorAll('.crit-row')].map((el,i)=>({id:'FT-'+(i+1),title:el.querySelector('.crit-title').value.trim(),condition:el.querySelector('.crit-condition').value.trim(),uncertain:el.querySelector('.crit-uncertain').value.trim(),definition:el.querySelector('.crit-definition').value.trim()}));
+  let edited;
+  try{
+    if(!manualEditorReady)throw new Error('The manual editor is still loading. Please try again in a moment.');
+    edited=$('crit-manual-frame').contentWindow.aimstepManualEditor.read();
+  }catch(e){setCriteriaError(e.message);return;}
+  const rows=edited.rows;
   if(!rows.length||rows.length>30){setCriteriaError('Add between 1 and 30 criteria before saving.');return;}
   const missingName=rows.findIndex(r=>!r.title),missingRule=rows.findIndex(r=>!r.condition&&!r.uncertain&&!r.definition);
   if(missingName>=0){setCriteriaError('Criterion '+(missingName+1)+' needs a name.');return;}
   if(missingRule>=0){setCriteriaError('Criterion '+(missingRule+1)+' ('+rows[missingRule].title+') needs an inclusion rule, exclusion rule or operational definition.');return;}
   const seen=new Set();for(const r of rows){const key=r.title.toLowerCase();if(seen.has(key)){setCriteriaError('The criterion name "'+r.title+'" appears more than once. Give each criterion a unique name.');return;}seen.add(key);}
-  const criteria={...workspace.criteria,question:text($('crit-question').value.trim(),5000),rows},sig=fingerprint(criteria);
-  busy='criteria-save';pauseRetrieval();
-  const controls=['crit-save','crit-cancel','crit-add','crit-import','crit-restore','edit-criteria','close-criteria'];
+  const criteria={...workspace.criteria,...edited,question:text($('crit-question').value.trim(),5000),rows},sig=fingerprint(criteria);
+  busy='criteria-save';pauseRetrieval();$('crit-manual-frame').inert=true;
+  const controls=['crit-save','crit-cancel','crit-question','crit-import','crit-restore','edit-criteria','close-criteria'];
   for(const id of controls)$(id).disabled=true;$('crit-save').textContent='Saving…';
   let before,previousView=pilotView;
   try{
@@ -1951,13 +1972,11 @@ async function saveCriteria(){
     if(before){workspace=before;pilotView=previousView;indexRecords();publishSummary();}
     setCriteriaError('Could not save criteria: '+e.message+'. Your edits are still here. Please retry.');
   }finally{
-    busy='';for(const id of controls)$(id).disabled=false;$('crit-restore').disabled=!handoff?.criteria;
+    busy='';$('crit-manual-frame').inert=false;for(const id of controls)$(id).disabled=false;$('crit-restore').disabled=!handoff?.criteria;
     $('crit-save').textContent='Save criteria';render();
   }
 }
 $('edit-criteria').addEventListener('click',openCriteriaEditor);
-$('crit-add').addEventListener('click',()=>$('crit-rows').insertAdjacentHTML('beforeend',editorRow()));
-$('crit-rows').addEventListener('click',e=>{if(e.target.closest('.crit-remove'))e.target.closest('.crit-row').remove();});
 $('crit-cancel').addEventListener('click',closeCriteriaEditor);
 $('crit-save').addEventListener('click',()=>saveCriteria().catch(e=>setCriteriaError(e.message)));
 $('crit-restore').addEventListener('click',async()=>{

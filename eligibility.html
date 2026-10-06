@@ -24,6 +24,16 @@
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.pc-btn:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.pc-btn:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
 </style>
+<style>
+.embedded-manual body{background:#fff}
+.embedded-manual .header,.embedded-manual .steps,.embedded-manual .crumb,.embedded-manual .heading,.embedded-manual .preview-actions,.embedded-manual .editor>.section:not(#manual-generate-panel){display:none!important}
+.embedded-manual .wrap{max-width:none;margin:0;padding:0}
+.embedded-manual .layout{display:block}
+.embedded-manual .panel{box-shadow:none;border:0;border-radius:0}
+.embedded-manual .section{padding:14px 0}
+.embedded-manual .right-column{display:block}
+.embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
+</style>
 </head>
 <body>
 <header class="header"><a class="brand" href="index.html" aria-label="ACHIEVE for AIM-STEP Living evidence"><span class="brand-mark">A</span><span class="brand-text"><span class="brand-main">ACHIEVE</span><small class="brand-sub">for AIM-STEP Living evidence</small></span></a><nav class="nav" aria-label="Main navigation"><a href="index.html?view=project" data-nav="workflow">Workflow</a><a href="index.html?view=toolset" data-nav="toolset">Toolset</a><a href="contact.html">Contact</a></nav><div class="right-head"><span class="project-pill" id="project-pill" hidden></span><button class="lang" id="lang" type="button" aria-label="Page language: English">English</button></div></header>
@@ -38,9 +48,11 @@
 <script>
 (function(){
 const params=new URLSearchParams(location.search),projectId=params.get('project')||params.get('projectId')||'',contextKey='aimstep-active-project',key='aimstep-eligibility:'+ (projectId||'default'),completionKey=projectId?'aimstep-setup-completed:'+encodeURIComponent(projectId):'',modelSettingsKey='aimstep-screen-settings:'+(projectId||'default'),modelTokenKey=slot=>'aimstep-screen-token:'+slot+':'+(projectId||'default');
+const embeddedManual=params.get('embedded')==='fulltext-criteria';
+if(embeddedManual)document.documentElement.classList.add('embedded-manual');
 let lang='en';const $=id=>document.getElementById(id),list=$('criteria-list'),picker=$('criterion-picker');const criterionTypesByFramework={PICO:[{key:'pico-population',id:'INC-01',title:'Population'},{key:'pico-intervention',id:'INC-02',title:'Intervention'},{key:'pico-comparison',id:'INC-03',title:'Comparison'},{key:'pico-outcomes',id:'INC-04',title:'Outcomes'},{key:'pico-study-design',id:'INC-05',title:'Study design'}],PECO:[{key:'peco-population',id:'INC-01',title:'Population'},{key:'peco-exposure',id:'EXP-02',title:'Exposure'},{key:'peco-comparator',id:'CMP-03',title:'Comparator'},{key:'peco-outcomes',id:'OUT-04',title:'Outcomes'},{key:'peco-study-design',id:'SD-05',title:'Study design'}],PCC:[{key:'pcc-population',id:'INC-01',title:'Population'},{key:'pcc-concept',id:'CON-02',title:'Concept'},{key:'pcc-context',id:'CTX-03',title:'Context'}],PICo:[{key:'pico-population',id:'INC-01',title:'Population'},{key:'pico-interest',id:'INT-02',title:'Phenomenon of Interest'},{key:'pico-context',id:'CTX-03',title:'Context'}],Other:[{key:'other-custom',id:'OTH-01',title:'Other'}]};
 let state={framework:'PICO',question:'',reviewType:'Systematic Review',activeGenerator:'',generationMethodChoice:'',manualRefinement:null,machineRefinement:null,machineSourceRevision:0,machineRun:null,machineCriteria:[],criteria:[{id:'INC-01',title:'Population',condition:'Adults with the condition or population of interest',definition:'Define age threshold, diagnosis and how mixed populations are handled.',purpose:'Eligibility',stage:'',uncertain:''},{id:'INC-05',title:'Study design',condition:'Eligible study designs',definition:'Specify design features; distinguish design from report format.',purpose:'Eligibility',stage:'',uncertain:''}],outcomeGate:false,outcomeReason:'',years:'No restriction',language:'',dateRange:{start:{year:'',month:'',day:''},end:{year:'',month:'',day:''}},dateEnd:'Ongoing',reportType:'All formats',reportTypeOther:'',limitsReason:'',confirmed:false,versions:[]};
-try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state=Object.assign(state,saved)}catch(e){}if(!Array.isArray(state.machineCriteria))state.machineCriteria=[];if(state.generationMode==='machine'&&state.criteria.length&&state.criteria.every(c=>c.source==='machine')){state.machineCriteria=state.criteria;state.criteria=[{id:'INC-01',title:'Population',condition:'Adults with the condition or population of interest',definition:'Define age threshold, diagnosis and how mixed populations are handled.',purpose:'Eligibility',stage:'',uncertain:''},{id:'INC-05',title:'Study design',condition:'Eligible study designs',definition:'Specify design features; distinguish design from report format.',purpose:'Eligibility',stage:'',uncertain:''}]}if(!state.activeGenerator)state.activeGenerator=state.generationMode==='machine'?'machine':'manual';state.criteria.forEach(c=>{const known=criterionTypesByFramework.PICO.find(t=>t.title.toLowerCase()===String(c.title||'').toLowerCase());if(known)c.id=known.id;if(['Advance to full text','Human review','Contact author'].includes(c.uncertain))c.uncertain=''});
+try{const saved=embeddedManual?null:JSON.parse(localStorage.getItem(key)||'null');if(saved)state=Object.assign(state,saved)}catch(e){}if(!Array.isArray(state.machineCriteria))state.machineCriteria=[];if(state.generationMode==='machine'&&state.criteria.length&&state.criteria.every(c=>c.source==='machine')){state.machineCriteria=state.criteria;state.criteria=[{id:'INC-01',title:'Population',condition:'Adults with the condition or population of interest',definition:'Define age threshold, diagnosis and how mixed populations are handled.',purpose:'Eligibility',stage:'',uncertain:''},{id:'INC-05',title:'Study design',condition:'Eligible study designs',definition:'Specify design features; distinguish design from report format.',purpose:'Eligibility',stage:'',uncertain:''}]}if(!state.activeGenerator)state.activeGenerator=state.generationMode==='machine'?'machine':'manual';state.criteria.forEach(c=>{const known=criterionTypesByFramework.PICO.find(t=>t.title.toLowerCase()===String(c.title||'').toLowerCase());if(known)c.id=known.id;if(['Advance to full text','Human review','Contact author'].includes(c.uncertain))c.uncertain=''});
 delete state.machineModelSlot;delete state.manualModelSlot;
 let project=null;try{project=JSON.parse(sessionStorage.getItem(contextKey)||'null')}catch(e){};
 function pageLink(file,view){const url=new URL(file,location.href);if(projectId)url.searchParams.set('projectId',projectId);if(view)url.searchParams.set('view',view);return url.href}
@@ -64,6 +76,7 @@ function save(){
   state.language=$('language').value;state.limitsOther=$('limits-other').value;
   if(manualRefinementController&&manualRunSignature!==manualSourceSignature()){stopManualRefinement();setManualStatus('Inputs changed. Standardize again to update the AI draft.')}
   if(state.activeGenerator==='manual'&&state.manualRefinement&&state.manualRefinement.signature!==manualSourceSignature())setManualStatus('Inputs changed. Standardize again to update the AI draft.');
+  if(embeddedManual){renderPreview();return true;}
   let previous=null,saved=true;
   try{previous=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
   try{localStorage.setItem(key,JSON.stringify(state))}catch(e){saved=false}
@@ -650,7 +663,7 @@ function manuscriptDraft(rows,exclusions,limits){
 // from, so a later edit made elsewhere is never shown with an old summary.
 const summaryKey='aimstep-eligibility-summary:'+(projectId||'default');
 function summaryRowsSig(rows){let h=2166136261;for(const c of JSON.stringify((rows||[]).map(r=>[String(r.title||''),String(r.condition||''),String(r.uncertain||''),String(r.definition||'')])))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0).toString(16)}
-function shareSummary(data){try{if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
+function shareSummary(data){if(embeddedManual)return;try{if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
 function renderPreview(){
   const area=$('preview');if(!$('generation-method').value){area.innerHTML='';$('download').hidden=true;shareSummary(null);return}
   if($('generation-method').value==='machine'&&(!state.machineRun||state.machineRun.question!==$('question').value.trim()||state.machineRun.reviewType!==$('review-type').value||(state.machineRun.sourceRevision??0)!==(Number(state.machineSourceRevision)||0))){area.innerHTML='<p class="empty">Click Start to generate criteria from the current text and attachments.</p>';$('download').hidden=true;shareSummary(null);return}
@@ -765,7 +778,7 @@ function pendingEditor(pending,rows){
     `<div class="pc-actions"><span class="summary-muted">${decided} of ${pending.length} decided</span><button type="button" class="btn btn-primary pc-generate" data-pc-generate${decided===pending.length?'':' disabled'}>Generate final criteria</button></div>`;
 }
 function currentPending(){return standardizedCriteria().pending}
-function persistQuietly(){try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
+function persistQuietly(){if(embeddedManual)return;try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
 function sentence(t){t=String(t||'').replace(/\s+/g,' ').trim().replace(/[.。]+$/,'');return t?t.charAt(0).toUpperCase()+t.slice(1)+'.':''}
 function generateFinalCriteria(){
   const pending=currentPending(),decisions=state.pendingDecisions||{};
@@ -806,12 +819,49 @@ $('preview').addEventListener('input',e=>{
   const item=currentPending()[Number(i)];if(item===undefined)return;const li=t.closest('.pc-item'),prev=(state.pendingDecisions||{})[item]||{};
   state.pendingDecisions={...(state.pendingDecisions||{}),[item]:{...prev,domain:li.querySelector('.pc-domain').value,text:li.querySelector('.pc-text').value}};persistQuietly();
 });
-fill();
+// Reuse this exact manual editor in Full-text assess, with an isolated draft.
+if(embeddedManual){
+  window.aimstepManualEditor={
+    load(snapshot={}){
+      stopManualRefinement();stopMachineGeneration();
+      const draft=structuredClone(snapshot.manualEditor||{});
+      state={...state,...draft,question:snapshot.question||'',framework:draft.framework||snapshot.framework||'Other',
+        criteria:structuredClone(draft.criteria||snapshot.rows||[]),reviewType:draft.reviewType||snapshot.reviewType||'Systematic Review',
+        activeGenerator:'manual',generationMethodChoice:'manual',machineCriteria:[],machineRun:null,machineRefinement:null,
+        manualRefinement:draft.manualRefinement||null,dateRange:draft.dateRange||{},language:draft.language||'',limitsOther:draft.limitsOther||'',
+        pendingDecisions:draft.pendingDecisions||{},finalCriteria:draft.finalCriteria||null,confirmed:false};
+      setManualStatus('');fill();picker.hidden=true;
+    },
+    read(){
+      if(manualRefinementController)throw new Error('Wait for Standardize to finish before saving.');
+      save();
+      const start=dateToInput(state.dateRange?.start,'start'),end=dateToInput(state.dateRange?.end,'end');
+      if(start&&end&&start>end)throw new Error('The start date must not be later than the end date.');
+      const preview=standardizedCriteria();
+      const rows=state.criteria.map((r,i)=>({id:'FT-'+(i+1),title:String(r.title||'').trim(),
+        condition:preview.refined?preview.rows[i].include.join('\n'):String(r.condition||'').trim(),
+        uncertain:preview.refined?preview.rows[i].exclude.join('\n'):String(r.uncertain||'').trim(),
+        definition:preview.refined?'':String(r.definition||'').trim()}));
+      // Limits are assessable rules, so they travel through the same evidence and decision pipeline.
+      const limits=[];
+      if(start||end)limits.push('Publication date: '+(start&&end?start+' to '+end:start?'From '+start:'Through '+end));
+      if(state.language)limits.push('Language: '+state.language);
+      if(state.limitsOther.trim())limits.push(state.limitsOther.trim());
+      if(limits.length){let title='Limits';while(rows.some(r=>r.title.toLowerCase()===title.toLowerCase()))title='Additional '+title;
+        rows.push({id:'FT-limits',title,condition:limits.join('\n'),uncertain:'',definition:''});}
+      const {framework,reviewType,criteria,dateRange,language,limitsOther,manualRefinement,pendingDecisions,finalCriteria}=state;
+      return structuredClone({rows,framework,reviewType,manualEditor:{framework,reviewType,criteria,dateRange,language,limitsOther,manualRefinement,pendingDecisions,finalCriteria}});
+    },
+    stop(){stopManualRefinement();stopMachineGeneration();}
+  };
+  window.aimstepManualEditor.load();
+}else fill();
 })();
 
 // Collapse / expand each section. The head keeps its buttons; footers with
 // Next or Download stay visible. Remembered per browser, page and project.
 (()=>{
+  if(new URLSearchParams(location.search).get('embedded')==='fulltext-criteria')return;
   const q=new URLSearchParams(location.search),pid=q.get('projectId')||q.get('project')||'default',page=(location.pathname.split('/').pop()||'page').replace(/\.html$/,'');
   const icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg>';
   document.querySelectorAll('.editor > .section, aside .panel').forEach(box=>{
