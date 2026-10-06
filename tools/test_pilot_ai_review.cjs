@@ -27,6 +27,16 @@ t.bindModel(async(r,round,signal,variant,bundle)=>{calls.push({id:r.uid,bundle:s
  assert.equal(el('pilot-agreed-count').textContent,'2');assert.equal(el('pilot-mistake-count').textContent,'1');assert(!el('pilot-list').innerHTML.includes('id="pilot-record-'+ids[1]+'"'));assert(el('pilot-list').innerHTML.includes('id="pilot-record-'+ids[0]+'"'));
  el('pilot-filter').handlers.click({target:{closest:()=>({dataset:{filter:'differ'}})}});assert(el('pilot-list').innerHTML.includes('id="pilot-record-'+ids[1]+'"'));assert(!el('pilot-list').innerHTML.includes('id="pilot-record-'+ids[0]+'"'));
  el('pilot-filter').handlers.click({target:{closest:()=>({dataset:{filter:'agreed'}})}});
+ // Status badges fold the complete AI assessment without changing saved reviews.
+ for(const id of [ids[0],ids[1]]){
+  const before=JSON.stringify(w.pilot.human[id]),body={hidden:false},attrs={};
+  const toggle={dataset:{toggleAssessment:id},closest:()=>({querySelector:()=>body}),setAttribute:(k,v)=>attrs[k]=v};
+  const event={target:{closest:selector=>selector==='[data-toggle-assessment]'?toggle:null}};
+  el('pilot-list').handlers.click(event);assert.equal(body.hidden,true);assert.equal(attrs['aria-expanded'],'false');
+  const folded=t.pilotCard(records.find(r=>r.uid===id),t.pilotRoundState(0),0);assert(folded.includes('data-pilot-assessment hidden'));assert(folded.includes(id===ids[0]?'Agreed':'Corrected'));assert(!folded.includes('Correction saved'));
+  t.renderPilot();assert(t.pilotCard(records.find(r=>r.uid===id),t.pilotRoundState(0),0).includes('data-pilot-assessment hidden'));
+  el('pilot-list').handlers.click(event);assert.equal(body.hidden,false);assert.equal(attrs['aria-expanded'],'true');assert.equal(JSON.stringify(w.pilot.human[id]),before);
+ }
  const bundle=t.currentCalibration();assert.equal(bundle.pending.length,0);assert.equal(bundle.lessons.length,3);assert.equal(bundle.lessons.filter(l=>l.review==='agree').length,2);assert.equal(bundle.lessons.filter(l=>l.review==='mistake').length,1);
  const prompt=JSON.parse(t.pilotPrompt(records[5],1,1,bundle));assert.equal(prompt.reviewerCalibration.totalLessons,3);assert(prompt.reviewerExamples.some(x=>x.review==='mistake'&&x.correction.includes('children')));assert(prompt.reviewerExamples.some(x=>x.review==='agree'));
  t.replace(structuredClone(saved));w=t.get();assert.equal(t.pilotRoundState(0).revealed,true);assert.equal(t.pilotMetrics(ids).accuracy,2/3);
