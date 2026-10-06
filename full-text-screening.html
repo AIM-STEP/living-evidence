@@ -177,7 +177,7 @@ th{background:#f4f4f4}
 
 /* Bibliographic records with expandable Full text and Abstract, matching the reference layout. */
 #source-body.source-empty>*{display:none!important}
-.source-record-list{margin-top:0}.source-record{padding:20px 0 22px;border-bottom:1px solid var(--soft)}.source-record:first-child{padding-top:0}.source-record:last-child{border-bottom:0}
+.source-footer{justify-content:flex-end;margin-top:12px}.source-record-list{margin-top:0}.source-record{padding:20px 0 22px;border-bottom:1px solid var(--soft)}.source-record:first-child{padding-top:0}.source-record:last-child{border-bottom:0}
 .source-record-heading{margin-bottom:10px}.source-record-number{font-size:12px;color:#5f6069;margin-bottom:5px;overflow-wrap:anywhere}.source-record-title{flex:1;min-width:0;margin:0;font-size:18px;line-height:1.45;font-weight:650;color:#30394c;overflow-wrap:anywhere}
 .source-record-meta{font-size:14px;line-height:1.65;color:#687188;overflow-wrap:anywhere}.source-record-meta p{margin:0}.source-record-id{font-size:12px;margin-top:3px!important}
 .source-record-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:16px}.source-record-actions .btn{gap:10px}
@@ -207,7 +207,7 @@ th{background:#f4f4f4}
 <div class="layout">
 <div class="stack">
 <section class="panel">
-<div class="panel-head fulltext-source-head"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="btn small" type="button" id="clear-source" title="Clear results from this page">Clear</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
+<div class="panel-head fulltext-source-head"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="btn small" type="button" id="download-source" title="Retry downloading missing full-text PDFs">Download</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
 <div class="panel-body" id="source-body">
 <div id="source-background" hidden>
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
@@ -215,7 +215,7 @@ th{background:#f4f4f4}
 <div class="notice" id="source-notice" hidden role="status"></div>
 </div>
 <div class="source-record-list" id="doc-rows" role="list" aria-label="Reports for full-text screening"></div>
-<button class="btn small" type="button" id="docs-more" hidden>Show all reports</button>
+<button class="btn small" type="button" id="docs-more" hidden>Show all reports</button><div class="toolbar source-footer"><button class="btn small" type="button" id="clear-source" title="Clear results from this page">Clear</button></div>
 </div>
 </section>
 <section class="panel">
@@ -1004,7 +1004,7 @@ async function storeText(uid,got,file){
   log('full-text-added',{recordId:uid,kind:got.kind,source:got.source,chunks:chunks.length});
 }
 const RETRIEVAL_RETRY_MS=6*60*60*1000;
-let retrievalRunning=false,retrievalController=null,retrievalTimer=null,retrievalStatus='';
+let retrievalRunning=false,retrievalController=null,retrievalTimer=null,retrievalStatus='',retrievalSettled=Promise.resolve();
 function pauseRetrieval(){retrievalController?.abort();clearTimeout(retrievalTimer);}
 function scheduleRetrieval(){
   clearTimeout(retrievalTimer);
@@ -1020,9 +1020,10 @@ function retrievalDue(rec){
   const d=workspace.docs[rec.uid];
   return !hasDoc(rec.uid)&&d?.kind!=='not-retrievable'&&(!d?.retryAt||Date.parse(d.retryAt)<=Date.now()||d.lookupSig!==fingerprint([rec.title,rec.doi,rec.pmid]));
 }
-async function retrieveReadable(rec,base,signal,email){
+async function retrieveReadable(rec,base,signal,email,{pdfOnly=false}={}){
   let attempts=[],skipUrls=[];
   if(!base){
+    if(pdfOnly)throw new Error('Connect the Mac Studio backend to download full-text PDFs.');
     const got=await epmcFullText(rec,signal);
     attempts.push({source:'Other free sources',status:'unavailable',detail:'Connect the Mac Studio backend to try all configured sources.'});
     return {got:got&&chunkParagraphs(got.paras).length>=3?got:null,attempts};
@@ -1035,6 +1036,7 @@ async function retrieveReadable(rec,base,signal,email){
     if(data.kind==='none')return {got:null,attempts};
     if(!data.url||skipUrls.includes(data.url))throw new Error('The retrieval service needs updating to try alternative files.');
     skipUrls.push(data.url);
+    if(pdfOnly&&data.kind!=='pdf'){attempts.push({source:data.source||'Full text',status:'skipped-xml',detail:'Searching for an original PDF.'});continue;}
     try{
       let got;
       if(data.kind==='xml')got={kind:'xml',source:data.source,paras:jatsParagraphs(data.xml),url:data.url};
@@ -1052,6 +1054,7 @@ async function retrieveReadable(rec,base,signal,email){
 async function findOpenAccess(){
   if(!workspace||busy||syncingSource||retrievalRunning||!workspace.records.length||document.hidden||navigator.onLine===false)return;
   const todo=workspace.records.filter(retrievalDue);if(!todo.length)return;
+  let finishRetrieval;retrievalSettled=new Promise(resolve=>{finishRetrieval=resolve;});
   retrievalRunning=true;const ctl=new AbortController();retrievalController=ctl;
   const timeout=setTimeout(()=>ctl.abort(),10*60*1000);
   let done=0,found=0,base='';
@@ -1078,7 +1081,43 @@ async function findOpenAccess(){
     }
     retrievalStatus='Background retrieval: '+found+' full texts added.'+(todo.some(r=>!hasDoc(r.uid))?' Missing files will be retried automatically.':'')+(!base?' Connect the Mac Studio backend to enable all configured sources.':'');
   }catch(e){retrievalStatus=ctl.signal.aborted?'Background retrieval paused; it resumes when the page is visible and screening is idle.':'Automatic retrieval: '+text(e.message,200);}
-  finally{clearTimeout(timeout);retrievalRunning=false;retrievalController=null;safely(renderRetrievalStatus);}
+  finally{clearTimeout(timeout);retrievalRunning=false;retrievalController=null;finishRetrieval();safely(renderRetrievalStatus);}
+}
+
+
+async function downloadFulltextPdfs(){
+  if(busy==='pdf-download'){controller?.abort();return;}
+  if(busy||syncingSource||!workspace.records.length)return;
+  busy='pdf-download';pauseRetrieval();render();
+  const ctl=new AbortController();controller=ctl;
+  const timeout=setTimeout(()=>ctl.abort(),10*60*1000);
+  let found=0,checked=0;
+  try{
+    await retrievalSettled;
+    const todo=[];
+    for(const rec of workspace.records){const doc=hasDoc(rec.uid)?await loadDoc(rec.uid):null;if(!doc?.pdf)todo.push(rec);}
+    if(!todo.length){toast('Every report already has a saved PDF.');return;}
+    const base=await findTypesafeBackend(ctl.signal);
+    if(!base)throw new Error('Connect the Mac Studio backend to download full-text PDFs.');
+    const email=$('oa-email').checkValidity()?$('oa-email').value.trim():'';
+    for(const rec of todo){
+      if(ctl.signal.aborted)throw new DOMException('Stopped','AbortError');
+      const before=structuredClone(workspace),old=await loadDoc(rec.uid);
+      let got=null,attempts=[];
+      try{({got,attempts}=await retrieveReadable(rec,base,ctl.signal,email,{pdfOnly:true}));}
+      catch(e){if(ctl.signal.aborted)throw e;attempts.push({source:'PDF retrieval',status:'failed',detail:text(e.message,200)});}
+      if(ctl.signal.aborted)throw new DOMException('Stopped','AbortError');
+      try{
+        if(got?.kind==='pdf'&&got.file){await storeText(rec.uid,got,got.file);workspace.docs[rec.uid].url=got.url||'';found++;}
+        else if(!workspace.docs[rec.uid])workspace.docs[rec.uid]={kind:'none',source:'No free PDF found',at:now()};
+        workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,pdfCheckedAt:now()};
+        log('pdf-download-retried',{recordId:rec.uid,found:got?.kind==='pdf'});await save();
+      }catch(e){workspace=before;indexRecords();if(old)await saveDoc(old);else{await deleteKey(docStore,docKey(rec.uid));docCache.delete(rec.uid);}publishSummary();throw e;}
+      checked++;$('download-source').textContent='Stop ('+checked+'/'+todo.length+')';renderSource();
+    }
+    toast(found+' PDF'+(found===1?'':'s')+' downloaded; '+(checked-found)+' not available from the configured free sources.');
+  }catch(e){toast(ctl.signal.aborted?'PDF download stopped. Saved files are retained.':e.message);}
+  finally{clearTimeout(timeout);busy='';controller=null;render();}
 }
 
 // A PDF is matched to a report by DOI on its first pages, else by its title:
@@ -1528,6 +1567,8 @@ function renderSource(){
   $('doc-rows').innerHTML=rows.slice(0,docsShown).map(sourceRecordCard).join('');
   $('docs-more').hidden=rows.length<=docsShown;$('docs-more').textContent='Show all '+rows.length+' reports';
   for(const b of ['open-import','clear-source','restore-source'])$(b).disabled=!!busy||syncingSource;
+  $('download-source').disabled=(!!busy&&busy!=='pdf-download')||syncingSource||!workspace.records.length;
+  if(busy!=='pdf-download')$('download-source').textContent='Download';else if(!$('download-source').textContent.startsWith('Stop ('))$('download-source').textContent='Stop download';
   $('clear-source').disabled=!!busy||syncingSource||!workspace.records.length;
   $('clear-source').hidden=!!workspace.sourceCleared&&!workspace.records.length;$('restore-source').hidden=!workspace.sourceCleared;
 
@@ -1939,6 +1980,7 @@ $('confirm-import').addEventListener('click',async()=>{
   finally{importing=false;busy='';$('confirm-import').disabled=false;render();refreshSource();}
 });
 importDialog.addEventListener('cancel',event=>{if(importing)event.preventDefault()});
+$('download-source').addEventListener('click',downloadFulltextPdfs);
 $('clear-source').addEventListener('click',()=>clearSource().catch(e=>showNotice('source-notice',e.message,'error')));
 $('restore-source').addEventListener('click',()=>restoreSource().catch(e=>showNotice('source-notice',e.message,'error')));
 $('check-scope').addEventListener('change',()=>{if(busy)return;workspace.full.check=$('check-scope').value;maybeComplete();save().then(render);});
