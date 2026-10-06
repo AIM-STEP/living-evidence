@@ -38,6 +38,9 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  const many={chunks:Array.from({length:200},(_,i)=>({id:'C'+i,text:'x'.repeat(2000)})),evidence:{byCriterion:{Population:Array.from({length:8},(_,i)=>({id:'C'+i}))}}};assert(ft.evidenceChunks(many).some(c=>c.id==='C7'));assert(ft.evidenceChunks(many).reduce((n,c)=>n+c.text.length,0)<=42000);
  const long='x'.repeat(5000)+' final token here.';const chunks=ft.chunkParagraphs([{text:long,section:'Methods',page:1}]);assert(chunks.some(c=>c.text.includes('final token')));
  const archives=w.modelArchives.length;el('crit-question').value='Edited question';el('crit-rows').querySelectorAll=()=>[{querySelector(sel){return {value:({'.crit-title':'Population','.crit-condition':'Adults aged 18 or older','.crit-uncertain':'Children','.crit-definition':''})[sel]}}}];await ft.saveCriteria();assert.equal(w.criteriaEdited,true);assert.equal(w.pilot.rounds.length,0);assert.equal(w.criteria.rows[0].condition,'Adults aged 18 or older');assert.equal(w.modelArchives.length,archives+1);assert.equal(w.docs.r.kind,'pdf');
+ // XML evidence must not prevent a PDF retry, and a failed retry must preserve it.
+ w=setup();w.docs.r={kind:'xml',source:'Synthetic XML',url:'https://example.org/fulltext'};ft.setDoc('r',{...doc,pdf:null});assert.equal(ft.retrievalDue(rec),true);
+ ft.bindRetrieval(async()=>({got:null,attempts:[]}));await ft.findOpenAccess();assert.equal(w.docs.r.kind,'xml');assert.equal(w.docs.r.url,'https://example.org/fulltext');assert.equal(ft.retrievalDue(rec),false,'Respect retry cooldown after a failed PDF lookup');
  // Auto handoff: additions preserve valid work, removal/metadata changes invalidate it.
  w=setup();let incoming={criteria:w.criteria,criteriaSig:'criteria',records:[rec,{...rec,uid:'r2'}],updatedAt:'now'};
  ft.bindHandoff(incoming);await ft.importFromScreening();assert.equal(w.records.length,2);

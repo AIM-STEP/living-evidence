@@ -1070,7 +1070,7 @@ function renderRetrievalStatus(){
 }
 function retrievalDue(rec){
   const d=workspace.docs[rec.uid];
-  return !hasDoc(rec.uid)&&d?.kind!=='not-retrievable'&&(!d?.retryAt||Date.parse(d.retryAt)<=Date.now()||d.lookupSig!==fingerprint([rec.title,rec.doi,rec.pmid]));
+  return !hasOriginalPdf(rec.uid)&&d?.kind!=='not-retrievable'&&(!d?.retryAt||Date.parse(d.retryAt)<=Date.now()||d.lookupSig!==fingerprint([rec.title,rec.doi,rec.pmid]));
 }
 async function retrieveReadable(rec,base,signal,email){
   return globalThis.AimstepFulltextBrowser.retrieve(rec,{signal,email,extraUrl:workspace.fulltextLinks?.[rec.uid]?.url||'',
@@ -1091,7 +1091,7 @@ async function findOpenAccess(){
     base='browser';
     for(const rec of todo){
       if(ctl.signal.aborted||busy||!workspace.records.length||document.hidden)break;
-      if(!recordById.has(rec.uid)||hasDoc(rec.uid))continue;
+      if(!recordById.has(rec.uid)||hasOriginalPdf(rec.uid))continue;
       let got=null,attempts=[];
       const lookupSig=fingerprint([rec.title,rec.doi,rec.pmid]);
       try{
@@ -1102,8 +1102,8 @@ async function findOpenAccess(){
       const current=recordById.get(rec.uid);
       if(!current||fingerprint([current.title,current.doi,current.pmid])!==lookupSig)continue;
       if(got){await storeText(rec.uid,got,got.file);found++;}
-      else workspace.docs[rec.uid]={kind:'none',source:!rec.doi&&!rec.pmid&&!rec.title?'DOI, PMID or title required':'No readable free full text yet; automatic retry scheduled',at:now()};
-      workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,lookupSig,retryAt:new Date(Date.now()+(base?RETRIEVAL_RETRY_MS:5*60*1000)).toISOString(),url:got?.url||''};
+      else if(!hasDoc(rec.uid))workspace.docs[rec.uid]={kind:'none',source:!rec.doi&&!rec.pmid&&!rec.title?'DOI, PMID or title required':'No readable free full text yet; automatic retry scheduled',at:now()};
+      workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,lookupSig,retryAt:new Date(Date.now()+(base?RETRIEVAL_RETRY_MS:5*60*1000)).toISOString(),url:got?.url||workspace.docs[rec.uid]?.url||''};
       done++;retrievalStatus='Background retrieval: '+done+' / '+todo.length+' checked · '+found+' full texts added.';await save();render();
     }
     retrievalStatus='Background retrieval: '+found+' full texts added.'+(todo.some(r=>!hasDoc(r.uid))?' Missing files will be retried automatically.':'');
