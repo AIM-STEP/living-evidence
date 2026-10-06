@@ -433,8 +433,9 @@ public HTTPS, checked DNS addresses pinned for TLS, and individually validated
 redirects. No caller-provided download URL, authentication cookies or paywall
 bypass is accepted. PDFs must match the report DOI/title before automatic import.
 Rate limits, unavailable metadata, HTML landing pages and unreadable files are
-reported as retrieval failures, not proof that a report is unobtainable. Upload
-remains available. PDF extraction processes all pages; OCR is not included.
+reported as retrieval failures, not proof that a report is unobtainable. Manual PDF upload and assignment are no longer available on the full-text page.
+Previously saved documents remain readable. Automatic PDF retrieval still checks
+DOI/title matches and extracts all pages; OCR is not included.
 
 Provider references checked for this implementation:
 - https://europepmc.org/RestfulWebService
