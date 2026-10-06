@@ -795,7 +795,7 @@ function renderModelSelection(){
   $('screen-model-source').value=screeningProvider();
   $('screen-api-settings').hidden=screeningProvider()!=='typesafe';
   for(const id of ['screen-model-source','screen-api-key','screen-api-model','screen-api-confirm'])$(id).disabled=id==='screen-model-source'||!!busy||(id==='screen-api-confirm'&&!!typesafeConfirmController);
-  $('screen-model-archives').hidden=!workspace?.modelArchives?.length;
+  $('screen-model-archives').hidden=true; // Historical screening runs remain archived internally.
 }
 async function setScreeningModel(provider,name=''){
   if(provider!=='typesafe')throw new Error('This tool uses TypeSafe.');
