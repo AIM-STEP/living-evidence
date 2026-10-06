@@ -176,6 +176,7 @@ th{background:#f4f4f4}
 .step-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid var(--plum);border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.2;letter-spacing:0;text-decoration:none;white-space:nowrap;cursor:pointer}.step-btn:hover{text-decoration:none}.step-btn.back{background:#fff;color:var(--plum)}.step-btn.back:hover{background:#f8eff6}.step-btn.next{background:var(--plum);color:#fff}.step-btn.next:hover{background:#470039;color:#fff}.step-tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:#f8eff6;color:var(--plum);font-size:11px;font-weight:600;vertical-align:1px}
 
 /* Bibliographic records with expandable Full text and Abstract, matching the reference layout. */
+#source-body.source-empty>*{display:none!important}
 .source-record-list{margin-top:18px}.source-record{padding:20px 0 22px;border-bottom:1px solid var(--soft)}.source-record:first-child{padding-top:0}.source-record:last-child{border-bottom:0}
 .source-record-number{font-size:13px;color:#5f6069;margin-bottom:8px}.source-record-title{margin:0 0 10px;font-size:18px;line-height:1.45;font-weight:650;color:#30394c;overflow-wrap:anywhere}
 .source-record-meta{font-size:14px;line-height:1.65;color:#687188;overflow-wrap:anywhere}.source-record-meta p{margin:0}.source-record-id{font-size:12px;margin-top:3px!important}
@@ -1251,11 +1252,12 @@ function sourceRecordCard(r,index){
 
 let docsShown=30;
 function renderSource(){
+  $('source-body').classList.toggle('source-empty',workspace.records.length===0);
   const s=summary();
   $('stat-sought').textContent=s.sought;$('stat-retrieved').textContent=s.retrieved;$('stat-missing').textContent=s.notRetrieved;$('stat-toscreen').textContent=s.pending;
   $('source-hint').textContent=workspace.records.length?'Reports are the records you decided Yes or Maybe in Title and abstract screening. Retrieved full texts are stored in this browser.':workspace.sourceCleared?'Results cleared. Restore results to display the latest selection from the previous step.':'Records marked Yes or Maybe in Title and abstract screening appear here automatically.';
   const rows=workspace.records;
-  $('doc-rows').innerHTML=rows.slice(0,docsShown).map(sourceRecordCard).join('')||'<p class="empty">No reports to display. Eligible records from the previous step appear here automatically unless cleared.</p>';
+  $('doc-rows').innerHTML=rows.slice(0,docsShown).map(sourceRecordCard).join('');
   $('docs-more').hidden=rows.length<=docsShown;$('docs-more').textContent='Show all '+rows.length+' reports';
   for(const b of ['clear-source','restore-source'])$(b).disabled=!!busy||syncingSource;
   $('clear-source').disabled=!!busy||syncingSource||!workspace.records.length;
