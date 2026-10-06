@@ -6,7 +6,7 @@ const ctx={console,URL,URLSearchParams,AbortController,DOMException,structuredCl
  setTimeout(){return 1},clearTimeout(){},setInterval(){},localStorage:{getItem(){return null},setItem(){},removeItem(){}},sessionStorage:{getItem(){return null}},navigator:{},
  location:{href:'https://aimsetp.com/title-abstract-screening.html',search:'',hostname:'aimsetp.com'},document:{activeElement:null,addEventListener(){},getElementById:el,querySelectorAll(){return []},body:{dataset:{}}},window:{addEventListener(){}},confirm(){return true},AimstepCalibration:engine};
 let code=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(s=>s.includes('const PILOT_PROMPT'));
-code=code.replace(/\ninit\(\);/,`\nglobalThis.testPilot={setup(records){source={records,criteriaSig:'criteria',sourceSig:'source',runs:[],criteria:{framework:'PICO',rows:[{title:'Population',condition:'Adults',uncertain:'Children'}]}};recordById.clear();records.forEach(r=>recordById.set(r.uid,r));workspace=defaults();workspace.sourceSig='source';workspace.criteriaSig='criteria';workspace.pilot.size=3;pilotView=-1;pilotReviewDrafts.clear();pilotReviewErrors.clear();},get:()=>workspace,replace(w){workspace=w},view(i){pilotView=i},bindSave(fn){save=fn},bindModel(fn){resolvePilotModel=async()=>({name:'test',provider:'typesafe'});screenPilotRecord=fn},stub(){render=()=>renderPilot();publishSummary=()=>{};log=()=>{};renderCalibration=()=>{};renderFull=()=>{};showNotice=()=>{};toast=()=>{}},startPilotRound,savePilotReview,beginPilotMistake,approvePilotRound,pilotRoundState,pilotMetrics,pilotCard,renderPilot,currentCalibration,pilotPrompt,pilotApprovalValid,validPilotReview,pilotReviewDrafts,pilotReviewErrors};`);
+code=code.replace(/\ninit\(\);/,`\nglobalThis.testPilot={setup(records){source={records,criteriaSig:'criteria',sourceSig:'source',runs:[],criteria:{framework:'PICO',rows:[{title:'Population',condition:'Adults',uncertain:'Children'}]}};recordById.clear();records.forEach(r=>recordById.set(r.uid,r));workspace=defaults();workspace.sourceSig='source';workspace.criteriaSig='criteria';workspace.pilot.size=3;pilotView=-1;pilotReviewDrafts.clear();pilotReviewErrors.clear();},resetAssessmentView(){expandedPilotAssessments.clear()},get:()=>workspace,replace(w){workspace=w},view(i){pilotView=i},bindSave(fn){save=fn},bindModel(fn){resolvePilotModel=async()=>({name:'test',provider:'typesafe'});screenPilotRecord=fn},stub(){render=()=>renderPilot();publishSummary=()=>{};log=()=>{};renderCalibration=()=>{};renderFull=()=>{};showNotice=()=>{};toast=()=>{}},startPilotRound,savePilotReview,beginPilotMistake,approvePilotRound,pilotRoundState,pilotMetrics,pilotCard,renderPilot,currentCalibration,pilotPrompt,pilotApprovalValid,validPilotReview,pilotReviewDrafts,pilotReviewErrors};`);
 vm.runInNewContext(code,ctx);const t=ctx.testPilot;t.stub();
 const currentRoundHTML=()=>el('rounds').innerHTML.match(/<button[^>]*class="round current[^"]*"[^>]*>(.*?)<\/button>/)?.[1]||'';
 const records=Array.from({length:6},(_,i)=>({uid:'r'+i,title:'Synthetic adults study '+i,abstract:'Adults received treatment.',authors:[],year:'2026',journal:'Synthetic'}));
@@ -27,15 +27,16 @@ t.bindModel(async(r,round,signal,variant,bundle)=>{calls.push({id:r.uid,bundle:s
  assert.equal(el('pilot-agreed-count').textContent,'2');assert.equal(el('pilot-mistake-count').textContent,'1');assert(!el('pilot-list').innerHTML.includes('id="pilot-record-'+ids[1]+'"'));assert(el('pilot-list').innerHTML.includes('id="pilot-record-'+ids[0]+'"'));
  el('pilot-filter').handlers.click({target:{closest:()=>({dataset:{filter:'differ'}})}});assert(el('pilot-list').innerHTML.includes('id="pilot-record-'+ids[1]+'"'));assert(!el('pilot-list').innerHTML.includes('id="pilot-record-'+ids[0]+'"'));
  el('pilot-filter').handlers.click({target:{closest:()=>({dataset:{filter:'agreed'}})}});
- // Status badges fold the complete AI assessment without changing saved reviews.
+ // Completed reviews default to folded on page open, with explicit expansion retained.
+ t.resetAssessmentView();
  for(const id of [ids[0],ids[1]]){
-  const before=JSON.stringify(w.pilot.human[id]),body={hidden:false},attrs={};
+  const before=JSON.stringify(w.pilot.human[id]),body={hidden:true},attrs={};
+  const initial=t.pilotCard(records.find(r=>r.uid===id),t.pilotRoundState(0),0);assert(initial.includes('data-pilot-assessment hidden'));assert(initial.includes(id===ids[0]?'Agreed':'Corrected'));
   const toggle={dataset:{toggleAssessment:id},closest:()=>({querySelector:()=>body}),setAttribute:(k,v)=>attrs[k]=v};
   const event={target:{closest:selector=>selector==='[data-toggle-assessment]'?toggle:null}};
-  el('pilot-list').handlers.click(event);assert.equal(body.hidden,true);assert.equal(attrs['aria-expanded'],'false');
-  const folded=t.pilotCard(records.find(r=>r.uid===id),t.pilotRoundState(0),0);assert(folded.includes('data-pilot-assessment hidden'));assert(folded.includes(id===ids[0]?'Agreed':'Corrected'));assert(!folded.includes('Correction saved'));
-  t.renderPilot();assert(t.pilotCard(records.find(r=>r.uid===id),t.pilotRoundState(0),0).includes('data-pilot-assessment hidden'));
-  el('pilot-list').handlers.click(event);assert.equal(body.hidden,false);assert.equal(attrs['aria-expanded'],'true');assert.equal(JSON.stringify(w.pilot.human[id]),before);
+  el('pilot-list').handlers.click(event);assert.equal(body.hidden,false);assert.equal(attrs['aria-expanded'],'true');
+  t.renderPilot();assert(!t.pilotCard(records.find(r=>r.uid===id),t.pilotRoundState(0),0).includes('data-pilot-assessment hidden'));
+  el('pilot-list').handlers.click(event);assert.equal(body.hidden,true);assert.equal(attrs['aria-expanded'],'false');assert.equal(JSON.stringify(w.pilot.human[id]),before);
  }
  const bundle=t.currentCalibration();assert.equal(bundle.pending.length,0);assert.equal(bundle.lessons.length,3);assert.equal(bundle.lessons.filter(l=>l.review==='agree').length,2);assert.equal(bundle.lessons.filter(l=>l.review==='mistake').length,1);
  const prompt=JSON.parse(t.pilotPrompt(records[5],1,1,bundle));assert.equal(prompt.reviewerCalibration.totalLessons,3);assert(prompt.reviewerExamples.some(x=>x.review==='mistake'&&x.correction.includes('children')));assert(prompt.reviewerExamples.some(x=>x.review==='agree'));

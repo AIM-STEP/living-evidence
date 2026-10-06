@@ -733,7 +733,7 @@ function validPilot(p){
 }
 const forward=d=>d==='yes'||d==='maybe';
 const PILOT_REVIEW_MODE='ai-first-v1';
-const pilotReviewDrafts=new Map(),pilotReviewErrors=new Map(),collapsedPilotAssessments=new Set();let pilotReviewSaving=false;
+const pilotReviewDrafts=new Map(),pilotReviewErrors=new Map(),expandedPilotAssessments=new Set();let pilotReviewSaving=false;
 const pilotAIOutcome=a=>a?.decision==='no'?'no':'yes';
 const pilotReviewSignature=a=>fingerprint([a?.round,a?.decision,a?.criteria,a?.criteriaSig,a?.promptHash,a?.at]);
 function validPilotReview(id,round){
@@ -1140,7 +1140,7 @@ function exclusionDetails(id){
 
 function pilotCard(rec,st,index){
   const id=rec.uid,a=workspace.pilot.ai[id],available=!!a&&a.round===index,h=workspace.pilot.human[id],saved=validPilotReview(id,index),draft=pilotReviewDrafts.get(id);
-  const collapsed=saved&&collapsedPilotAssessments.has(id),assessmentId='pilot-assessment-'+encodeURIComponent(id);
+  const collapsed=saved&&!expandedPilotAssessments.has(id)&&!draft&&!pilotReviewErrors.has(id),assessmentId='pilot-assessment-'+encodeURIComponent(id);
   const outcome=pilotAIOutcome(a),decisionLabel=d=>d==='no'?'Exclude':'Include';
   const quotes=available?(a.criteria||[]).map(c=>c.quote).filter(Boolean):[];
   const canReview=available&&st.aiDone&&index===workspace.pilot.rounds.length-1&&!stale()&&!pilotReviewSaving&&!busy;
@@ -2056,12 +2056,12 @@ $('approve-pilot').addEventListener('click',()=>approvePilotRound().catch(e=>sho
 $('stop-pilot').addEventListener('click',()=>controller?.abort());
 $('reset-calibration').addEventListener('click',()=>{
   if(busy||pilotReviewSaving||!confirm('Restart the pilot? All pilot rounds, reviews and the approval are removed.'))return;
-  log('pilot-restarted',{rounds:workspace.pilot.rounds.length});workspace.pilot=newPilot(workspace.pilot.size);exclusionDrafts.clear();pilotReviewDrafts.clear();pilotReviewErrors.clear();collapsedPilotAssessments.clear();pilotView=-1;showNotice('pilot-message','');save().then(render).catch(()=>{});
+  log('pilot-restarted',{rounds:workspace.pilot.rounds.length});workspace.pilot=newPilot(workspace.pilot.size);exclusionDrafts.clear();pilotReviewDrafts.clear();pilotReviewErrors.clear();expandedPilotAssessments.clear();pilotView=-1;showNotice('pilot-message','');save().then(render).catch(()=>{});
 });
 $('pilot-list').addEventListener('click',e=>{
   const toggle=e.target.closest('[data-toggle-assessment]');
   if(toggle){const id=toggle.dataset.toggleAssessment,body=toggle.closest('.record').querySelector('[data-pilot-assessment]');if(!body)return;
-    body.hidden=!body.hidden;if(body.hidden)collapsedPilotAssessments.add(id);else collapsedPilotAssessments.delete(id);
+    body.hidden=!body.hidden;if(body.hidden)expandedPilotAssessments.delete(id);else expandedPilotAssessments.add(id);
     toggle.setAttribute('aria-expanded',String(!body.hidden));return;}
   const t=e.target.closest('[data-abs]');
   if(t){const id=t.dataset.abs,wrap=t.closest('.abs-wrap'),open=!wrap.classList.contains('open');wrap.classList.toggle('open',open);if(open)openAbstracts.add(id);else openAbstracts.delete(id);t.setAttribute('aria-expanded',String(open));t.textContent=open?'Hide full abstract':'Show full abstract';return}
