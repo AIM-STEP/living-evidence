@@ -117,6 +117,16 @@ p{margin:8px 0}
 .status-line{min-height:23px;font-size:12px}
 .dialog{width:min(930px,calc(100vw - 28px));max-height:85vh;border:1px solid var(--line);border-radius:6px;padding:0}
 .dialog::backdrop{background:rgba(13,15,23,.45)}
+#criteria-dialog .criteria-dialog-head{align-items:flex-start;gap:16px}
+.criteria-heading{min-width:0;flex:1}.criteria-heading h2{margin:0}
+.criteria-source-link{display:block;margin:4px 0 0;padding:5px 0;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;line-height:1.5;text-align:left;cursor:pointer}
+.criteria-source-link:hover:not(:disabled){color:var(--plum);text-decoration:underline;text-underline-offset:3px}
+.criteria-source-link:disabled{opacity:.5;cursor:default}
+.criteria-head-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.criteria-close{display:inline-grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted);font:inherit;font-size:26px;line-height:1;cursor:pointer}
+.criteria-close:hover{background:#f3f1f4;color:var(--ink)}
+.criteria-source-link:focus-visible,.criteria-close:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+@media(max-width:420px){#criteria-dialog .criteria-dialog-head{gap:10px}.criteria-head-actions{gap:4px}.criteria-heading h2{font-size:16px}}
 .table-wrap{overflow:auto}
 table{border-collapse:collapse;width:100%;font-size:12px}
 th,td{border:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;white-space:pre-wrap}
@@ -247,7 +257,10 @@ th{background:#f4f4f4}
 </details>
 </main>
 <dialog id="criteria-dialog" class="dialog" aria-labelledby="criteria-title">
-<div class="panel-head"><h2 id="criteria-title">Eligibility criteria</h2><button class="btn small" type="button" id="edit-criteria">Edit</button><button class="btn small" type="button" id="crit-restore">Use title and abstract criteria</button><button class="btn small" type="button" id="close-criteria">Close</button></div>
+<div class="panel-head criteria-dialog-head">
+<div class="criteria-heading"><h2 id="criteria-title">Eligibility criteria</h2><button class="criteria-source-link" type="button" id="crit-restore">Use title and abstract criteria</button></div>
+<div class="criteria-head-actions"><button class="btn small" type="button" id="edit-criteria">Edit</button><button class="criteria-close" type="button" id="close-criteria" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
+</div>
 <div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Edits apply only to full-text screening. Existing runs are archived and a new pilot is required.</p><label class="label" for="crit-question">Review question</label><textarea class="textarea" id="crit-question" rows="2"></textarea><div id="crit-rows"></div><button class="btn small" id="crit-add" type="button">Add criterion</button><p class="hint" id="crit-error" role="alert"></p><div class="toolbar"><button class="btn small" id="crit-cancel" type="button">Cancel</button><button class="btn primary small" id="crit-save" type="button">Save criteria</button></div></div><p class="hint" id="reason-order"></p></div>
 </dialog>
 <dialog id="reader-dialog" class="dialog reader-dialog" aria-labelledby="reader-title">
