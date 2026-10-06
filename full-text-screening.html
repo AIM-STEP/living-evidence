@@ -187,7 +187,7 @@ th{background:#f4f4f4}
 <div class="layout">
 <div class="stack">
 <section class="panel">
-<div class="panel-head fulltext-source-head"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ta">Import from title and abstract screening</button><button class="btn small" type="button" id="find-oa">Find open-access full texts</button><button class="btn small" type="button" id="upload-pdfs">Upload PDFs</button><input type="file" id="pdf-input" accept=".pdf,application/pdf" multiple hidden aria-label="Upload full-text PDFs"><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
+<div class="panel-head fulltext-source-head"><div class="source-title-actions"><h2>Full-text source</h2><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar source-actions"><button class="btn small" type="button" id="clear-source" title="Clear the previous step’s results from this page">Clear</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="btn small" type="button" id="find-oa">Find open-access full texts</button><button class="btn small" type="button" id="upload-pdfs">Upload PDFs</button><input type="file" id="pdf-input" accept=".pdf,application/pdf" multiple hidden aria-label="Upload full-text PDFs"><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
 <div class="panel-body" id="source-body">
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
 <p class="hint" id="source-hint"></p><details><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC full-text XML and publisher links, OpenAlex repository/publisher PDFs, Semantic Scholar open-access PDFs, Unpaywall, and arXiv PDFs for arXiv DOIs. Sources are tried in order until a readable file is found. Rate limits, paywalls and scanned PDFs may require manual upload. DOI / PMID lookups are sent to these services; downloads pass through the Mac Studio backend.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><button class="btn small" id="stop-find" type="button" hidden>Stop retrieval</button>
@@ -629,24 +629,48 @@ const hasDoc=uid=>['xml','pdf'].includes(workspace.docs[uid]?.kind);
 async function readHandoff(){
   try{const db=await openDB('aimstep-fulltext-input');const v=await getProject(db);db.close();return v&&Array.isArray(v.records)?v:null}catch(e){return null}
 }
-const handoffSig=h=>fingerprint([h.criteriaSig,h.records.map(r=>r.uid)]);
-function handoffChanged(){return !!handoff&&!!workspace.handoffAt&&handoffSig(handoff)!==fingerprint([workspace.upstreamCriteriaSig||workspace.criteriaSig,workspace.records.map(r=>r.uid)])}
+const handoffSig=h=>fingerprint([h.criteriaSig,h.records]);
+let syncingSource=false;
 async function importFromScreening(){
-  if(busy)return toast('Stop screening before updating the reports.');
-  handoff=await readHandoff();
-  if(!handoff||!handoff.records.length){showNotice('source-notice','No reports were found from Title and abstract screening. Screen titles and abstracts first: records you decide Yes or Maybe come here.','warning');return}
-  const before=workspace.records.length,criteriaChanged=workspace.criteriaSig&&workspace.criteriaSig!==handoff.criteriaSig;
-  if(criteriaChanged&&(workspace.pilot.rounds.length||Object.keys(workspace.full.ai).length)&&!confirm('The eligibility criteria changed in Title and abstract screening. The pilot approval and AI readings made with the old criteria will no longer count. Update?'))return;
-  const incomingIds=new Set(handoff.records.map(r=>r.uid));
-  if(workspace.pilot.rounds.some(r=>r.ids.some(id=>!incomingIds.has(id)))){archiveRun('Pilot reports changed upstream');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();}
-  if(criteriaChanged&&!workspace.criteriaEdited){archiveRun('Upstream criteria changed');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();}
-  workspace.upstreamCriteriaSig=handoff.criteriaSig;
-  workspace.records=handoff.records.map(r=>({...r}));if(!workspace.criteriaEdited){workspace.criteria=handoff.criteria;workspace.criteriaSig=handoff.criteriaSig;}workspace.handoffAt=handoff.updatedAt;
-  indexRecords();
-  log('reports-imported',{reports:workspace.records.length,previous:before,criteriaSig:workspace.criteriaSig,pendingInTitleAbstract:handoff.pending||0});
-  await save();render();
-  showNotice('source-notice',workspace.records.length+' reports imported from Title and abstract screening'+(handoff.pending?' ('+handoff.pending+' records there still have no final decision)':'')+'. Next: Find open-access full texts, then upload PDFs for the rest.',handoff.pending?'warning':'success');
+  if(!workspace||busy||syncingSource||workspace.sourceCleared)return;
+  syncingSource=true;let changed=false;
+  try{
+    const next=await readHandoff();if(!next||busy||workspace.sourceCleared)return;
+    handoff=next;
+    const signature=handoffSig(next),previous=workspace.sourceHandoffSig||handoffSig({criteriaSig:workspace.upstreamCriteriaSig||workspace.criteriaSig,records:workspace.records});
+    if(signature===previous)return;
+    changed=true;
+    const before=workspace.records.length,criteriaChanged=workspace.criteriaSig&&workspace.criteriaSig!==next.criteriaSig&&!workspace.criteriaEdited;
+    const incoming=new Map(next.records.map(r=>[r.uid,r]));
+    const existingChanged=workspace.records.some(r=>incoming.has(r.uid)&&fingerprint(r)!==fingerprint(incoming.get(r.uid)));
+    const pilotRemoved=workspace.pilot.rounds.some(r=>r.ids.some(id=>!incoming.has(id)));
+    const removed=workspace.records.filter(r=>!incoming.has(r.uid));
+    if(criteriaChanged||existingChanged||pilotRemoved){
+      archiveRun('Upstream screening results changed');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
+    }else if(removed.length){
+      archiveRun('Upstream reports removed');
+      for(const r of removed){delete workspace.full.ai[r.uid];delete workspace.full.ai2[r.uid];delete workspace.full.human[r.uid];}
+    }
+    workspace.upstreamCriteriaSig=next.criteriaSig;
+    workspace.records=structuredClone(next.records);
+    if(!workspace.criteriaEdited){workspace.criteria=structuredClone(next.criteria);workspace.criteriaSig=next.criteriaSig;}
+    workspace.handoffAt=next.updatedAt;workspace.sourceHandoffSig=signature;workspace.full.completedAt='';
+    indexRecords();log('reports-synchronized',{reports:workspace.records.length,previous:before,criteriaSig:workspace.criteriaSig});
+    await save();render();
+    showNotice('source-notice',workspace.records.length+' reports from Title and abstract screening.'+(next.pending?' '+next.pending+' records in the previous step still have no final decision.':'')+((criteriaChanged||existingChanged||pilotRemoved)?' Previous screening runs were archived; complete a new pilot.':''),next.pending?'warning':'success');
+  }finally{syncingSource=false;if(changed&&workspace)safely(renderSource);}
 }
+async function clearSource(){
+  if(busy||syncingSource)return;
+  archiveRun('Upstream results cleared from full-text screening');
+  workspace.sourceCleared=true;workspace.records=[];workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
+  indexRecords();log('source-cleared');await save();showNotice('source-notice','Results cleared from this page. The previous step and saved full-text files are unchanged. Select Restore results to show the latest results again.');render();
+}
+async function restoreSource(){
+  if(busy||syncingSource)return;
+  workspace.sourceCleared=false;workspace.sourceHandoffSig='';await save();await importFromScreening();render();
+}
+function refreshSource(){importFromScreening().catch(e=>showNotice('source-notice','Could not refresh the previous screening results: '+e.message,'error'));}
 function indexRecords(){recordById.clear();workspace.records.forEach(r=>recordById.set(r.uid,r))}
 
 /* ---------------- Full text: Europe PMC (open access) and PDFs ----------------
@@ -1195,15 +1219,16 @@ let docsShown=30;
 function renderSource(){
   const s=summary();
   $('stat-sought').textContent=s.sought;$('stat-retrieved').textContent=s.retrieved;$('stat-missing').textContent=s.notRetrieved;$('stat-toscreen').textContent=s.pending;
-  $('source-hint').textContent=workspace.records.length?'Reports are the records you decided Yes or Maybe in Title and abstract screening. Full texts come from available open-access providers or uploaded PDFs and are stored in this browser.':'Import the reports you decided Yes or Maybe in Title and abstract screening.';
+  $('source-hint').textContent=workspace.records.length?'Reports are the records you decided Yes or Maybe in Title and abstract screening. Full texts come from available open-access providers or uploaded PDFs and are stored in this browser.':workspace.sourceCleared?'Results cleared. Restore results to display the latest selection from the previous step.':'Records marked Yes or Maybe in Title and abstract screening appear here automatically.';
   const rows=workspace.records.slice().sort((a,b)=>hasDoc(a.uid)-hasDoc(b.uid));
   $('doc-rows').innerHTML=rows.slice(0,docsShown).map(r=>{const d=workspace.docs[r.uid],has=hasDoc(r.uid);
     return '<tr><td class="doc-title">'+esc((r.title||'(untitled)').slice(0,160))+'</td><td class="num-col">'+esc(r.year||'')+'</td><td>'+(has?'<span class="ok-dot"></span>'+esc(d.source)+' <span class="hint">('+d.chunks+' passages)</span>':'<span class="hint">'+esc(d?.source||'Not yet')+'</span>')+(d?.attempts?.length?'<details><summary>Retrieval log</summary>'+d.attempts.map(a=>'<div>'+esc(a.source+': '+a.status+(a.detail?' — '+a.detail:''))+'</div>').join('')+'</details>':'')+'</td><td class="act-col">'+
-      (has?'<button class="abs-toggle" type="button" data-read="'+esc(r.uid)+'">Read</button><button class="remove-import" type="button" data-remove-doc="'+esc(r.uid)+'" title="Remove this full text" aria-label="Remove the full text">×</button>':'<button class="abs-toggle" type="button" data-upload-for="'+esc(r.uid)+'">Upload PDF</button>'+(d?.kind!=='not-retrievable'?'<button class="abs-toggle" type="button" data-missing="'+esc(r.uid)+'">Not retrievable</button>':''))+'</td></tr>'}).join('')||'<tr><td colspan="4" class="empty">No reports yet. Use Import from title and abstract screening.</td></tr>';
+      (has?'<button class="abs-toggle" type="button" data-read="'+esc(r.uid)+'">Read</button><button class="remove-import" type="button" data-remove-doc="'+esc(r.uid)+'" title="Remove this full text" aria-label="Remove the full text">×</button>':'<button class="abs-toggle" type="button" data-upload-for="'+esc(r.uid)+'">Upload PDF</button>'+(d?.kind!=='not-retrievable'?'<button class="abs-toggle" type="button" data-missing="'+esc(r.uid)+'">Not retrievable</button>':''))+'</td></tr>'}).join('')||'<tr><td colspan="4" class="empty">No reports to display. Eligible records from the previous step appear here automatically unless cleared.</td></tr>';
   $('docs-more').hidden=rows.length<=docsShown;$('docs-more').textContent='Show all '+rows.length+' reports';
-  for(const b of ['import-ta','find-oa','upload-pdfs'])$(b).disabled=!!busy;
-  const changed=handoffChanged();
-  if(changed&&!busy&&!$('source-notice').textContent)showNotice('source-notice','Title and abstract screening has changed since the reports were imported. Use Import from title and abstract screening to refresh the reports.','warning');
+  for(const b of ['clear-source','restore-source','find-oa','upload-pdfs'])$(b).disabled=!!busy||syncingSource;
+  $('clear-source').disabled=!!busy||syncingSource||!workspace.records.length;
+  $('clear-source').hidden=!!workspace.sourceCleared;$('restore-source').hidden=!workspace.sourceCleared;
+
 }
 function renderPilot(){
   if(document.activeElement?.matches?.('input, textarea, select')&&document.activeElement.closest('#pilot-list'))return;
@@ -1294,7 +1319,7 @@ function bibtex(recs){
 const calibrationEngine=globalThis.AimstepCalibration;
 function archiveRun(reason){
   if(!workspace.pilot.rounds.length&&!Object.keys(workspace.full.ai).length&&!Object.keys(workspace.full.human).length)return;
-  (workspace.modelArchives??=[]).push({at:now(),reason,criteria:structuredClone(workspace.criteria),criteriaSig:workspace.criteriaSig,provider:screeningProvider(),model:workspace.screeningModel||'',pilot:structuredClone(workspace.pilot),full:structuredClone(workspace.full)});
+  (workspace.modelArchives??=[]).push({at:now(),reason,records:structuredClone(workspace.records),criteria:structuredClone(workspace.criteria),criteriaSig:workspace.criteriaSig,provider:screeningProvider(),model:workspace.screeningModel||'',pilot:structuredClone(workspace.pilot),full:structuredClone(workspace.full)});
 }
 function invalidateDocument(id){
   archiveRun('Full text replaced or removed: '+id);
@@ -1376,7 +1401,8 @@ $('calibration-pending').addEventListener('click',e=>{const b=e.target.closest('
 collapsible('toggle-source','source-body','Full-text source','ft-source');
 collapsible('toggle-pilot','pilot-body','Pilot full-text screening','ft-pilot');
 collapsible('toggle-full','full-body','All reports full-text screening','ft-full');
-$('import-ta').addEventListener('click',()=>importFromScreening().catch(e=>showNotice('source-notice',e.message,'error')));
+$('clear-source').addEventListener('click',()=>clearSource().catch(e=>showNotice('source-notice',e.message,'error')));
+$('restore-source').addEventListener('click',()=>restoreSource().catch(e=>showNotice('source-notice',e.message,'error')));
 $('stop-find').addEventListener('click',()=>controller?.abort());
 $('check-scope').addEventListener('change',()=>{if(busy)return;workspace.full.check=$('check-scope').value;maybeComplete();save().then(render);});
 $('find-oa').addEventListener('click',()=>findOpenAccess());
@@ -1433,7 +1459,8 @@ $('export-option').addEventListener('change',updateExportCount);
 $('export-results').addEventListener('click',exportResults);
 document.querySelectorAll('[data-screening]').forEach(a=>a.href=pageLink('title-abstract-screening.html'));
 document.querySelectorAll('[data-extraction]').forEach(a=>a.href=pageLink('extraction.html'));
-window.addEventListener('focus',async()=>{if(!workspace||busy)return;handoff=await readHandoff();safely(renderSource)});
+window.addEventListener('focus',refreshSource);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSource();});
 async function init(){
   try{
     store=await openDB('aimstep-fulltext');docStore=await openDB('aimstep-fulltext-docs');
@@ -1442,7 +1469,8 @@ async function init(){
     workspace.pilot=Object.assign(newPilot(),workspace.pilot||{});workspace.full=Object.assign(newFull(),workspace.full||{});
     if(workspace.pilot.rounds.some(r=>r.prompt!==FT_PROMPT)||Object.values(workspace.full.ai).some(a=>!a.prompt?.startsWith(FT_PROMPT))){archiveRun('Upgrade to calibrated full-text screening');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();await save();}
     indexRecords();await ensureDocs(workspace.pilot.rounds.flatMap(r=>r.ids));handoff=await readHandoff();
-    if(!workspace.records.length&&handoff?.records?.length){await importFromScreening()}
+    await importFromScreening();
+    setInterval(()=>{if(!document.hidden)refreshSource();},5000);
     render();publishSummary();document.body.dataset.ready='true';
   }catch(e){showNotice('source-notice','The full-text workspace could not be opened: '+e.message,'error')}
 }

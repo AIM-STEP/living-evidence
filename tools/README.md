@@ -449,3 +449,14 @@ Live checks retrieved Europe PMC XML and an arXiv PDF and reached OpenAlex and
 Semantic Scholar metadata. No private TypeSafe credential was available for a
 live paid screening request. The browser connector was unavailable; DOM bindings
 and workflow behavior were checked by the VM harness, not a visual browser run.
+
+### Automatic full-text source synchronization
+
+The full-text page displays the previous step’s Yes/Maybe records automatically
+on opening, focus and every five seconds while visible and idle. There is no
+Import button. Clear is local to this page, archives screening runs and persists
+across reloads; it does not delete upstream decisions or downloaded documents.
+Restore results re-enables synchronization. Empty upstream selections remove old
+reports too. Record/criterion changes invalidate affected screening results;
+page-local criteria edits are retained. The workflow regression covers automatic
+updates, persistent clear, restoration, empty sources and deferral during runs.
