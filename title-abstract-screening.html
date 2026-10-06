@@ -156,6 +156,7 @@ th{background:#f4f4f4}
 .btn:not(.primary):not(.btn-primary):not(.btn-link):not(.activated):not([aria-pressed="true"]):hover:not(:disabled),.vote:not(.selected):hover:not(:disabled),.round:not(.current):not(.done):hover:not(:disabled),.pc-btn:not(.selected):hover:not(:disabled),.collapse-toggle:hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.pc-btn:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.pc-btn:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
+.pilot-panel-head{flex-wrap:wrap}.pilot-help-button{display:inline-grid;place-items:center;width:22px;height:22px;padding:1px;border:0;background:none;color:#a081ad;cursor:pointer}.pilot-help-button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round}.pilot-help-button .pilot-help-dot{fill:currentColor;stroke:none}.pilot-help-button:focus-visible{outline:2px solid var(--plum);outline-offset:2px;border-radius:50%}.pilot-help-tooltip{position:fixed;z-index:1000;width:min(470px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;padding:15px 17px;background:#fff;border:1px solid #e6dfea;border-radius:8px;box-shadow:0 5px 20px #24152c20}.pilot-help-tooltip .pilot-steps{margin:0}.pilot-help-tooltip .pilot-steps li+li{margin-top:8px}.pilot-title-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}.pilot-title-actions h2{margin:0}.pilot-panel-head>.toolbar{margin-left:auto}
 </style>
 </head>
 <body>
@@ -180,11 +181,11 @@ th{background:#f4f4f4}
 </div>
 <div class="stack">
 <section class="panel">
-<div class="panel-head"><h2>Pilot screening</h2><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
+<div class="panel-head pilot-panel-head"><div class="pilot-title-actions"><h2>Pilot screening</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot screening works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
 <div class="panel-body" id="pilot-body">
 <button class="btn small" type="button" id="screen-model-archives" hidden>Download previous screening runs</button>
 
-<ol class="pilot-steps"><li>Start a round: the selected AI model screens a random sample of records.</li><li>Vote Yes / Maybe / No on the same records. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Complete at least one round. Then approve the pilot to start formal screening, or run another round if you choose. Additional rounds are optional.</li></ol>
+
 <div class="pilot-controls"><label class="label" for="sample-size">Records per round</label><input class="input" id="sample-size" type="number" min="5" max="100" step="1" value="20"><button class="btn primary" id="run-pilot" type="button">Start round 1</button><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-calibration" type="button">Restart pilot</button></div>
 <div class="audit" id="calibration-panel"><h3 class="sub-head">Learning from pilot corrections</h3><p class="hint">Confirm the criterion and correction for each disagreement. All corrections are saved; relevant rules and examples are selected for each subsequent request. The screening model uses this feedback; model weights are not changed. Approval freezes the feedback for formal screening.</p><p class="hint" id="calibration-summary" role="status"></p><ul id="calibration-pending"></ul><details><summary>Confirmed correction rules</summary><ul id="calibration-rules"></ul></details><div class="toolbar"><button class="btn small" id="calibration-check" type="button">Check corrections (optional)</button><button class="btn small" id="calibration-stop" type="button" hidden>Stop check</button><button class="btn small" id="calibration-download" type="button">Download calibration</button></div><p class="hint" id="calibration-check-status" role="status" aria-live="polite"></p></div>
 <div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div>
@@ -235,6 +236,7 @@ th{background:#f4f4f4}
 </ul>
 </details>
 </main>
+<div id="pilot-help-tooltip" class="pilot-help-tooltip" role="tooltip" hidden><ol class="pilot-steps"><li>Start a round: the selected AI model screens a random sample of records.</li><li>Vote Yes / Maybe / No on the same records. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Complete at least one round. Then approve the pilot to start formal screening, or run another round if you choose. Additional rounds are optional.</li></ol></div>
 <dialog id="screen-connection-dialog" class="dialog" style="width:min(480px,calc(100vw - 28px))" aria-labelledby="screen-connection-title"><div class="panel-head"><h2 id="screen-connection-title">Connect screening</h2><button class="btn small" type="button" id="screen-connection-close" aria-label="Close">×</button></div><div class="panel-body"><div hidden><select class="select" id="screen-model-source" disabled><option value="typesafe">TypeSafe</option></select></div><div id="screen-api-settings">
 <p class="hint">TypeSafe screens each criterion using the title and abstract. Your records and criteria will be sent to TypeSafe. Keep the Mac Studio connection running.</p>
 <label class="label" for="screen-api-key">TypeSafe API key</label>
@@ -1955,6 +1957,28 @@ function collapsible(buttonId,bodyId,name,key){
   btn.addEventListener('click',()=>{const collapsed=!body.hidden;set(collapsed);try{localStorage.setItem(store,collapsed?'1':'0')}catch(e){}});
 }
 collapsible('toggle-source','source-body','Screening source','source');
+let pilotHelpTimer;
+function hidePilotHelp(){clearTimeout(pilotHelpTimer);$('pilot-help-tooltip').hidden=true;}
+function showPilotHelp(){
+  clearTimeout(pilotHelpTimer);
+  const tip=$('pilot-help-tooltip'),button=$('pilot-help-button').getBoundingClientRect();
+  tip.hidden=false;
+  const box=tip.getBoundingClientRect(),gap=8;
+  tip.style.left=Math.max(12,Math.min(button.left,window.innerWidth-box.width-12))+'px';
+  tip.style.top=Math.max(12,button.bottom+gap+box.height<=window.innerHeight-12?button.bottom+gap:button.top-gap-box.height)+'px';
+}
+function scheduleHidePilotHelp(){clearTimeout(pilotHelpTimer);pilotHelpTimer=setTimeout(hidePilotHelp,120);}
+$('pilot-help-button').addEventListener('mouseenter',showPilotHelp);
+$('pilot-help-button').addEventListener('mouseleave',scheduleHidePilotHelp);
+$('pilot-help-tooltip').addEventListener('mouseenter',()=>clearTimeout(pilotHelpTimer));
+$('pilot-help-tooltip').addEventListener('mouseleave',scheduleHidePilotHelp);
+$('pilot-help-button').addEventListener('focus',showPilotHelp);
+$('pilot-help-button').addEventListener('blur',hidePilotHelp);
+$('pilot-help-button').addEventListener('click',showPilotHelp);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')hidePilotHelp();});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#pilot-help-button,#pilot-help-tooltip'))hidePilotHelp();});
+window.addEventListener('resize',hidePilotHelp);
+window.addEventListener('scroll',hidePilotHelp,true);
 collapsible('toggle-pilot','pilot-body','Pilot screening','pilot');
 collapsible('toggle-full','full-body','All records screening','full');
 $('open-import').addEventListener('click',()=>{
