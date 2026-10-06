@@ -161,6 +161,11 @@ th{background:#f4f4f4}
 .pilot-controls #reset-calibration{margin-left:auto;flex-shrink:0}
 .pilot-rounds .round.current{border-color:#a27da0;background:#eadce9;color:#5c004d}
 .pilot-rounds .round.current span{color:#5c004d}
+#pilot-filter{gap:18px;margin:4px 0 0}
+#pilot-filter .pilot-filter-tab{padding:5px 0;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--ink2);font:inherit;font-size:12px;line-height:1.4;cursor:pointer}
+#pilot-filter .pilot-filter-tab[aria-pressed="true"]{border-bottom-color:var(--plum);background:none}
+#pilot-filter .pilot-filter-tab:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+#pilot-list{margin-top:6px}
 </style>
 </head>
 <body>
@@ -194,8 +199,7 @@ th{background:#f4f4f4}
 <div class="audit" id="calibration-panel" hidden><h3 class="sub-head">Learning from pilot corrections</h3><p class="hint">Confirm the criterion and correction for each disagreement. All corrections are saved; relevant rules and examples are selected for each subsequent request. The screening model uses this feedback; model weights are not changed. Approval freezes the feedback for formal screening.</p><p class="hint" id="calibration-summary" role="status"></p><ul id="calibration-pending"></ul><details><summary>Confirmed correction rules</summary><ul id="calibration-rules"></ul></details><div class="toolbar"><button class="btn small" id="calibration-check" type="button">Check corrections (optional)</button><button class="btn small" id="calibration-stop" type="button" hidden>Stop check</button><button class="btn small" id="calibration-download" type="button">Download calibration</button></div><p class="hint" id="calibration-check-status" role="status" aria-live="polite"></p></div>
 <div class="notice" id="pilot-message" hidden role="status"></div>
 <p class="hint pilot-detail" id="pilot-detail" hidden></p>
-<div class="toolbar pilot-filter" id="pilot-filter" hidden><button class="btn small" type="button" data-filter="all" aria-pressed="true">All records</button><button class="btn small" type="button" data-filter="differ" aria-pressed="false">Mistakes</button></div>
-<div class="toolbar abs-tools" id="pilot-abs-tools" hidden><button class="btn small" type="button" id="pilot-abs-all" aria-pressed="false">Expand all abstracts</button></div>
+<div class="toolbar pilot-filter" id="pilot-filter" hidden><button class="pilot-filter-tab" type="button" data-filter="all" aria-pressed="true">All records <span class="count" id="pilot-all-count">0</span></button><button class="pilot-filter-tab" type="button" data-filter="differ" aria-pressed="false">Mistakes <span class="count" id="pilot-mistake-count">0</span></button></div>
 <div class="pilot-list" id="pilot-list"></div>
 </div>
 </section>
@@ -709,10 +713,10 @@ function isLoopback(url){try{return LOOPBACK_HOSTS.includes(new URL(url,location
 function localFetch(url,options){return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
 let pilotModel=null,pilotView=-1,pilotFilter='all';
 // Abstracts open by the reviewer, kept across re-renders while voting.
-const openAbstracts=new Set(),openCheckAbstracts=new Set();let allAbstractsOpen=false,allCheckAbstractsOpen=false;
+const openAbstracts=new Set(),openCheckAbstracts=new Set();let allCheckAbstractsOpen=false;
 function abstractBlock(id,abstract,quotes,check=false){
   if(!abstract)return '<p class="abstract"><span class="hint">No abstract available. '+(check?'Choose Maybe if eligibility is uncertain.':'Review the AI decision against the available title and eligibility criteria.')+'</span></p>';
-  const open=check?(allCheckAbstractsOpen||openCheckAbstracts.has(id)):(allAbstractsOpen||openAbstracts.has(id)),long=check||abstract.length>160,domId=(check?'check-abs-':'abs-')+id;
+  const open=check?(allCheckAbstractsOpen||openCheckAbstracts.has(id)):openAbstracts.has(id),long=check||abstract.length>160,domId=(check?'check-abs-':'abs-')+id;
   return '<div class="abs-wrap'+(open||!long?' open':'')+'"><p class="abstract" id="'+esc(domId)+'">'+excerpt(abstract,quotes)+'</p>'+
     (long?'<button type="button" class="abs-toggle" data-abs="'+esc(id)+'" aria-expanded="'+open+'" aria-controls="'+esc(domId)+'">'+(open?'Hide full abstract':'Show full abstract')+'</button>':'')+'</div>';
 }
@@ -1163,8 +1167,10 @@ function renderPilot(){
   $('pilot-filter').hidden=!shown;
   $('pilot-filter').querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===pilotFilter)));
   let ids=st?st.ids:[];
-  if(shown){const diff=id=>validPilotReview(id,pilotView)&&workspace.pilot.human[id].review==='mistake';ids=ids.slice().sort((a,b)=>diff(b)-diff(a));if(pilotFilter==='differ')ids=ids.filter(diff)}
-  $('pilot-abs-tools').hidden=!ids.length;$('pilot-abs-all').textContent=allAbstractsOpen?'Collapse all abstracts':'Expand all abstracts';$('pilot-abs-all').setAttribute('aria-pressed',String(allAbstractsOpen));
+  const diff=id=>validPilotReview(id,pilotView)&&workspace.pilot.human[id].review==='mistake';
+  $('pilot-all-count').textContent=String(ids.length);$('pilot-mistake-count').textContent=String(ids.filter(diff).length);
+  if(shown){ids=ids.slice().sort((a,b)=>diff(b)-diff(a));if(pilotFilter==='differ')ids=ids.filter(diff)}
+
   const active=document.activeElement,focusId=active?.dataset?.reviewReason,selection=focusId?[active.selectionStart,active.selectionEnd]:null;
   $('pilot-list').innerHTML=st?(ids.length?ids.map(id=>pilotCard(recordById.get(id),st,pilotView)).join(''):'<p class="hint">You and the AI agree on every record in this round.</p>'):'';
   if(focusId){const input=$('pilot-list').querySelector('[data-review-reason="'+CSS.escape(focusId)+'"]');input?.focus({preventScroll:true});input?.setSelectionRange(...selection);}
@@ -2047,13 +2053,12 @@ $('reset-calibration').addEventListener('click',()=>{
 });
 $('pilot-list').addEventListener('click',e=>{
   const t=e.target.closest('[data-abs]');
-  if(t){const id=t.dataset.abs,wrap=t.closest('.abs-wrap'),open=!wrap.classList.contains('open');wrap.classList.toggle('open',open);if(open)openAbstracts.add(id);else{openAbstracts.delete(id);allAbstractsOpen=false;$('pilot-abs-all').textContent='Expand all abstracts';$('pilot-abs-all').setAttribute('aria-pressed','false')}t.setAttribute('aria-expanded',String(open));t.textContent=open?'Hide full abstract':'Show full abstract';return}
+  if(t){const id=t.dataset.abs,wrap=t.closest('.abs-wrap'),open=!wrap.classList.contains('open');wrap.classList.toggle('open',open);if(open)openAbstracts.add(id);else openAbstracts.delete(id);t.setAttribute('aria-expanded',String(open));t.textContent=open?'Hide full abstract':'Show full abstract';return}
   const b=e.target.closest('[data-review]');if(b){if(b.dataset.review==='agree')savePilotReview(b.dataset.id,'agree');else beginPilotMistake(b.dataset.id);return;}
   const button=e.target.closest('[data-review-save]');if(button)savePilotReview(button.dataset.reviewSave,'mistake');
 });
 // Abstracts that fit in the three-line preview need no toggle.
 function trimAbstractToggles(list){list.querySelectorAll('.abs-wrap:not(.open)').forEach(w=>{const p=w.querySelector('.abstract');if(p.scrollHeight<=p.clientHeight+2){w.classList.add('open');w.querySelector('.abs-toggle')?.remove()}})}
-$('pilot-abs-all').addEventListener('click',()=>{allAbstractsOpen=!allAbstractsOpen;openAbstracts.clear();renderPilot()});
 $('pilot-list').addEventListener('input',e=>{const id=e.target.dataset.reviewReason;if(id&&pilotReviewDrafts.has(id))pilotReviewDrafts.get(id).note=e.target.value;});
 $('check-list').addEventListener('input',captureExclusionReason);
 

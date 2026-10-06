@@ -24,6 +24,7 @@ t.bindModel(async(r,round,signal,variant,bundle)=>{calls.push({id:r.uid,bundle:s
  t.bindSave(async()=>{saved=structuredClone(t.get())});await t.savePilotReview(ids[1],'mistake');assert.equal(w.pilot.human[ids[1]].decision,'no');assert.match(w.pilot.human[ids[1]].exclusionReason,/children/);assert.equal(t.pilotRoundState(0).revealed,false);
  await t.savePilotReview(ids[2],'agree');assert.equal(t.pilotRoundState(0).revealed,true);assert.equal(t.pilotMetrics(ids).accuracy,2/3);assert(currentRoundHTML().includes('AI accuracy'));assert(currentRoundHTML().includes('AI accuracy 67%')&&currentRoundHTML().includes('Round 1 Reviewed'));
  t.beginPilotMistake(ids[0]);assert(!currentRoundHTML().includes('AI accuracy'));await t.startPilotRound();assert.equal(w.pilot.rounds.length,1);await t.approvePilotRound();assert.equal(w.pilot.approved,null);await t.savePilotReview(ids[0],'agree');assert(currentRoundHTML().includes('AI accuracy'));
+ assert.equal(el('pilot-all-count').textContent,'3');assert.equal(el('pilot-mistake-count').textContent,'1');
  const bundle=t.currentCalibration();assert.equal(bundle.pending.length,0);assert.equal(bundle.lessons.length,3);assert.equal(bundle.lessons.filter(l=>l.review==='agree').length,2);assert.equal(bundle.lessons.filter(l=>l.review==='mistake').length,1);
  const prompt=JSON.parse(t.pilotPrompt(records[5],1,1,bundle));assert.equal(prompt.reviewerCalibration.totalLessons,3);assert(prompt.reviewerExamples.some(x=>x.review==='mistake'&&x.correction.includes('children')));assert(prompt.reviewerExamples.some(x=>x.review==='agree'));
  t.replace(structuredClone(saved));w=t.get();assert.equal(t.pilotRoundState(0).revealed,true);assert.equal(t.pilotMetrics(ids).accuracy,2/3);
@@ -37,6 +38,7 @@ t.bindModel(async(r,round,signal,variant,bundle)=>{calls.push({id:r.uid,bundle:s
  t.beginPilotMistake(id);t.pilotReviewDrafts.get(id).note='The report includes eligible adults.';await t.savePilotReview(id,'mistake');assert.equal(w.pilot.human[id].decision,'yes');assert.equal(w.pilot.human[id].exclusionReason,'');
  t.view(0);t.renderPilot();assert(currentRoundHTML().includes('Round 1'));assert(currentRoundHTML().includes('AI accuracy 67%')&&currentRoundHTML().includes('Round 1 Reviewed'));assert(el('rounds').innerHTML.includes('data-round="0" aria-pressed="true"'));assert(el('rounds').innerHTML.includes('data-round="1" aria-pressed="false"'));
  assert(html.indexOf('id="run-pilot"')<html.indexOf('id="rounds"'));assert(html.indexOf('id="rounds"')<html.indexOf('id="reset-calibration"'));assert(html.includes('.pilot-rounds .round.current{'));
+ assert(!html.includes('pilot-abs-all'));assert(!html.includes('pilot-abs-tools'));assert(html.includes('class="pilot-filter-tab"'));
  assert(html.includes('id="pilot-detail" hidden'));assert(!html.includes('id="pilot-accuracy"'));
  for(const id of ['pilot-voted','pilot-ai','pilot-agreement','pilot-kappa','pilot-false-ex'])assert(!html.includes('id="'+id+'"'));
  const known=new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));for(const id of elements.keys())assert(known.has(id),'Missing UI binding '+id);
