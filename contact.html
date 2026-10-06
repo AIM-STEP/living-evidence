@@ -857,7 +857,13 @@
               from { transform: rotate(var(--from)); }
               to { transform: rotate(calc(var(--from) + 360deg)); }
             }
-    </style>
+
+/* Match the compact neutral controls used throughout the screening workflow. */
+.login,.login-card .btn-google,.pw-sort-trigger{height:auto;min-height:26px;padding:4px 8px;border:1px solid #e4e4e8;border-radius:6px;background:#fafafb;color:#5f6069;font-size:12px;font-weight:500;line-height:1.25}
+.login:hover:not(:disabled),.login-card .btn-google:hover:not(:disabled),.pw-sort-trigger:hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
+.login:focus-visible,.login-card .btn-google:focus-visible,.pw-sort-trigger:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+.login:disabled,.login-card .btn-google:disabled,.pw-sort-trigger:disabled{opacity:.48;cursor:not-allowed}
+</style>
   </head>
   <body>
     <!-- Logo artwork (from AIM-STEP_square.svg) plus shared gradients/filters for the tiles -->
