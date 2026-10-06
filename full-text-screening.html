@@ -1553,7 +1553,7 @@ async function openReader(id,originalOnly=false){
 }
 
 /* ---------------- Rendering ---------------- */
-const sourceDetailsOpen=new Set();
+const sourceDetailsOpen=new Set(),sourceDetailsInitialized=new Set();
 // Count only saved PDF documents, never XML documents or web links.
 function fulltextPrimaryBadge(documents){
   return documents.filter(d=>d?.kind==='pdf').length>=2?'<span class="source-file-primary">Primary</span>':'';
@@ -1571,6 +1571,7 @@ function firstAuthorGivenName(r){
   return parts.length>1&&/^(?:[A-Z]\.?){1,3}$/.test(last)?last:parts[0];
 }
 function sourceRecordCard(r,index){
+  if(!sourceDetailsInitialized.has(r.uid)){sourceDetailsInitialized.add(r.uid);sourceDetailsOpen.add(r.uid+'|fulltext');}
   const d=workspace.docs[r.uid],has=hasOriginalPdf(r.uid),authors=Array.isArray(r.authors)?r.authors.filter(Boolean).join(', '):String(r.authors||'');
   const citation=[r.year,[r.volume,r.issue?'('+r.issue+')':''].filter(Boolean).join('')].filter(Boolean).join('; ')+(r.pages?': '+r.pages:'');
   const bibliography=[r.journal,citation].filter(Boolean).join(' · ');
