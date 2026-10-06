@@ -1913,7 +1913,7 @@ function loadManualCriteriaEditor(snapshot){
   manualEditorReady=false;manualEditorDraft=structuredClone(snapshot||{});
   manualEditorDraft.framework||=inferFramework(manualEditorDraft.rows||[]);
   const frame=$('crit-manual-frame');frame.hidden=true;$('crit-editor-loading').hidden=false;
-  const url=new URL('eligibility.html',location.href);url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261006');
+  const url=new URL('eligibility.html',location.href);url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261006-direct');
   if(projectId)url.searchParams.set('projectId',projectId);
   frame.src=url.href;
 }

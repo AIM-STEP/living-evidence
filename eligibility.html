@@ -27,6 +27,7 @@
 <style>
 .embedded-manual body{background:#fff}
 .embedded-manual .header,.embedded-manual .steps,.embedded-manual .crumb,.embedded-manual .heading,.embedded-manual .preview-actions,.embedded-manual .editor>.section:not(#manual-generate-panel){display:none!important}
+.embedded-manual .manual-limits-heading,.embedded-manual .limits-grid,.embedded-manual .manual-refine-controls,.embedded-manual #manual-refine-status{display:none!important}
 .embedded-manual .wrap{max-width:none;margin:0;padding:0}
 .embedded-manual .layout{display:block}
 .embedded-manual .panel{box-shadow:none;border:0;border-radius:0}
@@ -42,7 +43,7 @@
 <div class="section"><div class="section-head"><div><h2>Review type</h2></div></div><label class="field-label" for="review-type">Review type</label><select class="select" id="review-type"><option>Literature Review</option><option>Systematic Review</option><option>Network/Meta-analysis</option><option>Scoping Review</option><option>Other Review</option></select></div>
 <div class="section"><label class="field-label" for="generation-method">Generation Method</label><select class="select" id="generation-method"><option value="" hidden></option><option value="machine">Machine generate</option><option value="manual">Manual generate</option></select></div>
 <div class="section" id="machine-generate-panel" hidden><div class="section-head"><div><h2>Machine generate</h2></div></div><div class="machine-input"><textarea id="question" class="textarea" aria-label="Review question for automatic criteria generation" placeholder="What population, intervention or phenomenon are you studying?"></textarea><div class="machine-input-tools"><button class="machine-tool" id="add-source" type="button" aria-label="Upload Word, PDF, text or image" title="Upload a document or image">＋</button><button class="machine-tool" id="voice-toggle" type="button" aria-label="Start voice input" aria-pressed="false" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg></button><input id="source-files" type="file" accept=".docx,.pdf,.txt,.md,.csv,image/png,image/jpeg,image/webp" multiple hidden></div></div><div id="machine-attachments" class="machine-attachments" aria-live="polite" hidden></div><div class="machine-actions"><button class="btn" id="clear-question" type="button">Clear</button><button class="btn btn-primary" id="start-machine" type="button">Start</button></div><div id="generation-status" class="hint machine-status" role="status" aria-live="polite" hidden></div></div>
-<div class="section" id="manual-generate-panel" hidden><div class="section-head"><div><h2>Manual generate</h2></div><div class="manual-actions"><button class="btn" id="manual-generate" type="button" aria-label="Clear all entered eligibility content">Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker">＋ Add criterion</button></div></div><label class="field-label">Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden><strong>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other">Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading" style="margin-top:18px">Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label">Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date">Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date">End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language">Language</label><select id="language" class="select"><option value="">Select language</option><option value="Chinese">Chinese</option><option value="English">English</option></select></div><div><label class="field-label" for="limits-other">Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div class="manual-refine-controls"><button class="btn btn-primary" id="refine-manual" type="button">Standardize</button></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
+<div class="section" id="manual-generate-panel" hidden><div class="section-head"><div><h2>Manual generate</h2></div><div class="manual-actions"><button class="btn" id="manual-generate" type="button" aria-label="Clear all entered eligibility content">Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker">＋ Add criterion</button></div></div><label class="field-label">Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden><strong>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other">Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading manual-limits-heading" style="margin-top:18px">Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label">Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date">Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date">End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language">Language</label><select id="language" class="select"><option value="">Select language</option><option value="Chinese">Chinese</option><option value="English">English</option></select></div><div><label class="field-label" for="limits-other">Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div class="manual-refine-controls"><button class="btn btn-primary" id="refine-manual" type="button">Standardize</button></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2>Criteria</h2></div><div class="preview-body" id="preview"></div><div class="preview-actions"><button class="btn" id="download" type="button">Download criteria</button><a class="step-btn next" id="next-search-strategy" href="search-strategy.html">Next: Search strategy <span aria-hidden="true">→</span></a></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
@@ -665,7 +666,14 @@ const summaryKey='aimstep-eligibility-summary:'+(projectId||'default');
 function summaryRowsSig(rows){let h=2166136261;for(const c of JSON.stringify((rows||[]).map(r=>[String(r.title||''),String(r.condition||''),String(r.uncertain||''),String(r.definition||'')])))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0).toString(16)}
 function shareSummary(data){if(embeddedManual)return;try{if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
 function renderPreview(){
-  const area=$('preview');if(!$('generation-method').value){area.innerHTML='';$('download').hidden=true;shareSummary(null);return}
+  const area=$('preview');
+  if(embeddedManual){
+    const entries=state.criteria.map(r=>({title:r.title,include:[r.condition,r.definition].filter(v=>String(v||'').trim()).join('\n'),exclude:String(r.uncertain||'').trim()}));
+    const lines=field=>entries.filter(r=>r[field]).map(r=>`<div class="summary-inclusion"><span style="white-space:pre-wrap"><strong>${escapeHtml(r.title)}:</strong> ${escapeHtml(r[field])}</span></div>`).join('');
+    area.innerHTML='<div class="criteria-summary"><section class="summary-block"><h3>Inclusion criteria</h3>'+(lines('include')||'<p class="summary-muted">Enter eligibility rules above to generate criteria.</p>')+'</section><section class="summary-block"><h3>Exclusion criteria</h3>'+(lines('exclude')||'<p class="summary-muted">No explicit exclusion rules entered.</p>')+'</section></div>';
+    return;
+  }
+  if(!$('generation-method').value){area.innerHTML='';$('download').hidden=true;shareSummary(null);return}
   if($('generation-method').value==='machine'&&(!state.machineRun||state.machineRun.question!==$('question').value.trim()||state.machineRun.reviewType!==$('review-type').value||(state.machineRun.sourceRevision??0)!==(Number(state.machineSourceRevision)||0))){area.innerHTML='<p class="empty">Click Start to generate criteria from the current text and attachments.</p>';$('download').hidden=true;shareSummary(null);return}
   $('download').hidden=false;
   const {rows,framework,pending,exclusions,limits,topic,paragraph,trace}=standardizedCriteria();
@@ -826,31 +834,18 @@ if(embeddedManual){
       stopManualRefinement();stopMachineGeneration();
       const draft=structuredClone(snapshot.manualEditor||{});
       state={...state,...draft,question:snapshot.question||'',framework:draft.framework||snapshot.framework||'Other',
-        criteria:structuredClone(draft.criteria||snapshot.rows||[]),reviewType:draft.reviewType||snapshot.reviewType||'Systematic Review',
+        criteria:structuredClone(draft.criteria||snapshot.rows||[]).filter(r=>r.id!=='FT-limits'),reviewType:draft.reviewType||snapshot.reviewType||'Systematic Review',
         activeGenerator:'manual',generationMethodChoice:'manual',machineCriteria:[],machineRun:null,machineRefinement:null,
-        manualRefinement:draft.manualRefinement||null,dateRange:draft.dateRange||{},language:draft.language||'',limitsOther:draft.limitsOther||'',
+        manualRefinement:null,dateRange:{},language:'',limitsOther:'',
         pendingDecisions:draft.pendingDecisions||{},finalCriteria:draft.finalCriteria||null,confirmed:false};
       setManualStatus('');fill();picker.hidden=true;
     },
     read(){
-      if(manualRefinementController)throw new Error('Wait for Standardize to finish before saving.');
       save();
-      const start=dateToInput(state.dateRange?.start,'start'),end=dateToInput(state.dateRange?.end,'end');
-      if(start&&end&&start>end)throw new Error('The start date must not be later than the end date.');
-      const preview=standardizedCriteria();
       const rows=state.criteria.map((r,i)=>({id:'FT-'+(i+1),title:String(r.title||'').trim(),
-        condition:preview.refined?preview.rows[i].include.join('\n'):String(r.condition||'').trim(),
-        uncertain:preview.refined?preview.rows[i].exclude.join('\n'):String(r.uncertain||'').trim(),
-        definition:preview.refined?'':String(r.definition||'').trim()}));
-      // Limits are assessable rules, so they travel through the same evidence and decision pipeline.
-      const limits=[];
-      if(start||end)limits.push('Publication date: '+(start&&end?start+' to '+end:start?'From '+start:'Through '+end));
-      if(state.language)limits.push('Language: '+state.language);
-      if(state.limitsOther.trim())limits.push(state.limitsOther.trim());
-      if(limits.length){let title='Limits';while(rows.some(r=>r.title.toLowerCase()===title.toLowerCase()))title='Additional '+title;
-        rows.push({id:'FT-limits',title,condition:limits.join('\n'),uncertain:'',definition:''});}
-      const {framework,reviewType,criteria,dateRange,language,limitsOther,manualRefinement,pendingDecisions,finalCriteria}=state;
-      return structuredClone({rows,framework,reviewType,manualEditor:{framework,reviewType,criteria,dateRange,language,limitsOther,manualRefinement,pendingDecisions,finalCriteria}});
+        condition:String(r.condition||'').trim(),uncertain:String(r.uncertain||'').trim(),definition:String(r.definition||'').trim()}));
+      const {framework,reviewType,criteria}=state;
+      return structuredClone({rows,framework,reviewType,manualEditor:{framework,reviewType,criteria}});
     },
     stop(){stopManualRefinement();stopMachineGeneration();}
   };
