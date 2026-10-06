@@ -399,3 +399,53 @@ python3 tools/test_typesafe_model.py
 All automated checks use synthetic records and mocked model responses. A real
 provider replay is initiated by the reviewer in the page; no accuracy gain is
 claimed without such evaluation and a separate fresh sample.
+
+## Full-text screening (2026-10-06)
+
+`full-text-screening.html` now shares title/abstract screening's local / TypeSafe
+selection and tab-only key confirmation. TypeSafe receives selected **full-text
+passages**, the criteria and frozen reviewer corrections; it does not substitute
+an abstract for a full text. Exact exclusion quotations must match the named
+passage. Both positive and negative retrieval scores are represented in the
+bounded evidence context; missing evidence remains Unclear. Two readings are
+model readings, not independent human reviewers.
+
+- Complete and compare at least one pilot round; additional rounds are optional.
+  Confirm a criterion and explanation for every disagreement. Approval freezes
+  the correction bundle; changes invalidate approval. Optional correction replay
+  does not overwrite the original pilot or constitute independent validation.
+- Eligibility criteria → Edit applies only to the full-text workspace. Criteria,
+  provider and document changes archive affected runs and require new screening.
+  “Download previous screening runs” retains the prior results and criteria.
+- One supported unmet criterion excludes unless the other reading directly
+  contradicts it. Default human review covers uncertainty and conflicts; users
+  may include a random sample of up to 300 exclusions or all exclusions.
+- Human exclusions require a reason. CSV, RIS, RevMan RIS, BibTeX and JSON retain
+  reasons; CSV/JSON also trace criteria, document and calibration versions.
+
+Open-access retrieval uses the existing guarded `/api/eligibility/model` endpoint
+with `provider: "fulltext"`, so the remote proxy needs no new public route.
+`tools/fulltext_sources.py` queries Europe PMC XML/OA links, OpenAlex OA locations,
+Semantic Scholar openAccessPdf, and optionally Unpaywall DOI locations. Recognized
+arXiv DOIs also resolve to arXiv PDF downloads. A real user-supplied email is needed
+for Unpaywall; no placeholder email is sent. Downloads are limited to 24 MiB,
+public HTTPS, checked DNS addresses pinned for TLS, and individually validated
+redirects. No caller-provided download URL, authentication cookies or paywall
+bypass is accepted. PDFs must match the report DOI/title before automatic import.
+Rate limits, unavailable metadata, HTML landing pages and unreadable files are
+reported as retrieval failures, not proof that a report is unobtainable. Upload
+remains available. PDF extraction processes all pages; OCR is not included.
+
+Provider references checked for this implementation:
+- https://europepmc.org/RestfulWebService
+- https://help.openalex.org/api/authentication/
+- https://api.semanticscholar.org/api-docs/
+- https://unpaywall.org/products/api
+
+Validation: `python3 tools/test_fulltext_sources.py`,
+`node tools/test_fulltext_workflow.cjs`, existing local/remote server, TypeSafe,
+calibration and title/abstract tests, and the repository inline-script checker.
+Live checks retrieved Europe PMC XML and an arXiv PDF and reached OpenAlex and
+Semantic Scholar metadata. No private TypeSafe credential was available for a
+live paid screening request. The browser connector was unavailable; DOM bindings
+and workflow behavior were checked by the VM harness, not a visual browser run.

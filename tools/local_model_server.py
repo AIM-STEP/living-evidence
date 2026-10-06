@@ -46,6 +46,7 @@ from __future__ import annotations
 import argparse
 import api_model
 import typesafe_model
+import fulltext_sources
 import json
 import os
 import sys
@@ -365,6 +366,8 @@ class Handler(SimpleHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             if isinstance(payload, dict) and payload.get("provider") == "typesafe":
                 return self._typesafe(payload)
+            if isinstance(payload, dict) and payload.get("provider") == "fulltext":
+                return self._send_json(200, fulltext_sources.retrieve(payload))
             messages = clean_messages(payload)
             fmt = clean_format(payload)
             provider = payload.get("provider", "local")

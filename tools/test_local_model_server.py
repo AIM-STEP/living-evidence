@@ -381,6 +381,24 @@ class ServerTest(unittest.TestCase):
             api.assert_not_called()
             self.assertNotIn('secret', json.dumps(body))
 
+    def test_fulltext_retrieval_route(self):
+        with patch.object(srv.fulltext_sources, 'retrieve', return_value={'kind':'none','attempts':[]}) as retrieve, patch.object(srv.api_model, 'chat') as chat:
+            status, data = self.req('POST', srv.MODEL, {'provider':'fulltext','record':{'pmid':'123'}})
+        self.assertEqual(status, 200)
+        self.assertEqual(data['kind'], 'none')
+        retrieve.assert_called_once()
+        chat.assert_not_called()
+
+    def test_fulltext_origin_guard(self):
+        with patch.object(srv.fulltext_sources, 'retrieve') as retrieve:
+            status, _ = self.req('POST', srv.MODEL, {'provider':'fulltext','record':{'pmid':'123'}}, {'Origin':'https://untrusted.example'})
+        self.assertEqual(status, 403)
+        retrieve.assert_not_called()
+
+    def test_fulltext_invalid_identifier(self):
+        status, _ = self.req('POST', srv.MODEL, {'provider':'fulltext','record':{'doi':'https://127.0.0.1'}})
+        self.assertEqual(status, 400)
+
     def test_typesafe_discovery_bypasses_text_generation(self):
         with patch.object(srv.typesafe_model, 'models', return_value={'models':['test-model']}) as models, patch.object(srv.api_model, 'chat') as chat:
             status, body = self.req('POST', srv.MODEL, {'provider':'typesafe','action':'models','apiKey':'synthetic-key'})

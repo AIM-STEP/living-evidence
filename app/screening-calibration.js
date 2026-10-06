@@ -16,12 +16,12 @@
         let issue='';
         if(criterion!=='*'&&!names.has(criterion))issue='Select the criterion to correct.';
         else if(!guidance)issue='Explain the correction for future records.';
-        else if(quote&&!((record.title||'')+' '+(record.abstract||'')).includes(quote))issue='The supporting quote must be copied exactly from this record.';
+        else if(quote&&!((record.title||'')+' '+(record.fullText||record.abstract||'')).includes(quote))issue='The supporting quote must be copied exactly from this record.';
         if(issue){pending.push({recordId:id,round:i+1,title:record.title,issue});continue;}
         lessons.push({id:'round-'+(i+1)+'-'+id,recordId:id,round:i+1,criterion,
           aiDecision:ai.decision,reviewerDecision:human.decision,correction:guidance,
           exclusionReason:clean(human.exclusionReason),supportingQuote:quote,
-          title:record.title||'',abstract:record.abstract||'',
+          title:record.title||'',abstract:record.abstract||'',...(record.fullText?{fullTextExcerpt:record.fullText.slice(0,3000),fullTextTruncated:record.fullText.length>3000}:{}),
           originalJudgments:(ai.criteria||[]).map(c=>({dimension:c.dimension,judgment:c.judgment,quote:c.quote||''}))});
       }
     }
@@ -50,7 +50,7 @@
       if(!selected.selectedLessonIds.includes(lesson.id))continue;
       selected.examples.push({lessonId:lesson.id,title:lesson.title,abstract:lesson.abstract.slice(0,3000),
         abstractTruncated:lesson.abstract.length>3000,aiDecision:lesson.aiDecision,reviewerDecision:lesson.reviewerDecision,
-        criterion:lesson.criterion,correction:lesson.correction,supportingQuote:lesson.supportingQuote});
+        criterion:lesson.criterion,correction:lesson.correction,supportingQuote:lesson.supportingQuote,...(lesson.fullTextExcerpt?{fullTextExcerpt:lesson.fullTextExcerpt,fullTextTruncated:lesson.fullTextTruncated}:{})});
       if(JSON.stringify(selected).length>maxChars)selected.examples.pop();
     }
     return selected;
