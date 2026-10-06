@@ -166,6 +166,7 @@ th{background:#f4f4f4}
 #pilot-filter .pilot-filter-tab[aria-pressed="true"]{border-bottom-color:var(--plum);background:none}
 #pilot-filter .pilot-filter-tab:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 #pilot-list{margin-top:6px}
+.pilot-controls{padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -199,7 +200,7 @@ th{background:#f4f4f4}
 <div class="audit" id="calibration-panel" hidden><h3 class="sub-head">Learning from pilot corrections</h3><p class="hint">Confirm the criterion and correction for each disagreement. All corrections are saved; relevant rules and examples are selected for each subsequent request. The screening model uses this feedback; model weights are not changed. Approval freezes the feedback for formal screening.</p><p class="hint" id="calibration-summary" role="status"></p><ul id="calibration-pending"></ul><details><summary>Confirmed correction rules</summary><ul id="calibration-rules"></ul></details><div class="toolbar"><button class="btn small" id="calibration-check" type="button">Check corrections (optional)</button><button class="btn small" id="calibration-stop" type="button" hidden>Stop check</button><button class="btn small" id="calibration-download" type="button">Download calibration</button></div><p class="hint" id="calibration-check-status" role="status" aria-live="polite"></p></div>
 <div class="notice" id="pilot-message" hidden role="status"></div>
 <p class="hint pilot-detail" id="pilot-detail" hidden></p>
-<div class="toolbar pilot-filter" id="pilot-filter" hidden><button class="pilot-filter-tab" type="button" data-filter="all" aria-pressed="true">All records <span class="count" id="pilot-all-count">0</span></button><button class="pilot-filter-tab" type="button" data-filter="differ" aria-pressed="false">Mistakes <span class="count" id="pilot-mistake-count">0</span></button></div>
+<div class="toolbar pilot-filter" id="pilot-filter" hidden><button class="pilot-filter-tab" type="button" data-filter="agreed" aria-pressed="true">Agreed <span class="count" id="pilot-agreed-count">0</span></button><button class="pilot-filter-tab" type="button" data-filter="differ" aria-pressed="false">Mistakes <span class="count" id="pilot-mistake-count">0</span></button></div>
 <div class="pilot-list" id="pilot-list"></div>
 </div>
 </section>
@@ -711,7 +712,7 @@ const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').
 const LOOPBACK_HOSTS=['localhost','127.0.0.1','[::1]','::1'];
 function isLoopback(url){try{return LOOPBACK_HOSTS.includes(new URL(url,location.href).hostname)}catch(e){return false}}
 function localFetch(url,options){return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
-let pilotModel=null,pilotView=-1,pilotFilter='all';
+let pilotModel=null,pilotView=-1,pilotFilter='agreed';
 // Abstracts open by the reviewer, kept across re-renders while voting.
 const openAbstracts=new Set(),openCheckAbstracts=new Set();let allCheckAbstractsOpen=false;
 function abstractBlock(id,abstract,quotes,check=false){
@@ -1010,7 +1011,7 @@ async function startPilotRound(){
     const calibration=currentCalibration(p.rounds.length);
     p.approved=null;
     p.rounds.push({reviewMode:PILOT_REVIEW_MODE,ids,seed,calibration,size:p.size,startedAt:now(),criteriaSig:source.criteriaSig,prompt:PILOT_PROMPT,revealedAt:''});
-    i=p.rounds.length-1;pilotView=i;pilotFilter='all';
+    i=p.rounds.length-1;pilotView=i;pilotFilter='agreed';
     log('pilot-round-started',{round:i+1,records:ids.length,seed,criteriaSig:source.criteriaSig});
     await save();
   }
@@ -1168,11 +1169,12 @@ function renderPilot(){
   $('pilot-filter').querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===pilotFilter)));
   let ids=st?st.ids:[];
   const diff=id=>validPilotReview(id,pilotView)&&workspace.pilot.human[id].review==='mistake';
-  $('pilot-all-count').textContent=String(ids.length);$('pilot-mistake-count').textContent=String(ids.filter(diff).length);
-  if(shown){ids=ids.slice().sort((a,b)=>diff(b)-diff(a));if(pilotFilter==='differ')ids=ids.filter(diff)}
+  const agreed=id=>validPilotReview(id,pilotView)&&workspace.pilot.human[id].review==='agree';
+  $('pilot-agreed-count').textContent=String(ids.filter(agreed).length);$('pilot-mistake-count').textContent=String(ids.filter(diff).length);
+  if(shown)ids=ids.filter(pilotFilter==='differ'?diff:agreed);
 
   const active=document.activeElement,focusId=active?.dataset?.reviewReason,selection=focusId?[active.selectionStart,active.selectionEnd]:null;
-  $('pilot-list').innerHTML=st?(ids.length?ids.map(id=>pilotCard(recordById.get(id),st,pilotView)).join(''):'<p class="hint">You and the AI agree on every record in this round.</p>'):'';
+  $('pilot-list').innerHTML=st?(ids.length?ids.map(id=>pilotCard(recordById.get(id),st,pilotView)).join(''):'<p class="hint">'+(pilotFilter==='differ'?'No saved mistakes in this round.':'No agreed records in this round.')+'</p>'):'';
   if(focusId){const input=$('pilot-list').querySelector('[data-review-reason="'+CSS.escape(focusId)+'"]');input?.focus({preventScroll:true});input?.setSelectionRange(...selection);}
   trimAbstractToggles($('pilot-list'));
   renderCalibration();
@@ -2042,7 +2044,7 @@ $('sample-size').addEventListener('change',()=>{
   const n=Math.max(5,Math.min(100,Math.round(Number($('sample-size').value)||20)));
   workspace.pilot.size=n;$('sample-size').value=n;save().catch(()=>{});
 });
-$('rounds').addEventListener('click',e=>{const b=e.target.closest('[data-round]');if(!b)return;pilotView=Number(b.dataset.round);pilotFilter='all';renderPilot()});
+$('rounds').addEventListener('click',e=>{const b=e.target.closest('[data-round]');if(!b)return;pilotView=Number(b.dataset.round);pilotFilter='agreed';renderPilot()});
 $('pilot-filter').addEventListener('click',e=>{const b=e.target.closest('[data-filter]');if(!b)return;pilotFilter=b.dataset.filter;renderPilot()});
 $('run-pilot').addEventListener('click',()=>startPilotRound().catch(e=>showNotice('pilot-message',e.message,'error')));
 $('approve-pilot').addEventListener('click',()=>approvePilotRound().catch(e=>showNotice('pilot-message','Could not save approval: '+e.message,'error')));
