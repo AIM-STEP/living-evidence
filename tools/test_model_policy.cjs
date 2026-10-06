@@ -9,11 +9,11 @@ const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
  vm.runInContext(fn,c);const model=await c.findLocalBackend(new AbortController().signal);assert.equal(model.source,'local');assert.equal(model.name,'synthetic-local');
  assert(read('search-strategy.html').includes("model.provider==='backend'?{messages,format:schema,provider:'local'}"));
  for(const file of ['title-abstract-screening.html','full-text-screening.html']){
-  const html=read(file),start=html.indexOf('async function resolvePilotModel('),end=html.indexOf('\nfunction isUnreachable',start);
-  let fetches=0;
-  const ctx=vm.createContext({typesafeKey:'',typesafeBackend:'',workspace:{screeningProvider:'local',screeningModel:'old-local'},localFetch:()=>{fetches++;throw Error('No local fallback allowed')}});
+  const html=read(file);assert(!html.slice(0,html.indexOf('</main>')).includes('id="screen-api-key"'));assert(html.includes('id="screen-api-model" hidden'));const start=html.indexOf('async function resolvePilotModel('),end=html.indexOf('\nfunction isUnreachable',start);
+  let fetches=0,prompts=0;
+  const ctx=vm.createContext({promptTypesafeConnection(){prompts++},typesafeKey:'',typesafeBackend:'',workspace:{screeningProvider:'local',screeningModel:'old-local'},localFetch:()=>{fetches++;throw Error('No local fallback allowed')}});
   vm.runInContext(html.slice(start,end),ctx);
-  await assert.rejects(ctx.resolvePilotModel(),/TypeSafe key/);assert.equal(fetches,0);
+  await assert.rejects(ctx.resolvePilotModel(),/Connect TypeSafe/);assert.equal(fetches,0);assert.equal(prompts,1);
   ctx.typesafeKey='synthetic-key';ctx.typesafeBackend='/backend';ctx.workspace={screeningProvider:'typesafe',screeningModel:'synthetic-typesafe'};
   const selected=await ctx.resolvePilotModel();assert.equal(selected.provider,'typesafe');assert.equal(selected.name,'TypeSafe: synthetic-typesafe');assert.equal(fetches,0);
   assert(html.includes('id="screen-model-source" disabled><option value="typesafe">TypeSafe</option>'));

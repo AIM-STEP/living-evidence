@@ -1,22 +1,23 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'../title-abstract-screening.html'),'utf8');
-const elements={};function $(id){return elements[id]??={value:'',textContent:'',disabled:false,hidden:false,events:{},addEventListener(n,f){this.events[n]=f},replaceChildren(...items){this.items=items}}}
+const elements={};function $(id){return elements[id]??={value:'',textContent:'',disabled:false,hidden:false,events:{},addEventListener(n,f){this.events[n]=f},replaceChildren(...items){this.items=items},showModal(){this.open=true},close(){this.open=false}}}
 let response={models:['synthetic-model']},requests=[],accept=true;
 const context=vm.createContext({$,AbortController,DOMException,setTimeout,clearTimeout,structuredClone,Error,Option:function(t,v){this.text=t;this.value=v},
  location:{href:'http://127.0.0.1:8765/title-abstract-screening.html'},URL,LOCAL_SERVER:'http://127.0.0.1:8765',
  workspace:{pilot:{size:20,rounds:[],ai:{},human:{}},full:{ai:{},human:{}}},source:{criteriaSig:'c',sourceSig:'s'},busy:'',pilotModel:null,pilotView:-1,
- confirm:()=>accept,now:()=> 'test-time',log(){},save:async()=>{},render(){},download(){},
+ confirm:()=>accept,now:()=> 'test-time',log(){},save:async()=>{},render(){},download(){},toast(){},
  newPilot:size=>({size,rounds:[],ai:{},human:{}}),newFull:()=>({ai:{},human:{}}),
  pilotHasProgress:()=>context.workspace.pilot.rounds.length>0,isUnreachable:()=>false,
  localFetch:async(url,options={})=>{if(url.endsWith('/health'))return {json:async()=>({typesafe:{available:true}})};requests.push(JSON.parse(options.body));return {ok:true,json:async()=>response}}});
 const a=html.indexOf('// TypeSafe credentials live'),b=html.indexOf('/* Screening uses TypeSafe;',a);
 vm.runInContext(html.slice(a,b),context);
 (async()=>{
+ context.promptTypesafeConnection();assert.equal($('screen-connection-dialog').open,true);
  $('screen-model-source').value='typesafe';await $('screen-model-source').events.change();
  assert.equal(context.workspace.screeningProvider,'typesafe');assert.equal($('screen-api-settings').hidden,false);
  await $('screen-api-confirm').events.click();assert.match($('screen-api-status').textContent,/Paste/);
  $('screen-api-key').value='synthetic-key';await $('screen-api-confirm').events.click();
- assert.equal(context.workspace.screeningModel,'synthetic-model');assert.equal($('screen-api-key').value,'');
+ assert.equal($('screen-connection-dialog').open,false);assert.match($('screen-api-status').textContent,/Connected/);assert.equal(context.workspace.screeningModel,'synthetic-model');assert.equal($('screen-api-key').value,'');
  assert.equal(vm.runInContext('typesafeKey',context),'synthetic-key');
  assert.equal(requests[0].action,'models');assert.equal(requests[0].apiKey,'synthetic-key');
  assert(!JSON.stringify(context.workspace).includes('synthetic-key'));

@@ -181,23 +181,11 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2>Pilot screening</h2><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
 <div class="panel-body" id="pilot-body">
-<div class="model-connection" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)">
-<label class="label" for="screen-model-source">Model source</label>
-<select class="select" id="screen-model-source" disabled><option value="typesafe">TypeSafe</option></select>
-<div id="screen-api-settings">
-<p class="hint">TypeSafe screens each criterion using the title and abstract. Your records and criteria will be sent to TypeSafe. Keep the Mac Studio connection running.</p>
-<label class="label" for="screen-api-key">TypeSafe API key</label>
-<input class="input" type="password" id="screen-api-key" placeholder="Paste your TypeSafe API key" autocomplete="off" spellcheck="false" aria-describedby="screen-api-help">
-<p class="hint" id="screen-api-help">Your key stays in this tab and is cleared on refresh. Confirm checks account access and loads available models.</p>
-<button class="btn" type="button" id="screen-api-confirm">Confirm</button>
-<label class="label" for="screen-api-model">API model</label><select class="select" id="screen-api-model"><option value="">Confirm your key to load models</option></select>
-<p class="hint" id="screen-api-status" role="status" aria-live="polite"></p>
-</div><button class="btn small" type="button" id="screen-model-archives" hidden>Download previous model runs</button>
-</div>
+<button class="btn small" type="button" id="screen-model-archives" hidden>Download previous screening runs</button>
 
 <ol class="pilot-steps"><li>Start a round: the selected AI model screens a random sample of records.</li><li>Vote Yes / Maybe / No on the same records. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Complete at least one round. Then approve the pilot to start formal screening, or run another round if you choose. Additional rounds are optional.</li></ol>
 <div class="pilot-controls"><label class="label" for="sample-size">Records per round</label><input class="input" id="sample-size" type="number" min="5" max="100" step="1" value="20"><button class="btn primary" id="run-pilot" type="button">Start round 1</button><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-calibration" type="button">Restart pilot</button></div>
-<div class="audit" id="calibration-panel"><h3 class="sub-head">Learning from pilot corrections</h3><p class="hint">Confirm the criterion and correction for each disagreement. All corrections are saved; relevant rules and examples are selected for each subsequent request. Both local and API models use this feedback; model weights are not changed. Approval freezes the feedback for formal screening.</p><p class="hint" id="calibration-summary" role="status"></p><ul id="calibration-pending"></ul><details><summary>Confirmed correction rules</summary><ul id="calibration-rules"></ul></details><div class="toolbar"><button class="btn small" id="calibration-check" type="button">Check corrections (optional)</button><button class="btn small" id="calibration-stop" type="button" hidden>Stop check</button><button class="btn small" id="calibration-download" type="button">Download calibration</button></div><p class="hint" id="calibration-check-status" role="status" aria-live="polite"></p></div>
+<div class="audit" id="calibration-panel"><h3 class="sub-head">Learning from pilot corrections</h3><p class="hint">Confirm the criterion and correction for each disagreement. All corrections are saved; relevant rules and examples are selected for each subsequent request. The screening model uses this feedback; model weights are not changed. Approval freezes the feedback for formal screening.</p><p class="hint" id="calibration-summary" role="status"></p><ul id="calibration-pending"></ul><details><summary>Confirmed correction rules</summary><ul id="calibration-rules"></ul></details><div class="toolbar"><button class="btn small" id="calibration-check" type="button">Check corrections (optional)</button><button class="btn small" id="calibration-stop" type="button" hidden>Stop check</button><button class="btn small" id="calibration-download" type="button">Download calibration</button></div><p class="hint" id="calibration-check-status" role="status" aria-live="polite"></p></div>
 <div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div>
 <div class="notice" id="pilot-message" hidden role="status"></div>
 <div class="source-summary pilot-summary"><div><strong id="pilot-voted">—</strong><span>Your votes</span></div><div><strong id="pilot-ai">—</strong><span>AI screened</span></div><div><strong id="pilot-agreement">—</strong><span>Agreement</span></div><div><strong id="pilot-kappa">—</strong><span>Cohen's κ</span></div><div><strong id="pilot-false-ex">—</strong><span>False exclusions</span></div></div>
@@ -246,6 +234,15 @@ th{background:#f4f4f4}
 </ul>
 </details>
 </main>
+<dialog id="screen-connection-dialog" class="dialog" style="width:min(480px,calc(100vw - 28px))" aria-labelledby="screen-connection-title"><div class="panel-head"><h2 id="screen-connection-title">Connect screening</h2><button class="btn small" type="button" id="screen-connection-close" aria-label="Close">×</button></div><div class="panel-body"><div hidden><select class="select" id="screen-model-source" disabled><option value="typesafe">TypeSafe</option></select></div><div id="screen-api-settings">
+<p class="hint">TypeSafe screens each criterion using the title and abstract. Your records and criteria will be sent to TypeSafe. Keep the Mac Studio connection running.</p>
+<label class="label" for="screen-api-key">TypeSafe API key</label>
+<input class="input" type="password" id="screen-api-key" placeholder="Paste your TypeSafe API key" autocomplete="off" spellcheck="false" aria-describedby="screen-api-help">
+<p class="hint" id="screen-api-help">Your key stays in this tab and is cleared on refresh. Confirm checks account access and loads available models.</p>
+<button class="btn" type="button" id="screen-api-confirm">Confirm</button>
+<select class="select" id="screen-api-model" hidden aria-label="Configured model"><option value="">Confirm your key to load models</option></select>
+<p class="hint" id="screen-api-status" role="status" aria-live="polite"></p>
+</div></div></dialog>
 <dialog id="criteria-dialog" class="dialog" aria-labelledby="criteria-title">
 <div class="panel-head"><h2 id="criteria-title">Eligibility criteria</h2><div class="toolbar"><button class="btn small" type="button" id="edit-criteria">Edit</button><button class="btn small" type="button" id="close-criteria">Close</button></div></div>
 <div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Edits apply to screening on this page. The Eligibility criteria and Search strategy steps are not changed; delete the edit (× beside Upload criteria) to return to their criteria. One rule per line.</p><label class="label" for="crit-question">Review question (optional)</label><textarea class="textarea" id="crit-question" rows="2"></textarea><datalist id="crit-domains"><option value="Population"></option><option value="Intervention"></option><option value="Exposure"></option><option value="Comparison"></option><option value="Outcomes"></option><option value="Study design"></option><option value="Concept"></option><option value="Context"></option><option value="Phenomenon of Interest"></option><option value="Other"></option></datalist><div id="crit-rows"></div><button class="btn small" type="button" id="crit-add">Add criterion</button><p class="criteria-upload-error" id="crit-error" role="alert" hidden></p><div class="toolbar crit-actions"><button class="btn small" type="button" id="crit-cancel">Cancel</button><button class="btn small primary" type="button" id="crit-save">Save criteria</button></div></div></div>
@@ -760,6 +757,12 @@ function pilotHasProgress(){return !!workspace?.pilot?.rounds?.length}
 // TypeSafe credentials live only in this page closure, never in workspace/storage.
 let typesafeKey='',typesafeBackend='',typesafeConfirmController=null;
 function screeningProvider(){return 'typesafe'}
+function promptTypesafeConnection(){
+  $('screen-connection-dialog').showModal();renderModelSelection();
+}
+$('screen-connection-close').addEventListener('click',()=>{clearTypesafeKey();$('screen-api-key').value='';$('screen-connection-dialog').close();});
+$('screen-connection-dialog').addEventListener('cancel',()=>{clearTypesafeKey();$('screen-api-key').value='';});
+
 function clearTypesafeKey(){typesafeKey='';typesafeBackend='';pilotModel=null;if(typesafeConfirmController)typesafeConfirmController.abort();typesafeConfirmController=null;$('screen-api-confirm').disabled=false;$('screen-api-confirm').textContent='Confirm';}
 function renderModelSelection(){
   $('screen-model-source').value=screeningProvider();
@@ -815,7 +818,8 @@ $('screen-api-confirm').addEventListener('click',async()=>{
     if(typesafeConfirmController!==ctl)return;
     typesafeKey=key;typesafeBackend=base;$('screen-api-key').value='';
     $('screen-api-model').replaceChildren(...names.map(n=>new Option(n,n)));$('screen-api-model').value=name;
-    $('screen-api-status').textContent='Key confirmed. Select a model, then start a pilot round. Screening requests use TypeSafe credits.';
+    $('screen-api-status').textContent='Connected. Start screening when ready.';
+    $('screen-connection-dialog').close();toast('Connected. Click Start to begin screening.');
   }catch(e){if(typesafeConfirmController===ctl)$('screen-api-status').textContent=e.name==='AbortError'?'Connection check timed out. Try again.':isUnreachable(e)?'Cannot reach the backend. Check the Mac Studio connection.':e.message;}
   finally{clearTimeout(timer);if(typesafeConfirmController===ctl){typesafeConfirmController=null;$('screen-api-confirm').textContent='Confirm';renderModelSelection();}}
 });
@@ -824,7 +828,7 @@ $('screen-model-archives').addEventListener('click',()=>download('screening-mode
 
 /* Screening uses TypeSafe; no local-model fallback. */
 async function resolvePilotModel(signal){
-  if(!typesafeKey||!typesafeBackend||workspace.screeningProvider!=='typesafe'||!workspace.screeningModel)throw new Error('Paste your TypeSafe key and click Confirm before screening.');
+  if(!typesafeKey||!typesafeBackend||workspace.screeningProvider!=='typesafe'||!workspace.screeningModel){promptTypesafeConnection();throw new Error('Connect TypeSafe in the dialog, then start again.');}
   return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
 }
 
@@ -971,7 +975,7 @@ function pilotSample(size,seed){
 }
 async function startPilotRound(){
   if(busy||stale()||!readySource())return;
-  if(screeningProvider()==='typesafe'&&(!typesafeKey||!workspace.screeningModel))throw new Error('Paste your TypeSafe API key and click Confirm before starting a pilot.');
+  if(!typesafeKey||!typesafeBackend||workspace.screeningProvider!=='typesafe'||!workspace.screeningModel){promptTypesafeConnection();return;}
   const p=workspace.pilot,last=p.rounds.length-1;
   let i=last;
   if(last<0||pilotRoundState(last).revealed){
