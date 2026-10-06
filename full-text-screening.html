@@ -209,7 +209,7 @@ th{background:#f4f4f4}
 <div class="layout">
 <div class="stack">
 <section class="panel">
-<div class="panel-head fulltext-source-head"><div class="source-title-group"><div class="source-title-actions"><h2>Full-text source</h2></div><p class="source-counts" id="source-counts" role="status" aria-live="polite" aria-atomic="true"><span class="source-count-item">Total records 0</span><span class="source-count-item pdf-count">With full-text PDF 0</span></p></div><div class="toolbar source-actions"><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="btn small" type="button" id="download-source" title="Retry downloading missing full-text PDFs">Download</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
+<div class="panel-head fulltext-source-head"><div class="source-title-group"><div class="source-title-actions"><h2>Full-text source</h2></div><p class="source-counts" id="source-counts" role="status" aria-live="polite" aria-atomic="true"><span class="source-count-item">Total records 0</span><span class="source-count-item pdf-count">With PDF 0</span></p></div><div class="toolbar source-actions"><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="btn small" type="button" id="download-source" title="Retry downloading missing full-text PDFs">Download</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
 <div class="panel-body" id="source-body">
 <div id="source-background" hidden>
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
@@ -1606,7 +1606,7 @@ function sourceRecordCard(r,index){
 
 let docsShown=30;
 function renderSource(){
-  $('source-counts').innerHTML='<span class="source-count-item">Total records '+workspace.records.length+'</span><span class="source-count-item pdf-count">With full-text PDF '+workspace.records.filter(r=>hasOriginalPdf(r.uid)).length+'</span>';
+  $('source-counts').innerHTML='<span class="source-count-item">Total records '+workspace.records.length+'</span><span class="source-count-item pdf-count">With PDF '+workspace.records.filter(r=>hasOriginalPdf(r.uid)).length+'</span>';
   $('source-body').classList.toggle('source-empty',workspace.records.length===0);
   const s=summary();
   $('stat-sought').textContent=s.sought;$('stat-retrieved').textContent=s.retrieved;$('stat-missing').textContent=s.notRetrieved;$('stat-toscreen').textContent=s.pending;
