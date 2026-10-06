@@ -210,6 +210,7 @@ th{background:#f4f4f4}
 <div class="stack">
 <section class="panel">
 <div class="panel-head fulltext-source-head"><div class="source-title-group"><div class="source-title-actions"><h2>Full-text source</h2></div><p class="source-counts" id="source-counts" role="status" aria-live="polite" aria-atomic="true"><span class="source-count-item">Total records 0</span><span class="source-count-item pdf-count">With PDF 0</span></p></div><div class="toolbar source-actions"><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="btn small" type="button" id="download-source" title="Retry downloading missing full-text PDFs">Download</button><button class="btn small" type="button" id="restore-source" hidden>Restore results</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Full-text source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Full-text source</span></button></div></div>
+<div class="notice error" id="storage-notice" hidden role="alert" style="margin:12px 19px"></div>
 <div class="panel-body" id="source-body">
 <div id="source-background" hidden>
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
@@ -652,7 +653,7 @@ function deleteKey(db,key){return new Promise((resolve,reject)=>{const tx=db.tra
 function save(){
   publishSummary();
   saveChain=saveChain.catch(()=>{}).then(()=>putProject(store,{id:scope,state:workspace,updatedAt:now()}));
-  return saveChain.catch(e=>{showNotice('source-notice','Local save failed: '+e.message+'. Check available device storage.','error');throw e});
+  return saveChain.catch(e=>{showNotice('storage-notice','Local save failed: '+e.message+'. Check available device storage.','error');throw e});
 }
 const docKey=uid=>scope+'|'+uid;
 async function loadDoc(uid){if(docCache.has(uid))return docCache.get(uid);const d=await getKey(docStore,docKey(uid));if(d){docCache.set(uid,d);if(workspace.docs[uid]&&!workspace.docs[uid].hash)workspace.docs[uid].hash=fingerprint(d.chunks);}return d}
@@ -918,6 +919,7 @@ async function importFromScreening(){
     workspace.records=merged;
     if(!workspace.criteriaEdited){workspace.criteria=structuredClone(next.criteria);workspace.criteriaSig=next.criteriaSig;}
     workspace.handoffAt=next.updatedAt;workspace.sourceHandoffSig=signature;workspace.full.completedAt='';
+    await ensureDocs(workspace.records.map(r=>r.uid));
     indexRecords();log('reports-synchronized',{reports:workspace.records.length,previous:before,criteriaSig:workspace.criteriaSig});
     await save();render();
     showNotice('source-notice',workspace.records.length+' reports, including local imports and Title and abstract screening results.'+(next.pending?' '+next.pending+' records in the previous step still have no final decision.':'')+((criteriaChanged||existingChanged||pilotRemoved)?' Previous screening runs were archived; complete a new pilot.':''),next.pending?'warning':'success');
@@ -2094,18 +2096,22 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseRetrie
 window.addEventListener('pagehide',pauseRetrieval);
 window.addEventListener('online',scheduleRetrieval);
 async function init(){
+  syncingSource=true;
   try{
     store=await openDB('aimstep-fulltext');docStore=await openDB('aimstep-fulltext-docs');
     const saved=await getProject(store);
     workspace=Object.assign(defaults(),saved?.state||{});
     workspace.pilot=Object.assign(newPilot(),workspace.pilot||{});workspace.full=Object.assign(newFull(),workspace.full||{});
     if(workspace.pilot.rounds.some(r=>r.prompt!==FT_PROMPT)||Object.values(workspace.full.ai).some(a=>!a.prompt?.startsWith(FT_PROMPT))){archiveRun('Upgrade to calibrated Full-text assess');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();await save();}
-    if(indexRecords())await save();await ensureDocs(workspace.pilot.rounds.flatMap(r=>r.ids));handoff=await readHandoff();
+    if(indexRecords())await save();
+    // Restore original PDFs for every source record before rendering or downloading.
+    await ensureDocs([...new Set([...workspace.records.map(r=>r.uid),...workspace.pilot.rounds.flatMap(r=>r.ids)])]);
+    handoff=await readHandoff();syncingSource=false;
     await importFromScreening();
     setInterval(()=>{if(!document.hidden){refreshSource();scheduleRetrieval();}},5000);
     scheduleRetrieval();
     render();publishSummary();document.body.dataset.ready='true';
-  }catch(e){showNotice('source-notice','The full-text workspace could not be opened: '+e.message,'error')}
+  }catch(e){showNotice('storage-notice','The full-text workspace could not be opened: '+e.message,'error')}
 }
 init();
 
