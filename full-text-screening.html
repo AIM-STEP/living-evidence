@@ -508,7 +508,7 @@ function summaryHtml(m){
   return `<div class="criteria-summary"><div class="summary-rule" aria-hidden="true"></div><div class="summary-intro"><p><strong>Review topic:</strong> ${esc(m.topic||'To be defined')}</p><p><strong>Framework:</strong> ${esc(m.framework||'Other')}</p></div><div class="summary-rule" aria-hidden="true"></div><section class="summary-block"><h3>Inclusion criteria</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong>Limits:</strong> ${esc(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclusionHtml}</section><section class="summary-block"><h3>Pending clarification</h3>${pending.length?`<ul class="summary-list summary-pending">${pending.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`:'<p class="summary-muted">None identified.</p>'}</section><section class="summary-block"><h3>Manuscript wording</h3>${m.paragraph?`<p class="summary-paragraph">${esc(m.paragraph)}</p>`:`<p class="summary-muted">${esc(m.paragraphNote||'No manuscript wording was generated for these criteria.')}</p>`}</section>${traceHtml}<div class="summary-rule" aria-hidden="true"></div></div>`;
 }
 function wilson(k,n){if(!n)return null;const z=1.959964,p=k/n,d=1+z*z/n,c=(p+z*z/(2*n))/d,h=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;return [Math.max(0,c-h),Math.min(1,c+h)]}
-let typesafeKey='',typesafeBackend='',typesafeConfirmController=null;
+let typesafeKey='',typesafeBackend='',typesafeServerReady=false,typesafeConfirmController=null;
 function screeningProvider(){return 'typesafe'}
 function promptTypesafeConnection(){
   $('screen-connection-dialog').showModal();renderModelSelection();
@@ -516,7 +516,7 @@ function promptTypesafeConnection(){
 $('screen-connection-close').addEventListener('click',()=>{clearTypesafeKey();$('screen-api-key').value='';$('screen-connection-dialog').close();});
 $('screen-connection-dialog').addEventListener('cancel',()=>{clearTypesafeKey();$('screen-api-key').value='';});
 
-function clearTypesafeKey(){typesafeKey='';typesafeBackend='';pilotModel=null;if(typesafeConfirmController)typesafeConfirmController.abort();typesafeConfirmController=null;$('screen-api-confirm').disabled=false;$('screen-api-confirm').textContent='Confirm';}
+function clearTypesafeKey(){typesafeKey='';typesafeBackend='';typesafeServerReady=false;pilotModel=null;if(typesafeConfirmController)typesafeConfirmController.abort();typesafeConfirmController=null;$('screen-api-confirm').disabled=false;$('screen-api-confirm').textContent='Confirm';}
 function renderModelSelection(){
   $('screen-model-source').value=screeningProvider();
   $('screen-api-settings').hidden=screeningProvider()!=='typesafe';
@@ -540,7 +540,7 @@ async function setScreeningModel(provider,name=''){
 async function findTypesafeBackend(signal){
   const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];
   if(!bases.includes(LOCAL_SERVER+'/api/eligibility'))bases.push(LOCAL_SERVER+'/api/eligibility');
-  for(const base of bases){try{const r=await localFetch(base+'/health',{signal});const h=await r.json();if(h.typesafe?.available)return base;}catch(e){if(signal.aborted)throw e;}}
+  for(const base of bases){try{const r=await localFetch(base+'/health',{signal});const h=await r.json();if(h.typesafe?.available)return base;}catch(e){if(signal?.aborted)throw e;}}
   throw new Error('Cannot reach the TypeSafe-enabled AIM-STEP backend. Keep the Mac Studio service and SSH connection running.');
 }
 async function typesafeRequest(base,body,signal){
@@ -582,8 +582,13 @@ $('screen-model-archives').addEventListener('click',()=>download('screening-mode
 
 const aiWorkers=()=>screeningProvider()==='typesafe'?1:AI_WORKERS;
 async function resolvePilotModel(signal){
-  if(!typesafeKey||!typesafeBackend||workspace.screeningProvider!=='typesafe'||!workspace.screeningModel){promptTypesafeConnection();throw new Error('Connect TypeSafe in the dialog, then start again.');}
-  return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
+  if((typesafeKey||typesafeServerReady)&&typesafeBackend&&workspace.screeningProvider==='typesafe'&&workspace.screeningModel)return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
+  const base=await findTypesafeBackend(signal),data=await typesafeRequest(base,{action:'models'},signal);
+  const names=data.models;if(!Array.isArray(names)||!names.length)throw new Error('No TypeSafe models are available.');
+  const name=data.preferredModel||(names.includes(workspace.screeningModel)?workspace.screeningModel:names[0]);
+  if(!await setScreeningModel('typesafe',name))throw new Error('Model change cancelled.');
+  typesafeBackend=base;typesafeServerReady=true;
+  return {provider:'typesafe',base,name:'TypeSafe: '+workspace.screeningModel};
 }
 
 function isUnreachable(e){return /Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||''))}
@@ -1309,7 +1314,7 @@ async function readReport(uid,round,signal,variant=1,calibration=null){
   calibration??=busy==='full'?workspace.pilot.approved?.calibration:workspace.pilot.rounds[round]?.calibration||currentCalibration(round);
   const prompt=ftPrompt(rec,doc,round,variant,calibration),input=JSON.parse(prompt),selected=await resolvePilotModel(signal);
   let result;
-  if(selected.provider==='typesafe')result=await typesafeRequest(selected.base,{action:'screen',apiKey:typesafeKey,model:workspace.screeningModel,input:{...input,record:input.report}},signal);
+  if(selected.provider==='typesafe')result=await typesafeRequest(selected.base,{action:'screen',...(typesafeKey?{apiKey:typesafeKey}:{}),model:workspace.screeningModel,input:{...input,record:input.report}},signal);
   else result=await pilotModelJSON([{role:'system',content:ftSystem},{role:'user',content:prompt}],ftSchema,signal);
   return {...ftDecision(result.value,{...doc,chunks:evidenceChunks(doc,variant)}),round,model:selected.provider==='typesafe'?selected.name:result.model,provider:screeningProvider(),resolvedModel:result.model,variant,prompt:FT_PROMPT+(variant===2?'-reading-2':''),promptHash:fingerprint([ftSystem,prompt]),criteriaSig:workspace.criteriaSig,documentHash:workspace.docs[uid].hash,calibrationHash:input.reviewerCalibration.hash,calibrationLessonIds:input.reviewerCalibration.selectedLessonIds,evidenceMethod:doc.evidence.method,at:now()};
 }
@@ -1346,7 +1351,7 @@ function sampleIds(size,seed){
 async function startPilotRound(){
   if(busy||!workspace.criteria?.rows?.length)return;
   const p=workspace.pilot,last=p.rounds.length-1;let i=last;
-  await resolvePilotModel();
+  await resolvePilotModel();if(busy)return;
   if(last<0||roundState(last).revealed){
     if(!calibrationReady())return showNotice('pilot-message','Confirm corrections for all disagreements before the next round.','warning');
     const seed=fingerprint([scope,workspace.criteriaSig,p.rounds.length,now()]),ids=sampleIds(p.size,seed);
@@ -1460,6 +1465,7 @@ function publishSummary(){publishForRob();try{localStorage.setItem(summaryKey,JS
 function maybeComplete(){const s=summary(),done=s.assessed>0&&!s.pending&&aiDone();if(done&&!workspace.full.completedAt){workspace.full.completedAt=now();log('full-text-screening-complete',{included:s.include,excluded:s.exclude,awaiting:s.unclear})}else if(!done)workspace.full.completedAt=''}
 async function runFull(){
   if(busy||!approvalsValid())return;
+  await resolvePilotModel();if(busy)return;
   const approved=workspace.pilot.approved,tasks=screenable().flatMap(r=>[1,2].filter(v=>!ftAI(v===1?workspace.full.ai:workspace.full.ai2,r.uid)).map(v=>[r.uid,v]));
   if(!tasks.length){maybeComplete();await save();render();return}
   busy='full';controller=new AbortController();render();
@@ -1743,6 +1749,7 @@ function updateCalibration(id,field,value){
 }
 async function checkCalibration(){
   const bundle=currentCalibration();if(busy||bundle.pending.length||!bundle.lessons.length)return;
+  await resolvePilotModel();if(busy)return;
   busy='calibration-check';controller=new AbortController();render();
   const ids=[...new Set(bundle.lessons.map(l=>l.recordId))],result={hash:bundle.hash,total:ids.length,matched:0,failed:0,completed:false,records:[],at:now()};
   try{

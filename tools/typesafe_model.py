@@ -1,6 +1,7 @@
-"""TypeSafe structured title/abstract screening; keys are request-scoped."""
+"""TypeSafe structured title/abstract screening; keys can be stored outside the web root."""
 import json
 import math
+from pathlib import Path
 import re
 import urllib.request
 
@@ -8,6 +9,41 @@ from api_model import NoRedirect, clean_key
 
 BASE = 'https://api.typesafe.ai/v1'
 VERSION = 'typesafe-screen-v3'
+CONFIG_PATH = Path(__file__).resolve().parents[2] / 'private' / 'typesafe.json'
+
+
+class ConfigurationError(ValueError):
+    pass
+
+
+def server_config():
+    try:
+        data = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))
+        if not isinstance(data, dict) or any(not isinstance(data.get(k, ''), str) for k in ('apiKey', 'model')):
+            raise ValueError()
+        return data
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError):
+        raise ConfigurationError('The server TypeSafe configuration could not be read. Contact the administrator.') from None
+
+
+def resolve_key(key=None):
+    if key:
+        return clean_key(key)
+    try:
+        return clean_key(server_config().get('apiKey'))
+    except ValueError:
+        raise ConfigurationError('TypeSafe is not configured on the server. Ask the administrator to set the key in the private TypeSafe configuration file.') from None
+
+
+def configured():
+    try:
+        resolve_key()
+        return True
+    except ConfigurationError:
+        return False
+
 
 
 def request(path, key, body=None):
@@ -18,13 +54,17 @@ def request(path, key, body=None):
         return json.loads(response.read())
 
 
-def models(key):
+def models(key=None):
+    key = resolve_key(key)
     data = request('/models', key)
     names = [m['name'] for m in data.get('models', [])
              if isinstance(m, dict) and isinstance(m.get('name'), str) and m['name'].strip()]
     if not names:
         raise ValueError('No TypeSafe models are available for this key.')
-    return {'models': list(dict.fromkeys(names)), 'provider': 'typesafe', 'version': VERSION}
+    preferred = server_config().get('model', '').strip()
+    if preferred and preferred not in names:
+        raise ConfigurationError('The configured TypeSafe model is not available for this account. Update the server configuration.')
+    return {'models': list(dict.fromkeys(names)), 'preferredModel': preferred, 'provider': 'typesafe', 'version': VERSION}
 
 
 def choice(answer, allowed):
@@ -41,7 +81,7 @@ def choice(answer, allowed):
 
 
 def screen(payload):
-    key = clean_key(payload.get('apiKey'))
+    key = resolve_key(payload.get('apiKey'))
     model, data = payload.get('model'), payload.get('input')
     if not isinstance(model, str) or not model.strip() or len(model) > 200:
         raise ValueError('Choose a TypeSafe model after confirming the API key.')

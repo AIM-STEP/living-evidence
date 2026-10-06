@@ -755,7 +755,7 @@ function pilotApprovalValid(){const a=workspace?.pilot?.approved,st=a?pilotRound
 function pilotHasProgress(){return !!workspace?.pilot?.rounds?.length}
 
 // TypeSafe credentials live only in this page closure, never in workspace/storage.
-let typesafeKey='',typesafeBackend='',typesafeConfirmController=null;
+let typesafeKey='',typesafeBackend='',typesafeServerReady=false,typesafeConfirmController=null;
 function screeningProvider(){return 'typesafe'}
 function promptTypesafeConnection(){
   $('screen-connection-dialog').showModal();renderModelSelection();
@@ -763,7 +763,7 @@ function promptTypesafeConnection(){
 $('screen-connection-close').addEventListener('click',()=>{clearTypesafeKey();$('screen-api-key').value='';$('screen-connection-dialog').close();});
 $('screen-connection-dialog').addEventListener('cancel',()=>{clearTypesafeKey();$('screen-api-key').value='';});
 
-function clearTypesafeKey(){typesafeKey='';typesafeBackend='';pilotModel=null;if(typesafeConfirmController)typesafeConfirmController.abort();typesafeConfirmController=null;$('screen-api-confirm').disabled=false;$('screen-api-confirm').textContent='Confirm';}
+function clearTypesafeKey(){typesafeKey='';typesafeBackend='';typesafeServerReady=false;pilotModel=null;if(typesafeConfirmController)typesafeConfirmController.abort();typesafeConfirmController=null;$('screen-api-confirm').disabled=false;$('screen-api-confirm').textContent='Confirm';}
 function renderModelSelection(){
   $('screen-model-source').value=screeningProvider();
   $('screen-api-settings').hidden=screeningProvider()!=='typesafe';
@@ -787,7 +787,7 @@ async function setScreeningModel(provider,name=''){
 async function findTypesafeBackend(signal){
   const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];
   if(!bases.includes(LOCAL_SERVER+'/api/eligibility'))bases.push(LOCAL_SERVER+'/api/eligibility');
-  for(const base of bases){try{const r=await localFetch(base+'/health',{signal});const h=await r.json();if(h.typesafe?.available)return base;}catch(e){if(signal.aborted)throw e;}}
+  for(const base of bases){try{const r=await localFetch(base+'/health',{signal});const h=await r.json();if(h.typesafe?.available)return base;}catch(e){if(signal?.aborted)throw e;}}
   throw new Error('Cannot reach the TypeSafe-enabled AIM-STEP backend. Keep the Mac Studio service and SSH connection running.');
 }
 async function typesafeRequest(base,body,signal){
@@ -828,8 +828,13 @@ $('screen-model-archives').addEventListener('click',()=>download('screening-mode
 
 /* Screening uses TypeSafe; no local-model fallback. */
 async function resolvePilotModel(signal){
-  if(!typesafeKey||!typesafeBackend||workspace.screeningProvider!=='typesafe'||!workspace.screeningModel){promptTypesafeConnection();throw new Error('Connect TypeSafe in the dialog, then start again.');}
-  return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
+  if((typesafeKey||typesafeServerReady)&&typesafeBackend&&workspace.screeningProvider==='typesafe'&&workspace.screeningModel)return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
+  const base=await findTypesafeBackend(signal),data=await typesafeRequest(base,{action:'models'},signal);
+  const names=data.models;if(!Array.isArray(names)||!names.length)throw new Error('No TypeSafe models are available.');
+  const name=data.preferredModel||(names.includes(workspace.screeningModel)?workspace.screeningModel:names[0]);
+  if(!await setScreeningModel('typesafe',name))throw new Error('Model change cancelled.');
+  typesafeBackend=base;typesafeServerReady=true;
+  return {provider:'typesafe',base,name:'TypeSafe: '+workspace.screeningModel};
 }
 
 function isUnreachable(e){return /Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||''))}
@@ -896,6 +901,7 @@ function renderPilotApproval(){
 async function checkCalibration(){
   if(busy||stale())return;
   const bundle=currentCalibration();if(bundle.pending.length||!bundle.lessons.length)return;
+  await resolvePilotModel();if(busy)return;
   busy='calibration-check';controller=new AbortController();render();
   const result={hash:bundle.hash,at:now(),total:bundle.lessons.length,matched:0,failed:0,records:[]};
   try{
@@ -960,7 +966,7 @@ async function screenPilotRecord(record,round,signal,variant=1,calibration=null)
   const feedback=JSON.parse(prompt).reviewerCalibration;
   const trace={calibrationHash:feedback.hash,calibrationLessonIds:feedback.selectedLessonIds,calibrationTotalLessons:feedback.totalLessons};
   if(selected.provider==='typesafe'){
-    const result=await typesafeRequest(selected.base,{action:'screen',apiKey:typesafeKey,model:workspace.screeningModel,input:JSON.parse(prompt)},signal);
+    const result=await typesafeRequest(selected.base,{action:'screen',...(typesafeKey?{apiKey:typesafeKey}:{}),model:workspace.screeningModel,input:JSON.parse(prompt)},signal);
     return {...pilotDecision(result.value,record),...trace,round,model:selected.name,resolvedModel:result.model,provider:'typesafe',
       prompt:result.version+(variant===2?'-reading-2':''),promptHash:fingerprint([result.version,prompt]),criteriaSig:source.criteriaSig,at:now(),raw:JSON.stringify(result.raw),usage:result.usage};
   }
@@ -975,7 +981,7 @@ function pilotSample(size,seed){
 }
 async function startPilotRound(){
   if(busy||stale()||!readySource())return;
-  if(!typesafeKey||!typesafeBackend||workspace.screeningProvider!=='typesafe'||!workspace.screeningModel){promptTypesafeConnection();return;}
+  await resolvePilotModel();if(busy)return;
   const p=workspace.pilot,last=p.rounds.length-1;
   let i=last;
   if(last<0||pilotRoundState(last).revealed){
@@ -1228,6 +1234,7 @@ function endMessage(s){
 }
 async function runFull(){
   if(busy||!readySource()||!approvalsValid())return;
+  await resolvePilotModel();if(busy)return;
   const approved=workspace.pilot.approved;
   const ids=aiRecords().map(r=>r.uid).filter(id=>!fullAI(id)||!fullAI2(id));
   if(!ids.length){maybeComplete();await save();render();return}

@@ -31,6 +31,37 @@ class TypeSafeTest(unittest.TestCase):
         with patch.object(ts,'request',side_effect=fake):
             return ts.screen(self.payload)
 
+    def test_server_key_rotation_and_public_model_response(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            config = Path(folder) / 'typesafe.json'
+            with patch.object(ts, 'CONFIG_PATH', config):
+                self.assertFalse(ts.configured())
+                with self.assertRaises(ts.ConfigurationError):
+                    ts.models()
+                config.write_text(json.dumps({'apiKey':'synthetic-server-one','model':'synthetic-model'}))
+                self.assertTrue(ts.configured())
+                with patch.object(ts, 'request', return_value={'models':[{'name':'synthetic-model'}]}) as request:
+                    data = ts.models()
+                    self.assertEqual(request.call_args.args[1], 'synthetic-server-one')
+                    self.assertEqual(data['preferredModel'], 'synthetic-model')
+                    self.assertNotIn('synthetic-server-one', json.dumps(data))
+                    config.write_text(json.dumps({'apiKey':'synthetic-server-two','model':''}))
+                    ts.models()
+                    self.assertEqual(request.call_args.args[1], 'synthetic-server-two')
+                payload = copy.deepcopy(self.payload)
+                payload.pop('apiKey')
+                with patch.object(ts, 'request', side_effect=RuntimeError('synthetic stop')) as request:
+                    with self.assertRaises(RuntimeError):
+                        ts.screen(payload)
+                    self.assertEqual(request.call_args.args[1], 'synthetic-server-two')
+                config.write_text('{invalid secret configuration')
+                self.assertFalse(ts.configured())
+                with self.assertRaisesRegex(ts.ConfigurationError, 'not configured') as error:
+                    ts.resolve_key()
+                self.assertNotIn('invalid secret', str(error.exception))
+
     def test_exclusion_uses_exact_source_span(self):
         result=self.run_screen()
         self.assertEqual(result['value']['decision'],'exclude')

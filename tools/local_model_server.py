@@ -326,7 +326,7 @@ class Handler(SimpleHTTPRequestHandler):
                 "service": SERVICE if ok else SERVICE + "-unavailable",
                 "model": self.model, "ollama": self.ollama, "status": msg,
                 "embedModel": self.embed_model if embed_ok else "",
-                "typesafe": {"available": True, "version": typesafe_model.VERSION},
+                "typesafe": {"available": True, "configured": typesafe_model.configured(), "version": typesafe_model.VERSION},
                 "api": {"acceptsKey": api_model.status("configuration-check")[0],
                         "ready": api_model.status()[0], "status": api_model.status()[1],
                         "model": api_model.config()["model"]}})
@@ -414,6 +414,8 @@ class Handler(SimpleHTTPRequestHandler):
             else:
                 raise ValueError('Unknown TypeSafe action.')
             return self._send_json(200, result)
+        except typesafe_model.ConfigurationError as e:
+            return self._send_json(503, {'error': str(e), 'fatal': True})
         except urllib.error.HTTPError as e:
             messages = {401: 'Invalid TypeSafe API key.', 403: 'This TypeSafe key is not permitted to access the requested model.',
                         402: 'TypeSafe credits are insufficient.', 429: 'TypeSafe rate limit or quota reached. Wait before resuming.',
