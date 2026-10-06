@@ -171,6 +171,12 @@ th{background:#f4f4f4}
 .pilot-review-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .review-chevron{display:inline-block;line-height:1;transform:rotate(180deg)}
 .pilot-review-toggle[aria-expanded="false"] .review-chevron{transform:none}
+.pilot-controls{--pilot-control-width:144px;--pilot-control-height:40px}
+.pilot-controls>.input,.pilot-controls>.btn,.pilot-controls .round{box-sizing:border-box;width:var(--pilot-control-width);min-width:var(--pilot-control-width);max-width:var(--pilot-control-width);height:var(--pilot-control-height);min-height:var(--pilot-control-height);padding:4px 8px;border-radius:6px;flex-shrink:0}
+.pilot-controls>.input{text-align:center}
+.pilot-controls>.btn{white-space:normal;line-height:1.25}
+.pilot-controls .round{justify-content:center}
+.pilot-controls .pilot-rounds{flex-basis:var(--pilot-control-width);min-width:var(--pilot-control-width)}
 </style>
 </head>
 <body>
