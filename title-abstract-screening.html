@@ -455,8 +455,45 @@ function blockKeys(f){
   if(firstAuthor&&firstAuthor!=='UNKNOWN'&&f.year)k.push('ay|'+firstAuthor+'|'+f.year);
   return k;
 }
+
+async function pendingFulltextReturns(){
+  const db=await openDB('aimstep-fulltext');
+  try{const data=await getProject(db);return (data?.state?.returnedRecords||[]).filter(e=>e?.id&&e.record&&!(workspace.appliedFulltextReturns||[]).includes(e.id));}finally{db.close();}
+}
+async function prepareFulltextReturns(entries){
+  if(!entries.length)return;
+  const before=workspace.imports;
+  workspace.imports=[...before];
+  for(const entry of entries){const id='ft-'+entry.id;if(workspace.imports.some(r=>r.id===id))continue;
+    const rec=cleanRecord(entry.record,entry.record.uid);if(!rec)continue;
+    rec.provenance.push({db:'Returned from full-text screening',runId:id,date:entry.at,nativeSource:'fulltext-return'});
+    workspace.imports.push({id,db:'Returned from full-text screening',startedAt:entry.at,downloaded:1,added:1,records:[rec]});
+  }
+  try{await putProject(importStore,{id:scope,runs:workspace.imports,updatedAt:now()});}catch(e){workspace.imports=before;throw e;}
+}
+async function applyFulltextReturns(entries){
+  if(!entries.length)return;
+  const found=entries.map(entry=>({entry,rec:source.records.find(r=>(r.provenance||[]).some(p=>p.runId==='ft-'+entry.id)||r.uid===entry.record.uid||recordKeys(r).some(k=>recordKeys(cleanRecord(entry.record)).includes(k)))})).filter(x=>x.rec);
+  if(!found.length)return;
+  const before=structuredClone(workspace);
+  (workspace.modelArchives??=[]).push({at:now(),reason:'Reports returned from full-text screening',records:structuredClone(source.records),pilot:structuredClone(workspace.pilot),full:structuredClone(workspace.full)});
+  workspace.pilot=validPilot(workspace.pilot);workspace.full=validFull(workspace.full);
+  const pilotAffected=found.some(({rec})=>workspace.pilot.rounds.some(round=>round.ids.includes(rec.uid)));
+  if(pilotAffected)clearCalibration();
+  for(const {entry,rec} of found){
+    for(const group of [workspace.full.ai,workspace.full.ai2,workspace.full.human,workspace.pilot.ai,workspace.pilot.human,workspace.predictions,workspace.pilotSecondPredictions,workspace.fullPredictions,workspace.secondPredictions,workspace.resolutions,workspace.reviews])if(group)delete group[rec.uid];
+    (workspace.returnTokens??={})[rec.uid]=entry.id;
+    (workspace.appliedFulltextReturns??=[]).push(entry.id);
+    log('report-returned-from-fulltext',{recordId:rec.uid,returnId:entry.id});
+  }
+  workspace.full.completedAt='';workspace.completedAt='';
+  if(workspace.criteriaSig===source.criteriaSig)workspace.sourceSig=source.sourceSig;
+  try{await save();render();}catch(e){workspace=before;publishSummary();throw e;}
+}
+
 async function loadSource(){
   sourceError='';
+  const returned=await pendingFulltextReturns();await prepareFulltextReturns(returned);
   let data=null;
   try{
     const db=await openDB('aimstep-search-results');
@@ -515,6 +552,7 @@ async function loadSource(){
     criteriaSig:fingerprint(criteria)};
   recordById.clear();
   records.forEach(r=>recordById.set(r.uid,r));
+  await applyFulltextReturns(returned);
 }
 function stale(){return !!workspace&&(workspace.sourceSig!==source.sourceSig||workspace.criteriaSig!==source.criteriaSig)}
 function readySource(){return !stale()&&source.records.length>=3&&!!source.criteria?.rows?.length}
@@ -526,7 +564,7 @@ function publishForFullText(){
   handoffTimer=setTimeout(async()=>{
     try{
       if(!workspace||!source)return;
-      const s=summary(),records=source.records.filter(r=>forward(finalDecision(r.uid))).map(r=>({uid:r.uid,title:r.title,authors:r.authors,year:r.year,journal:r.journal,volume:r.volume,issue:r.issue,pages:r.pages,doi:r.doi,pmid:r.pmid,url:r.url,abstract:r.abstract,databases:sourceDatabases(r),taDecision:finalDecision(r.uid),taSource:decisionSource(r.uid)}));
+      const s=summary(),records=source.records.filter(r=>forward(finalDecision(r.uid))).map(r=>({uid:r.uid,title:r.title,authors:r.authors,year:r.year,journal:r.journal,volume:r.volume,issue:r.issue,pages:r.pages,doi:r.doi,pmid:r.pmid,url:r.url,abstract:r.abstract,databases:sourceDatabases(r),taDecision:finalDecision(r.uid),taSource:decisionSource(r.uid),returnId:workspace.returnTokens?.[r.uid]||''}));
       const db=await openDB('aimstep-fulltext-input');
       await putProject(db,{id:scope,updatedAt:now(),criteria:source.criteria||null,criteriaSig:source.criteriaSig,criteriaOrigin:criteriaOrigin||null,records,pending:s.pending,screeningComplete:s.completed});
       db.close();
@@ -1995,6 +2033,7 @@ window.addEventListener('storage',e=>{
   if(e.key===searchSummaryKey)setTimeout(refreshSource,1200);
 });
 window.addEventListener('focus',()=>refreshSource());
+setInterval(()=>refreshSource(),5000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshSource()});
 async function init(){
   try{
