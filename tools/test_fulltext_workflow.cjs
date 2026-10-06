@@ -62,14 +62,14 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  await ft.clearSource();release({got:{kind:'pdf',source:'Synthetic'},attempts:[]});await pending;assert.equal(w.records.length,0);assert.equal(w.docs.r,undefined,'Cancelled download must not revive cleared results');
  assert(!html.includes('id="find-oa"'));assert(!html.includes('id="stop-find"'));
  const cardRecord={...rec,title:'A complete title <with markup>',authors:['First Author','Second Author'],journal:'Example Journal',year:'2024',volume:'12',issue:'3',pages:'45–51',abstract:'Abstract <content>'};
- let card=ft.sourceRecordCard(cardRecord,30);assert(card.includes('#31'));assert(card.includes('A complete title &lt;with markup&gt;'));assert(card.includes('First Author, Second Author'));assert(card.includes('12(3): 45–51'));assert(card.includes('aria-expanded="false"'));assert(card.includes('Abstract &lt;content&gt;'));
+ w=setup();let card=ft.sourceRecordCard(cardRecord,30);assert(card.includes('#'+w.sourceNumbers.byUid['uid:r']));assert(card.includes('A complete title &lt;with markup&gt;'));assert(card.includes('First Author, Second Author'));assert(card.includes('12(3): 45–51'));assert(card.includes('aria-expanded="false"'));assert(card.includes('Abstract &lt;content&gt;'));
  ft.sourceDetailsOpen.add('r|abstract');card=ft.sourceRecordCard(cardRecord,30);assert(card.includes('aria-expanded="true" aria-controls="source-abstract-30"'));assert(card.includes('id="source-abstract-30" aria-label="Abstract">'));assert(!html.includes('<tbody id="doc-rows">'));
 
  assert.equal(ft.firstAuthorGivenName({authors:['Smith, John A.']}),'John');
  assert.equal(ft.firstAuthorGivenName({authors:['John Smith']}),'John');
  assert.equal(ft.firstAuthorGivenName({authors:['Smith JA']}),'JA');
  assert.equal(ft.firstAuthorGivenName({authors:[]}),'');
- assert(card.includes('#31 · First · 2024</div>'));assert(card.indexOf('#31 · First · 2024')<card.indexOf('<h3'));
+ assert(card.includes(' · First · 2024</div>'));assert(card.indexOf(' · First · 2024')<card.indexOf('<h3'));
  const fullPanel=card.match(/id="source-fulltext-30"[^>]*>([\s\S]*?)<\/section>/)[1];
  const abstractPanel=card.match(/id="source-abstract-30"[^>]*>([\s\S]*?)<\/section>/)[1];
  assert(abstractPanel.includes('<div class="source-abstract-fulltext">'+fullPanel+'</div>'));
@@ -196,6 +196,14 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  w=setup();w.docs.r={kind:'xml'};ft.setDoc('r',{...doc,uid:'r',kind:'xml',pdf:null});let startedAgain;const beganAgain=new Promise(resolve=>startedAgain=resolve);
  ft.bindRetrieval(async(rec,base,signal)=>{startedAgain();return new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(new DOMException('Stopped','AbortError')),{once:true}))});
  const pendingStop=ft.downloadFulltextPdfs();await beganAgain;ft.setBusy('full');await ft.downloadFulltextPdfs();await pendingStop;assert.equal(ft.pdfDownloadState().busy,'full','Stopping download must not stop or unlock model screening');ft.setBusy('');
+
+ // Permanent numbers survive removal, reordering, reload and return/re-import; new records append.
+ w=setup();w.records=[{...rec,uid:'one',doi:'10.1234/one',title:'One'},{...rec,uid:'two',doi:'10.1234/two',title:'Two'},{...rec,uid:'three',doi:'10.1234/three',title:'Three'}];w.sourceNumbers=undefined;ft.set(w);
+ const originalNumbers=structuredClone(w.sourceNumbers.byUid);assert.equal(originalNumbers['uid:three'],3);
+ w.records=w.records.filter(r=>r.uid!=='two').reverse();ft.set(w);assert.equal(w.sourceNumbers.byUid['uid:three'],3);assert.equal(w.sourceNumbers.byUid['uid:one'],1);assert(ft.sourceRecordCard(w.records[0],0).includes('#3'));
+ w=structuredClone(w);w.records.push({...rec,uid:'four',doi:'10.1234/four',title:'Four'});ft.set(w);assert.equal(w.sourceNumbers.byUid['uid:four'],4);
+ w.records.push({...rec,uid:'two-returned',doi:'10.1234/two',title:'Two'});ft.set(w);assert.equal(w.sourceNumbers.byUid['uid:two-returned'],2);
+ await ft.clearSource();w.records=[{...rec,uid:'five',doi:'10.1234/five',title:'Five'}];ft.set(w);assert.equal(w.sourceNumbers.byUid['uid:five'],5);
 
  const known=new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));for(const id of elements.keys())assert(known.has(id),'Missing UI element: '+id);
  console.log('PASS: full-text startup bindings, evidence validation, criterion conflicts, review scopes, five exports, calibration, snapshots, model requests, reason gating and bounded retrieval');

@@ -933,7 +933,25 @@ async function restoreSource(){
   workspace.sourceCleared=false;workspace.deletedSourceRecords=[];workspace.sourceHandoffSig='';await save();await importFromScreening();render();
 }
 function refreshSource(){importFromScreening().catch(e=>showNotice('source-notice','Could not refresh the previous screening results: '+e.message,'error'));}
-function indexRecords(){recordById.clear();workspace.records.forEach(r=>recordById.set(r.uid,r))}
+function assignSourceNumbers(){
+  const numbers=workspace.sourceNumbers??={next:1,byUid:{},byKey:{}};
+  const reserved=new Set(Object.values(numbers.byUid).filter(Number.isSafeInteger));
+  numbers.next=[...reserved].reduce((next,n)=>Math.max(next,n+1),numbers.next||1);
+  const active=new Set(workspace.records.map(r=>numbers.byUid['uid:'+r.uid]).filter(Number.isSafeInteger));
+  let changed=false;
+  for(const r of workspace.records){
+    const uid='uid:'+r.uid,keys=recordKeys(cleanRecord(r));
+    if(!Number.isSafeInteger(numbers.byUid[uid])){
+      const previous=keys.map(k=>numbers.byKey[k]).find(n=>Number.isSafeInteger(n)&&!active.has(n));
+      const number=previous??numbers.next++;
+      numbers.byUid[uid]=number;active.add(number);changed=true;
+    }
+    for(const key of keys)if(!Number.isSafeInteger(numbers.byKey[key]))numbers.byKey[key]=numbers.byUid[uid];
+  }
+  return changed;
+}
+function indexRecords(){const changed=assignSourceNumbers();recordById.clear();workspace.records.forEach(r=>recordById.set(r.uid,r));return changed;}
+
 
 /* Open-access XML and PDF retrieval. PDF text is extracted in the browser.
    Additional providers use the local backend. */
@@ -1554,7 +1572,7 @@ function sourceRecordCard(r,index){
   const d=workspace.docs[r.uid],has=hasOriginalPdf(r.uid),authors=Array.isArray(r.authors)?r.authors.filter(Boolean).join(', '):String(r.authors||'');
   const citation=[r.year,[r.volume,r.issue?'('+r.issue+')':''].filter(Boolean).join('')].filter(Boolean).join('; ')+(r.pages?': '+r.pages:'');
   const bibliography=[r.journal,citation].filter(Boolean).join(' · ');
-  const headingMeta=['#'+(index+1),firstAuthorGivenName(r),r.year].filter(Boolean).join(' · ');
+  const headingMeta=['#'+workspace.sourceNumbers.byUid['uid:'+r.uid],firstAuthorGivenName(r),r.year].filter(Boolean).join(' · ');
   const local=isLocalSourceRecord(r),locked=!!busy||pdfDownloading||syncingSource;
   const actions='<div class="source-record-tools"><button class="source-move" type="button" data-move-screening="'+esc(r.uid)+'"'+(locked||local?' disabled':'')+'><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m8 4-5 5 5 5M3 9h9a5 5 0 0 1 5 5v2"/></svg>Move to screening</button><button class="source-delete" type="button" data-delete-source="'+esc(r.uid)+'" aria-label="Delete record" title="Delete this record from Full-text assess"'+(locked?' disabled':'')+'>×</button></div>';
 
@@ -2071,7 +2089,7 @@ async function init(){
     workspace=Object.assign(defaults(),saved?.state||{});
     workspace.pilot=Object.assign(newPilot(),workspace.pilot||{});workspace.full=Object.assign(newFull(),workspace.full||{});
     if(workspace.pilot.rounds.some(r=>r.prompt!==FT_PROMPT)||Object.values(workspace.full.ai).some(a=>!a.prompt?.startsWith(FT_PROMPT))){archiveRun('Upgrade to calibrated Full-text assess');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();await save();}
-    indexRecords();await ensureDocs(workspace.pilot.rounds.flatMap(r=>r.ids));handoff=await readHandoff();
+    if(indexRecords())await save();await ensureDocs(workspace.pilot.rounds.flatMap(r=>r.ids));handoff=await readHandoff();
     await importFromScreening();
     setInterval(()=>{if(!document.hidden){refreshSource();scheduleRetrieval();}},5000);
     scheduleRetrieval();
