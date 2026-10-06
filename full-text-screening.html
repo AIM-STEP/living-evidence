@@ -191,6 +191,7 @@ th{background:#f4f4f4}
 .source-file-origin{color:#087532;font-size:14px;margin:3px 0 12px!important}
 .source-manage{display:inline-flex;align-items:center;gap:8px;border:0;background:none;color:#123c70;padding:4px 0;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .source-manage svg{width:17px;height:19px;flex:none}.source-file-link:focus-visible,.source-manage:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+.manage-dialog{width:min(900px,calc(100vw - 28px))}.manage-dialog .panel-head{border-bottom:0}.manage-drop{border:1px dashed #cbd4e1;padding:24px 16px;text-align:center;margin-bottom:22px;border-radius:3px}.manage-drop.drag-over{background:#f0f5fc;border-color:#386ca9}.manage-drop p{margin:12px 0}.manage-upload-icon{font-size:30px;color:#687188}.manage-drop #manage-report{font-size:15px;font-weight:600}.manage-link-row{display:flex;gap:10px;align-items:center}.manage-link-row .input{flex:1;min-width:0}.manage-link-row .btn{flex:none;white-space:nowrap}.manage-files{margin-top:20px}.manage-file-row{display:flex;align-items:center;gap:12px;padding:18px 0;border-top:1px solid var(--line)}.manage-file-main{flex:1;min-width:0;overflow-wrap:anywhere}.manage-file-main .hint{margin:5px 0 0}.manage-footer{justify-content:flex-end;border-top:1px solid var(--line);padding-top:16px}.manage-remove{border:0;background:none;color:#596478;font-size:21px;cursor:pointer;padding:6px}.manage-remove:disabled{opacity:.4;cursor:default}
 @media(max-width:600px){.source-record-title{font-size:16px}.source-record-meta{font-size:13px}.source-record{padding:16px 0}.source-disclosure-body{padding:10px}}
 </style>
 </head>
@@ -297,6 +298,15 @@ th{background:#f4f4f4}
 </div>
 <div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Edits apply only to full-text screening. Existing runs are archived and a new pilot is required.</p><label class="label" for="crit-question">Review question</label><textarea class="textarea" id="crit-question" rows="2"></textarea><div id="crit-rows"></div><button class="btn small" id="crit-add" type="button">Add criterion</button><p class="hint" id="crit-error" role="alert"></p><div class="toolbar"><button class="btn small" id="crit-cancel" type="button">Cancel</button><button class="btn primary small" id="crit-save" type="button">Save criteria</button></div></div><p class="hint" id="reason-order"></p></div>
 </dialog>
+<dialog id="manage-dialog" class="dialog manage-dialog" aria-labelledby="manage-title">
+<div class="panel-head"><h2 id="manage-title">Upload full text</h2><button class="criteria-close" id="manage-close" type="button" aria-label="Close full-text manager">×</button></div>
+<div class="panel-body">
+<div class="manage-drop" id="manage-drop"><svg aria-hidden="true" class="manage-upload-icon" width="34" height="30" viewBox="0 0 32 28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 22H7a5 5 0 0 1-1-10 9 9 0 0 1 17-3 6.5 6.5 0 0 1 2 13h-5M16 23V8m-5 5 5-5 5 5"/></svg><p>Drag and drop PDF to upload</p><p id="manage-report" class="hint"></p><button class="btn" id="manage-choose" type="button">Choose a file</button><input id="manage-file" type="file" accept=".pdf,application/pdf" hidden></div>
+<label class="label" for="manage-link">Link to full text</label><div class="manage-link-row"><input class="input" id="manage-link" type="url" placeholder="https://" maxlength="4000"><button class="btn" id="manage-add-link" type="button">Add link</button></div>
+<p class="hint">Only add links if you are unable to upload PDFs. Only one link can be added.</p>
+<div class="notice" id="manage-message" role="status" hidden></div><div id="manage-files" class="manage-files"></div>
+<div class="toolbar manage-footer"><button class="btn primary" id="manage-done" type="button">Done</button></div>
+</div></dialog>
 <dialog id="reader-dialog" class="dialog reader-dialog" aria-labelledby="reader-title">
 <div class="panel-head"><h2 id="reader-title">Full text</h2><div class="toolbar"><a class="btn small" id="reader-pdf" target="_blank" rel="noopener" hidden>Open the PDF</a><button class="btn small" type="button" id="close-reader">Close</button></div></div>
 <div class="panel-body"><p class="hint" id="reader-meta"></p><div id="reader-body" class="reader-body"></div></div>
@@ -1466,11 +1476,11 @@ function sourceRecordCard(r,index){
   }}catch(e){}
   const label=filename||('Full text ('+(d?.kind==='pdf'?'PDF':'XML')+')');
   const fileLink=fileUrl?'<a class="source-file-link" href="'+esc(fileUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+' <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>':'<button class="source-file-link" type="button" data-read="'+esc(r.uid)+'">'+esc(label)+'</button>';
-  const file=has?'<div class="source-file-row">'+fileLink+'<span class="source-file-primary">Primary</span></div><p class="source-file-origin">'+esc(d.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">No full text available yet.</p>';
-  const logs=d?.attempts?.length?'<details class="source-retrieval-log"><summary>Retrieval details</summary><ul>'+d.attempts.map(a=>'<li>'+esc(a.source+': '+a.status+(a.detail?' — '+a.detail:''))+'</li>').join('')+'</ul></details>':'';
-  const controls=has?'<div class="toolbar"><button class="btn small" type="button" data-read="'+esc(r.uid)+'">Read full text</button><button class="btn small" type="button" data-remove-doc="'+esc(r.uid)+'">Remove saved full text</button></div>':'<p class="hint">'+esc(d?.source||'Full text will be retrieved automatically.')+'</p>'+(d?.kind!=='not-retrievable'?'<button class="btn small" type="button" data-missing="'+esc(r.uid)+'">Mark as not retrievable</button>':'');
-  const manage='<button class="source-manage" id="source-manage-button-'+index+'" type="button" data-source-toggle="manage" data-source-record="'+esc(r.uid)+'" aria-expanded="'+expanded('manage')+'" aria-controls="source-manage-'+index+'"><svg viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="19" rx="2"/><rect x="8" y="2" width="8" height="6" rx="2" fill="white"/></svg>Manage full text</button>';
-  const full=file+manage+disclosurePanel('manage','Manage full text',controls+logs);
+  const file=has?'<div class="source-file-row">'+fileLink+'<span class="source-file-primary">Primary</span></div><p class="source-file-origin">'+esc(d.source==='Uploaded locally'?'Full text uploaded locally':d.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">No full text available yet.</p>';
+  const manage='<button class="source-manage" id="source-manage-button-'+index+'" type="button" data-manage="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="manage-dialog"><svg viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="19" rx="2"/><rect x="8" y="2" width="8" height="6" rx="2" fill="white"/></svg>Manage full text</button>';
+  const savedLink=workspace.fulltextLinks?.[r.uid];
+  const external=savedLink&&safeFulltextLink(savedLink.url)?'<p><a class="source-file-link" href="'+esc(safeFulltextLink(savedLink.url))+'" target="_blank" rel="noopener noreferrer">Link to full text ↗</a></p>':'';
+  const full=(has?file:external||file)+manage;
   return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-heading"><div class="source-record-number">#'+(index+1)+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3></div><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+esc(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full)+disclosurePanel('abstract','Abstract',r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint">No abstract is available for this report.</p>')+'</article>';
 }
 
@@ -1655,6 +1665,75 @@ $('calibration-stop').addEventListener('click',()=>controller?.abort());
 $('calibration-download').addEventListener('click',()=>download('full-text-calibration-'+stamp()+'.json','application/json',JSON.stringify({calibration:currentCalibration(),check:workspace.pilot.calibrationCheck||null},null,2)));
 $('calibration-pending').addEventListener('click',e=>{const b=e.target.closest('[data-correction-round]');if(b){pilotView=Number(b.dataset.correctionRound);pilotFilter='differ';renderPilot();}});
 
+
+/* Single-report full-text manager. A saved web link is not readable AI evidence. */
+let manageId='',manageWorking=false;
+function safeFulltextLink(value){try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)&&!url.username&&!url.password?url.href:''}catch(e){return ''}}
+function renderFulltextManager(){
+  const d=workspace.docs[manageId],link=workspace.fulltextLinks?.[manageId];
+  $('manage-report').textContent=recordById.get(manageId)?.title||'(Untitled report)';
+  $('manage-link').value=link?.url||'';
+  const row=(body,meta,kind,primary)=>'<div class="manage-file-row"><div class="manage-file-main">'+body+'<p class="hint">'+esc(meta)+'</p></div>'+(primary?'<span class="source-file-primary">Primary</span>':'')+'<button class="manage-remove" type="button" data-manage-remove="'+kind+'" aria-label="Remove '+(kind==='file'?'saved full text':'full-text link')+'" title="Remove"><svg width="18" height="21" viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M6 6l1 17h10l1-17M10 10v9m4-9v9"/></svg></button></div>';
+  let html='';
+  if(hasDoc(manageId))html+=row('<button class="source-file-link" type="button" data-manage-read="true">'+esc(d.filename||('Full text ('+d.kind.toUpperCase()+')'))+'</button>',(d.source||'Saved full text')+(d.at?' · '+new Date(d.at).toLocaleDateString('en-GB'):''),'file',true);
+  if(link&&safeFulltextLink(link.url))html+=row('<a class="source-file-link" href="'+esc(safeFulltextLink(link.url))+'" target="_blank" rel="noopener noreferrer">'+esc(link.url)+' ↗</a>','Saved link · upload a readable PDF to use it for AI screening','link',!hasDoc(manageId));
+  if(d?.attempts?.length)html+='<details class="source-retrieval-log"><summary>Retrieval details</summary><ul>'+d.attempts.map(a=>'<li>'+esc(a.source+': '+a.status+(a.detail?' — '+a.detail:''))+'</li>').join('')+'</ul></details>';
+  $('manage-files').innerHTML=html;
+  for(const id of ['manage-choose','manage-file','manage-add-link','manage-link','manage-close','manage-done'])$(id).disabled=manageWorking;
+  $('manage-files').querySelectorAll('button').forEach(b=>b.disabled=manageWorking);
+}
+function openFulltextManager(id){
+  if(busy||syncingSource||!recordById.has(id))return toast('Wait for the current operation to finish.');
+  manageId=id;busy='manage';pauseRetrieval();render();$('manage-file').value='';showNotice('manage-message','');renderFulltextManager();$('manage-dialog').showModal();
+}
+function closeFulltextManager(){if(manageWorking)return;$('manage-dialog').close();manageId='';busy='';render();refreshSource();}
+async function manageOperation(action){
+  if(!manageId||manageWorking)return;
+  manageWorking=true;renderFulltextManager();showNotice('manage-message','Saving…');
+  try{await action();showNotice('manage-message','Saved.','success')}
+  catch(e){showNotice('manage-message',e.message,'error')}
+  finally{manageWorking=false;renderFulltextManager();render();}
+}
+async function uploadManagedPdf(file){
+  if(!file)throw new Error('Choose a PDF file.');
+  if(file.size>40*1024*1024)throw new Error('PDF files must be 40 MB or smaller.');
+  const header=new Uint8Array(await file.slice(0,5).arrayBuffer());
+  if(String.fromCharCode(...header)!=='%PDF-')throw new Error('Choose a valid PDF file.');
+  showNotice('manage-message','Reading PDF…');
+  const pages=await pdfPages(file),rec=recordById.get(manageId);
+  if(!matchPdf(pages.map(p=>p.text).join('\n'),[rec]))throw new Error('This PDF does not match the report title or DOI. Choose the matching full text.');
+  const got={kind:'pdf',source:'Uploaded locally',paras:pdfParagraphs(pages)};
+  if(chunkParagraphs(got.paras).length<3)throw new Error('This PDF has too little readable text. A scanned PDF needs OCR before upload.');
+  const before=structuredClone(workspace),old=await loadDoc(manageId);
+  try{await storeText(manageId,got,file);await save()}
+  catch(e){workspace=before;indexRecords();if(old)await saveDoc(old);else{await deleteKey(docStore,docKey(manageId));docCache.delete(manageId)}publishSummary();throw e}
+}
+async function saveManagedLink(value){
+  const url=safeFulltextLink(value.trim());if(!url)throw new Error('Enter a valid http:// or https:// full-text link.');
+  const before=structuredClone(workspace);
+  (workspace.fulltextLinks??={})[manageId]={url,at:now()};log('full-text-link-saved',{recordId:manageId,url});
+  try{await save()}catch(e){workspace=before;indexRecords();publishSummary();throw e}
+}
+async function removeManagedItem(kind){
+  if(!confirm(kind==='file'?'Remove this full text? Affected screening results will be archived and must be repeated.':'Remove this full-text link?'))return;
+  const before=structuredClone(workspace),old=kind==='file'?await loadDoc(manageId):null;
+  try{
+    if(kind==='file'){invalidateDocument(manageId);await deleteKey(docStore,docKey(manageId));docCache.delete(manageId);workspace.docs[manageId]={kind:'none',source:'Removed by reviewer',retryAt:new Date(Date.now()+RETRIEVAL_RETRY_MS).toISOString(),lookupSig:fingerprint([recordById.get(manageId).title,recordById.get(manageId).doi,recordById.get(manageId).pmid])};}
+    else delete workspace.fulltextLinks?.[manageId];
+    log('full-text-manager-removed',{recordId:manageId,kind});await save();
+  }catch(e){workspace=before;indexRecords();if(old)await saveDoc(old);publishSummary();throw e}
+}
+$('manage-choose').addEventListener('click',()=>$('manage-file').click());
+$('manage-file').addEventListener('change',()=>{const file=$('manage-file').files[0];$('manage-file').value='';if(file)manageOperation(()=>uploadManagedPdf(file));});
+$('manage-add-link').addEventListener('click',()=>{const value=$('manage-link').value;manageOperation(()=>saveManagedLink(value));});
+$('manage-drop').addEventListener('dragover',e=>{e.preventDefault();if(!manageWorking)$('manage-drop').classList.add('drag-over');});
+$('manage-drop').addEventListener('dragleave',()=>$('manage-drop').classList.remove('drag-over'));
+$('manage-drop').addEventListener('drop',e=>{e.preventDefault();$('manage-drop').classList.remove('drag-over');if(manageWorking)return;const files=e.dataTransfer?.files;if(files?.length!==1)return showNotice('manage-message','Drop one PDF for this report.','warning');manageOperation(()=>uploadManagedPdf(files[0]));});
+$('manage-files').addEventListener('click',e=>{const remove=e.target.closest('[data-manage-remove]');if(remove)return manageOperation(()=>removeManagedItem(remove.dataset.manageRemove));if(e.target.closest('[data-manage-read]'))openReader(manageId).catch(e=>showNotice('manage-message',e.message,'error'));});
+$('manage-close').addEventListener('click',closeFulltextManager);$('manage-done').addEventListener('click',closeFulltextManager);
+$('manage-dialog').addEventListener('cancel',e=>{e.preventDefault();closeFulltextManager();});
+$('manage-dialog').addEventListener('click',e=>{if(e.target===$('manage-dialog'))closeFulltextManager();});
+
 /* ---------------- Start-up and events ---------------- */
 collapsible('toggle-source','source-body','Full-text source','ft-source');
 collapsible('toggle-pilot','pilot-body','Pilot full-text screening','ft-pilot');
@@ -1690,6 +1769,7 @@ $('oa-email').addEventListener('change',()=>{if(!$('oa-email').checkValidity())r
 $('docs-more').addEventListener('click',()=>{docsShown=1e9;renderSource()});
 $('doc-rows').addEventListener('click',e=>{const t=e.target,button=t.closest('[data-source-toggle]');
   if(button){const key=button.dataset.sourceRecord+'|'+button.dataset.sourceToggle,id=button.id;sourceDetailsOpen.has(key)?sourceDetailsOpen.delete(key):sourceDetailsOpen.add(key);renderSource();$(id)?.focus();return;}
+  const manage=t.closest('[data-manage]');if(manage)return openFulltextManager(manage.dataset.manage);
   if(t.dataset.read)return openReader(t.dataset.read);
   if(t.dataset.removeDoc)return removeDoc(t.dataset.removeDoc);
   if(t.dataset.missing)return markNotRetrievable(t.dataset.missing);
