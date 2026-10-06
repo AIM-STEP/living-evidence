@@ -196,6 +196,29 @@ th{background:#f4f4f4}
 .source-manage:disabled{opacity:.4;cursor:default}.source-manage svg{width:11.33px;height:12.67px;flex:none}.source-file-link:focus-visible,.source-manage:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .manage-dialog{width:min(900px,calc(100vw - 28px))}.manage-dialog .panel-head{border-bottom:0}.manage-drop{border:1px dashed #cbd4e1;padding:24px 16px;text-align:center;margin-bottom:22px;border-radius:3px}.manage-drop.drag-over{background:#f0f5fc;border-color:#386ca9}.manage-drop p{margin:12px 0}.manage-upload-icon{font-size:30px;color:#687188}.manage-drop #manage-report{font-size:15px;font-weight:600}.manage-link-row{display:flex;gap:10px;align-items:center}.manage-link-row .input{flex:1;min-width:0}.manage-link-row .btn{flex:none;white-space:nowrap}.manage-files{margin-top:20px}.manage-file-row{display:flex;align-items:center;gap:12px;padding:18px 0;border-top:1px solid var(--line)}.manage-file-main{flex:1;min-width:0;overflow-wrap:anywhere}.manage-file-main .hint{margin:5px 0 0}.manage-footer{justify-content:flex-end;border-top:1px solid var(--line);padding-top:16px}.manage-remove{border:0;background:none;color:#596478;font-size:21px;cursor:pointer;padding:6px}.manage-remove:disabled{opacity:.4;cursor:default}
 @media(max-width:600px){.source-record-title{font-size:16px}.source-record-meta{font-size:13px}.source-record{padding:16px 0}.source-disclosure-body{padding:10px}}
+.pilot-rounds{flex-wrap:nowrap;overflow-x:auto;padding:2px 0;max-width:100%}.pilot-rounds .round{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:10px;line-height:1.3;white-space:nowrap;flex:0 0 auto}.pilot-rounds .round b{font-size:inherit;font-weight:600}.pilot-rounds .round span{font-size:inherit}
+.pilot-controls .pilot-rounds{margin:0;flex:1 1 220px;min-width:0}
+.pilot-controls #reset-pilot{margin-left:auto;flex-shrink:0}
+.pilot-rounds .round.current{border-color:#a27da0;background:#eadce9;color:#5c004d}
+.pilot-rounds .round.current span{color:#5c004d}
+#pilot-filter{gap:18px;margin:4px 0 0}
+#pilot-filter .pilot-filter-tab{padding:5px 0;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--ink2);font:inherit;font-size:12px;line-height:1.4;cursor:pointer}
+#pilot-filter .pilot-filter-tab[aria-pressed="true"]{border-bottom-color:var(--plum);background:none}
+#pilot-filter .pilot-filter-tab:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+#pilot-list{margin-top:6px}
+.pilot-controls{padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.pilot-review-toggle{border:0;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.pilot-review-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+.review-chevron{display:inline-block;line-height:1;transform:rotate(180deg)}
+.pilot-review-toggle[aria-expanded="false"] .review-chevron{transform:none}
+.pilot-controls{--pilot-control-width:144px;--pilot-control-height:40px}
+.pilot-controls>.input,.pilot-controls>.btn,.pilot-controls .round{box-sizing:border-box;width:var(--pilot-control-width);min-width:var(--pilot-control-width);max-width:var(--pilot-control-width);height:var(--pilot-control-height);min-height:var(--pilot-control-height);padding:4px 8px;border-radius:6px;flex-shrink:0}
+.pilot-controls>.input{text-align:center}
+.pilot-controls>.btn{white-space:normal;line-height:1.25}
+.pilot-controls .round{justify-content:center}
+.pilot-controls .pilot-rounds{flex-basis:var(--pilot-control-width);min-width:var(--pilot-control-width)}
+.full-summary>div:has(.full-category){padding:0}.full-category{display:block;width:100%;height:100%;border:0;border-bottom:2px solid transparent;padding:8px 12px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}.full-category:hover{background:#f0eaf3}.full-category[aria-pressed="true"]{background:#eee4f1;border-bottom-color:var(--plum)}.full-category:focus-visible{outline:2px solid var(--plum);outline-offset:-3px}
+
 </style>
 </head>
 <body>
@@ -229,34 +252,28 @@ th{background:#f4f4f4}
 
 
 
-<div class="pilot-controls"><label class="label" for="sample-size">Reports per round</label><input class="input" id="sample-size" type="number" min="3" max="50" step="1" value="8"><button class="btn primary" id="run-pilot" type="button">Start round 1</button><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-pilot" type="button">Restart pilot</button></div>
+<div class="pilot-controls"><label class="label" for="sample-size">Reports per round</label><input class="input" id="sample-size" type="number" min="3" max="50" step="1" value="8"><button class="btn primary" id="run-pilot" type="button">Start round 1</button><div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-pilot" type="button">Restart pilot</button></div>
 <div class="audit" id="calibration-panel" hidden><h3 class="sub-head">Learning from pilot corrections</h3><p class="hint">Confirm the criterion and correction for each disagreement. All corrections are saved; relevant rules and examples are selected for each subsequent request. The screening model uses this feedback; model weights are not changed. Approval freezes the feedback for formal screening.</p><p class="hint" id="calibration-summary" role="status"></p><ul id="calibration-pending"></ul><details><summary>Confirmed correction rules</summary><ul id="calibration-rules"></ul></details><div class="toolbar"><button class="btn small" id="calibration-check" type="button">Check corrections (optional)</button><button class="btn small" id="calibration-stop" type="button" hidden>Stop check</button><button class="btn small" id="calibration-download" type="button">Download calibration</button></div><p class="hint" id="calibration-check-status" role="status" aria-live="polite"></p></div>
-<div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div>
 <div class="notice" id="pilot-message" hidden role="status"></div>
-<div class="source-summary pilot-summary"><div><strong id="pilot-voted">—</strong><span>Your assessed</span></div><div><strong id="pilot-ai">—</strong><span>AI assessed</span></div><div><strong id="pilot-agreement">—</strong><span>Agreement</span></div><div><strong id="pilot-kappa">—</strong><span>Cohen's κ</span></div><div><strong id="pilot-false-ex">—</strong><span>False exclusions</span></div></div>
-<p class="hint pilot-detail" id="pilot-detail"></p>
-<div class="toolbar pilot-filter" id="pilot-filter" hidden><button class="btn small" type="button" data-filter="all" aria-pressed="true">All reports</button><button class="btn small" type="button" data-filter="differ" aria-pressed="false">Disagreements</button></div>
+<p class="hint pilot-detail" id="pilot-detail" hidden></p>
+<div class="toolbar pilot-filter" id="pilot-filter" hidden><button class="pilot-filter-tab" type="button" data-filter="agreed" aria-pressed="true">Agreed <span class="count" id="pilot-agreed-count">0</span></button><button class="pilot-filter-tab" type="button" data-filter="differ" aria-pressed="false">Mistakes <span class="count" id="pilot-mistake-count">0</span></button></div>
 <div class="pilot-list" id="pilot-list"></div>
 </div>
 </section>
 <section class="panel">
-<div class="panel-head"><h2>All reports full-text assessment</h2><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-full" type="button" disabled title="Approve the pilot first.">Start</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse All reports full-text assessment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse All reports full-text assessment</span></button></div></div>
+<div class="panel-head pilot-panel-head"><div class="pilot-title-actions"><h2>All reports full-text assessment</h2><button class="pilot-help-button" id="full-help-button" type="button" aria-label="How all reports full-text assessment works" aria-describedby="full-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-full" type="button" disabled title="Approve the pilot first.">Start</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse All reports full-text assessment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse All reports full-text assessment</span></button></div></div>
 <div class="panel-body" id="full-body">
-<p class="hint full-intro">The approved AI model reads every retrieved full text twice, through selected evidence passages, with two model readings (not independent reviewers). Missing evidence stays Unclear; open the full text to resolve it. One explicitly unmet criterion with a verified full-text quote is sufficient for exclusion, unless the other reading directly contradicts that criterion. Unclear reports and conflicts need human review.</p>
-<div class="source-summary pilot-summary full-summary"><div><strong id="full-decided">0 / 0</strong><span>Decided</span></div><div><strong id="full-include">0</strong><span>Included</span></div><div><strong id="full-exclude">0</strong><span>Excluded</span></div><div><strong id="full-unclear">0</strong><span>Awaiting classification</span></div><div><strong id="full-conflicts">0 / 0</strong><span>Conflicts resolved</span></div><div><strong id="full-check">0 / 0</strong><span>Human check</span></div></div>
+
+<div class="source-summary pilot-summary full-summary" id="full-categories"><div><strong id="full-decided">0 / 0</strong><span>Completed</span></div><div><button class="full-category" type="button" data-full-category="include" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-include">0</strong><span>Yes</span></button></div><div><button class="full-category" type="button" data-full-category="unclear" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-unclear">0</strong><span>Maybe</span></button></div><div><button class="full-category" type="button" data-full-category="exclude" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-exclude">0</strong><span>No</span></button></div><div><button class="full-category" type="button" data-full-category="conflicts" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-conflicts">0</strong><span>Conflicts</span></button></div><div><button class="full-category" type="button" data-full-category="check" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-check">0</strong><span>Check</span></button></div></div>
 <div class="team-track full-track" role="progressbar" aria-label="Full-text assess complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="full-track"><span id="full-bar" style="width:0"></span></div>
-<p class="hint" id="full-progress" aria-live="polite"></p>
-<p class="full-now" id="full-now" hidden aria-live="polite"></p>
+<p class="hint" id="full-progress" hidden></p>
+<p class="full-now" id="full-now" hidden></p>
 <div class="notice" id="full-message" hidden role="status"></div>
 <div id="full-feed-wrap" hidden><h3 class="sub-head">Latest AI readings</h3><ol class="full-feed" id="full-feed"></ol></div>
-<div class="check-head"><h3 class="sub-head">Conflicts and Human check</h3></div>
-<p class="hint">Check unclear reports and direct criterion conflicts. You can also choose to review AI exclusions. The evidence passages are highlighted; open the full text when you need more. Your decision replaces the AI's. Unclear reports are listed as awaiting classification (for example, to contact the authors).</p>
-<label class="label" for="check-scope">Human check scope</label><select class="select" id="check-scope"><option value="unresolved">Unclear reports and conflicts</option><option value="sample">Plus a random sample of up to 300 exclusions</option><option value="all">Plus all exclusions</option></select>
-<p class="hint check-summary" id="check-summary"></p>
-<div class="toolbar pilot-filter" id="check-filter" hidden><button class="btn small" type="button" data-cfilter="conflicts" aria-pressed="false">Conflicts <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="todo" aria-pressed="true">To check <span class="count">0</span></button><button class="btn small" type="button" data-cfilter="done" aria-pressed="false">Checked <span class="count">0</span></button></div>
-<div class="pilot-list" id="check-list"></div>
+<div class="pilot-list" id="check-list" hidden></div>
+<div hidden>
 <h3 class="sub-head">PRISMA 2020 counts</h3>
-<div class="table-wrap results-like prisma"><table><tbody id="prisma-rows"></tbody></table></div>
+<div class="table-wrap results-like prisma"><table><tbody id="prisma-rows"></tbody></table></div></div>
 </div>
 <div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Reports</label><select class="select compact" id="export-option"><option value="include">Included</option><option value="exclude">Excluded, with reasons</option><option value="unclear">Awaiting classification</option><option value="missing">Not retrieved</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan RIS</option><option value="csv">CSV (Excel, with decisions and reasons)</option><option value="bib">BibTeX</option><option value="json">JSON (with decisions and evidence)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div><a class="step-btn next" data-extraction href="extraction.html">Next: Extraction <span aria-hidden="true">→</span></a></div>
 </section>
@@ -273,7 +290,8 @@ th{background:#f4f4f4}
 </ul>
 </details>
 </main>
-<div id="pilot-help-tooltip" class="pilot-help-tooltip" role="tooltip" hidden><ol class="pilot-steps"><li>Start a round: the AI model reads a random sample of retrieved full texts.</li><li>Decide Include, Unclear or Exclude (with the reason) for the same reports. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Complete at least one round and confirm corrections. Approve the pilot for formal screening, or run another round. Additional rounds are optional.</li></ol></div>
+<div id="full-help-tooltip" class="pilot-help-tooltip" role="tooltip" hidden><p class="hint full-intro" style="margin:0">The approved AI model reads every retrieved full text twice, through selected evidence passages, with two model readings (not independent reviewers). Missing evidence stays Unclear; open the full text to resolve it. One explicitly unmet criterion with a verified full-text quote is sufficient for exclusion, unless the other reading directly contradicts that criterion. Unclear reports and conflicts need human review.</p></div>
+<div id="pilot-help-tooltip" class="pilot-help-tooltip" role="tooltip" hidden><ol class="pilot-steps"><li>Start a round: the AI applies your eligibility criteria to a random sample of retrieved full texts.</li><li>Review the AI decision and evidence. Click Agree if correct. Otherwise, click Mistake, explain why, and click Save.</li><li>Your saved reviews and corrections guide the AI in the next round.</li><li>AI accuracy appears after you finish reviewing the whole round. Complete at least one round, then approve the pilot or run another optional round.</li></ol></div>
 <dialog id="screen-connection-dialog" class="dialog" style="width:min(480px,calc(100vw - 28px))" aria-labelledby="screen-connection-title"><div class="panel-head"><h2 id="screen-connection-title">Connect screening</h2><button class="btn small" type="button" id="screen-connection-close" aria-label="Close">×</button></div><div class="panel-body"><div hidden><select class="select" id="screen-model-source" disabled><option value="typesafe">TypeSafe</option></select></div><div id="screen-api-settings">
 <p class="hint">TypeSafe screens each criterion using selected full-text passages. Your report passages, criteria and reviewer corrections will be sent to TypeSafe. Keep the Mac Studio connection running.</p>
 <label class="label" for="screen-api-key">TypeSafe API key</label>
@@ -315,7 +333,7 @@ th{background:#f4f4f4}
 </dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="app/screening-calibration.js"></script>
+<script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js"></script>
 <script>
 'use strict';
@@ -523,7 +541,7 @@ function renderModelSelection(){
   $('screen-model-source').value=screeningProvider();
   $('screen-api-settings').hidden=screeningProvider()!=='typesafe';
   for(const id of ['screen-model-source','screen-api-key','screen-api-model','screen-api-confirm'])$(id).disabled=id==='screen-model-source'||!!busy||(id==='screen-api-confirm'&&!!typesafeConfirmController);
-  $('screen-model-archives').hidden=!workspace?.modelArchives?.length;
+  $('screen-model-archives').hidden=true;
 }
 async function setScreeningModel(provider,name=''){
   if(provider!=='typesafe')throw new Error('This tool uses TypeSafe.');
@@ -1321,96 +1339,120 @@ async function readReport(uid,round,signal,variant=1,calibration=null){
   return {...ftDecision(result.value,{...doc,chunks:evidenceChunks(doc,variant)}),round,model:selected.provider==='typesafe'?selected.name:result.model,provider:screeningProvider(),resolvedModel:result.model,variant,prompt:FT_PROMPT+(variant===2?'-reading-2':''),promptHash:fingerprint([ftSystem,prompt]),criteriaSig:workspace.criteriaSig,documentHash:workspace.docs[uid].hash,calibrationHash:input.reviewerCalibration.hash,calibrationLessonIds:input.reviewerCalibration.selectedLessonIds,evidenceMethod:doc.evidence.method,at:now()};
 }
 
-/* ---------------- Pilot full-text assessment ----------------
-   Cochrane Handbook §4.6.4 pilots the criteria on 6-8 reports; the default
-   round is 8. The reviewer decides blind (Include / Unclear / Exclude with a
-   reason); the AI reading is shown when both are done. Disagreements and the
-   reviewer's notes are worked examples in later rounds. Agreement is on
-   "kept" (Include or Unclear) versus Exclude; a false exclusion is an AI
-   exclusion of a report the reviewer keeps. */
-let pilotView=-1,pilotFilter='all';
+/* ---------------- AI-first pilot full-text assessment ---------------- */
+const PILOT_REVIEW_MODE='ai-first-v1';
+let pilotView=-1,pilotFilter='agreed',pilotReviewSaving=false;
+const pilotReviewDrafts=new Map(),pilotReviewErrors=new Map(),expandedPilotAssessments=new Set();
 const kept=d=>d==='include'||d==='unclear';
 const ftLabel=d=>({include:'Include',exclude:'Exclude',unclear:'Unclear'}[d]||'Pending');
 const ftBadge=d=>'<span class="badge ft-'+esc(d||'none')+'">'+esc(ftLabel(d))+'</span>';
+const pilotAIOutcome=a=>a?.decision==='exclude'?'exclude':'include';
+const pilotReviewSignature=a=>fingerprint({round:a?.round,decision:pilotAIOutcome(a),originalDecision:a?.originalDecision||a?.decision,criteria:a?.criteria,criteriaSig:a?.criteriaSig,documentHash:a?.documentHash,promptHash:a?.promptHash,at:a?.at});
+function validPilotAI(id,i){const a=workspace.pilot.ai[id];return !!a&&a.round===i&&a.criteriaSig===workspace.criteriaSig&&a.documentHash===workspace.docs[id]?.hash&&hasDoc(id);}
+function validPilotReview(id,i){
+  const a=workspace.pilot.ai[id],h=workspace.pilot.human[id];
+  return !!workspace.pilot.rounds[i]?.ids.includes(id)&&validPilotAI(id,i)&&!!h&&h.reviewMode===PILOT_REVIEW_MODE&&h.round===i&&['agree','mistake'].includes(h.review)&&h.reviewedAI===pilotReviewSignature(a)&&h.decision===(h.review==='agree'?pilotAIOutcome(a):pilotAIOutcome(a)==='include'?'exclude':'include')&&(h.review!=='mistake'||!!h.note?.trim());
+}
 function roundState(i){
   const round=workspace.pilot.rounds[i];if(!round)return null;
-  const ids=round.ids.filter(id=>recordById.has(id)),ai=ids.filter(id=>workspace.pilot.ai[id]?.round===i&&workspace.pilot.ai[id]?.criteriaSig===workspace.criteriaSig&&hasDoc(id)).length,voted=ids.filter(id=>workspace.pilot.human[id]).length;
-  return {round,ids,ai,voted,aiDone:ids.length>0&&ai===ids.length,votesDone:ids.length>0&&voted===ids.length,revealed:!!round.revealedAt};
+  const ids=round.ids.filter(id=>recordById.has(id)),ai=ids.filter(id=>validPilotAI(id,i)).length,voted=ids.filter(id=>validPilotReview(id,i)).length;
+  const aiDone=ids.length>0&&ai===ids.length,votesDone=ids.length>0&&voted===ids.length;
+  return {round,ids,ai,voted,aiDone,votesDone,revealed:!!round.revealedAt&&aiDone&&votesDone};
 }
 function pilotMetrics(ids){
-  let tp=0,fn=0,fp=0,tn=0,exact=0,n=0;
-  for(const id of ids){const a=workspace.pilot.ai[id],h=workspace.pilot.human[id];if(!a||!h)continue;n++;if(a.decision===h.decision)exact++;
-    if(kept(h.decision))kept(a.decision)?tp++:fn++;else kept(a.decision)?fp++:tn++}
+  let tp=0,fn=0,fp=0,tn=0,exact=0,n=0,agreed=0;
+  for(const id of ids){const a=workspace.pilot.ai[id],h=workspace.pilot.human[id];if(!validPilotReview(id,a?.round))continue;n++;if(h.review==='agree')agreed++;if(pilotAIOutcome(a)===h.decision)exact++;if(kept(h.decision))kept(pilotAIOutcome(a))?tp++:fn++;else kept(pilotAIOutcome(a))?fp++:tn++;}
   const po=n?(tp+tn)/n:null,pe=n?((tp+fn)*(tp+fp)+(fp+tn)*(fn+tn))/(n*n):null,kappa=n&&pe<1?(po-pe)/(1-pe):null;
-  return {n,tp,fn,fp,tn,exact,agreement:po,kappa,recall:tp+fn?tp/(tp+fn):null,recallCI:wilson(tp,tp+fn),recommended:n>0&&fn===0&&((kappa!==null&&kappa>=0.6)||po>=0.75)};
+  return {n,tp,fn,fp,tn,exact,agreed,accuracy:n?agreed/n:null,agreement:po,kappa,recall:tp+fn?tp/(tp+fn):null,recallCI:wilson(tp,tp+fn),recommended:n>0&&fn===0&&((kappa!==null&&kappa>=0.6)||po>=0.75)};
 }
-const approvalSig=()=>fingerprint({criteriaSig:workspace.criteriaSig,prompt:FT_PROMPT,provider:screeningProvider(),model:workspace.screeningModel||''});
-const approvalsValid=()=>{const a=workspace.pilot.approved,st=a?roundState(a.round):null;return !!a&&a.round===workspace.pilot.rounds.length-1&&!!st?.revealed&&st.aiDone&&st.votesDone&&a.criteriaSig===approvalSig()&&!!a.calibration&&a.calibration.hash===currentCalibration().hash&&calibrationReady();};
+const approvalSig=()=>fingerprint({criteriaSig:workspace.criteriaSig,prompt:FT_PROMPT,reviewMode:PILOT_REVIEW_MODE,provider:screeningProvider(),model:workspace.screeningModel||''});
+const approvalsValid=()=>{const a=workspace.pilot.approved,st=a?roundState(a.round):null;return !pilotReviewSaving&&!fullReviewSaving&&!pilotReviewDrafts.size&&!!a&&a.round===workspace.pilot.rounds.length-1&&!!st?.revealed&&a.criteriaSig===approvalSig()&&!!a.calibration&&a.calibration.hash===currentCalibration().hash&&calibrationReady();};
 function sampleIds(size,seed){
   const used=new Set(workspace.pilot.rounds.flatMap(r=>r.ids));
   return workspace.records.filter(r=>hasDoc(r.uid)&&!used.has(r.uid)).map(r=>[parseInt(fingerprint(seed+'|'+r.uid),16),r.uid]).sort((a,b)=>a[0]-b[0]).slice(0,size).map(x=>x[1]);
 }
 async function startPilotRound(){
-  if(busy||!workspace.criteria?.rows?.length)return;
-  await resolvePilotModel();if(busy)return;
+  if(busy||pilotReviewSaving||fullReviewSaving||pilotReviewDrafts.size||!workspace.criteria?.rows?.length)return;
+  await resolvePilotModel();if(busy||pilotReviewSaving||fullReviewSaving||pilotReviewDrafts.size)return;
   const p=workspace.pilot,last=p.rounds.length-1;let i=last;
   if(last<0||roundState(last).revealed){
     if(!calibrationReady())return showNotice('pilot-message','Confirm corrections for all disagreements before the next round.','warning');
     const seed=fingerprint([scope,workspace.criteriaSig,p.rounds.length,now()]),ids=sampleIds(p.size,seed);
     if(!ids.length){showNotice('pilot-message','No retrieved full text is left for a new round. Add full texts in Full-text source.','warning');return}
     p.approved=null;
-    p.rounds.push({ids,seed,calibration:currentCalibration(p.rounds.length),size:p.size,startedAt:now(),criteriaSig:workspace.criteriaSig,prompt:FT_PROMPT,revealedAt:''});
-    i=p.rounds.length-1;pilotView=i;pilotFilter='all';log('pilot-round-started',{round:i+1,reports:ids.length,seed});await save();
+    p.rounds.push({reviewMode:PILOT_REVIEW_MODE,ids,seed,calibration:currentCalibration(p.rounds.length),size:p.size,startedAt:now(),criteriaSig:workspace.criteriaSig,prompt:FT_PROMPT,revealedAt:''});
+    i=p.rounds.length-1;pilotView=i;pilotFilter='agreed';log('pilot-round-started',{round:i+1,reports:ids.length,seed});await save();
   }
-  const ids=roundState(i).ids.filter(id=>workspace.pilot.ai[id]?.round!==i);
+  if(!p.rounds[i].calibration)p.rounds[i].calibration=currentCalibration(i);
+  const ids=roundState(i).ids.filter(id=>!validPilotAI(id,i));
   if(!ids.length){render();return}
   busy='pilot';controller=new AbortController();render();
   try{
-    const progress=()=>showNotice('pilot-message','The AI model is reading round '+(i+1)+': '+roundState(i).ai+' / '+roundState(i).ids.length+' done. You can decide while it works; its results stay hidden until you finish.');
+    const progress=()=>showNotice('pilot-message','The AI is assessing this round. Review its decisions when assessment is complete.');
     progress();
     const failed=await runPool(ids,aiWorkers(),async id=>{
-      const r=await readReport(id,i,controller.signal);workspace.pilot.ai[id]=r;
+      const r=await readReport(id,i,controller.signal);workspace.pilot.ai[id]={...r,originalDecision:r.decision,decision:pilotAIOutcome(r),reviewMode:PILOT_REVIEW_MODE};
       log('pilot-ai',{round:i+1,recordId:id,decision:r.decision,primaryReason:r.primaryReason,model:r.model,evidence:r.evidenceMethod,promptHash:r.promptHash});
       await save();progress();safely(renderPilot);
     },controller);
     if(failed.length)showNotice('pilot-message',failed.length+' report'+(failed.length===1?' was':'s were')+' skipped ('+failed[0].message+'). Click Resume to try again.','warning');
-    else if(!controller.signal.aborted)showNotice('pilot-message',roundState(i).votesDone?'':'The AI has read every report in round '+(i+1)+'. Decide on the remaining reports to see the comparison.','success');
+    else if(!controller.signal.aborted)showNotice('pilot-message',roundState(i).votesDone?'':'Review each AI assessment. Choose Agree, or Mistake with a reason and Save.','success');
   }catch(e){showNotice('pilot-message',e.name==='AbortError'?'Stopped. Finished readings are saved; click Resume to continue.':e.message,e.name==='AbortError'?'warning':'error')}
   finally{busy='';controller=null;await revealIfReady(i);render()}
 }
-async function revealIfReady(i){
-  const st=roundState(i);if(!st||st.revealed||!st.aiDone||!st.votesDone)return;
-  st.round.revealedAt=now();const m=pilotMetrics(st.ids);st.round.metrics=m;
-  log('pilot-round-compared',{round:i+1,reports:m.n,agreement:m.agreement,kappa:m.kappa,falseExclusions:m.fn});await save();
-  showNotice('pilot-message','Round '+(i+1)+' compared.'+(m.fn?' '+m.fn+' report'+(m.fn===1?'':'s')+' you keep the AI excluded.':'')+' Disagreements are listed first; add a note to tell the AI why.',m.recommended?'success':'warning');
+async function revealIfReady(i){const st=roundState(i);if(st?.aiDone&&st.votesDone&&!st.round.revealedAt){st.round.revealedAt=now();st.round.metrics=pilotMetrics(st.ids);await save();}}
+function setHuman(storeObj,id,patch){const prev=storeObj[id]||{};storeObj[id]={decision:prev.decision||'',reason:prev.reason||'',note:prev.note||'',...prev,...patch,at:now()};return prev;}
+function beginPilotMistake(id){
+  const a=workspace.pilot.ai[id];
+  if(pilotReviewSaving||busy||!roundState(pilotView)?.aiDone||!a||a.round!==pilotView||pilotView!==workspace.pilot.rounds.length-1)return;
+  pilotReviewDrafts.set(id,{note:workspace.pilot.human[id]?.review==='mistake'?workspace.pilot.human[id].note||'':''});
+  pilotReviewErrors.delete(id);renderPilot();
+  $('pilot-list').querySelector('[data-review-reason="'+CSS.escape(id)+'"]')?.focus();
 }
-function setHuman(storeObj,id,patch){const prev=storeObj[id]||{};storeObj[id]={decision:prev.decision||'',reason:prev.reason||'',note:prev.note||'',...prev,...patch,at:now()};return prev}
-function pilotDecide(id,decision){
-  if(busy&&busy!=='pilot')return;
-  const i=pilotView,st=roundState(i);if(!st||!st.ids.includes(id))return;
-  if(decision==='exclude'&&!reasonDrafts.get('pvote|'+id)&&!workspace.pilot.human[id]?.reason)return toast('Enter a reason for exclusion first.');
-  const prev=setHuman(workspace.pilot.human,id,{decision,reason:decision==='exclude'?(reasonDrafts.get('pvote|'+id)||workspace.pilot.human[id]?.reason||''):''});
-  if(st.revealed){workspace.pilot.human[id].revisedAt=now();st.round.metrics=pilotMetrics(st.ids);/* Current calibration hash invalidates approval without losing the frozen snapshot. */}
-  log('pilot-decision',{round:i+1,recordId:id,decision,previous:prev.decision||''});
-  save().then(()=>revealIfReady(i)).then(render).catch(()=>{});
+async function savePilotReview(id,review){
+  const i=pilotView,st=roundState(i),a=workspace.pilot.ai[id];
+  if(pilotReviewSaving||busy||!st?.aiDone||!a||!validPilotAI(id,i)||!st.ids.includes(id)||i!==workspace.pilot.rounds.length-1||!['agree','mistake'].includes(review))return;
+  const note=review==='mistake'?text(pilotReviewDrafts.get(id)?.note||'',1200).trim():'';
+  if(review==='mistake'&&!note){pilotReviewErrors.set(id,'Explain why the AI decision is incorrect before saving.');renderPilot();return;}
+  const prev=workspace.pilot.human[id],approved=workspace.pilot.approved,roundBefore=structuredClone(st.round);
+  const outcome=pilotAIOutcome(a),decision=review==='agree'?outcome:outcome==='include'?'exclude':'include';
+  const reason=decision==='exclude'?(review==='mistake'?note:(a.criteria||[]).filter(c=>c.judgment==='not met'&&c.quote).map(c=>c.dimension+': '+(c.reason||c.quote)).join('; ')||a.reason||'Reviewer confirmed the AI exclusion.') : '';
+  pilotReviewSaving=true;pilotReviewErrors.delete(id);
+  const confirmed={reviewMode:PILOT_REVIEW_MODE,review,round:i,reviewedAI:pilotReviewSignature(a),decision,calibrationCriterion:'*',note,
+    reason,exclusionReason:reason,aiDecision:outcome,at:now(),...(prev?{revisedAt:now(),previousReview:{review:prev.review||'',decision:prev.decision,note:prev.note||'',at:prev.at||''}}:{} )};
+  try{
+    workspace.pilot.human[id]=confirmed;workspace.pilot.approved=null;
+    const complete=roundState(i);st.round.reviewMode=PILOT_REVIEW_MODE;
+    st.round.revealedAt=complete.aiDone&&complete.votesDone?(st.round.revealedAt||now()):'';
+    st.round.metrics=pilotMetrics(st.ids);
+    log('pilot-review-saved',{round:i+1,recordId:id,review,aiDecision:outcome,decision,note});
+    renderPilot();await save();
+    pilotReviewDrafts.delete(id);
+  }catch(e){
+    if(prev)workspace.pilot.human[id]=prev;else delete workspace.pilot.human[id];
+    workspace.pilot.approved=approved;workspace.pilot.rounds[i]=roundBefore;
+    pilotReviewErrors.set(id,'Could not save your review: '+e.message+'. Please retry.');publishSummary();
+  }finally{pilotReviewSaving=false;render();}
 }
 async function approvePilot(){
-  if(busy)return;
+  if(busy||pilotReviewSaving||fullReviewSaving||pilotReviewDrafts.size)return;
   const p=workspace.pilot;
   if(approvalsValid()){if(!confirm('Withdraw the pilot approval? Full-text assessment of all reports will be locked again.'))return;p.approved=null;log('pilot-approval-withdrawn',{});await save();render();return}
   const i=p.rounds.length-1,st=roundState(i);if(busy||!st?.revealed||!st.aiDone||!st.votesDone||!calibrationReady())return;
   const m=pilotMetrics(st.ids);
-  const calibration=currentCalibration();
-  if(Object.keys(workspace.full.ai).length&&p.approved?.calibration?.hash!==calibration.hash){archiveRun('Calibration changed');workspace.full=newFull();}
+  const calibration=currentCalibration(),oldApproval=p.approved,oldFull=workspace.full,archiveCount=workspace.modelArchives?.length||0;
+  if((Object.keys(workspace.full.ai).length||Object.keys(workspace.full.ai2).length||Object.keys(workspace.full.human).length)&&p.approved?.calibration?.hash!==calibration.hash){archiveRun('Calibration changed');workspace.full=newFull();}
   p.approved={round:i,calibration,provider:screeningProvider(),at:now(),criteriaSig:approvalSig(),model:st.ids.map(id=>p.ai[id]?.model).find(Boolean)||'',prompt:FT_PROMPT,metrics:m,recommendedMet:m.recommended};
-  log('pilot-approved',{round:i+1,model:p.approved.model,agreement:m.agreement,kappa:m.kappa,falseExclusions:m.fn});await save();
+  log('pilot-approved',{round:i+1,model:p.approved.model,agreement:m.agreement,kappa:m.kappa,falseExclusions:m.fn});
+  try{await save();}catch(e){p.approved=oldApproval;workspace.full=oldFull;if(workspace.modelArchives)workspace.modelArchives.length=archiveCount;publishSummary();render();throw e;}
   showNotice('pilot-message','Pilot approved. Full-text assessment of all reports is unlocked.','success');render();
 }
 
 /* ---------------- All reports ---------------- */
-const fullNow=new Map(),fullDone=[];let fullFilter='auto',fullShown=20;
+const fullNow=new Map(),fullDone=[];let fullFilter='',fullShown=20,fullReviewSaving=false;
+const expandedFullAssessments=new Set(),collapsedFullAssessments=new Set(),fullReviewErrors=new Map();
 const ftAI=(storeObj,id)=>{const a=storeObj[id];return a&&a.criteriaSig===workspace.criteriaSig&&a.prompt?.startsWith(FT_PROMPT)&&a.calibrationHash===workspace.pilot.approved?.calibration?.hash&&a.documentHash===workspace.docs[id]?.hash?a:null};
-const pilotHumanOf=id=>workspace.pilot.human[id]||null;
+const pilotHumanOf=id=>{const h=workspace.pilot.human[id];return h&&validPilotReview(id,h.round)?h:null;};
 const screenable=()=>workspace.records.filter(r=>hasDoc(r.uid)&&!pilotHumanOf(r.uid));
 // A conflict requires directly opposed judgments about an exclusion criterion.
 function supportedExclusions(a){return (a?.criteria||[]).filter(c=>c.known&&c.judgment==='not met'&&c.quote);}
@@ -1433,7 +1475,7 @@ function exclusionReason(id){
 function finalOf(id){
   if(!hasDoc(id))return {decision:'',reason:'',source:''};
   const h=workspace.full.human[id]||pilotHumanOf(id);if(h?.decision)return {decision:h.decision,reason:h.decision==='exclude'?(h.reason||'Exclusion reason not recorded'):'',source:workspace.full.human[id]?'Human check':'Pilot reviewer decision'};
-  const pair=aiPair(id);if(!needsCheck(id)&&['include','exclude'].includes(pair))return {decision:pair,reason:pair==='exclude'?exclusionReason(id):'',source:'AI full-text readings'};
+  const pair=aiPair(id);if(['include','exclude','unclear'].includes(pair))return {decision:pair,reason:pair==='exclude'?exclusionReason(id):'',source:'AI full-text readings'};
   return {decision:'',reason:'',source:''};
 }
 
@@ -1442,11 +1484,11 @@ function summary(){
   const recs=workspace.records,assessed=recs.filter(r=>hasDoc(r.uid));
   let include=0,exclude=0,unclear=0;const reasons=new Map();
   for(const r of assessed){const f=finalOf(r.uid);if(f.decision==='include')include++;else if(f.decision==='unclear')unclear++;else if(f.decision==='exclude'){exclude++;reasons.set(f.reason||'Other',(reasons.get(f.reason||'Other')||0)+1)}}
-  const checkIds=screenable().map(r=>r.uid).filter(needsCheck),checked=checkIds.filter(id=>workspace.full.human[id]).length,conflicts=screenable().map(r=>r.uid).filter(isConflict);
+  const checkIds=screenable().map(r=>r.uid).filter(id=>needsCheck(id)&&!isConflict(id)),checked=checkIds.filter(id=>workspace.full.human[id]).length,conflicts=screenable().map(r=>r.uid).filter(isConflict);
   const decided=include+exclude+unclear;
   return {version:1,projectId,sought:recs.length,retrieved:assessed.length,notRetrieved:recs.length-assessed.length,assessed:assessed.length,include,exclude,unclear,reasons:[...reasons],decided,pending:assessed.length-decided,
     conflicts:conflicts.length,conflictsResolved:conflicts.filter(id=>workspace.full.human[id]).length,humanCheck:checkIds.length,humanChecked:checked,
-    completed:!!workspace.full.completedAt&&assessed.length>0&&decided===assessed.length,updatedAt:now()};
+    completed:!!workspace.full.completedAt&&assessed.length>0&&decided===assessed.length&&checked===checkIds.length&&conflicts.every(id=>workspace.full.human[id]),updatedAt:now()};
 }
 /* Hand-off to Risk of bias assessment: the included reports, the criteria in
    use, and where each full text is stored (aimstep-fulltext-docs, same key). */
@@ -1464,10 +1506,10 @@ function publishForRob(){
   },800);
 }
 function publishSummary(){publishForRob();try{localStorage.setItem(summaryKey,JSON.stringify(summary()))}catch(e){}}
-function maybeComplete(){const s=summary(),done=s.assessed>0&&!s.pending&&aiDone();if(done&&!workspace.full.completedAt){workspace.full.completedAt=now();log('full-text-screening-complete',{included:s.include,excluded:s.exclude,awaiting:s.unclear})}else if(!done)workspace.full.completedAt=''}
+function maybeComplete(){const s=summary(),done=s.assessed>0&&!s.pending&&aiDone()&&s.humanCheck===s.humanChecked&&s.conflicts===s.conflictsResolved;if(done&&!workspace.full.completedAt){workspace.full.completedAt=now();log('full-text-screening-complete',{included:s.include,excluded:s.exclude,awaiting:s.unclear})}else if(!done)workspace.full.completedAt=''}
 async function runFull(){
-  if(busy||!approvalsValid())return;
-  await resolvePilotModel();if(busy||!approvalsValid())return;
+  if(busy||fullReviewSaving||!approvalsValid())return;
+  await resolvePilotModel();if(busy||fullReviewSaving||!approvalsValid())return;
   const approved=workspace.pilot.approved,tasks=screenable().flatMap(r=>[1,2].filter(v=>!ftAI(v===1?workspace.full.ai:workspace.full.ai2,r.uid)).map(v=>[r.uid,v]));
   if(!tasks.length){maybeComplete();await save();render();return}
   busy='full';controller=new AbortController();render();
@@ -1494,20 +1536,27 @@ async function runFull(){
   }catch(e){showNotice('full-message',e.name==='AbortError'?'Stopped. Every finished reading is saved; click Resume to continue.':e.message,e.name==='AbortError'?'warning':'error');if(e.name!=='AbortError')log('model-error',{stage:'full',message:text(e.message,500)})}
   finally{busy='';controller=null;fullNow.clear();await save().catch(()=>{});render()}
 }
-function endMessage(s){const open=s.humanCheck-s.humanChecked;return open?'The AI has read every report twice. Below, check '+open+' report'+(open===1?'':'s')+' (unclear reports, conflicts and selected exclusions).':'Full-text assess is complete. Export the included reports, or the excluded ones with reasons.'}
-function fullDecide(id,decision){
-  if(busy||!recordById.has(id))return;
-  if(decision==='exclude'&&!reasonDrafts.get('fvote|'+id)&&!workspace.full.human[id]?.reason)return toast('Enter a reason for exclusion first.');
-  const prev=setHuman(workspace.full.human,id,{decision,reason:decision==='exclude'?(reasonDrafts.get('fvote|'+id)||workspace.full.human[id]?.reason||''):''});
-  log(isConflict(id)?'conflict-resolved':'human-check',{recordId:id,decision,reason:workspace.full.human[id].reason,previous:prev.decision||'',reading1:ftAI(workspace.full.ai,id)?.decision||'',reading2:ftAI(workspace.full.ai2,id)?.decision||''});
-  maybeComplete();save().then(render).catch(()=>{});
+function endMessage(s){const open=s.humanCheck-s.humanChecked+s.conflicts-s.conflictsResolved;return open?'The AI has read every report twice. Select Check or Conflicts above to review '+open+' report'+(open===1?'':'s')+' (unclear reports, conflicts and selected exclusions).':'Full-text assess is complete. Export the included reports, or the excluded ones with reasons.'}
+async function fullDecide(id,decision){
+  if(busy||fullReviewSaving||pilotReviewSaving||!recordById.has(id)||!hasDoc(id)||!['include','exclude'].includes(decision))return;
+  const prev=workspace.full.human[id],prior=prev?structuredClone(prev):null,completion=workspace.full.completedAt;
+  const reason=decision==='exclude'?text(reasonDrafts.get('fvote|'+id)??prev?.reason??pilotHumanOf(id)?.reason??'',1200).trim():'';
+  if(decision==='exclude'&&!reason){fullReviewErrors.set(id,'Enter an exclusion reason before choosing No.');renderFull();return;}
+  fullReviewSaving=true;fullReviewErrors.delete(id);
+  try{setHuman(workspace.full.human,id,{decision,reason});log('human-check',{recordId:id,decision,reason,previous:prev?.decision||''});maybeComplete();await save();}
+  catch(e){if(prior)workspace.full.human[id]=prior;else delete workspace.full.human[id];workspace.full.completedAt=completion;publishSummary();fullReviewErrors.set(id,'Could not save: '+e.message+'. Please retry.');}
+  finally{fullReviewSaving=false;render();}
+}
+function fullCategoryIds(category){
+  if(['include','unclear','exclude'].includes(category))return workspace.records.filter(r=>finalOf(r.uid).decision===category).map(r=>r.uid);
+  return screenable().map(r=>r.uid).filter(id=>category==='conflicts'?isConflict(id):category==='check'?needsCheck(id)&&!isConflict(id):false).sort((a,b)=>!!workspace.full.human[a]-!!workspace.full.human[b]);
 }
 
 /* ---------------- Cards: decision, reasons, highlighted evidence ---------------- */
 const openEvidence=new Set(),openAbstracts=new Set(),reasonDrafts=new Map();
 function decisionControls(id,h,attr){
-  const value=reasonDrafts.get(attr+'|'+id)??h?.reason??'',locked=!!busy&&!(attr==='pvote'&&busy==='pilot');
-  return '<label class="ft-reason">Reason for exclusion (required for Exclude)<input class="input" maxlength="1200" data-reason-draft="'+esc(attr+'|'+id)+'" value="'+esc(value)+'" placeholder="Name the unmet criterion and explain why"'+(locked?' disabled':'')+'></label><div class="decision-buttons" role="group" aria-label="Your decision">'+['include','unclear','exclude'].map(d=>'<button type="button" class="vote ft-'+d+(h?.decision===d?' selected':'')+'" data-'+attr+'="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'"'+(locked?' disabled':'')+'>'+ftLabel(d)+'</button>').join('')+'</div>'+(h?'<label class="pilot-note">Note<input class="input" data-'+attr+'-note="'+esc(id)+'" value="'+esc(h.note||'')+'" placeholder="Why, or what to ask the authors"'+(locked?' disabled':'')+'></label>':'');
+  const value=reasonDrafts.get(attr+'|'+id)??h?.reason??'',locked=!!busy||fullReviewSaving;
+  return '<label class="ft-reason">Exclusion reason (required for No)<input class="input" maxlength="1200" data-reason-draft="'+esc(attr+'|'+id)+'" value="'+esc(value)+'" placeholder="Name the unmet criterion and explain why"'+(locked?' disabled':'')+'></label><div class="decision-buttons" role="group" aria-label="Your decision">'+['include','exclude'].map(d=>'<button type="button" class="vote ft-'+d+(h?.decision===d?' selected':'')+'" data-'+attr+'="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'"'+(locked?' disabled':'')+'>'+(d==='include'?'Yes':'No')+'</button>').join('')+'</div>';
 }
 
 function aiBlock(a,label){
@@ -1522,13 +1571,23 @@ function evidenceHtml(doc,quotes){
 }
 function reportCard(id,opts){
   const rec=recordById.get(id),doc=docCache.get(id),meta=workspace.docs[id];if(!rec)return '';
-  const {human,attr,reveal,ai,badges}=opts,quotes=reveal?ai.flatMap(a=>a?a.criteria.map(c=>c.quote).filter(Boolean):[]):[],open=openEvidence.has(id);
-  return '<article class="record'+(opts.differ?' differ':'')+'"><div class="record-head"><div><h3>'+esc(rec.title||'(untitled report)')+'</h3><div class="meta">'+[esc([rec.authors?.slice(0,3).join(', '),rec.year,rec.journal].filter(Boolean).join(' · ')),rec.doi?'DOI: '+doiLink(rec.doi):''].filter(Boolean).join(' · ')+'</div><div class="meta">Full text: '+esc(meta?.source||'—')+'</div></div><div class="badges">'+(badges||'')+(human?.decision?ftBadge(human.decision):'<span class="badge">Decision pending</span>')+'</div></div>'+
-    '<div class="toolbar ev-tools"><button type="button" class="abs-toggle" data-ev="'+esc(id)+'" aria-expanded="'+open+'">'+(open?'Hide evidence passages':'Show evidence passages')+'</button><button type="button" class="abs-toggle" data-read="'+esc(id)+'">Open full text</button></div>'+
-    (open?'<div class="evidence">'+evidenceHtml(doc,quotes)+'</div>':'')+
-    (rec.abstract?'<button type="button" class="abs-toggle" data-abstract="'+esc(id)+'" aria-expanded="'+openAbstracts.has(id)+'">'+(openAbstracts.has(id)?'Hide abstract':'Show abstract')+'</button>'+(openAbstracts.has(id)?'<p class="abstract">'+esc(rec.abstract)+'</p>':''):'')+
-    decisionControls(id,human,attr)+(attr==='pvote'&&opts.differ&&human?calibrationFields(id,human):'')+
-    (reveal?ai.map((a,i)=>a?aiBlock(a,ai.length>1?'AI reading '+(i+1):'AI'):'').join(''):'<p class="hint">'+(opts.blindNote||'')+'</p>')+'</article>';
+  const pilot=opts.attr==='pvote',a=workspace.pilot.ai[id],st=pilot?roundState(pilotView):null,available=pilot?validPilotAI(id,pilotView):true;
+  const h=pilot?workspace.pilot.human[id]:workspace.full.human[id]||pilotHumanOf(id),saved=pilot?validPilotReview(id,pilotView):!!h,draft=pilot?pilotReviewDrafts.get(id):null;
+  const readings=pilot?(available?[a]:[]):[ftAI(workspace.full.ai,id),ftAI(workspace.full.ai2,id)].filter(Boolean);
+  if(!pilot&&!readings.length&&a)readings.push(a);
+  const quotes=readings.flatMap(x=>(x.criteria||[]).map(c=>c.quote).filter(Boolean));
+  const collapsed=pilot?saved&&!expandedPilotAssessments.has(id)&&!draft&&!pilotReviewErrors.has(id):collapsedFullAssessments.has(id)||(saved&&!expandedFullAssessments.has(id));
+  const assessmentId=(pilot?'pilot':'full')+'-assessment-'+encodeURIComponent(id),outcome=pilot?pilotAIOutcome(a):pilotHumanOf(id)?pilotAIOutcome(a):aiPair(id);
+  const toggle=(pilot?saved:true)?'<button class="badge pilot-review-toggle" type="button" data-toggle-assessment="'+esc(id)+'" aria-expanded="'+!collapsed+'" aria-controls="'+esc(assessmentId)+'">'+(pilot?(h.review==='agree'?'Agreed':'Corrected'):saved?'Assessed: '+(h.decision==='include'?'Yes':h.decision==='exclude'?'No':'Maybe'):'AI assessed')+'<span class="review-chevron" aria-hidden="true">⌄</span></button>':'';
+  const ai=readings.length?'<div class="audit"><strong>AI decision: '+esc(({include:'Include',exclude:'Exclude',unclear:'Unclear',conflict:'Conflicting assessments'})[outcome]||'Pending')+'</strong>'+(pilot&&a.originalDecision==='unclear'?'<p class="hint">Retained because the available evidence does not establish an exclusion. Review the full text before agreeing.</p>':'')+readings.map((x,i)=>aiBlock(x,readings.length>1?'AI reading '+(i+1):'AI assessment')).join('')+'</div>':'<p class="hint">Waiting for the AI assessment.</p>';
+  const canReview=available&&st?.aiDone&&pilotView===workspace.pilot.rounds.length-1&&!busy&&!pilotReviewSaving;
+  const buttons=pilot&&available?'<div class="decision-buttons" role="group" aria-label="Review AI decision">'+['agree','mistake'].map(choice=>'<button type="button" class="vote ft-'+(choice==='agree'?'include':'exclude')+((draft?choice==='mistake':saved&&h.review===choice)?' selected':'')+'" data-review="'+choice+'" data-id="'+esc(id)+'"'+(canReview?'':' disabled')+'>'+(choice==='agree'?'Agree':'Mistake')+'</button>').join('')+'</div>':'';
+  const correction=pilot&&draft?'<p class="hint">Your corrected decision: '+ftLabel(pilotAIOutcome(a)==='include'?'exclude':'include')+'</p><label class="pilot-note">Reason<textarea class="textarea" data-review-reason="'+esc(id)+'" maxlength="1200"'+(canReview?'':' disabled')+'>'+esc(draft.note)+'</textarea></label><button class="btn primary small" type="button" data-review-save="'+esc(id)+'"'+(canReview?'':' disabled')+'>Save</button>':pilot&&saved&&h.review==='mistake'?'<p class="hint">Your corrected decision: '+ftLabel(h.decision)+' · '+esc(h.note)+'</p>':'';
+  const errors=pilot?pilotReviewErrors:fullReviewErrors;
+  return '<article class="record'+((pilot?saved&&h.review==='mistake':isConflict(id)&&!h)?' differ':'')+'"><div class="record-head"><div><h3>'+excerpt(rec.title||'(untitled report)',quotes)+'</h3><div class="meta">'+[esc([rec.authors?.slice(0,3).join(', '),rec.year,rec.journal].filter(Boolean).join(' · ')),rec.doi?'DOI: '+doiLink(rec.doi):''].filter(Boolean).join(' · ')+'</div><div class="meta">Full text: '+esc(meta?.source||'—')+'</div></div>'+toggle+'</div>'+
+    (rec.abstract?'<button type="button" class="abs-toggle" data-abstract="'+esc(id)+'" aria-expanded="'+openAbstracts.has(id)+'">'+(openAbstracts.has(id)?'Hide abstract':'Show abstract')+'</button>'+(openAbstracts.has(id)?'<p class="abstract">'+excerpt(rec.abstract,quotes)+'</p>':''):'')+
+    '<div class="toolbar ev-tools"><button type="button" class="abs-toggle" data-ev="'+esc(id)+'" aria-expanded="'+openEvidence.has(id)+'">'+(openEvidence.has(id)?'Hide evidence passages':'Show evidence passages')+'</button><button type="button" class="abs-toggle" data-read="'+esc(id)+'">Open full text</button></div>'+(openEvidence.has(id)?'<div class="evidence">'+evidenceHtml(doc,quotes)+'</div>':'')+
+    '<div id="'+esc(assessmentId)+'" data-assessment'+(collapsed?' hidden':'')+'>'+ai+buttons+correction+'</div>'+(!pilot?decisionControls(id,h,'fvote'):'')+(errors.has(id)?'<p class="notice error" role="alert">'+esc(errors.get(id))+'</p>':'')+'</article>';
 }
 async function ensureDocs(ids){await Promise.all(ids.filter(id=>!docCache.has(id)&&hasDoc(id)).map(id=>loadDoc(id)))}
 let readerObjectUrl='',readerRequest=0;
@@ -1630,58 +1689,47 @@ function renderSource(){
 
 }
 function renderPilot(){
-  if(document.activeElement?.matches?.('input, textarea, select')&&document.activeElement.closest('#pilot-list'))return;
   const p=workspace.pilot,last=p.rounds.length-1;if(pilotView<0||pilotView>last)pilotView=last;
   const st=roundState(pilotView),lastSt=roundState(last),ready=!!workspace.criteria?.rows?.length&&workspace.records.some(r=>hasDoc(r.uid));
-  $('rounds').innerHTML=p.rounds.map((r,i)=>'<button class="round'+(i===pilotView?' current':'')+(r.revealedAt?' done':'')+'" type="button" data-round="'+i+'"><b>Round '+(i+1)+(p.approved?.round===i?' ✓':'')+'</b><span>'+r.ids.length+' reports'+(r.revealedAt?' · compared':' · in progress')+'</span></button>').join('');
+  $('rounds').innerHTML=p.rounds.map((r,i)=>{const state=roundState(i),complete=state.revealed&&!state.ids.some(id=>pilotReviewDrafts.has(id))&&!pilotReviewSaving;return '<button class="round'+(i===pilotView?' current':'')+(complete?' done':'')+'" type="button" data-round="'+i+'" aria-pressed="'+(i===pilotView)+'"><b>Round '+(i+1)+(complete?' Reviewed':'')+(p.approved?.round===i?' ✓':'')+'</b><span>'+(complete?'AI accuracy '+pct(pilotMetrics(state.ids).accuracy):'In progress')+'</span></button>';}).join('');
   $('rounds').hidden=!p.rounds.length;$('sample-size').value=p.size;
-  $('run-pilot').textContent=lastSt&&!lastSt.aiDone?'Resume round '+(last+1):'Start round '+(last+2);
-  $('run-pilot').disabled=!ready||!!busy||(!!lastSt&&!lastSt.revealed&&lastSt.aiDone);
-  $('stop-pilot').hidden=busy!=='pilot';$('reset-pilot').disabled=!!busy||!p.rounds.length;
-  const m=st?pilotMetrics(st.ids):null,shown=st?.revealed;
-  $('pilot-voted').textContent=st?st.voted+' / '+st.ids.length:'—';$('pilot-ai').textContent=st?st.ai+' / '+st.ids.length:'—';
-  $('pilot-agreement').textContent=shown?pct(m.agreement):'—';$('pilot-kappa').textContent=shown?(m.kappa===null?'n/a':m.kappa.toFixed(2)):'—';$('pilot-false-ex').textContent=shown?String(m.fn):'—';
-  $('pilot-false-ex').parentElement.classList.toggle('alert',!!(shown&&m.fn));
-  $('pilot-detail').innerHTML=shown?'Recall of reports you keep: '+(m.recall===null?'not assessable':pct(m.recall)+' (95% CI '+pct(m.recallCI[0])+'–'+pct(m.recallCI[1])+')')+' · AI kept '+m.fp+' you excluded · Exact Include / Unclear / Exclude match '+m.exact+' / '+m.n+'<br><span class="'+(m.recommended?'ok':'warn')+'">'+(m.recommended?'✓ Meets':'✗ Does not meet')+' the recommended standard</span>: no false exclusions, and Cohen\'s κ ≥ 0.6 or agreement ≥ 75%.':
-    st?'Agreement is shown when you and the AI have both finished this round.':ready?'Start a round: the AI reads a random sample of retrieved full texts while you decide on the same reports.':'Import reports and add full texts in Full-text source first.';
+  $('run-pilot').textContent=lastSt&&!lastSt.aiDone?'Resume round '+(last+1):lastSt?'Run another round (optional)':'Start round 1';
+  $('run-pilot').disabled=!ready||!!busy||pilotReviewSaving||!!pilotReviewDrafts.size||(!!lastSt&&!lastSt.revealed&&lastSt.aiDone);
+  $('stop-pilot').hidden=busy!=='pilot';$('reset-pilot').disabled=!!busy||pilotReviewSaving||!p.rounds.length;
+  const shown=st?.revealed;
+  $('pilot-detail').textContent='Accuracy is the proportion of AI decisions you marked Agree in this round.';
   $('pilot-filter').hidden=!shown;$('pilot-filter').querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===pilotFilter)));
-  let ids=st?st.ids:[];
-  if(shown){const diff=id=>workspace.pilot.ai[id]?.decision!==workspace.pilot.human[id]?.decision;ids=ids.slice().sort((a,b)=>diff(b)-diff(a));if(pilotFilter==='differ')ids=ids.filter(diff)}
-  const latest=pilotView===last;
-  $('pilot-list').innerHTML=ids.map(id=>{const a=workspace.pilot.ai[id],h=workspace.pilot.human[id];return reportCard(id,{human:h,attr:'pvote',reveal:shown&&!!a,ai:[a],differ:shown&&a&&h&&a.decision!==h.decision,badges:shown&&a&&h&&a.decision==='exclude'&&kept(h.decision)?'<span class="badge differ">False exclusion</span>':'',blindNote:st&&!shown?'The AI reading stays hidden until you and the AI have both finished this round.':''})}).join('');
-  const gate=$('approve-pilot'),approved=approvalsValid(),canApprove=!!lastSt?.revealed&&lastSt.aiDone&&lastSt.votesDone&&calibrationReady()&&!busy;
-  gate.textContent=approved?'Pilot approved':'Approve pilot';
-  gate.disabled=!!busy||!(approved||canApprove);gate.classList.toggle('activated',approved);gate.setAttribute('aria-pressed',String(approved));
-  gate.title=approved?'Approved (round '+(p.approved.round+1)+'). Click to withdraw.':canApprove?'Approve the latest round to unlock Full-text assessment of all reports.':'Available when a round has been compared.';
-  ensureDocs(ids).then(()=>{if(ids.some(id=>openEvidence.has(id)))safely(()=>{const keep=window.scrollY;renderPilotListOnly(ids,st,shown,latest);window.scrollTo(0,keep)})});
+  const all=st?.ids||[],agreed=id=>validPilotReview(id,pilotView)&&p.human[id].review==='agree',mistake=id=>validPilotReview(id,pilotView)&&p.human[id].review==='mistake';
+  $('pilot-agreed-count').textContent=all.filter(agreed).length;$('pilot-mistake-count').textContent=all.filter(mistake).length;
+  const ids=shown?all.filter(pilotFilter==='differ'?mistake:agreed):all;
+  const active=document.activeElement,focusId=active?.dataset?.reviewReason,selection=focusId?[active.selectionStart,active.selectionEnd]:null;
+  $('pilot-list').innerHTML=ids.map(id=>reportCard(id,{attr:'pvote'})).join('')+(st&&!ids.length?'<p class="hint">No '+(pilotFilter==='differ'?'saved mistakes':'agreed reports')+' in this round.</p>':'');
+  if(focusId){const input=$('pilot-list').querySelector('[data-review-reason="'+CSS.escape(focusId)+'"]');input?.focus?.({preventScroll:true});input?.setSelectionRange?.(...selection);}
+  const gate=$('approve-pilot'),approved=approvalsValid(),canApprove=!!lastSt?.revealed&&calibrationReady()&&!busy&&!pilotReviewSaving&&!pilotReviewDrafts.size;
+  gate.textContent=approved?'Pilot approved':'Approve pilot';gate.disabled=!!busy||pilotReviewSaving||!!pilotReviewDrafts.size||!(approved||canApprove);gate.classList.toggle('activated',approved);gate.setAttribute('aria-pressed',String(approved));
+  gate.title=approved?'Approved. Click to withdraw.':canApprove?'Approve this round to start formal assessment.':'Complete at least one round and save all reviews first.';
 }
-function renderPilotListOnly(ids,st,shown,latest){$('pilot-list').innerHTML=ids.map(id=>{const a=workspace.pilot.ai[id],h=workspace.pilot.human[id];return reportCard(id,{human:h,attr:'pvote',reveal:shown&&!!a,ai:[a],differ:shown&&a&&h&&a.decision!==h.decision,blindNote:st&&!shown?'The AI reading stays hidden until you and the AI have both finished this round.':''})}).join('')}
 function renderFull(){
-  $('check-scope').value=workspace.full.check||'unresolved';$('check-scope').disabled=!!busy;
   const s=summary(),valid=approvalsValid(),calls=screenable().reduce((n,r)=>n+(ftAI(workspace.full.ai,r.uid)?0:1)+(ftAI(workspace.full.ai2,r.uid)?0:1),0),share=s.assessed?Math.floor(s.decided/s.assessed*100):0;
   $('full-decided').textContent=s.decided+' / '+s.assessed;$('full-include').textContent=s.include;$('full-exclude').textContent=s.exclude;$('full-unclear').textContent=s.unclear;
-  $('full-conflicts').textContent=s.conflictsResolved+' / '+s.conflicts;$('full-conflicts').parentElement.classList.toggle('alert',s.conflicts>s.conflictsResolved);$('full-check').textContent=s.humanChecked+' / '+s.humanCheck;
+  $('full-conflicts').textContent=s.conflicts;$('full-conflicts').parentElement.classList.toggle('alert',s.conflicts>s.conflictsResolved);$('full-check').textContent=s.humanCheck;
   $('full-bar').style.width=share+'%';$('full-track').setAttribute('aria-valuenow',String(share));
   const times=workspace.full.times||[],avg=fullDone.length>=4?(fullDone.at(-1)-fullDone[0])/(fullDone.length-1):times.length?times.reduce((a,b)=>a+b,0)/times.length/AI_WORKERS:0;
   $('full-progress').textContent=share+'% · '+s.decided+' of '+s.assessed+' reports decided'+(calls&&avg?' · '+(avg*calls<60000?'under a minute':'about '+fmtDuration(avg*calls))+' of AI reading left':'')+(s.reasons.length?' · Excluded by reason: '+s.reasons.sort((a,b)=>b[1]-a[1]).map(([r,n])=>r+' '+n).join(', '):'');
-  const inFlight=[...fullNow.values()];$('full-now').hidden=!inFlight.length;$('full-now').innerHTML=inFlight.map(t=>'<span class="now-item"><span class="pulse" aria-hidden="true"></span>'+esc(t)+'</span>').join('');
+  const inFlight=[...fullNow.values()];$('full-now').hidden=true;$('full-now').innerHTML=inFlight.map(t=>'<span class="now-item"><span class="pulse" aria-hidden="true"></span>'+esc(t)+'</span>').join('');
   const start=$('start-full');start.textContent=workspace.full.startedAt&&calls?'Resume':'Start';start.disabled=!valid||!!busy||!calls;start.title=!valid?'Approve the pilot first.':calls?calls+' AI readings left (two per report).':'Both AI readings are complete.';
   $('stop-full').hidden=busy!=='full';
   const latestR=[...Object.entries(workspace.full.ai),...Object.entries(workspace.full.ai2)].filter(([id,a])=>recordById.has(id)&&a.criteriaSig===workspace.criteriaSig).sort((x,y)=>String(y[1].at).localeCompare(String(x[1].at))).slice(0,8);
   $('full-feed').innerHTML=latestR.map(([id,a])=>'<li><span class="feed-pass">Reading '+(a.variant||1)+'</span>'+ftBadge(a.decision)+((a.variant===2)&&aiPair(id)==='conflict'?'<span class="badge differ">Conflict</span>':'')+'<span class="feed-title" title="'+esc(recordById.get(id).title)+'">'+esc(recordById.get(id).title||'(untitled report)')+'</span><span class="feed-why">'+esc(a.primaryReason?'Not met: '+a.primaryReason:a.decision==='include'?'All criteria met':'Unclear')+'</span></li>').join('');
-  $('full-feed-wrap').hidden=!latestR.length&&!busy;
-  const ids=screenable().map(r=>r.uid),conflicts=ids.filter(isConflict).sort((x,y)=>!!workspace.full.human[x]-!!workspace.full.human[y]),checks=ids.filter(id=>needsCheck(id)&&!isConflict(id)),todo=checks.filter(id=>!workspace.full.human[id]),done=checks.filter(id=>workspace.full.human[id]),open=conflicts.filter(id=>!workspace.full.human[id]).length;
-  $('check-summary').innerHTML=(conflicts.length||checks.length)?[conflicts.length?'<span class="'+(open?'warn':'ok')+'">'+open+' conflict'+(open===1?'':'s')+' to resolve</span> of '+conflicts.length:'',todo.length+' to check · '+done.length+' checked'].filter(Boolean).join(' · '):Object.keys(workspace.full.ai).length?'Nothing to check yet.':'Reports appear here as the AI reads them.';
-  const counts={conflicts:conflicts.length,todo:todo.length,done:done.length},view=fullFilter==='auto'?(open?'conflicts':'todo'):fullFilter;
-  $('check-filter').hidden=!conflicts.length&&!checks.length;$('check-filter').querySelectorAll('[data-cfilter]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.cfilter===view));b.querySelector('.count').textContent=counts[b.dataset.cfilter]});
-  const list=(view==='conflicts'?conflicts:view==='done'?done:todo).slice(0,fullShown);
-  const draw=()=>{$('check-list').innerHTML=list.map(id=>{const a=ftAI(workspace.full.ai,id),b=ftAI(workspace.full.ai2,id),h=workspace.full.human[id];
-    return reportCard(id,{human:h,attr:'fvote',reveal:true,ai:[a,b],badges:(isConflict(id)?'<span class="badge differ">Conflict</span>':'')+'<span class="badge">AI: '+esc(ftLabel(aiPair(id)==='conflict'?'':aiPair(id)))+'</span>',differ:isConflict(id)&&!h})}).join('')+((view==='conflicts'?conflicts:view==='done'?done:todo).length>fullShown?'<button class="btn small" type="button" id="check-more">Show more</button>':'')};
-  draw();ensureDocs(list).then(()=>{if(list.some(id=>openEvidence.has(id)))safely(draw)});
+  $('full-feed-wrap').hidden=true;
+  const ids=fullCategoryIds(fullFilter),list=ids.slice(0,fullShown);
+  $('full-categories').querySelectorAll('[data-full-category]').forEach(button=>{const selected=button.dataset.fullCategory===fullFilter;button.setAttribute('aria-pressed',String(selected));button.setAttribute('aria-expanded',String(selected));});
+  $('check-list').hidden=!fullFilter;
+  $('check-list').innerHTML=!fullFilter?'':list.map(id=>reportCard(id,{attr:'fvote'})).join('')+(ids.length>fullShown?'<button class="btn small" type="button" id="check-more">Show more</button>':'')+(!ids.length?'<p class="hint">No reports in this category.</p>':'');
   renderPrisma(s);updateExportCount();
   const endMsg=$('full-message').textContent;
   if(!busy&&aiDone()&&s.assessed&&(endMsg.startsWith('The AI has read every report')||endMsg.startsWith('Full-text assess is complete')))showNotice('full-message',endMessage(s),'success');
-  if(workspace.pilot.approved&&!valid)showNotice('full-message','The eligibility criteria changed after the pilot was approved. Approve a new pilot round first.','warning');
+  if(workspace.pilot.approved&&!valid)showNotice('full-message','The criteria, documents or pilot reviews changed. Complete and approve the current pilot before formal assessment.','warning');
 }
 function renderPrisma(s){
   const rows=[['Reports sought for retrieval',s.sought],['Reports not retrieved',s.notRetrieved],['Reports assessed for eligibility',s.assessed],['Reports excluded',s.exclude],...s.reasons.sort((a,b)=>b[1]-a[1]).map(([r,n])=>['  '+r,n]),['Awaiting classification',s.unclear],['Reports included',s.include],['Not yet decided',s.pending]];
@@ -1727,7 +1775,9 @@ function invalidateDocument(id){
 }
 function currentCalibration(before=Infinity){
   const records=workspace.records.map(r=>({...r,fullText:docCache.get(r.uid)?.fullText||''}));
-  return calibrationEngine.build(workspace.pilot,records,workspace.criteria,workspace.criteriaSig,before);
+  const p=workspace.pilot,ai={},human={};
+  for(const [id,a] of Object.entries(p.ai)){if(validPilotReview(id,a.round)){ai[id]={...a,decision:pilotAIOutcome(a)};human[id]=p.human[id];}}
+  return calibrationEngine.build({...p,ai,human},records,workspace.criteria,workspace.criteriaSig,before);
 }
 const calibrationReady=()=>currentCalibration().pending.length===0;
 function renderCalibration(){
@@ -2084,7 +2134,7 @@ importDialog.addEventListener('cancel',event=>{if(importing)event.preventDefault
 $('download-source').addEventListener('click',downloadFulltextPdfs);
 $('clear-source').addEventListener('click',()=>clearSource().catch(e=>showNotice('source-notice',e.message,'error')));
 $('restore-source').addEventListener('click',()=>restoreSource().catch(e=>showNotice('source-notice',e.message,'error')));
-$('check-scope').addEventListener('change',()=>{if(busy)return;workspace.full.check=$('check-scope').value;maybeComplete();save().then(render);});
+
 $('oa-email').addEventListener('change',()=>{if(!$('oa-email').checkValidity())return;pauseRetrieval();for(const r of workspace.records)if(!hasDoc(r.uid)&&workspace.docs[r.uid]?.kind==='none')delete workspace.docs[r.uid].retryAt;save().then(scheduleRetrieval);});
 $('docs-more').addEventListener('click',()=>{docsShown=1e9;renderSource()});
 $('doc-rows').addEventListener('click',e=>{const t=e.target,button=t.closest('[data-source-toggle]');
@@ -2099,28 +2149,33 @@ $('doc-rows').addEventListener('click',e=>{const t=e.target,button=t.closest('[d
 });
 $('close-reader').addEventListener('click',()=>$('reader-dialog').close());
 $('reader-dialog').addEventListener('close',()=>{readerRequest++;releaseReaderPdf();});
-let pilotHelpTimer;
-function hidePilotHelp(){clearTimeout(pilotHelpTimer);$('pilot-help-tooltip').hidden=true;}
-function showPilotHelp(){
-  clearTimeout(pilotHelpTimer);
-  const tip=$('pilot-help-tooltip'),button=$('pilot-help-button').getBoundingClientRect();
-  tip.hidden=false;
-  const box=tip.getBoundingClientRect(),gap=8;
-  tip.style.left=Math.max(12,Math.min(button.left,window.innerWidth-box.width-12))+'px';
-  tip.style.top=Math.max(12,button.bottom+gap+box.height<=window.innerHeight-12?button.bottom+gap:button.top-gap-box.height)+'px';
+function bindScreeningHelp(prefix){
+  let timer;
+  const tip=$(prefix+'-help-tooltip'),trigger=$(prefix+'-help-button');
+  const hide=()=>{clearTimeout(timer);tip.hidden=true;};
+  const show=()=>{
+    clearTimeout(timer);
+    const button=trigger.getBoundingClientRect();tip.hidden=false;
+    const box=tip.getBoundingClientRect(),gap=8;
+    tip.style.left=Math.max(12,Math.min(button.left,window.innerWidth-box.width-12))+'px';
+    tip.style.top=Math.max(12,button.bottom+gap+box.height<=window.innerHeight-12?button.bottom+gap:button.top-gap-box.height)+'px';
+  };
+  const scheduleHide=()=>{clearTimeout(timer);timer=setTimeout(hide,120);};
+  trigger.addEventListener('mouseenter',show);
+  trigger.addEventListener('mouseleave',scheduleHide);
+  tip.addEventListener('mouseenter',()=>clearTimeout(timer));
+  tip.addEventListener('mouseleave',scheduleHide);
+  trigger.addEventListener('focus',show);
+  trigger.addEventListener('blur',hide);
+  trigger.addEventListener('click',show);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});
+  document.addEventListener('pointerdown',e=>{if(!e.target.closest('#'+prefix+'-help-button,#'+prefix+'-help-tooltip'))hide();});
+  window.addEventListener('resize',hide);
+  window.addEventListener('scroll',hide,true);
 }
-function scheduleHidePilotHelp(){clearTimeout(pilotHelpTimer);pilotHelpTimer=setTimeout(hidePilotHelp,120);}
-$('pilot-help-button').addEventListener('mouseenter',showPilotHelp);
-$('pilot-help-button').addEventListener('mouseleave',scheduleHidePilotHelp);
-$('pilot-help-tooltip').addEventListener('mouseenter',()=>clearTimeout(pilotHelpTimer));
-$('pilot-help-tooltip').addEventListener('mouseleave',scheduleHidePilotHelp);
-$('pilot-help-button').addEventListener('focus',showPilotHelp);
-$('pilot-help-button').addEventListener('blur',hidePilotHelp);
-$('pilot-help-button').addEventListener('click',showPilotHelp);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')hidePilotHelp();});
-document.addEventListener('pointerdown',e=>{if(!e.target.closest('#pilot-help-button,#pilot-help-tooltip'))hidePilotHelp();});
-window.addEventListener('resize',hidePilotHelp);
-window.addEventListener('scroll',hidePilotHelp,true);
+bindScreeningHelp('pilot');
+bindScreeningHelp('full');
+
 $('open-criteria').addEventListener('click',()=>{
   closeCriteriaEditor();$('crit-import').disabled=!!busy;$('edit-criteria').disabled=!!busy;$('crit-restore').disabled=!!busy||!handoff?.criteria;
   $('criteria-origin').textContent=workspace.criteriaEdited?(workspace.criteriaImportName?'Imported from '+workspace.criteriaImportName+'. Used for Full-text assess.':'Edited for Full-text assess. Upstream criteria are unchanged.'):workspace.criteria?'From Title and abstract screening (the criteria in use there when the reports were imported).':'';
@@ -2130,35 +2185,29 @@ $('open-criteria').addEventListener('click',()=>{
 });
 $('close-criteria').addEventListener('click',()=>$('criteria-dialog').close());
 $('sample-size').addEventListener('change',()=>{const n=Math.max(3,Math.min(50,Math.round(Number($('sample-size').value)||8)));workspace.pilot.size=n;$('sample-size').value=n;save().catch(()=>{})});
-$('rounds').addEventListener('click',e=>{const b=e.target.closest('[data-round]');if(!b)return;pilotView=Number(b.dataset.round);pilotFilter='all';renderPilot()});
+$('rounds').addEventListener('click',e=>{const b=e.target.closest('[data-round]');if(!b)return;pilotView=Number(b.dataset.round);pilotFilter='agreed';renderPilot()});
 $('pilot-filter').addEventListener('click',e=>{const b=e.target.closest('[data-filter]');if(!b)return;pilotFilter=b.dataset.filter;renderPilot()});
 $('run-pilot').addEventListener('click',()=>startPilotRound().catch(e=>showNotice('pilot-message',e.message,'error')));
 $('stop-pilot').addEventListener('click',()=>controller?.abort());
-$('reset-pilot').addEventListener('click',()=>{if(busy||!confirm('Restart the pilot? Current pilot and formal screening results will be archived. Retrieved files are retained.'))return;archiveRun('Pilot restarted');workspace.full=newFull();log('pilot-restarted',{});workspace.pilot=newPilot(workspace.pilot.size);pilotView=-1;showNotice('pilot-message','');save().then(render)});
+$('reset-pilot').addEventListener('click',()=>{if(busy||pilotReviewSaving||!confirm('Restart the pilot? Current pilot and formal screening results will be archived. Retrieved files are retained.'))return;pilotReviewDrafts.clear();pilotReviewErrors.clear();expandedPilotAssessments.clear();archiveRun('Pilot restarted');workspace.full=newFull();log('pilot-restarted',{});workspace.pilot=newPilot(workspace.pilot.size);pilotView=-1;showNotice('pilot-message','');save().then(render)});
 $('approve-pilot').addEventListener('click',()=>approvePilot().catch(e=>showNotice('pilot-message',e.message,'error')));
 $('start-full').addEventListener('click',()=>runFull().catch(e=>showNotice('full-message',e.message,'error')));
 $('stop-full').addEventListener('click',()=>controller?.abort());
-$('check-filter').addEventListener('click',e=>{const b=e.target.closest('[data-cfilter]');if(!b)return;fullFilter=b.dataset.cfilter;fullShown=20;renderFull()});
-function cardEvents(listId,attr,decide,storeFn){
-  $(listId).addEventListener('click',e=>{const t=e.target;
-    if(t.dataset.abstract){const id=t.dataset.abstract;openAbstracts.has(id)?openAbstracts.delete(id):openAbstracts.add(id);render();return;}
-    if(t.dataset.ev){const id=t.dataset.ev;openEvidence.has(id)?openEvidence.delete(id):openEvidence.add(id);ensureDocs([id]).then(render);return}
+$('full-categories').addEventListener('click',e=>{const button=e.target.closest('[data-full-category]');if(!button)return;const key=button.dataset.fullCategory;if(!['include','unclear','exclude','conflicts','check'].includes(key))return;fullFilter=fullFilter===key?'':key;fullShown=20;renderFull();});
+function cardEvents(listId,pilot){
+  $(listId).addEventListener('click',e=>{
+    const t=e.target,b=t.closest('[data-toggle-assessment]');
+    if(b){const id=b.dataset.toggleAssessment,body=b.closest('.record').querySelector('[data-assessment]');if(body){body.hidden=!body.hidden;const set=pilot?expandedPilotAssessments:expandedFullAssessments;if(body.hidden)set.delete(id);else set.add(id);if(!pilot){if(body.hidden)collapsedFullAssessments.add(id);else collapsedFullAssessments.delete(id);}b.setAttribute('aria-expanded',String(!body.hidden));}return;}
+    if(t.dataset.abstract){const id=t.dataset.abstract;openAbstracts.has(id)?openAbstracts.delete(id):openAbstracts.add(id);(pilot?renderPilot:renderFull)();return;}
+    if(t.dataset.ev){const id=t.dataset.ev;openEvidence.has(id)?openEvidence.delete(id):openEvidence.add(id);ensureDocs([id]).then(()=>{(pilot?renderPilot:renderFull)();});return;}
     if(t.dataset.read)return openReader(t.dataset.read);
-    if(t.id==='check-more'){fullShown+=20;renderFull();return}
-    const b=t.closest('[data-'+attr+']');if(b)decide(b.dataset.id,b.dataset[attr]);
+    if(t.id==='check-more'){fullShown+=20;renderFull();return;}
+    if(pilot){const review=t.closest('[data-review]'),saveButton=t.closest('[data-review-save]');if(review){if(review.dataset.review==='mistake')beginPilotMistake(review.dataset.id);else savePilotReview(review.dataset.id,'agree');}else if(saveButton)savePilotReview(saveButton.dataset.reviewSave,'mistake');}
+    else{const vote=t.closest('[data-fvote]');if(vote)fullDecide(vote.dataset.id,vote.dataset.fvote);}
   });
-  $(listId).addEventListener('input',e=>{if(e.target.dataset.reasonDraft)reasonDrafts.set(e.target.dataset.reasonDraft,e.target.value.trim());});
-  $(listId).addEventListener('change',e=>{const t=e.target,ds=t.dataset;
-    if(busy&&!(attr==='pvote'&&busy==='pilot'))return;
-    if(ds.reasonDraft){const [kind,id]=ds.reasonDraft.split('|');if(storeFn()[id]?.decision==='exclude'&&t.value.trim()){storeFn()[id].reason=text(t.value,1200);save().then(render);}return;}
-    if(ds.calibrationField){updateCalibration(ds.calibrationId,ds.calibrationField,t.value);return;}
-    const rid=ds[attr+'Reason'],nid=ds[attr+'Note'],obj=storeFn();
-    if(rid&&obj[rid]){obj[rid].reason=t.value;log('reason-changed',{recordId:rid,reason:t.value});save().then(render)}
-    if(nid&&obj[nid]){obj[nid].note=text(t.value,1200);save().then(render)}
-  });
+  $(listId).addEventListener('input',e=>{const d=e.target.dataset;if(d.reviewReason&&pilotReviewDrafts.has(d.reviewReason))pilotReviewDrafts.get(d.reviewReason).note=e.target.value;if(d.reasonDraft)reasonDrafts.set(d.reasonDraft,e.target.value);});
 }
-cardEvents('pilot-list','pvote',pilotDecide,()=>workspace.pilot.human);
-cardEvents('check-list','fvote',fullDecide,()=>workspace.full.human);
+cardEvents('pilot-list',true);cardEvents('check-list',false);
 $('export-option').addEventListener('change',updateExportCount);
 $('export-results').addEventListener('click',exportResults);
 document.querySelectorAll('[data-screening]').forEach(a=>a.href=pageLink('title-abstract-screening.html'));
