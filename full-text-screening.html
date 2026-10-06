@@ -1677,7 +1677,6 @@ function renderFulltextManager(){
   let html='';
   if(hasDoc(manageId))html+=row('<button class="source-file-link" type="button" data-manage-read="true">'+esc(d.filename||('Full text ('+d.kind.toUpperCase()+')'))+'</button>',(d.source||'Saved full text')+(d.at?' · '+new Date(d.at).toLocaleDateString('en-GB'):''),'file',true);
   if(link&&safeFulltextLink(link.url))html+=row('<a class="source-file-link" href="'+esc(safeFulltextLink(link.url))+'" target="_blank" rel="noopener noreferrer">'+esc(link.url)+' ↗</a>','Saved link · upload a readable PDF to use it for AI screening','link',!hasDoc(manageId));
-  if(d?.attempts?.length)html+='<details class="source-retrieval-log"><summary>Retrieval details</summary><ul>'+d.attempts.map(a=>'<li>'+esc(a.source+': '+a.status+(a.detail?' — '+a.detail:''))+'</li>').join('')+'</ul></details>';
   $('manage-files').innerHTML=html;
   for(const id of ['manage-choose','manage-file','manage-add-link','manage-link','manage-close','manage-done'])$(id).disabled=manageWorking;
   $('manage-files').querySelectorAll('button').forEach(b=>b.disabled=manageWorking);
