@@ -236,7 +236,7 @@ th{background:#f4f4f4}
 </ul>
 </details>
 </main>
-<div id="pilot-help-tooltip" class="pilot-help-tooltip" role="tooltip" hidden><ol class="pilot-steps"><li>Start a round: the selected AI model screens a random sample of records.</li><li>Vote Yes / Maybe / No on the same records. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Complete at least one round. Then approve the pilot to start formal screening, or run another round if you choose. Additional rounds are optional.</li></ol></div>
+<div id="pilot-help-tooltip" class="pilot-help-tooltip" role="tooltip" hidden><ol class="pilot-steps"><li>Start a round: the selected AI model screens a random sample of records.</li><li>Vote Yes / No on the same records. The AI result stays hidden until you finish.</li><li>Compare. Your notes on disagreements teach the AI in the next round.</li><li>Complete at least one round. Then approve the pilot to start formal screening, or run another round if you choose. Additional rounds are optional.</li></ol></div>
 <dialog id="screen-connection-dialog" class="dialog" style="width:min(480px,calc(100vw - 28px))" aria-labelledby="screen-connection-title"><div class="panel-head"><h2 id="screen-connection-title">Connect screening</h2><button class="btn small" type="button" id="screen-connection-close" aria-label="Close">×</button></div><div class="panel-body"><div hidden><select class="select" id="screen-model-source" disabled><option value="typesafe">TypeSafe</option></select></div><div id="screen-api-settings">
 <p class="hint">TypeSafe screens each criterion using the title and abstract. Your records and criteria will be sent to TypeSafe. Keep the Mac Studio connection running.</p>
 <label class="label" for="screen-api-key">TypeSafe API key</label>
@@ -721,7 +721,7 @@ let pilotModel=null,pilotView=-1,pilotFilter='all';
 // Abstracts open by the reviewer, kept across re-renders while voting.
 const openAbstracts=new Set(),openCheckAbstracts=new Set();let allAbstractsOpen=false,allCheckAbstractsOpen=false;
 function abstractBlock(id,abstract,quotes,check=false){
-  if(!abstract)return '<p class="abstract"><span class="hint">No abstract available. Choose Maybe if eligibility is uncertain.</span></p>';
+  if(!abstract)return '<p class="abstract"><span class="hint">No abstract available. '+(check?'Choose Maybe if eligibility is uncertain.':'Choose Yes to retain the record for full-text review, or No with an exclusion reason.')+'</span></p>';
   const open=check?(allCheckAbstractsOpen||openCheckAbstracts.has(id)):(allAbstractsOpen||openAbstracts.has(id)),long=check||abstract.length>160,domId=(check?'check-abs-':'abs-')+id;
   return '<div class="abs-wrap'+(open||!long?' open':'')+'"><p class="abstract" id="'+esc(domId)+'">'+excerpt(abstract,quotes)+'</p>'+
     (long?'<button type="button" class="abs-toggle" data-abs="'+esc(id)+'" aria-expanded="'+open+'" aria-controls="'+esc(domId)+'">'+(open?'Hide full abstract':'Show full abstract')+'</button>':'')+'</div>';
@@ -735,7 +735,7 @@ function validPilot(p){
 const forward=d=>d==='yes'||d==='maybe';
 function pilotRoundState(i){
   const round=workspace.pilot.rounds[i];if(!round)return null;
-  const ids=round.ids.filter(id=>recordById.has(id)),ai=ids.filter(id=>workspace.pilot.ai[id]?.round===i).length,voted=ids.filter(id=>workspace.pilot.human[id]).length;
+  const ids=round.ids.filter(id=>recordById.has(id)),ai=ids.filter(id=>workspace.pilot.ai[id]?.round===i).length,voted=ids.filter(id=>['yes','no'].includes(workspace.pilot.human[id]?.decision)).length;
   return {round,ids,ai,voted,aiDone:ids.length>0&&ai===ids.length,votesDone:ids.length>0&&voted===ids.length,revealed:!!round.revealedAt};
 }
 function wilson(k,n){if(!n)return null;const z=1.959964,p=k/n,d=1+z*z/n,c=(p+z*z/(2*n))/d,h=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;return [Math.max(0,c-h),Math.min(1,c+h)]}
@@ -743,7 +743,7 @@ function wilson(k,n){if(!n)return null;const z=1.959964,p=k/n,d=1+z*z/n,c=(p+z*z
 function pilotMetrics(ids){
   let tp=0,fn=0,fp=0,tn=0,exact=0,n=0;
   for(const id of ids){
-    const a=workspace.pilot.ai[id],h=workspace.pilot.human[id];if(!a||!h)continue;n++;
+    const a=workspace.pilot.ai[id],h=workspace.pilot.human[id];if(!a||!h||!['yes','no'].includes(h.decision))continue;n++;
     if(a.decision===h.decision)exact++;
     if(forward(h.decision))forward(a.decision)?tp++:fn++;else forward(a.decision)?fp++:tn++;
   }
@@ -1029,7 +1029,7 @@ async function revealIfReady(i){
 }
 function castPilotVote(id,decision){
   const i=pilotView,st=pilotRoundState(i);
-  if(['full','calibration-check'].includes(busy)||!st||!st.ids.includes(id)||!['yes','maybe','no'].includes(decision)||stale())return;
+  if(['full','calibration-check'].includes(busy)||!st||!st.ids.includes(id)||!['yes','no'].includes(decision)||stale())return;
   if(i!==workspace.pilot.rounds.length-1){toast('Only the latest round can be changed.');return}
   const prev=workspace.pilot.human[id],exclusionReason=reviewerExclusionReason(id,'pilot',prev);
   if(decision==='no'&&!exclusionReason){toast('Enter an exclusion reason before choosing No.');return;}
@@ -1101,13 +1101,13 @@ function pilotCard(rec,st,index){
   const id=rec.uid,a=workspace.pilot.ai[id],h=workspace.pilot.human[id],show=st.revealed&&a;
   const quotes=show?a.criteria.map(c=>c.quote).filter(Boolean):[],differ=show&&h&&a.decision!==h.decision,falseEx=show&&h&&a.decision==='no'&&forward(h.decision);
   const latest=index===workspace.pilot.rounds.length-1,canVote=latest&&!stale()&&!['full','calibration-check'].includes(busy);
-  const buttons='<div class="decision-buttons" role="group" aria-label="Your decision">'+['yes','maybe','no'].map(d=>'<button type="button" class="vote '+d+(h?.decision===d?' selected':'')+'" data-pvote="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'"'+(canVote?'':' disabled')+'>'+label(d)+'</button>').join('')+'</div>';
+  const buttons='<div class="decision-buttons" role="group" aria-label="Your decision">'+['yes','no'].map(d=>'<button type="button" class="vote '+d+(h?.decision===d?' selected':'')+'" data-pvote="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'"'+(canVote?'':' disabled')+'>'+label(d)+'</button>').join('')+'</div>';
   const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+c.judgment.replace(' ','-')+'">'+esc(c.judgment)+'</span>'+(c.reason?' — '+esc(c.reason):'')+(c.probabilities?'<br><span class="hint">TypeSafe probabilities: '+esc(JSON.stringify(c.probabilities))+'</span>':'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
   const ai=!st.revealed?'':a?'<div class="audit"><div class="toolbar"><strong>AI</strong>'+colored(a.decision)+(differ?'<span class="badge differ">'+(falseEx?'False exclusion':'Differs from you')+'</span>':'')+'<span class="hint">'+esc(a.model)+'</span></div>'+
     (a.criteria.length?'<ul class="evidence-list">'+a.criteria.map(judge).join('')+'</ul>':'')+(a.reason?'<p class="hint">'+esc(a.reason)+'</p>':'')+(a.note?'<p class="hint">'+esc(a.note)+'</p>':'')+
     (h&&differ?calibrationFields(id,h):h?.note?'<p class="hint">Note: '+esc(h.note)+'</p>':'')+'</div>':'';
   return '<article id="pilot-record-'+esc(id)+'" class="record'+(differ?' differ':'')+'"><div class="record-head"><div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div>'+
-    (h?colored(h.decision)+(h.revisedAt?'<span class="badge">Changed after comparison</span>':''):'<span class="badge">Your vote pending</span>')+'</div>'+
+    (h&&['yes','no'].includes(h.decision)?colored(h.decision)+(h.revisedAt?'<span class="badge">Changed after comparison</span>':''):'<span class="badge">Choose Yes or No</span>')+'</div>'+
     abstractBlock(id,rec.abstract,quotes)+buttons+exclusionReasonField(id,'pilot',h)+ai+'</article>';
 }
 function renderPilot(){
@@ -1132,7 +1132,7 @@ function renderPilot(){
   $('pilot-false-ex').textContent=shown?String(m.fn):'—';
   $('pilot-false-ex').parentElement.classList.toggle('alert',!!(shown&&m.fn));
   $('pilot-detail').innerHTML=shown?
-    'Recall of records you would keep: '+(m.recall===null?'not assessable (you kept none)':pct(m.recall)+' (95% CI '+pct(m.recallCI[0])+'–'+pct(m.recallCI[1])+')')+' · AI kept '+m.fp+' you excluded · Exact Yes / Maybe / No match '+m.exact+' / '+m.n+'<br>'+
+    'Recall of records you would keep: '+(m.recall===null?'not assessable (you kept none)':pct(m.recall)+' (95% CI '+pct(m.recallCI[0])+'–'+pct(m.recallCI[1])+')')+' · AI kept '+m.fp+' you excluded · Exact AI / reviewer match '+m.exact+' / '+m.n+'<br>'+
     '<span class="'+(m.recommended?'ok':'warn')+'">'+(m.recommended?'✓ Meets':'✗ Does not meet')+' the recommended standard</span>: no false exclusions, and Cohen\'s κ ≥ 0.6 or agreement ≥ 75%.':
     st?'Agreement is shown when you and the AI have both finished this round. The AI result stays hidden until then.':'Start a round: the selected AI model screens a random sample of records while you vote on the same records without seeing its answers.';
   $('pilot-filter').hidden=!shown;

@@ -68,4 +68,15 @@ for(const format of ['csv','ris','revman','bib','json']){
 }
 // Original source bibliography export remains untouched.
 assert(!evaluate('sourceBibTeX(source.records)').includes('Exclusion reason'));
+// Pilot human votes are binary; legacy Maybe votes must be decided again.
+ctx.busy='';ctx.pilotView=0;ctx.render=()=>{};ctx.revealIfReady=async()=>{};ctx.colored=d=>'<span>'+d+'</span>';
+ctx.workspace.pilot={rounds:[{ids:['r1']}],human:{r1:{decision:'maybe'}},ai:{r1:{round:0}},approved:null};
+load('function castPilotVote(','function pilotNote(');
+load('function pilotCard(','function renderPilot(');
+assert.equal(evaluate('pilotRoundState(0).votesDone'),false);
+evaluate("castPilotVote('r1','maybe')");assert.equal(ctx.workspace.pilot.human.r1.decision,'maybe','Rejected action must not rewrite historical data');
+const card=evaluate('pilotCard(source.records[0],pilotRoundState(0),0)');assert(card.includes('data-pvote="yes"'));assert(card.includes('data-pvote="no"'));assert(!card.includes('data-pvote="maybe"'));assert(card.includes('Choose Yes or No'));
+evaluate("castPilotVote('r1','yes')");assert.equal(ctx.workspace.pilot.human.r1.decision,'yes');assert.equal(evaluate('pilotRoundState(0).votesDone'),true);
+assert(!evaluate("abstractBlock('r1','',[])").includes('Choose Maybe'));assert(evaluate("abstractBlock('r1','',[],true)").includes('Choose Maybe'));
+assert(html.includes('Vote Yes / No on the same records.'));
 console.log('PASS: pilot gating, one-failure exclusion, genuine conflicts, default review scope, folding and five export formats');
