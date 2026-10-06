@@ -14,7 +14,7 @@ const ctx=vm.createContext({$,Map,Set,Math,JSON,Array,String,Date,console,
 function load(from,to){const a=html.indexOf(from),b=html.indexOf(to,a);assert(a>=0&&b>a);vm.runInContext(html.slice(a,b),ctx);}
 load('const squash=','async function screenPilotRecord(');
 load('const CHECK_SCOPES=','// Share of agreed AI exclusions');
-load('function pilotRoundState(','function wilson(');
+load('const PILOT_REVIEW_MODE=','function wilson(');
 load('function pilotApprovalValid(','function pilotHasProgress(');
 load('const openAbstracts=','function newPilot(');
 load('const exclusionDrafts=','function pilotCard(');
@@ -45,7 +45,7 @@ ctx.old={version:3,check:'sample'};assert.equal(evaluate('validFull(old).check')
 ctx.old.checkPolicy=2;assert.equal(evaluate('validFull(old).check'),'sample');
 // Minimum one complete, compared pilot; starting another round revokes the gate.
 ctx.workspace.pilot={rounds:[],ai:{},human:{},approved:null};assert.equal(evaluate('pilotApprovalValid()'),false);
-ctx.workspace.pilot={rounds:[{ids:['r1'],revealedAt:'time'}],ai:{r1:{round:0}},human:{r1:{decision:'yes'}},approved:{round:0,criteriaSig:'sig',calibration:{hash:'feedback'}}};
+ctx.workspace.pilot={rounds:[{ids:['r1'],revealedAt:'time'}],ai:{r1:{round:0}},human:{r1:{decision:'yes',reviewMode:'ai-first-v1',review:'agree',round:0,reviewedAI:'abcd'}},approved:{round:0,criteriaSig:'sig',calibration:{hash:'feedback'}}};
 assert.equal(evaluate('pilotApprovalValid()'),true);
 ctx.workspace.pilot.rounds.push({ids:['r1']});assert.equal(evaluate('pilotApprovalValid()'),false);
 ctx.workspace.pilot.rounds.pop();delete ctx.workspace.pilot.human.r1;assert.equal(evaluate('pilotApprovalValid()'),false);
@@ -68,15 +68,4 @@ for(const format of ['csv','ris','revman','bib','json']){
 }
 // Original source bibliography export remains untouched.
 assert(!evaluate('sourceBibTeX(source.records)').includes('Exclusion reason'));
-// Pilot human votes are binary; legacy Maybe votes must be decided again.
-ctx.busy='';ctx.pilotView=0;ctx.render=()=>{};ctx.revealIfReady=async()=>{};ctx.colored=d=>'<span>'+d+'</span>';
-ctx.workspace.pilot={rounds:[{ids:['r1']}],human:{r1:{decision:'maybe'}},ai:{r1:{round:0}},approved:null};
-load('function castPilotVote(','function pilotNote(');
-load('function pilotCard(','function renderPilot(');
-assert.equal(evaluate('pilotRoundState(0).votesDone'),false);
-evaluate("castPilotVote('r1','maybe')");assert.equal(ctx.workspace.pilot.human.r1.decision,'maybe','Rejected action must not rewrite historical data');
-const card=evaluate('pilotCard(source.records[0],pilotRoundState(0),0)');assert(card.includes('data-pvote="yes"'));assert(card.includes('data-pvote="no"'));assert(!card.includes('data-pvote="maybe"'));assert(card.includes('Choose Yes or No'));
-evaluate("castPilotVote('r1','yes')");assert.equal(ctx.workspace.pilot.human.r1.decision,'yes');assert.equal(evaluate('pilotRoundState(0).votesDone'),true);
-assert(!evaluate("abstractBlock('r1','',[])").includes('Choose Maybe'));assert(evaluate("abstractBlock('r1','',[],true)").includes('Choose Maybe'));
-assert(html.includes('Vote Yes / No on the same records.'));
 console.log('PASS: pilot gating, one-failure exclusion, genuine conflicts, default review scope, folding and five export formats');

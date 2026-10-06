@@ -11,15 +11,17 @@
       const round=pilot.rounds[i];if(!round.revealedAt||round.criteriaSig&&round.criteriaSig!==criteriaSig)continue;
       for(const id of round.ids){
         const ai=pilot.ai[id],human=pilot.human[id],record=byId.get(id);
-        if(!ai||!human||!record||ai.decision===human.decision)continue;
-        const criterion=clean(human.calibrationCriterion),guidance=clean(human.note||human.exclusionReason),quote=clean(human.calibrationQuote);
+        if(!ai||!human||!record)continue;
+        const reviewed=human.reviewMode==='ai-first-v1'&&['agree','mistake'].includes(human.review);
+        if(ai.decision===human.decision&&!reviewed)continue;
+        const criterion=clean(human.calibrationCriterion),guidance=reviewed&&human.review==='agree'?'Reviewer confirmed this decision for this record. Use the cited criterion evidence as an example; do not infer new eligibility rules.':clean(human.note||human.exclusionReason),quote=clean(human.calibrationQuote);
         let issue='';
         if(criterion!=='*'&&!names.has(criterion))issue='Select the criterion to correct.';
         else if(!guidance)issue='Explain the correction for future records.';
         else if(quote&&!((record.title||'')+' '+(record.fullText||record.abstract||'')).includes(quote))issue='The supporting quote must be copied exactly from this record.';
         if(issue){pending.push({recordId:id,round:i+1,title:record.title,issue});continue;}
         lessons.push({id:'round-'+(i+1)+'-'+id,recordId:id,round:i+1,criterion,
-          aiDecision:ai.decision,reviewerDecision:human.decision,correction:guidance,
+          aiDecision:ai.decision,reviewerDecision:human.decision,correction:guidance,...(reviewed?{review:human.review}:{}),
           exclusionReason:clean(human.exclusionReason),supportingQuote:quote,
           title:record.title||'',abstract:record.abstract||'',...(record.fullText?{fullTextExcerpt:record.fullText.slice(0,3000),fullTextTruncated:record.fullText.length>3000}:{}),
           originalJudgments:(ai.criteria||[]).map(c=>({dimension:c.dimension,judgment:c.judgment,quote:c.quote||''}))});
@@ -34,13 +36,13 @@
     const target=tokens((record.title||'')+' '+(record.abstract||''));
     const ranked=bundle.lessons.map((lesson,index)=>{
       const words=tokens(lesson.title+' '+lesson.correction+' '+lesson.supportingQuote+' '+lesson.abstract);
-      let score=record.uid===lesson.recordId?100000:0;for(const word of words)if(target.has(word))score++;
+      let score=(record.uid===lesson.recordId?100000:0)+(lesson.review==='mistake'?20:0);for(const word of words)if(target.has(word))score++;
       return {lesson,index,score};
     }).sort((a,b)=>b.score-a.score||b.lesson.round-a.lesson.round||a.index-b.index);
     const selected={version:bundle.version,hash:bundle.hash,totalLessons:bundle.lessons.length,selectedLessonIds:[],rules:[],examples:[]};
     for(const {lesson} of ranked){
       if(selected.rules.length>=maxLessons)break;
-      const rule={lessonId:lesson.id,sourceTitle:lesson.title,criterion:lesson.criterion,correction:lesson.correction,reviewerDecision:lesson.reviewerDecision,supportingQuote:lesson.supportingQuote};
+      const rule={lessonId:lesson.id,sourceTitle:lesson.title,criterion:lesson.criterion,correction:lesson.correction,...(lesson.review?{review:lesson.review}:{}),reviewerDecision:lesson.reviewerDecision,supportingQuote:lesson.supportingQuote};
       selected.rules.push(rule);selected.selectedLessonIds.push(lesson.id);
       if(JSON.stringify(selected).length>maxChars){selected.rules.pop();selected.selectedLessonIds.pop();continue;}
     }
@@ -49,7 +51,7 @@
       if(selected.examples.length>=maxExamples)break;
       if(!selected.selectedLessonIds.includes(lesson.id))continue;
       selected.examples.push({lessonId:lesson.id,title:lesson.title,abstract:lesson.abstract.slice(0,3000),
-        abstractTruncated:lesson.abstract.length>3000,aiDecision:lesson.aiDecision,reviewerDecision:lesson.reviewerDecision,
+        abstractTruncated:lesson.abstract.length>3000,...(lesson.review?{review:lesson.review}:{}),aiDecision:lesson.aiDecision,reviewerDecision:lesson.reviewerDecision,
         criterion:lesson.criterion,correction:lesson.correction,supportingQuote:lesson.supportingQuote,...(lesson.fullTextExcerpt?{fullTextExcerpt:lesson.fullTextExcerpt,fullTextTruncated:lesson.fullTextTruncated}:{})});
       if(JSON.stringify(selected).length>maxChars)selected.examples.pop();
     }

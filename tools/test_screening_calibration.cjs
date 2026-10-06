@@ -22,7 +22,7 @@ const many={...approved,lessons:Array.from({length:40},(_,i)=>({...approved.less
 const bounded=engine.select(many,records[0]);assert(JSON.stringify(bounded).length<=20000);assert(bounded.rules.length<=12);assert.equal(bounded.totalLessons,40);
 // Actual local-model prompt contains the selected rules and the immutable version.
 const html=fs.readFileSync(path.join(__dirname,'../title-abstract-screening.html'),'utf8');
-const ctx=vm.createContext({calibrationEngine:engine,source:{criteria,criteriaSig:'sig'},workspace:{pilot},record:records[0],approved,records,JSON,
+const ctx=vm.createContext({pilotReviewSaving:false,pilotReviewDrafts:new Map(),calibrationEngine:engine,source:{criteria,criteriaSig:'sig'},workspace:{pilot},record:records[0],approved,records,JSON,
  screeningProvider:()=> 'local',stale:()=>false,pilotCriteriaSig:()=> 'criteria-prompt',
  currentCalibration:()=>engine.build(pilot,records,criteria,'sig'),calibrationReady:()=>engine.build(pilot,records,criteria,'sig').pending.length===0,
  pilotRoundState:()=>({revealed:true,aiDone:true,votesDone:true})});

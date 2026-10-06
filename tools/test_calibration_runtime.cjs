@@ -7,7 +7,7 @@ const pilot={size:20,rounds:[{ids:['r'],revealedAt:'done',criteriaSig:'criteria'
 const source={criteriaSig:'criteria',criteria:{rows:[{title:'Population',condition:'Adults'}]},records:[rec]};
 let calls=0,asked=0;
 const ctx=vm.createContext({$,AimstepCalibration:engine,AbortController,structuredClone,JSON,
- workspace:{pilot,full:{ai:{},ai2:{},human:{}}},source,recordById:new Map([['r',rec]]),busy:'',controller:null,
+ PILOT_REVIEW_MODE:'ai-first-v1',pilotAIOutcome:a=>a.decision==='no'?'no':'yes',pilotReviewSaving:false,pilotReviewDrafts:new Map(),workspace:{pilot,full:{ai:{},ai2:{},human:{}}},source,recordById:new Map([['r',rec]]),busy:'',controller:null,
  text:(x,n)=>String(x??'').slice(0,n),esc:x=>String(x??''),now:()=> 'time',stale:()=>false,
  render(){},renderFull(){},renderPilot(){},save:async()=>{},log(){},download(){},stamp:()=> 'test',projectId:'test',showNotice(){},
  resolvePilotModel:async()=>({name:'test-model'}),
