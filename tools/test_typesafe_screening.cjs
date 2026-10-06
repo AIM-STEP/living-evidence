@@ -9,7 +9,7 @@ const context=vm.createContext({$,AbortController,DOMException,setTimeout,clearT
  newPilot:size=>({size,rounds:[],ai:{},human:{}}),newFull:()=>({ai:{},human:{}}),
  pilotHasProgress:()=>context.workspace.pilot.rounds.length>0,isUnreachable:()=>false,
  localFetch:async(url,options={})=>{if(url.endsWith('/health'))return {json:async()=>({typesafe:{available:true}})};requests.push(JSON.parse(options.body));return {ok:true,json:async()=>response}}});
-const a=html.indexOf('// TypeSafe credentials live'),b=html.indexOf('/* Local model:',a);
+const a=html.indexOf('// TypeSafe credentials live'),b=html.indexOf('/* Screening uses TypeSafe;',a);
 vm.runInContext(html.slice(a,b),context);
 (async()=>{
  $('screen-model-source').value='typesafe';await $('screen-model-source').events.change();
@@ -22,11 +22,12 @@ vm.runInContext(html.slice(a,b),context);
  assert(!JSON.stringify(context.workspace).includes('synthetic-key'));
  context.workspace.pilot.rounds=[{ids:['r1']}];context.workspace.pilot.approved={model:'synthetic-model'};
  context.workspace.full.ai={r1:{decision:'yes'}};
- accept=false;$('screen-model-source').value='local';await $('screen-model-source').events.change();
+ await assert.rejects(context.setScreeningModel('local'),/uses TypeSafe/);
+ accept=false;await context.setScreeningModel('typesafe','synthetic-model-2');
  assert.equal(context.workspace.screeningProvider,'typesafe');assert.equal(context.workspace.pilot.rounds.length,1);
- accept=true;$('screen-model-source').value='local';await $('screen-model-source').events.change();
- assert.equal(context.workspace.screeningProvider,'local');assert.equal(context.workspace.pilot.rounds.length,0);
- assert.equal(context.workspace.modelArchives[0].full.ai.r1.decision,'yes');assert.equal(vm.runInContext('typesafeKey',context),'');
+ accept=true;await context.setScreeningModel('typesafe','synthetic-model-2');
+ assert.equal(context.workspace.screeningProvider,'typesafe');assert.equal(context.workspace.pilot.rounds.length,0);
+ assert.equal(context.workspace.modelArchives[0].full.ai.r1.decision,'yes');assert.equal(vm.runInContext('typesafeKey',context),'synthetic-key');
  assert(!JSON.stringify(context.workspace).includes('synthetic-key'));
  console.log('PASS: TypeSafe confirmation, model discovery, key isolation, model-change cancellation and archiving');
  // Existing decision rule still governs TypeSafe results.

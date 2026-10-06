@@ -31,7 +31,7 @@
 <div class="layout"><section class="panel editor" aria-label="Criteria editor">
 <div class="section"><div class="section-head"><div><h2>Review type</h2></div></div><label class="field-label" for="review-type">Review type</label><select class="select" id="review-type"><option>Literature Review</option><option>Systematic Review</option><option>Network/Meta-analysis</option><option>Scoping Review</option><option>Other Review</option></select></div>
 <div class="section"><label class="field-label" for="generation-method">Generation Method</label><select class="select" id="generation-method"><option value="" hidden></option><option value="machine">Machine generate</option><option value="manual">Manual generate</option></select></div>
-<div class="section"><label class="field-label" for="model-source">Model source</label><select class="select" id="model-source" aria-describedby="model-source-note"><option value="local">Local model</option><option value="api">API</option></select><p class="hint" id="model-source-note" role="status">Uses the model running on Mac Studio.</p><div id="api-settings" hidden><label class="field-label" for="api-key">API key</label><input class="select" type="password" id="api-key" placeholder="Paste your API key" autocomplete="off" spellcheck="false" aria-describedby="api-key-help"><p class="hint" id="api-key-help">The key is used only in this tab and is cleared on refresh. The API endpoint and model must be configured on the Mac Studio server.</p><button class="btn" type="button" id="confirm-api">Confirm</button><p class="hint" id="api-status" role="status" aria-live="polite"></p></div></div>
+<div class="section"><span class="field-label">Model source</span><p class="hint">Local model · Mac Studio</p></div>
 <div class="section" id="machine-generate-panel" hidden><div class="section-head"><div><h2>Machine generate</h2></div></div><div class="machine-input"><textarea id="question" class="textarea" aria-label="Review question for automatic criteria generation" placeholder="What population, intervention or phenomenon are you studying?"></textarea><div class="machine-input-tools"><button class="machine-tool" id="add-source" type="button" aria-label="Upload Word, PDF, text or image" title="Upload a document or image">＋</button><button class="machine-tool" id="voice-toggle" type="button" aria-label="Start voice input" aria-pressed="false" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg></button><input id="source-files" type="file" accept=".docx,.pdf,.txt,.md,.csv,image/png,image/jpeg,image/webp" multiple hidden></div></div><div id="machine-attachments" class="machine-attachments" aria-live="polite" hidden></div><div class="machine-actions"><button class="btn" id="clear-question" type="button">Clear</button><button class="btn btn-primary" id="start-machine" type="button">Start</button></div><div id="generation-status" class="hint machine-status" role="status" aria-live="polite" hidden></div></div>
 <div class="section" id="manual-generate-panel" hidden><div class="section-head"><div><h2>Manual generate</h2></div><div class="manual-actions"><button class="btn" id="manual-generate" type="button" aria-label="Clear all entered eligibility content">Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker">＋ Add criterion</button></div></div><label class="field-label">Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden><strong>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other">Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading" style="margin-top:18px">Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label">Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date">Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date">End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language">Language</label><select id="language" class="select"><option value="">Select language</option><option value="Chinese">Chinese</option><option value="English">English</option></select></div><div><label class="field-label" for="limits-other">Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div class="manual-refine-controls"><button class="btn btn-primary" id="refine-manual" type="button">Standardize</button></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
@@ -222,8 +222,7 @@ const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').
 const LOOPBACK_HOSTS=['localhost','127.0.0.1','[::1]','::1'];
 function isLoopback(url){try{return LOOPBACK_HOSTS.includes(new URL(url,location.href).hostname)}catch(e){return false}}
 function localFetch(url,options){return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
-let confirmedApiKey="", apiConfirmationController=null;
-async function findLocalBackend(signal, apiKey=confirmedApiKey){
+async function findLocalBackend(signal){
   const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];
   const local=LOCAL_SERVER+'/api/eligibility';if(!bases.includes(local))bases.push(local);
   for(const base of bases){
@@ -231,10 +230,6 @@ async function findLocalBackend(signal, apiKey=confirmedApiKey){
       const health=await localFetch(base+'/health',{signal});
       const info=await health.json();
       if(String(info.service||'').startsWith('aimstep-local-eligibility')){
-        if($('model-source').value==='api'){
-          if(!(apiKey?info.api?.acceptsKey:info.api?.ready)){const error=new Error(info.api?.status||'This backend needs the API update and server configuration.');error.configuration=true;throw error}
-          return {provider:'backend',source:'api',base,name:info.api.model,slot:'api',apiKey};
-        }
         if(health.ok)return {provider:'backend',source:'local',base,name:info.model||'local',slot:'local'};
       }
     }catch(error){if(signal.aborted||error.configuration)throw error}
@@ -264,9 +259,7 @@ async function explainUnreachable(){
   return unreachableModelMessage+direct;
 }
 async function resolveLocalModel(needsVision,signal){
-  if($('model-source').value==='api'&&!confirmedApiKey)throw new Error('Paste your API key and click Confirm first.');
-  const backend=await findLocalBackend(signal);if(backend){if(backend.source==='api'&&needsVision)throw new Error('API mode accepts text documents only. Use the local model for images or scanned PDFs.');return backend;}
-  if($('model-source').value==='api')throw new Error('Cannot reach the AIM-STEP backend. API mode also needs the Mac Studio connection or SSH tunnel.');
+  const backend=await findLocalBackend(signal);if(backend)return backend;
   const configured=localModelConfig(),provider=configured.provider==='compatible'?'compatible':'ollama';
   let base=String(configured.base||'http://127.0.0.1:11434').trim().replace(/\/+$/,'');
   let address;try{address=new URL(base)}catch(e){throw new Error('The local model address is invalid.')}
@@ -305,7 +298,7 @@ async function requestMachineCriteria(model,input,reviewType,signal){
   const user=ollama?{role:'user',content:prompt,...(input.images.length?{images:input.images.map(image=>image.dataUrl.split(',')[1])}:{})}:
     {role:'user',content:input.images.length?[{type:'text',text:prompt},...input.images.map(image=>({type:'image_url',image_url:{url:image.dataUrl}}))]:prompt};
   const messages=[{role:'system',content:system},user];
-  const body=backend?{messages,provider:model.source||'local',...(model.source==='api'&&model.apiKey?{apiKey:model.apiKey}:{})}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'}};
+  const body=backend?{messages,provider:'local'}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'}};
   const headers={'Content-Type':'application/json'};
   const token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
@@ -324,7 +317,7 @@ async function requestMachineCriteria(model,input,reviewType,signal){
 async function callCriteriaJson(model,system,payload,signal){
   const backend=model.provider==='backend',ollama=model.provider!=='compatible';
   const messages=[{role:'system',content:system},{role:'user',content:JSON.stringify(payload)}];
-  const body=backend?{messages,provider:model.source||'local',...(model.source==='api'&&model.apiKey?{apiKey:model.apiKey}:{})}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0,num_ctx:8192}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'},temperature:0};
+  const body=backend?{messages,provider:'local'}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0,num_ctx:8192}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'},temperature:0};
   const headers={'Content-Type':'application/json'},token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
   async function post(){
@@ -688,42 +681,6 @@ function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setT
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';const reviewOption=[...$('review-type').options].find(option=>option.value.toLowerCase()===String(state.reviewType||'Systematic Review').toLowerCase());$('review-type').value=reviewOption?reviewOption.value:'Systematic Review';document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});
 $('generation-method').addEventListener('change',()=>{stopMachineGeneration();stopManualRefinement();abortVoiceInput();setMachineStatus('');setManualStatus('');const mode=$('generation-method').value;state.generationMethodChoice=mode;state.activeGenerator=mode;state.generationMode=mode==='machine'?'machine':mode==='manual'?'manual':'';$('machine-generate-panel').hidden=mode!=='machine';$('manual-generate-panel').hidden=mode!=='manual';renderPreview();save()});
-function clearApiConfirmation(){
-  if(apiConfirmationController){apiConfirmationController.abort();apiConfirmationController=null;}
-  confirmedApiKey='';$('confirm-api').disabled=false;$('confirm-api').textContent='Confirm';$('api-status').textContent='';
-  stopMachineGeneration();stopManualRefinement();
-}
-$('api-key').addEventListener('input',clearApiConfirmation);
-$('confirm-api').addEventListener('click',async()=>{
-  clearApiConfirmation();
-  const key=$('api-key').value.trim();
-  if(!key){$('api-status').textContent='Paste your API key first.';return;}
-  const controller=new AbortController();apiConfirmationController=controller;
-  const timer=setTimeout(()=>controller.abort(),60000);
-  $('confirm-api').disabled=true;$('confirm-api').textContent='Checking…';
-  $('api-status').textContent='Checking the API with a short test request…';
-  try{
-    const model=await findLocalBackend(controller.signal,key);
-    if(!model)throw new Error('Cannot reach the AIM-STEP backend. Keep the Mac Studio connection or SSH tunnel open.');
-    const result=await callCriteriaJson(model,'Return only a JSON object with status set to ok.',{task:'Connection test'},controller.signal);
-    if(result?.status!=='ok')throw new Error('The API responded, but did not return the expected JSON. Check model compatibility.');
-    if(apiConfirmationController!==controller)return;
-    confirmedApiKey=key;$('api-key').value='';
-    $('api-status').textContent='Connected to '+model.name+'. You can now generate or standardize criteria.';
-  }catch(error){
-    if(apiConfirmationController===controller)$('api-status').textContent=error.name==='AbortError'?'Connection test timed out. Try again.':error instanceof TypeError?'Cannot reach the backend. Check the Mac Studio connection.':error.message;
-  }finally{
-    clearTimeout(timer);
-    if(apiConfirmationController===controller){apiConfirmationController=null;$('confirm-api').disabled=false;$('confirm-api').textContent='Confirm';}
-  }
-});
-$('model-source').addEventListener('change',()=>{
-  clearApiConfirmation();$('api-key').value='';$('api-settings').hidden=$('model-source').value!=='api';
-  stopMachineGeneration();stopManualRefinement();setMachineStatus('');setManualStatus('');
-  $('model-source-note').textContent=$('model-source').value==='api'
-    ?'Your task content will be sent to the configured API provider. A text-generation API is required; TypeSafe does not support criteria generation.'
-    :'Uses the model running on Mac Studio.';
-});
 $('start-machine').addEventListener('click',generateMachineCriteria);
 $('refine-manual').addEventListener('click',refineManualCriteria);
 $('add-source').addEventListener('click',()=>$('source-files').click());

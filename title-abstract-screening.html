@@ -183,8 +183,8 @@ th{background:#f4f4f4}
 <div class="panel-body" id="pilot-body">
 <div class="model-connection" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)">
 <label class="label" for="screen-model-source">Model source</label>
-<select class="select" id="screen-model-source"><option value="local">Local model</option><option value="typesafe">API</option></select>
-<div id="screen-api-settings" hidden>
+<select class="select" id="screen-model-source" disabled><option value="typesafe">TypeSafe</option></select>
+<div id="screen-api-settings">
 <p class="hint">TypeSafe screens each criterion using the title and abstract. Your records and criteria will be sent to TypeSafe. Keep the Mac Studio connection running.</p>
 <label class="label" for="screen-api-key">TypeSafe API key</label>
 <input class="input" type="password" id="screen-api-key" placeholder="Paste your TypeSafe API key" autocomplete="off" spellcheck="false" aria-describedby="screen-api-help">
@@ -308,7 +308,7 @@ function fingerprint(value){
   for(const c of JSON.stringify(value)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}
   return (h>>>0).toString(16);
 }
-function defaults(){return {importedRuns:null,excludedRuns:[],version:4,calibrationVersion:2,calibrationPassed:false,pilotApproved:false,passedRound:-1,sourceSig:'',criteriaSig:'',sampleSize:10,pilotIds:[[],[],[],[],[]],approved:[false,false,false,false,false],approvalHash:'',instructions:'',model:{provider:'ollama',base:'http://localhost:11434',name:''},modelB:{provider:'ollama',base:'http://localhost:11434',name:''},teamRules:{mode:'managed',screeners:['A','B'],resolver:'human',resolverName:''},predictions:{},pilotSecondPredictions:{},fullPredictions:{},secondPredictions:{},resolutions:{},reviews:{},pilot:newPilot(),full:newFull(),imports:[],fullStartedAt:'',completedAt:'',audit:[]}}
+function defaults(){return {screeningProvider:'typesafe',importedRuns:null,excludedRuns:[],version:4,calibrationVersion:2,calibrationPassed:false,pilotApproved:false,passedRound:-1,sourceSig:'',criteriaSig:'',sampleSize:10,pilotIds:[[],[],[],[],[]],approved:[false,false,false,false,false],approvalHash:'',instructions:'',model:{provider:'ollama',base:'http://localhost:11434',name:''},modelB:{provider:'ollama',base:'http://localhost:11434',name:''},teamRules:{mode:'managed',screeners:['A','B'],resolver:'human',resolverName:''},predictions:{},pilotSecondPredictions:{},fullPredictions:{},secondPredictions:{},resolutions:{},reviews:{},pilot:newPilot(),full:newFull(),imports:[],fullStartedAt:'',completedAt:'',audit:[]}}
 function log(action,detail={}){
   workspace.audit.push({at:now(),action,...detail});
 }
@@ -759,17 +759,18 @@ function pilotHasProgress(){return !!workspace?.pilot?.rounds?.length}
 
 // TypeSafe credentials live only in this page closure, never in workspace/storage.
 let typesafeKey='',typesafeBackend='',typesafeConfirmController=null;
-function screeningProvider(){return workspace?.screeningProvider==='typesafe'?'typesafe':'local'}
+function screeningProvider(){return 'typesafe'}
 function clearTypesafeKey(){typesafeKey='';typesafeBackend='';pilotModel=null;if(typesafeConfirmController)typesafeConfirmController.abort();typesafeConfirmController=null;$('screen-api-confirm').disabled=false;$('screen-api-confirm').textContent='Confirm';}
 function renderModelSelection(){
   $('screen-model-source').value=screeningProvider();
   $('screen-api-settings').hidden=screeningProvider()!=='typesafe';
-  for(const id of ['screen-model-source','screen-api-key','screen-api-model','screen-api-confirm'])$(id).disabled=!!busy||(id==='screen-api-confirm'&&!!typesafeConfirmController);
+  for(const id of ['screen-model-source','screen-api-key','screen-api-model','screen-api-confirm'])$(id).disabled=id==='screen-model-source'||!!busy||(id==='screen-api-confirm'&&!!typesafeConfirmController);
   $('screen-model-archives').hidden=!workspace?.modelArchives?.length;
 }
 async function setScreeningModel(provider,name=''){
+  if(provider!=='typesafe')throw new Error('This tool uses TypeSafe.');
   if(busy)throw new Error('Stop screening before changing models.');
-  const previous=screeningProvider(),oldName=workspace.screeningModel||'';
+  const previous=workspace.screeningProvider||'local',oldName=workspace.screeningModel||'';
   if(previous===provider&&oldName===name)return true;
   const progress=pilotHasProgress()||Object.keys(workspace.full?.ai||{}).length||Object.keys(workspace.full?.human||{}).length;
   if(progress){
@@ -821,21 +822,12 @@ $('screen-api-confirm').addEventListener('click',async()=>{
 $('screen-api-model').addEventListener('change',async()=>{try{if(!typesafeKey)throw new Error('Confirm your API key first.');await setScreeningModel('typesafe',$('screen-api-model').value);}catch(e){$('screen-api-status').textContent=e.message;}finally{$('screen-api-model').value=workspace.screeningModel||'';}});
 $('screen-model-archives').addEventListener('click',()=>download('screening-model-archives.json','application/json',JSON.stringify(workspace.modelArchives||[],null,2)));
 
-/* Local model: the same local server as the Eligibility criteria and Search
-   strategy steps, or Ollama directly when this page is opened locally. */
+/* Screening uses TypeSafe; no local-model fallback. */
 async function resolvePilotModel(signal){
-  if(screeningProvider()==='typesafe'){
-    if(!typesafeKey||!typesafeBackend||!workspace.screeningModel)throw new Error('Select API, paste your TypeSafe key, and click Confirm before screening.');
-    return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
-  }
-  if(pilotModel)return pilotModel;
-  const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];if(!bases.includes(LOCAL_SERVER+'/api/eligibility'))bases.push(LOCAL_SERVER+'/api/eligibility');
-  for(const base of bases){try{const r=await localFetch(base+'/health',{signal});if(r.ok){const h=await r.json();if(h.service==='aimstep-local-eligibility')return pilotModel={provider:'backend',base,name:text(h.model||'local model',200)}}}catch(e){if(signal?.aborted)throw e}}
-  const base='http://127.0.0.1:11434',r=await localFetch(base+'/api/tags',{signal});if(!r.ok)throw new Error('The local model service returned HTTP '+r.status+'.');
-  const name=((await r.json()).models||[]).map(m=>String(m?.name||'')).find(n=>n&&!/:cloud(?:$|[-_])|embed/i.test(n));
-  if(!name)throw new Error('No installed local Ollama model was found.');
-  return pilotModel={provider:'ollama',base,name};
+  if(!typesafeKey||!typesafeBackend||workspace.screeningProvider!=='typesafe'||!workspace.screeningModel)throw new Error('Paste your TypeSafe key and click Confirm before screening.');
+  return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
 }
+
 function isUnreachable(e){return /Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||''))}
 async function explainUnreachable(){
   const direct=' Or open '+LOCAL_SERVER+'/title-abstract-screening.html on this computer, which needs no permission.';
@@ -2042,6 +2034,7 @@ async function init(){
     importStore=await openDB('aimstep-screen-imports');
     const savedImports=await getProject(importStore);
     workspace=Object.assign(defaults(),saved?.state||{});
+    if(saved?.state&&!saved.state.screeningProvider)workspace.screeningProvider='local';
     if(saved&&saved.state?.calibrationVersion!==2){workspace.calibrationVersion=1;workspace.calibrationPassed=false;workspace.passedRound=-1}
     workspace.model=Object.assign(defaults().model,workspace.model||{});workspace.excludedRuns=Array.isArray(workspace.excludedRuns)?workspace.excludedRuns.filter(x=>typeof x==='string'):[];workspace.importedRuns=Array.isArray(workspace.importedRuns)?workspace.importedRuns.filter(x=>x&&typeof x.runId==='string').map(x=>({runId:x.runId,importedAt:typeof x.importedAt==='string'?x.importedAt:now()})):null;
     workspace.modelB=Object.assign(defaults().modelB,workspace.modelB||{});

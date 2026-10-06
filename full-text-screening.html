@@ -226,8 +226,8 @@ th{background:#f4f4f4}
 <div class="panel-body" id="pilot-body">
 <div class="model-connection" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)">
 <label class="label" for="screen-model-source">Model source</label>
-<select class="select" id="screen-model-source"><option value="local">Local model</option><option value="typesafe">API</option></select>
-<div id="screen-api-settings" hidden>
+<select class="select" id="screen-model-source" disabled><option value="typesafe">TypeSafe</option></select>
+<div id="screen-api-settings">
 <p class="hint">TypeSafe screens each criterion using selected full-text passages. Your report passages, criteria and reviewer corrections will be sent to TypeSafe. Keep the Mac Studio connection running.</p>
 <label class="label" for="screen-api-key">TypeSafe API key</label>
 <input class="input" type="password" id="screen-api-key" placeholder="Paste your TypeSafe API key" autocomplete="off" spellcheck="false" aria-describedby="screen-api-help">
@@ -512,17 +512,18 @@ function summaryHtml(m){
 }
 function wilson(k,n){if(!n)return null;const z=1.959964,p=k/n,d=1+z*z/n,c=(p+z*z/(2*n))/d,h=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;return [Math.max(0,c-h),Math.min(1,c+h)]}
 let typesafeKey='',typesafeBackend='',typesafeConfirmController=null;
-function screeningProvider(){return workspace?.screeningProvider==='typesafe'?'typesafe':'local'}
+function screeningProvider(){return 'typesafe'}
 function clearTypesafeKey(){typesafeKey='';typesafeBackend='';pilotModel=null;if(typesafeConfirmController)typesafeConfirmController.abort();typesafeConfirmController=null;$('screen-api-confirm').disabled=false;$('screen-api-confirm').textContent='Confirm';}
 function renderModelSelection(){
   $('screen-model-source').value=screeningProvider();
   $('screen-api-settings').hidden=screeningProvider()!=='typesafe';
-  for(const id of ['screen-model-source','screen-api-key','screen-api-model','screen-api-confirm'])$(id).disabled=!!busy||(id==='screen-api-confirm'&&!!typesafeConfirmController);
+  for(const id of ['screen-model-source','screen-api-key','screen-api-model','screen-api-confirm'])$(id).disabled=id==='screen-model-source'||!!busy||(id==='screen-api-confirm'&&!!typesafeConfirmController);
   $('screen-model-archives').hidden=!workspace?.modelArchives?.length;
 }
 async function setScreeningModel(provider,name=''){
+  if(provider!=='typesafe')throw new Error('This tool uses TypeSafe.');
   if(busy)throw new Error('Stop screening before changing models.');
-  const previous=screeningProvider(),oldName=workspace.screeningModel||'';
+  const previous=workspace.screeningProvider||'local',oldName=workspace.screeningModel||'';
   if(previous===provider&&oldName===name)return true;
   const progress=workspace.pilot.rounds.length||Object.keys(workspace.full?.ai||{}).length||Object.keys(workspace.full?.human||{}).length;
   if(progress){
@@ -577,18 +578,10 @@ $('screen-model-archives').addEventListener('click',()=>download('screening-mode
 
 const aiWorkers=()=>screeningProvider()==='typesafe'?1:AI_WORKERS;
 async function resolvePilotModel(signal){
-  if(screeningProvider()==='typesafe'){
-    if(!typesafeKey||!typesafeBackend||!workspace.screeningModel)throw new Error('Select API, paste your TypeSafe key, and click Confirm before screening.');
-    return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
-  }
-  if(pilotModel)return pilotModel;
-  const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];if(!bases.includes(LOCAL_SERVER+'/api/eligibility'))bases.push(LOCAL_SERVER+'/api/eligibility');
-  for(const base of bases){try{const r=await localFetch(base+'/health',{signal});if(r.ok){const h=await r.json();if(h.service==='aimstep-local-eligibility')return pilotModel={provider:'backend',base,name:text(h.model||'local model',200)}}}catch(e){if(signal?.aborted)throw e}}
-  const base='http://127.0.0.1:11434',r=await localFetch(base+'/api/tags',{signal});if(!r.ok)throw new Error('The local model service returned HTTP '+r.status+'.');
-  const name=((await r.json()).models||[]).map(m=>String(m?.name||'')).find(n=>n&&!/:cloud(?:$|[-_])|embed/i.test(n));
-  if(!name)throw new Error('No installed local Ollama model was found.');
-  return pilotModel={provider:'ollama',base,name};
+  if(!typesafeKey||!typesafeBackend||workspace.screeningProvider!=='typesafe'||!workspace.screeningModel)throw new Error('Paste your TypeSafe key and click Confirm before screening.');
+  return {provider:'typesafe',base:typesafeBackend,name:'TypeSafe: '+workspace.screeningModel};
 }
+
 function isUnreachable(e){return /Failed to fetch|NetworkError|Load failed/i.test(String(e?.message||''))}
 async function explainUnreachable(){
   const direct=' Or open '+LOCAL_SERVER+'/full-text-screening.html on this computer, which needs no permission.';
@@ -620,7 +613,7 @@ async function runPool(items,n,fn,controller){
     catch(e){
       if(e.fatal||e.name==='AbortError'||/^(Cannot reach|The browser|This page was opened)/.test(e.message)){stopRun(e);break}
       failed.push({item,message:text(e.message,300)});inARow++;
-      if(inARow>=n+2)stopRun(new Error('The local model failed '+inARow+' times in a row: '+e.message));
+      if(inARow>=n+2)stopRun(new Error('The screening model failed '+inARow+' times in a row: '+e.message));
     }}};
   await Promise.all(Array.from({length:Math.min(n,items.length)},worker));
   if(fatal)throw fatal;
@@ -646,7 +639,7 @@ let workspace=null,store=null,docStore=null,busy='',controller=null,saveChain=Pr
 const recordById=new Map(),docCache=new Map();
 function newPilot(size=8){return {version:1,size,rounds:[],ai:{},human:{},approved:null}}
 function newFull(){return {version:2,check:'unresolved',ai:{},ai2:{},human:{},startedAt:'',completedAt:'',times:[]}}
-function defaults(){return {version:1,records:[],imports:[],criteria:null,criteriaSig:'',handoffAt:'',docs:{},pilot:newPilot(),full:newFull(),audit:[]}}
+function defaults(){return {screeningProvider:'typesafe',version:1,records:[],imports:[],criteria:null,criteriaSig:'',handoffAt:'',docs:{},pilot:newPilot(),full:newFull(),audit:[]}}
 function log(action,detail={}){workspace.audit.push({at:now(),action,...detail});if(workspace.audit.length>5000)workspace.audit.splice(0,workspace.audit.length-5000)}
 function getKey(db,key){return new Promise((resolve,reject)=>{const tx=db.transaction('projects','readonly'),req=tx.objectStore('projects').get(key);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)})}
 function deleteKey(db,key){return new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').delete(key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
@@ -2101,6 +2094,7 @@ async function init(){
     store=await openDB('aimstep-fulltext');docStore=await openDB('aimstep-fulltext-docs');
     const saved=await getProject(store);
     workspace=Object.assign(defaults(),saved?.state||{});
+    if(saved?.state&&!saved.state.screeningProvider)workspace.screeningProvider='local';
     workspace.pilot=Object.assign(newPilot(),workspace.pilot||{});workspace.full=Object.assign(newFull(),workspace.full||{});
     if(workspace.pilot.rounds.some(r=>r.prompt!==FT_PROMPT)||Object.values(workspace.full.ai).some(a=>!a.prompt?.startsWith(FT_PROMPT))){archiveRun('Upgrade to calibrated Full-text assess');workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();await save();}
     if(indexRecords())await save();

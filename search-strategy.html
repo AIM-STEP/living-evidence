@@ -600,7 +600,7 @@ async function requestModelJSON(prompt,schema,schemaName,signal,system,images=[]
   try{model=await resolveLocalModel(images.length>0,signal)}catch(e){resolvedModel=null;throw e}
   const user=model.provider==='compatible'&&images.length?{role:'user',content:[{type:'text',text:prompt},...images.map(i=>({type:'image_url',image_url:{url:i.dataUrl}}))]}:{role:'user',content:prompt,...(images.length?{images:images.map(i=>i.dataUrl.split(',')[1])}:{})};
   const messages=[{role:'system',content:system},user],headers={'Content-Type':'application/json'};if(model.token)headers.Authorization='Bearer '+model.token;
-  const body=model.provider==='backend'?{messages,format:schema}:model.provider==='ollama'?{model:model.name,messages,stream:false,format:schema,options:{temperature:0}}:{model:model.name,messages,stream:false,temperature:0,response_format:{type:'json_schema',json_schema:{name:schemaName,strict:true,schema}}};
+  const body=model.provider==='backend'?{messages,format:schema,provider:'local'}:model.provider==='ollama'?{model:model.name,messages,stream:false,format:schema,options:{temperature:0}}:{model:model.name,messages,stream:false,temperature:0,response_format:{type:'json_schema',json_schema:{name:schemaName,strict:true,schema}}};
   const url=model.base+(model.provider==='backend'?'/model':model.provider==='ollama'?'/api/chat':'/chat/completions');
   let response;try{response=await remote(url,{method:'POST',headers,body:JSON.stringify(body)},signal,600000)}catch(e){if(isUnreachable(e))resolvedModel=null;throw e}
   const data=await response.json();
