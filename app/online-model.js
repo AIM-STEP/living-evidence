@@ -5,7 +5,7 @@
 (() => {
   'use strict';
   const online = ['aimsetp.com', 'www.aimsetp.com'].includes(location.hostname);
-  const origin = 'https://api.aimsetp.com', base = origin + '/api/eligibility';
+  const origin = 'https://ai.aimsetp.com', base = origin + '/api/eligibility';
   const unavailable = 'The online AI service is unavailable. Contact the AIM-STEP administrator; no local model or local network permission is required on this device.';
   const failure = message => Object.assign(new Error(message), {configuration:true, onlineModel:true});
   let authentication;

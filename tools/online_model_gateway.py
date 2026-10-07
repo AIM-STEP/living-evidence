@@ -150,7 +150,7 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
     def guard(self):
-        if self.headers.get('Host', '').lower() not in {'api.aimsetp.com', '127.0.0.1:%d' % self.port}:
+        if self.headers.get('Host', '').lower() not in {'ai.aimsetp.com', 'api.aimsetp.com', '127.0.0.1:%d' % self.port}:
             raise AccessError(421, 'Unknown API host.')
         origin = self.headers.get('Origin')
         if origin and origin not in ORIGINS:
