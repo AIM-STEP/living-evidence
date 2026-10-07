@@ -202,6 +202,15 @@ th{background:#f4f4f4}
 #open-criteria,#open-criteria:hover{background:transparent;border:0;box-shadow:none;color:#79548e}#open-criteria svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}#open-criteria:hover{color:var(--plum)}#criteria-dialog{width:min(940px,calc(100vw - 32px));max-height:85vh}#criteria-dialog .criteria-dialog-head{border:0}#criteria-dialog .criteria-preview-frame{display:block;width:100%;height:240px;border:0;background:#fff}#criteria-dialog #criteria-origin,#criteria-dialog #reason-order{display:none!important}
 #source-dialog .panel-head{padding:12px 16px}#source-dialog .panel-body{padding:12px 16px}#source-dialog .results-like th,#source-dialog .results-like td{padding-top:4px;padding-bottom:4px;line-height:1.3}#source-dialog .source-choice-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}#source-dialog #source-choice-summary{margin:0;line-height:1.35}#source-dialog #apply-source{flex:none;margin-left:auto}
 #import-dialog .panel-head{padding:10px 16px}#import-dialog .panel-body{padding:12px 16px}#import-dialog .label{margin-bottom:4px;line-height:1.35}#import-dialog .input{min-height:36px;padding:7px 10px}#import-dialog .panel-body>.toolbar{margin-top:10px}#import-dialog .notice{margin:8px 0;padding:8px 10px}#import-dialog .import-file-heading{position:relative;display:flex;align-items:center;gap:6px;margin:8px 0 4px}#import-dialog .import-file-heading .label{margin:0}#import-dialog #import-formats{position:absolute;z-index:2;top:100%;left:0;width:min(470px,100%);box-sizing:border-box;box-shadow:0 5px 20px #24152c20;margin:6px 0 0;padding:10px 12px;background:#faf7fc;border:1px solid #e6dfea;border-radius:8px;line-height:1.45}
+
+/* Common boxed action style; selected controls retain a purple state indicator. */
+.btn.primary,.btn.gate.activated{padding:4px 8px;min-height:26px;border:1px solid #e4e4e8;border-radius:6px;background:#fafafb;color:#5f6069;font-size:12px;font-weight:500;line-height:1.25}
+.btn.primary:hover,.btn.gate.activated:hover{border-color:var(--plum);background:#fafafb;color:var(--plum)}
+.vote.yes.selected,.vote.maybe.selected,.vote.no.selected,.btn.gate.activated{border-color:#a27da0;background:#eadce9;color:#5c004d}
+.round.done:not(.current){border-color:#e4e4e8;background:#fafafb;color:#5f6069}
+.collapse-toggle,.remove-import{border:1px solid #e4e4e8;border-radius:6px;background:#fafafb;color:#5f6069}
+.btn.clear-action{height:26px;min-height:26px;min-width:60px;padding:4px 8px;line-height:1.2}
+.clear-action svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
 </style>
 </head>
 <body>
@@ -216,7 +225,7 @@ th{background:#f4f4f4}
 <div class="layout">
 <div class="stack">
 <section class="panel">
-<div class="panel-head source-panel-head"><h2>Screening source</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog">Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Screening source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Screening source</span></button></div></div> <div class="panel-body" id="source-body">
+<div class="panel-head source-panel-head"><h2>Screening source</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog">Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog">Import from local</button><button class="btn small clear-action" id="clear-source" type="button" aria-label="Clear screening source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Screening source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Screening source</span></button></div></div> <div class="panel-body" id="source-body">
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span>Databases</span></div><div><strong id="stat-total">0</strong><span>Records imported</span></div><div><strong id="stat-dups">0</strong><span>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden data-developer-notes></p>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col">Imported</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="num-col">Duplicates</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
@@ -226,7 +235,7 @@ th{background:#f4f4f4}
 </div>
 <div class="stack">
 <section class="panel">
-<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2>Pilot screening</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot screening works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10v15H5V5h4m0-2h6v4H9zM8 11l1 1 2-2m2 1h3M8 16l1 1 2-2m2 1h3"/></svg>Eligibility criteria</button></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
+<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2>Pilot screening</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot screening works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10v15H5V5h4m0-2h6v4H9zM8 11l1 1 2-2m2 1h3M8 16l1 1 2-2m2 1h3"/></svg>Eligibility criteria</button></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="btn small clear-action" id="clear-pilot" type="button" aria-label="Clear pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
 <div class="panel-body" id="pilot-body">
 <button class="btn small" type="button" id="screen-model-archives" hidden>Download previous screening runs</button>
 
@@ -240,7 +249,7 @@ th{background:#f4f4f4}
 </div>
 </section>
 <section class="panel">
-<div class="panel-head pilot-panel-head"><div class="pilot-title-actions"><h2>All records screening</h2><button class="pilot-help-button" id="full-help-button" type="button" aria-label="How all records screening works" aria-describedby="full-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-screening" type="button" disabled title="Approve the pilot first.">Start</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse All records screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse All records screening</span></button></div></div>
+<div class="panel-head pilot-panel-head"><div class="pilot-title-actions"><h2>All records screening</h2><button class="pilot-help-button" id="full-help-button" type="button" aria-label="How all records screening works" aria-describedby="full-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-screening" type="button" disabled title="Approve the pilot first.">Start</button><button class="btn small clear-action" id="clear-full" type="button" aria-label="Clear all records screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse All records screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse All records screening</span></button></div></div>
 <div class="panel-body" id="full-body">
 
 <div class="source-summary pilot-summary full-summary" id="full-categories"><div><strong id="full-screened">0 / 0</strong><span>Completed</span></div><div><button class="full-category" type="button" data-full-category="yes" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-yes">0</strong><span>Yes</span></button></div><div><button class="full-category" type="button" data-full-category="maybe" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-maybe">0</strong><span>Maybe</span></button></div><div><button class="full-category" type="button" data-full-category="no" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-no">0</strong><span>No</span></button></div><div><button class="full-category" type="button" data-full-category="conflicts" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-conflicts">0</strong><span>Conflicts</span></button></div><div><button class="full-category" type="button" data-full-category="check" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-check">0</strong><span>Check</span></button></div></div>
@@ -1468,7 +1477,7 @@ function renderFull(){
 function approvalsValid(){return pilotApprovalValid()}
 function render(){
   if(!workspace)return;
-  renderModelSelection();renderSource();renderPilot();renderFull();
+  renderModelSelection();renderSource();renderPilot();renderFull();renderClearActions();
 }
 function download(name,mime,body){
   const url=URL.createObjectURL(new Blob([body],{type:mime}));
@@ -2147,6 +2156,50 @@ $('pilot-filter').addEventListener('click',e=>{const b=e.target.closest('[data-f
 $('run-pilot').addEventListener('click',()=>startPilotRound().catch(e=>showNotice('pilot-message',e.message,'error')));
 $('approve-pilot').addEventListener('click',()=>approvePilotRound().catch(e=>showNotice('pilot-message','Could not save approval: '+e.message,'error')));
 $('stop-pilot').addEventListener('click',()=>controller?.abort());
+function clearActionsBlocked(){return !workspace||!!busy||importing||pilotReviewSaving||fullReviewSaving}
+function renderClearActions(){
+  const blocked=clearActionsBlocked();
+  for(const kind of ['source','pilot','full'])$('clear-'+kind).disabled=blocked;
+}
+async function clearScreeningSection(kind){
+  if(clearActionsBlocked())return;
+  const messages={
+    source:'Clear all imported screening records, pilot rounds and formal screening results? Search strategy results and eligibility criteria are kept. This cannot be undone.',
+    pilot:'Clear all pilot rounds, corrections and approval, and reset the formal screening results that depend on them? Imported records and eligibility criteria are kept. This cannot be undone.',
+    full:'Clear formal screening assessments and reviewer decisions? Imported records, pilot rounds and pilot approval are kept. This cannot be undone.'
+  };
+  if(!messages[kind]||!confirm(messages[kind]))return;
+  const before=structuredClone(workspace),previousSource=source,previousStats=dedupStats;
+  let importsWritten=false;
+  busy='clear';render();
+  try{
+    if(kind==='source'){
+      await putProject(importStore,{id:scope,runs:[],updatedAt:now()});importsWritten=true;
+      workspace.imports=[];workspace.importedRuns=[];workspace.excludedRuns=[];
+      source={...source,records:[],runs:[],sourceSig:fingerprint([])};
+      dedupStats={byImport:new Map(),total:0,possible:0};recordById.clear();
+      workspace.sourceSig=source.sourceSig;workspace.criteriaSig=source.criteriaSig;
+    }
+    if(kind==='full'){
+      workspace.full=newFull();workspace.fullPredictions={};workspace.secondPredictions={};workspace.resolutions={};workspace.reviews={};workspace.fullStartedAt='';workspace.completedAt='';
+    }else clearCalibration();
+    log('section-cleared',{section:kind});
+    await save();
+    fullReviewErrors.clear();exclusionDrafts.clear();expandedFullAssessments.clear();collapsedFullAssessments.clear();fullFilter='';fullShown=20;fullNow.clear();fullDone.length=0;
+    if(kind!=='full'){
+      pilotReviewDrafts.clear();pilotReviewErrors.clear();expandedPilotAssessments.clear();pilotView=-1;pilotFilter='agreed';showNotice('pilot-message','');
+    }
+    showNotice('full-message','');
+    toast('Current '+(kind==='source'?'screening source':kind==='pilot'?'pilot screening':'formal screening')+' cleared.');
+  }catch(e){
+    workspace=before;source=previousSource;dedupStats=previousStats;
+    recordById.clear();source.records.forEach(r=>recordById.set(r.uid,r));
+    if(importsWritten)try{await putProject(importStore,{id:scope,runs:before.imports,updatedAt:now()})}catch(restoreError){showNotice('source-notice','Could not restore local imports: '+restoreError.message,'error')}
+    publishSummary();
+    toast('Could not clear this section: '+e.message);
+  }finally{busy='';render();}
+}
+for(const kind of ['source','pilot','full'])$('clear-'+kind).addEventListener('click',()=>clearScreeningSection(kind));
 $('reset-calibration').addEventListener('click',()=>{
   if(busy||pilotReviewSaving||!confirm('Restart the pilot? All pilot rounds, reviews and the approval are removed.'))return;
   log('pilot-restarted',{rounds:workspace.pilot.rounds.length});workspace.pilot=newPilot(workspace.pilot.size);exclusionDrafts.clear();pilotReviewDrafts.clear();pilotReviewErrors.clear();expandedPilotAssessments.clear();pilotView=-1;showNotice('pilot-message','');save().then(render).catch(()=>{});
