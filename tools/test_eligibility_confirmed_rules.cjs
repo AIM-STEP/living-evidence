@@ -14,7 +14,7 @@ for(const mode of ['manual','machine']){
  const state=setup(mode),pending=api.pending();assert.equal(pending.length,2);assert.match(el('preview').innerHTML,/Pending clarification/);
  for(const item of pending)state.pendingDecisions[item]=item.startsWith('Population')?{decision:'meets',domain:'Population',text:'Adults aged 21 or older'}:{decision:'fails',domain:'Study design',text:'Case reports'};
  api.generate();
- assert(!el('preview').innerHTML.includes('Pending clarification'));assert(!el('preview').innerHTML.includes('Adults aged 21'));assert(!el('preview').innerHTML.includes('Case reports'));assert(!el('criteria-list').innerHTML.includes('Adults aged 21'));assert(!el('criteria-list').innerHTML.includes('Case reports'));
+ assert(el('preview').innerHTML.includes('<h3>Description</h3>'));assert(!el('preview').innerHTML.includes('Pending clarification'));assert(!el('preview').innerHTML.includes('Adults aged 21'));assert(!el('preview').innerHTML.includes('Case reports'));assert(!el('criteria-list').innerHTML.includes('Adults aged 21'));assert(!el('criteria-list').innerHTML.includes('Case reports'));
  assert.match(el('preview').innerHTML,/Adults\./);assert.match(el('preview').innerHTML,/Randomized trials/);
  const xml=docXml();assert.match(xml,/Adults aged 21 or older/);assert.match(xml,/Case reports/);
  const shared=JSON.parse(storage.get('aimstep-eligibility-summary:default'));assert(shared.includes.some(r=>r.text.includes('Adults aged 21')));assert(shared.exclusions.some(r=>r.text.includes('Case reports')));
