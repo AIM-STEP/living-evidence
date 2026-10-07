@@ -312,8 +312,7 @@ function renderConcepts(){
   renderFrameworkOptions();renderWordPicker();
   $('concepts').innerHTML=state.concepts.length?state.concepts.map((c,i)=>`<article class="concept" data-id="${esc(c.id)}">
     <div class="concept-head">${c.criterionId||c.label!=='Other'?`<span class="word-card-title">${esc(c.label)}</span>`:`<input class="text-input word-card-title" data-field="label" value="${esc(c.label)}" aria-label="Criterion name">`}<label class="word-card-use"><input type="checkbox" data-field="enabled" ${c.enabled?'checked':''} aria-label="Use ${esc(c.label)} in search">Use in search</label><button class="remove-concept" data-remove="${esc(c.id)}" type="button" aria-label="Remove ${esc(c.label)}">×</button></div>
-    <label class="label" for="words-${i}">Words</label><textarea class="textarea word-text" id="words-${i}" data-field="terms" rows="4" maxlength="100000" placeholder="Paste or type words and synonyms, one per line">${esc(c.terms)}</textarea><label class="label" for="mesh-${i}">MeSH headings <span class="mesh-hint">verified with the NLM MeSH database; used in PubMed and Ovid</span></label><textarea class="textarea word-text mesh-text" id="mesh-${i}" data-field="mesh" rows="2" maxlength="5000" placeholder="One MeSH heading per line">${esc(c.mesh||'')}</textarea>
-    <div class="word-actions"><button type="button" class="btn small" data-upload-words="${esc(c.id)}">Upload words</button><input type="file" data-words-file="${esc(c.id)}" accept=".docx,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden aria-label="Upload words for ${esc(c.label)}"></div>
+    <label class="label" for="words-${i}">Words</label><textarea class="textarea word-text" id="words-${i}" data-field="terms" rows="4" maxlength="100000" placeholder="Paste or type words and synonyms, one per line">${esc(c.terms)}</textarea>
     <ul class="word-files" ${(c.uploads||[]).length?'':'hidden'}>${(c.uploads||[]).map(f=>{const url=wordFileUrls.get(f.id);return `<li>${url?`<a href="${esc(url)}" download="${esc(f.name)}">${esc(f.name)}</a>`:`<span>${esc(f.name)}</span>`}</li>`}).join('')}</ul>
     <p class="hint word-message" data-word-message hidden role="status"></p>
     ${c.sourceRule||c.sourceExclusion||c.sourceOther?`<details class="word-source"><summary>Eligibility criteria</summary>${c.sourceRule?`<p><strong>Eligibility rule:</strong> ${esc(c.sourceRule)}</p>`:''}${c.sourceExclusion?`<p><strong>Exclusion rule:</strong> ${esc(c.sourceExclusion)}</p>`:''}${c.sourceOther?`<p><strong>Other rule:</strong> ${esc(c.sourceOther)}</p>`:''}</details>`:''}
@@ -884,15 +883,7 @@ $('concepts').addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button||busy||generating)return;
   const card=button.closest('[data-id]'),c=state.concepts.find(c=>c.id===card?.dataset.id);if(!c)return;
   if(button.hasAttribute('data-remove')){if(c.criterionId&&!state.dismissedCriteria.includes(c.criterionId))state.dismissedCriteria.push(c.criterionId);state.concepts=state.concepts.filter(item=>item.id!==c.id);saveDraft();renderConcepts();renderStrategies()}
-  else if(button.hasAttribute('data-upload-words'))card.querySelector('[data-words-file]').click();
 });
-$('concepts').addEventListener('change',async event=>{
-  if(!event.target.hasAttribute('data-words-file')||busy||generating)return;
-  const input=event.target,file=input.files[0],card=input.closest('[data-id]'),c=state.concepts.find(c=>c.id===card?.dataset.id);if(!file||!c)return;
-  setBusy(true);const message=card.querySelector('[data-word-message]');message.textContent='Reading words…';message.hidden=false;
-  try{await uploadWords(file,c)}catch(e){message.textContent=e.message}finally{input.value='';setBusy(false)}
-});
-
 $('clear-databases').addEventListener('click',()=>{if(busy||generating||!state.databases.length)return;state.databases=[];saveDraft();renderDatabaseChoices();renderStrategies();});
 $('databases').addEventListener('change',()=>{if(busy||generating)return;state.databases=[...$('databases').querySelectorAll('input:checked')].map(el=>el.value);saveDraft();renderStrategies()});for(const [id,key]of [['start-date','start'],['end-date','end'],['limit-language','language'],['limit-other','other']])$(id).addEventListener('input',()=>{state.limits.apply=true;state.limits[key]=$(id).value;saveDraft();renderStrategies();updateClearLimits()});
 $('generate').addEventListener('click',generate);$('cancel-generation').addEventListener('click',()=>modelController?.abort());$('strategy-tabs').addEventListener('click',event=>{const btn=event.target.closest('[data-db]');if(!btn)return;state.activeDb=btn.dataset.db;saveDraft();renderStrategies()});$('query').addEventListener('input',()=>{
