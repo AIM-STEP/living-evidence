@@ -30,6 +30,9 @@
 .btn,.framework,.criterion-option,.pc-btn,.step-btn,.lang{padding:0 10px;min-width:60px;width:auto}
 .machine-actions .btn{min-width:60px}.collapse-toggle,.machine-tool{width:32px;min-width:32px;padding:0;flex-shrink:0}
 .criteria-file-actions{flex-wrap:wrap}.criteria-action[hidden],.btn[hidden]{display:none}
+.pc-list .pc-item{display:flex;align-items:flex-start;gap:6px;border:0;border-radius:0;background:transparent;padding:4px 0;margin:0}
+.pc-number{flex:none;line-height:1.55}.pc-list .pc-q{flex:1;min-width:0;font-size:13px;line-height:1.55;margin:0}.pc-list .pc-choice{display:flex;flex:none;gap:4px;flex-wrap:nowrap}
+.pc-list .pc-btn{width:32px;min-width:32px;padding:0;font-size:17px}
 </style>
 <style>
 .embedded-manual body{background:#fff}
@@ -821,7 +824,7 @@ function wordCell(value,width,bold){return '<w:tc><w:tcPr><w:tcW w:w="'+width+'"
 function crc32(bytes){let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let bit=0;bit<8;bit++)crc=(crc>>>1)^((crc&1)?0xedb88320:0)}return(crc^0xffffffff)>>>0}
 function concatBytes(parts){const length=parts.reduce((total,part)=>total+part.length,0),result=new Uint8Array(length);let offset=0;for(const part of parts){result.set(part,offset);offset+=part.length}return result}
 function makeStoredZip(files){const encoder=new TextEncoder(),localParts=[],centralParts=[];let offset=0;for(const file of files){const name=encoder.encode(file.name),data=encoder.encode(file.content),crc=crc32(data),local=new Uint8Array(30+name.length),lv=new DataView(local.buffer);lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint32(14,crc,true);lv.setUint32(18,data.length,true);lv.setUint32(22,data.length,true);lv.setUint16(26,name.length,true);local.set(name,30);localParts.push(local,data);const central=new Uint8Array(46+name.length),cv=new DataView(central.buffer);cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint32(16,crc,true);cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);cv.setUint16(28,name.length,true);cv.setUint32(42,offset,true);central.set(name,46);centralParts.push(central);offset+=local.length+data.length}const centralOffset=offset,central=concatBytes(centralParts),end=new Uint8Array(22),ev=new DataView(end.buffer);ev.setUint32(0,0x06054b50,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,central.length,true);ev.setUint32(16,centralOffset,true);return concatBytes([...localParts,central,end])}
-function criteriaWordFile(){const normalized=standardizedCriteria(),widths=[3000,4200,2160],headers=['Domain','Include','Exclude'];const rows=[headers,...normalized.rows.map(row=>[row.label,formatCriteriaRules(row.include)||'To be defined.',formatCriteriaRules(row.exclude)]),...(normalized.limits.length?[['Limits',normalized.limits.join(' '),'']]:[])];const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>',tableRows=rows.map((row,index)=>'<w:tr>'+row.map((cell,column)=>wordCell(cell,widths[column],index===0)).join('')+'</w:tr>').join('');const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+(normalized.topic||summaryTopic(normalized.rows,normalized.framework)),false)+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+(normalized.paragraph?wordParagraph('Description',true)+wordParagraph(normalized.paragraph,false):'')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
+function criteriaWordFile(){const normalized=standardizedCriteria(),widths=[3000,4200,2160],headers=['Domain','Include','Exclude'];const rows=[headers,...normalized.rows.map(row=>[row.label,formatCriteriaRules(row.include)||'To be defined.',formatCriteriaRules(row.exclude)]),...(normalized.limits.length?[['Limits',normalized.limits.join(' '),'']]:[])];const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>',tableRows=rows.map((row,index)=>'<w:tr>'+row.map((cell,column)=>wordCell(cell,widths[column],index===0)).join('')+'</w:tr>').join('');const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+(normalized.topic||summaryTopic(normalized.rows,normalized.framework)),false)+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+(normalized.paragraph?wordParagraph('Description',true)+wordParagraph(normalized.paragraph,false):'')+clarificationWordParagraphs()+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';const reviewOption=[...$('review-type').options].find(option=>option.value.toLowerCase()===String(state.reviewType||'Systematic Review').toLowerCase());$('review-type').value=reviewOption?reviewOption.value:'Systematic Review';document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});
@@ -900,22 +903,34 @@ function pendingSuggestion(item){
   if(/^(define|confirm|verify|clarify|specify|the same rule|the start date|english translation|specific eligibility rule required|define an explicit)/i.test(text))text='';
   return {domain,text,vague,issue};
 }
+const PENDING_CLARIFICATION_GUIDANCE='For each item, choose whether a report like this meets the criteria. The rule is added to the inclusion criteria (Meets) or the exclusion criteria (Does not meet) of its dimension.';
 function pendingEditor(pending,rows){
-  const decisions=state.pendingDecisions||{},labels=pendingLabels();
-  const items=pending.map((item,i)=>{const d=decisions[item]||{},sug=pendingSuggestion(item),domain=d.domain||sug.domain,text=d.text??sug.text;
-    return `<li class="pc-item${d.decision?' decided':''}" data-pc="${i}"><div class="pc-q">${escapeHtml(item)}</div>`+
-      `<div class="pc-fields"><select class="pc-domain" data-pc-domain="${i}" aria-label="Dimension">${labels.map(l=>`<option${l===domain?' selected':''}>${escapeHtml(l)}</option>`).join('')}</select>`+
-      `<input class="pc-text" data-pc-text="${i}" value="${escapeHtml(text)}" placeholder="${sug.vague?'Write the specific rule that replaces: '+escapeHtml(sug.vague):'Rule to record (leave empty to only confirm)'}" aria-label="Rule"></div>`+
-      `<div class="pc-choice" role="group" aria-label="Decision"><button type="button" class="pc-btn meets${d.decision==='meets'?' selected':''}" data-pc-dec="meets" data-pc-i="${i}" aria-pressed="${d.decision==='meets'}">Meets</button><button type="button" class="pc-btn fails${d.decision==='fails'?' selected':''}" data-pc-dec="fails" data-pc-i="${i}" aria-pressed="${d.decision==='fails'}">Does not meet</button></div></li>`}).join('');
-  const decided=pending.filter(item=>decisions[item]?.decision).length;
-  return `<p class="summary-muted pc-help">For each item, choose whether a report like this meets the criteria. The rule is added to the inclusion criteria (Meets) or the exclusion criteria (Does not meet) of its dimension.</p><ol class="pc-list">${items}</ol>`+
-    `<div class="pc-actions"><span class="summary-muted">${decided} of ${pending.length} decided</span><button type="button" class="btn btn-primary pc-generate" data-pc-generate${decided===pending.length?'':' disabled'}>Generate final criteria</button></div>`;
+  const decisions=state.pendingDecisions||{};
+  return `<ol class="pc-list">${pending.map((item,i)=>{const d=decisions[item]||{};return `<li class="pc-item" data-pc="${i}"><span class="pc-number">${i+1}.</span><span class="pc-q">${escapeHtml(sentence(item))}</span><span class="pc-choice" role="group" aria-label="Clarification decision"><button type="button" class="pc-btn fails${d.decision==='fails'?' selected':''}" data-pc-dec="fails" data-pc-i="${i}" aria-label="Does not meet: ${escapeHtml(item)}" title="Does not meet" aria-pressed="${d.decision==='fails'}">×</button><button type="button" class="pc-btn meets${d.decision==='meets'?' selected':''}" data-pc-dec="meets" data-pc-i="${i}" aria-label="Meets: ${escapeHtml(item)}" title="Meets" aria-pressed="${d.decision==='meets'}">✓</button></span></li>`;}).join('')}</ol>`;
+}
+function clarificationWordParagraphs(){
+  const confirmed=state.finalCriteria?.decisions||[],seen=new Set(confirmed.map(d=>d.item));
+  const pending=Object.entries(state.pendingDecisions||{}).filter(([item,d])=>d.decision&&!seen.has(item)).map(([item,d])=>({item,...d,unapplied:true}));
+  const decisions=[...confirmed,...pending];
+  if(!decisions.length)return '';
+  return wordParagraph('Clarification decisions',true)+decisions.map((d,i)=>wordParagraph((i+1)+'. '+d.item,false)+wordParagraph('Selected: '+(d.decision==='meets'?'Meets (✓)':'Does not meet (×)')+(d.unapplied?' — saved selection; not yet applied':''),false)+(d.rule?wordParagraph('Rule ('+d.domain+'): '+d.rule,false):'')).join('');
+}
+function recordPendingChoice(item,decision){
+  if(!['meets','fails'].includes(decision))return false;
+  if(previewDirty&&!savePreviewEdits(false))return false;
+  if(!currentPending().includes(item))return false;
+  stopMachineGeneration();stopManualRefinement();
+  const before=structuredClone(state),suggestion=pendingSuggestion(item),old=state.pendingDecisions?.[item]||{};
+  state.pendingDecisions={...(state.pendingDecisions||{}),[item]:{decision,domain:old.domain||suggestion.domain,text:old.text??suggestion.text}};
+  if(!generateFinalCriteria([item])){state=before;renderCards();renderPreview();return false;}
+  return true;
 }
 function currentPending(){return standardizedCriteria().pending}
 function persistQuietly(){if(embeddedManual)return;try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
 function sentence(t){t=String(t||'').replace(/\s+/g,' ').trim().replace(/[.。]+$/,'');return t?t.charAt(0).toUpperCase()+t.slice(1)+'.':''}
-function generateFinalCriteria(){
-  const pending=currentPending(),decisions=state.pendingDecisions||{};
+function generateFinalCriteria(selectedItems=null){
+  const before=structuredClone(state),wasDirty=previewDirty;
+  const pending=selectedItems||currentPending(),decisions=state.pendingDecisions||{};
   if(!pending.length||pending.some(item=>!decisions[item]?.decision))return;
   const machine=state.activeGenerator==='machine',rows=machine?state.machineCriteria:state.criteria;
   // The polished wording stays valid only if it is updated with the rows.
@@ -937,21 +952,19 @@ function generateFinalCriteria(){
   }
   if(refinement){refinement.uncertainties=refinement.uncertainties.filter(u=>!pending.includes(u));refinement.signature=machine?machineSourceSignature(state.machineRun?.question,state.machineRun?.reviewType,state.machineRun?.sourceRevision??0,state.machineCriteria):manualSourceSignature()}
   state.resolvedPending=[...new Set([...(state.resolvedPending||[]),...pending])];
-  state.pendingDecisions={};
+  state.pendingDecisions=Object.fromEntries(Object.entries(decisions).filter(([item])=>!pending.includes(item)));
+  state.clarificationGuidance=PENDING_CLARIFICATION_GUIDANCE;
   state.finalCriteria={at:new Date().toISOString(),count:(state.finalCriteria?.count||0)+pending.length,decisions:[...(state.finalCriteria?.decisions||[]),...log]};
-  renderCards();save();
-  toast('Final criteria generated: '+log.filter(x=>x.rule).length+' rule'+(log.filter(x=>x.rule).length===1?'':'s')+' added, '+log.filter(x=>!x.rule).length+' confirmed.');
+  previewDirty=true;
+  if(!save()){state=before;previewDirty=wasDirty;renderCards();renderPreview();toast('Could not save your choice. Please try again.');return false;}
+  previewDirty=wasDirty;renderCards();renderPreview();
+  toast('Clarification saved.');return true;
 }
 $('preview').addEventListener('click',e=>{
-  const b=e.target.closest('[data-pc-dec]');
-  if(b){const item=currentPending()[Number(b.dataset.pcI)];if(item===undefined)return;const li=b.closest('.pc-item');
-    state.pendingDecisions={...(state.pendingDecisions||{}),[item]:{decision:b.dataset.pcDec,domain:li.querySelector('.pc-domain').value,text:li.querySelector('.pc-text').value}};save();return}
-  if(e.target.closest('[data-pc-generate]'))generateFinalCriteria();
-});
-$('preview').addEventListener('input',e=>{
-  const t=e.target,i=t.dataset.pcText??t.dataset.pcDomain;if(i===undefined)return;
-  const item=currentPending()[Number(i)];if(item===undefined)return;const li=t.closest('.pc-item'),prev=(state.pendingDecisions||{})[item]||{};
-  state.pendingDecisions={...(state.pendingDecisions||{}),[item]:{...prev,domain:li.querySelector('.pc-domain').value,text:li.querySelector('.pc-text').value}};persistQuietly();
+  const button=e.target.closest('[data-pc-dec]');
+  if(!button)return;
+  const item=currentPending()[Number(button.dataset.pcI)];
+  if(item!==undefined)recordPendingChoice(item,button.dataset.pcDec);
 });
 // Reuse this exact manual editor in Full-text assess, with an isolated draft.
 if(embeddedManual){
