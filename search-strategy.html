@@ -90,6 +90,12 @@
 .search-words-panel .word-element-picker{padding:10px;margin-bottom:10px;gap:6px}
 .search-words-panel #concepts:not(:empty)+#selected-words{margin-top:10px}
 .search-words-panel .words-empty{padding:12px;margin-bottom:0}
+
+#previous-criteria-dialog .criteria-dialog-head,#previous-criteria-dialog .uploaded-criteria{border:0}
+#previous-criteria-dialog #active-criteria{display:none}
+.search-criteria-editable{display:inline-block;min-width:80px;max-width:100%;min-height:1.5em;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:3px;outline:none}
+.search-criteria-editable:empty::before{content:'Click to edit';color:var(--muted)}
+.search-criteria-editable:focus{background:#faf6fa;box-shadow:0 0 0 2px #eadbe7}
 </style></head>
 <body>
 <header class="header"><a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span class="brand-text"><span class="brand-main">ACHIEVE</span><small class="brand-sub">for AIM-STEP Living evidence</small></span></a><nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a data-toolset href="index.html?view=toolset" class="active">Toolset</a><a href="contact.html">Contact</a></nav><a class="project-pill" id="project-name" hidden></a></header>
@@ -135,10 +141,10 @@
   <div class="panel-footer downloads"><div class="toolbar"><label class="label inline" for="download-format">Format</label><select class="select compact" id="download-format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="json">JSON</option></select><button class="btn" id="download-results" type="button" disabled>Download selected</button><span class="hint" id="download-summary"></span></div></div>
 </section>
 </main><dialog id="previous-criteria-dialog" class="criteria-dialog" aria-labelledby="previous-criteria-title">
-  <div class="criteria-dialog-head"><div class="criteria-heading-group"><h2 id="previous-criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" id="restore-criteria" type="button">Use previous criteria</button><button class="criteria-source-link" id="upload-criteria" type="button">Import from local</button><button class="criteria-source-link" id="edit-criteria" type="button">Edit</button></div><input type="file" id="criteria-file" accept=".doc,.docx,.txt,.json,.csv,.tsv,.html,.htm" hidden aria-label="Import local eligibility criteria"></div><button type="button" id="close-previous-criteria" class="criteria-close" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
+  <div class="criteria-dialog-head"><div class="criteria-heading-group"><h2 id="previous-criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" id="restore-criteria" type="button">Use previous criteria</button><button class="criteria-source-link" id="upload-criteria" type="button">Import from local</button><button class="criteria-source-link" id="edit-criteria" type="button">Edit previous criteria</button><button class="criteria-source-link" id="save-search-criteria" type="button">Save</button></div><input type="file" id="criteria-file" accept=".doc,.docx,.txt,.json,.csv,.tsv,.html,.htm" hidden aria-label="Import local eligibility criteria"></div><button type="button" id="close-previous-criteria" class="criteria-close" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
   <div class="criteria-dialog-body"><div class="active-criteria" id="active-criteria" hidden></div><ul class="uploaded-criteria" id="uploaded-criteria-files" aria-label="Uploaded eligibility criteria files" hidden></ul><div class="notice" id="source-message" hidden role="status"></div><div id="criteria-rows" class="criteria-summary"></div></div>
 </dialog>
-<div class="toast" id="toast" role="status" aria-live="polite"></div><script>'use strict';
+<div class="toast" id="toast" role="status" aria-live="polite"></div><script src="app/search-criteria-editor.js"></script><script>'use strict';
 (() => {
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),str=(v,n=12000)=>String(v??'').slice(0,n),now=()=>new Date().toISOString(),uid=()=>globalThis.crypto?.randomUUID?.()||'id-'+Date.now()+'-'+Math.random().toString(36).slice(2),clone=v=>JSON.parse(JSON.stringify(v));
 const DB={
@@ -157,6 +163,7 @@ document.querySelectorAll('[data-home]').forEach(a=>a.href=pageLink('index.html'
 if(project?.name){$('project-name').hidden=false;$('project-name').textContent=project.name;$('project-name').title=project.name;$('project-name').href=pageLink('index.html','project')}
 const defaults=()=>({version:1,source:'previous',criteriaSnapshot:null,sourceHash:'',concepts:[],databases:['pubmed'],activeDb:'pubmed',queries:{},method:'manual',limits:{apply:true,start:'',end:'',language:'',other:''},recordLimit:'all',modelRun:null,machineInput:'',machineSourceRevision:0,knownPmids:'',machineWords:null,manualFramework:'',dismissedCriteria:[]});
 const roles=['population','intervention','exposure','concept','context','comparison','outcomes','design','phenomenon','other'];
+let criteriaEditBase=null,criteriaEditDirty=false;
 let state=defaults(),records=[],runs=[],database=null,busy=false,generating=false,controller=null,modelController=null,page=1,saveChain=Promise.resolve(),draftStored=true,resultsStored=true;
 function notice(id,message,kind=''){const el=$(id);el.textContent=message;el.className='notice'+(kind?' '+kind:'');el.hidden=!message}
 let toastTimer;function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3500)}
@@ -216,25 +223,8 @@ function syncPreviousCriteria(){
 // not touch the Eligibility criteria page; it sets source "removed", which the
 // automatic reload on open and the upstream sync both skip, so they stay out
 // until the user brings them back here or sends them again with Next.
-function renderActiveCriteria(){
-  const box=$('active-criteria');box.replaceChildren();
-  const snapshot=state.criteriaSnapshot,rows=(snapshot?.rows||[]).length;
-  if(snapshot&&rows){
-    const label=document.createElement('span'),remove=document.createElement('button');
-    const from=state.source==='previous'?'Criteria from the previous step':'Criteria from '+(snapshot.origin||'an upload');
-    label.innerHTML='<span class="muted">In use:</span> '+esc(from)+' · '+rows+' criteri'+(rows===1?'on':'a');
-    remove.type='button';remove.className='remove-file';remove.textContent='×';remove.title='Remove these criteria from Search strategy';remove.setAttribute('aria-label','Remove '+from.toLowerCase()+' from Search strategy');
-    remove.addEventListener('click',removeActiveCriteria);box.append(label,remove);box.hidden=false;return;
-  }
-  let previous=null;try{previous=eligibility()}catch(e){}
-  if(state.source==='removed'&&previous?.rows.length){
-    const label=document.createElement('span'),back=document.createElement('button');
-    label.className='muted';label.textContent='No eligibility criteria in use.';
-    back.type='button';back.className='link-button';back.textContent="Use the previous step's criteria";back.addEventListener('click',()=>{if(!busy&&!generating){refreshCriteria();renderActiveCriteria()}});
-    box.append(label,back);box.hidden=false;return;
-  }
-  box.hidden=true;
-}
+function renderActiveCriteria(){$('active-criteria').hidden=true;}
+
 function removeActiveCriteria(){
   if(busy||generating||!state.criteriaSnapshot)return;
   const fromPrevious=state.source==='previous';
@@ -247,7 +237,7 @@ function removeActiveCriteria(){
   fillControls();renderCriteria();renderConcepts();renderStrategies();
 }
 function checkUpstream(){
-  if(busy||generating)return;
+  if(busy||generating||criteriaEditDirty)return;
   try{if(syncPreviousCriteria()){fillControls();renderCriteria();renderConcepts();renderStrategies()}$('upstream-notice').hidden=true}catch(e){notice('source-message',e.message,'error')}
 }
 function renderWordPicker(){
@@ -395,16 +385,47 @@ async function saveUploadedCriteriaFile(file){
   await renderUploadedCriteriaFiles();
 }
 function renderCriteria(){
+  if(criteriaEditDirty)return;
   const snapshot=state.criteriaSnapshot,rows=snapshot?.rows||[];
+  criteriaEditBase={previous:localStorage.getItem(eligibilityKey),snapshot:clone(snapshot)};
   renderActiveCriteria();
-  const box=$('criteria-rows');
+  const box=$('criteria-rows');$('save-search-criteria').disabled=!rows.length||busy||generating;
   if(!rows.length){box.innerHTML='<p class="summary-muted">No eligibility rules saved for this search. Select Use previous criteria or Import from local.</p>';return}
-  const rule=(row,text)=>`<div class="summary-inclusion"><strong>${esc(row.title)}:</strong> ${esc(text)}</div>`;
-  const include=rows.filter(r=>r.condition).map(r=>rule(r,r.condition)).join('');
-  const exclude=rows.filter(r=>r.uncertain).map(r=>rule(r,r.uncertain)).join('');
-  const other=rows.filter(r=>r.definition).map(r=>rule(r,r.definition)).join('');
-  box.innerHTML=`<div class="summary-intro"><p><strong>Review topic:</strong> ${esc(snapshot.question||'To be defined')}</p><p><strong>Framework:</strong> ${esc(snapshot.framework||'Other')}</p></div><section class="summary-block"><h3>Inclusion criteria</h3>${include||'<p class="summary-muted">No inclusion rules entered.</p>'}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclude||'<p class="summary-muted">No explicit exclusion rules entered.</p>'}</section>${other?`<section class="summary-block"><h3>Other rules</h3>${other}</section>`:''}`;
+  const editable=(text,attrs,label)=>`<span class="search-criteria-editable" contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="${esc(label)}" ${attrs}>${esc(text)}</span>`;
+  const rule=(row,index,field)=>`<div class="summary-inclusion"><strong>${esc(row.title)}:</strong> ${editable(row[field],`data-edit-row="${index}" data-edit-field="${field}"`,row.title+' '+field)}</div>`;
+  const include=rows.map((r,i)=>rule(r,i,'condition')).join('');
+  const exclude=rows.map((r,i)=>rule(r,i,'uncertain')).join('');
+  const other=rows.map((r,i)=>r.definition?rule(r,i,'definition'):'').join('');
+  box.innerHTML=`<div class="summary-intro"><p><strong>Review topic:</strong> ${editable(snapshot.question,'data-edit-topic','Review topic')}</p><p><strong>Framework:</strong> ${esc(snapshot.framework||'Other')}</p></div><section class="summary-block"><h3>Inclusion criteria</h3>${include}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclude}</section>${other?`<section class="summary-block"><h3>Other rules</h3>${other}</section>`:''}`;
 }
+function discardCriteriaEdits(){
+  if(criteriaEditDirty&&!confirm('Discard unsaved criteria edits?'))return false;
+  criteriaEditDirty=false;return true;
+}
+function saveSearchCriteria(){
+  if(busy||generating||!criteriaEditBase?.snapshot)return false;
+  try{
+    if(criteriaEditBase.previous!==localStorage.getItem(eligibilityKey)||fingerprint(comparableSnapshot(criteriaEditBase.snapshot))!==fingerprint(comparableSnapshot(state.criteriaSnapshot)))throw new Error('Criteria changed elsewhere. Copy your edits before reopening this dialog.');
+    const snapshot=clone(criteriaEditBase.snapshot);
+    for(const el of $('criteria-rows').querySelectorAll('[data-edit-row]')){
+      const row=snapshot.rows[Number(el.dataset.editRow)],field=el.dataset.editField;
+      if(row&&['condition','uncertain','definition'].includes(field))row[field]=String(el.innerText??el.textContent??'').trim();
+    }
+    snapshot.question=$('criteria-rows').querySelector('[data-edit-topic]').innerText.trim();
+    const previous=JSON.parse(criteriaEditBase.previous||'null'),updated=AIMSearchCriteriaEditor.workspace(previous,snapshot,now());
+    const next=clone(state);next.criteriaSnapshot=snapshot;next.source='previous';next.sourceHash=fingerprint(comparableSnapshot(snapshot));next.machineWords=null;
+    for(const c of next.concepts){const row=snapshot.rows.find(r=>r.id===c.criterionId);if(row){c.sourceRule=row.condition;c.sourceExclusion=row.uncertain;c.sourceOther=row.definition}}
+    const changes=[[eligibilityKey,JSON.stringify(updated)],[stateKey,JSON.stringify(next)],['aimstep-eligibility-summary:'+scope,null]];
+    if(projectId){const key='aimstep-setup-completed:'+encodeURIComponent(projectId),done=JSON.parse(localStorage.getItem(key)||'[]');changes.push([key,JSON.stringify(Array.isArray(done)?done.filter(n=>![1,2,3].includes(Number(n))):[])])}
+    AIMSearchCriteriaEditor.commit(localStorage,changes);
+    state=next;criteriaEditDirty=false;draftStored=true;renderCriteria();renderConcepts();renderMachineWords();renderStrategies();
+    notice('source-message','Criteria saved and synchronized with previous criteria.','success');return true;
+  }catch(error){notice('source-message',error.message,'error');return false}
+}
+$('criteria-rows').addEventListener('input',event=>{if(event.target.closest('.search-criteria-editable'))criteriaEditDirty=true});
+$('save-search-criteria').addEventListener('click',saveSearchCriteria);
+window.addEventListener('beforeunload',event=>{if(criteriaEditDirty){event.preventDefault();event.returnValue=''}});
+
 function fillControls(){$('generation-method').value=state.method;$('manual-words-panel').hidden=false;$('words-heading').textContent=state.method==='machine'?'Search concepts':'Manual generate';$('manual-start').hidden=state.method==='machine';$('clear-words').textContent=state.method==='machine'?'Clear words':'Clear';$('mw-question').value=state.machineInput||'';$('known-pmids').value=state.knownPmids||'';$('apply-limits').checked=state.limits.apply;$('start-date').value=state.limits.start;$('end-date').value=state.limits.end;$('limit-language').value=state.limits.language;$('limit-other').value=state.limits.other;updateClearLimits();$('record-limit').value=state.recordLimit;$('limits-hint').textContent='Some databases support year limits rather than exact dates. The strategy notes show which limits are included. '+(state.method==='machine'?'Other is sent to the model; check its notes for restrictions that require screening or database filters.':'Other is recorded as a note.');renderDatabaseChoices();renderMachineWords();scheduleMachineWords();renderActiveCriteria()}
 function renderDatabaseChoices(){$('databases').innerHTML=Object.entries(DB).map(([id,d])=>`<label class="check"><input type="checkbox" value="${id}" ${state.databases.includes(id)?'checked':''}><span>${esc(d.label)}<small>${d.direct?'Direct retrieval':'Institutional search + import'}</small></span></label>`).join('');}
 function draftHash(){return fingerprint({method:state.method,databases:state.databases,criteria:comparableSnapshot(state.criteriaSnapshot),concepts:state.method==='manual'?state.concepts.map(c=>({label:c.label,role:c.role,terms:c.terms,enabled:c.enabled})):{key:machineWordKey(),rows:currentMachineWords()?.rows||[]},limits:state.limits})}
@@ -422,7 +443,7 @@ function renderStrategies(){
   $('execution-note').hidden=!info;
 }
 
-function setBusy(value){busy=value;for(const id of ['generate','add-concept','clear-words','refresh-banner','restore-criteria','edit-criteria','upload-criteria','criteria-file','generation-method','mw-start','mw-clear','mw-add-source','mw-voice','manual-start','check-recall'])$(id).disabled=value||generating||(id==='manual-start'&&!!manualController);updateClearLimits();$('stop-search').hidden=!value;document.querySelectorAll('#word-element-picker button,#concepts input,#concepts textarea,#concepts select,#concepts button,#databases input,#mw-question,#apply-limits,#start-date,#end-date,#limit-language,#limit-other').forEach(el=>el.disabled=value||generating);renderStrategies(false);renderHistory()}
+function setBusy(value){busy=value;for(const id of ['generate','add-concept','clear-words','refresh-banner','restore-criteria','edit-criteria','save-search-criteria','upload-criteria','criteria-file','generation-method','mw-start','mw-clear','mw-add-source','mw-voice','manual-start','check-recall'])$(id).disabled=value||generating||(id==='manual-start'&&!!manualController);updateClearLimits();$('stop-search').hidden=!value;document.querySelectorAll('#word-element-picker button,#concepts input,#concepts textarea,#concepts select,#concepts button,#databases input,#mw-question,#apply-limits,#start-date,#end-date,#limit-language,#limit-other').forEach(el=>el.disabled=value||generating);renderStrategies(false);renderHistory()}
 function setGenerating(value){generating=value;$('cancel-generation').hidden=!value;setBusy(busy);$('generate').textContent=value?'Generating…':'Generate strategies'}
 
 function csvRows(text,separator=','){const rows=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){let c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else if(!cell||quoted)quoted=!quoted;else cell+=c}else if(c===separator&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=''}else cell+=c}if(quoted)throw new Error('The CSV contains an unclosed quoted field.');row.push(cell);if(row.some(x=>x.trim()))rows.push(row);return rows}
@@ -764,11 +785,12 @@ function downloadBackup(){const data={format:'aimstep-search-workspace/v1',expor
 function downloadStrategies(){let s=state.criteriaSnapshot,out=['AIM-STEP — Search strategy','Exported: '+now(),'Project: '+(project?.name||projectId||'Default workspace'),'','ELIGIBILITY CRITERIA',s?.question?'Question: '+s.question:'',...(s?.rows||[]).map(r=>r.title+'\n  Eligibility: '+r.condition+'\n  Exclusion: '+r.uncertain+(r.definition?'\n  Other: '+r.definition:'')),'','LIMIT NOTES',JSON.stringify(state.limits,null,2),'','DATABASE DRAFTS'];for(const id of state.databases){const q=state.queries[id];out.push('',DB[id].label,q?.text||'No draft generated',...(q?.notes||[]).map(n=>'Note: '+n))}out.push('','SEARCH HISTORY');for(const r of runs)out.push('',DB[r.db].label+' · '+r.startedAt+' · '+r.status,'Retrieved / imported: '+r.downloaded+'; reported matches: '+(r.total??'unknown'),'Generation: '+r.generation,'Executed query: '+(r.query||'unknown — imported file'),...(r.notices||[]),r.error||'');download('search-strategies-'+fileStamp()+'.txt','text/plain;charset=utf-8',out.filter(x=>x!==undefined).join('\n'))}
 
 $('show-previous-criteria').addEventListener('click',()=>{renderCriteria();$('previous-criteria-dialog').showModal()});
-$('close-previous-criteria').addEventListener('click',()=>$('previous-criteria-dialog').close());
-$('previous-criteria-dialog').addEventListener('click',event=>{const d=$('previous-criteria-dialog'),r=d.getBoundingClientRect();if(event.target===d&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom))d.close()});
-$('restore-criteria').addEventListener('click',()=>{if(!busy&&!generating)refreshCriteria()});
-$('edit-criteria').addEventListener('click',()=>{if(!busy&&!generating)location.href=pageLink('eligibility.html')});
-$('upload-criteria').addEventListener('click',()=>{if(!busy&&!generating)$('criteria-file').click()});
+$('close-previous-criteria').addEventListener('click',()=>{if(discardCriteriaEdits())$('previous-criteria-dialog').close()});
+$('previous-criteria-dialog').addEventListener('cancel',event=>{if(!discardCriteriaEdits())event.preventDefault()});
+$('previous-criteria-dialog').addEventListener('click',event=>{const d=$('previous-criteria-dialog'),r=d.getBoundingClientRect();if(event.target===d&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)&&discardCriteriaEdits())d.close()});
+$('restore-criteria').addEventListener('click',()=>{if(!busy&&!generating&&discardCriteriaEdits())refreshCriteria()});
+$('edit-criteria').addEventListener('click',()=>{if(!busy&&!generating&&discardCriteriaEdits())location.href=pageLink('eligibility.html')});
+$('upload-criteria').addEventListener('click',()=>{if(!busy&&!generating&&discardCriteriaEdits())$('criteria-file').click()});
 $('refresh-banner').addEventListener('click',refreshCriteria);
 $('criteria-file').addEventListener('change',async event=>{
   if(busy||generating)return;
