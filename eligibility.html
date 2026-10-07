@@ -573,7 +573,8 @@ async function generateMachineCriteria(){
     state.machineRefinement=refinement;
     state.machineRun={question,reviewType,sourceRevision,sourceFiles:files.map(entry=>entry.file.name),modelName:model.name,generatedAt:new Date().toISOString()};
     document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));
-    const saved=save();setMachineStatus(saved?'Criteria generated. Review the criteria against the original question.':'Criteria generated, but could not be saved on this device.',!saved);
+    state.machineRun.statusMessage='Criteria generated. Review the criteria against the original question.';
+    const saved=save();setMachineStatus(saved?'':'Criteria generated, but could not be saved on this device.',!saved);
   }catch(error){
     if(run===generationNonce)setMachineStatus(timedOut?'Model request timed out after 10 minutes.':error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);
     if(run===generationNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===generationNonce&&!generationController)setMachineStatus(message,true)});
