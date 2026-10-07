@@ -129,6 +129,15 @@
 
 .framework-heading-row>.toolbar{flex-wrap:nowrap}
 .strategy-panel>.panel-head{flex-wrap:wrap}
+
+/* Shared compact action and selection controls. */
+main.wrap .btn,main.wrap .tab,main.wrap .framework-option{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:26px;height:26px;min-width:60px;padding:4px 8px;border:1px solid #e4e4e8;border-radius:6px;background:#fafafb;color:#5f6069;font:500 12px/1.2 Inter,Arial,sans-serif;white-space:nowrap;text-decoration:none}
+main.wrap .btn.primary{min-width:76px;background:var(--plum);border-color:var(--plum);color:#fff;font-weight:600}
+main.wrap .btn.primary:hover:not(:disabled){background:#740061;border-color:#740061}
+main.wrap .tab.selected,main.wrap .framework-option.selected{background:var(--pale);border-color:var(--plum);color:var(--plum);font-weight:600}
+main.wrap .tab:hover,main.wrap .framework-option:hover{border-color:#d4cdd4;color:var(--plum)}
+main.wrap .btn:disabled{opacity:.5;cursor:default}
+@media(max-width:620px){.framework-heading-row>.toolbar{flex-wrap:wrap}}
 </style></head>
 <body>
 <header class="header"><a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span class="brand-text"><span class="brand-main">ACHIEVE</span><small class="brand-sub">for AIM-STEP Living evidence</small></span></a><nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a data-toolset href="index.html?view=toolset" class="active">Toolset</a><a href="contact.html">Contact</a></nav><a class="project-pill" id="project-name" hidden></a></header>
