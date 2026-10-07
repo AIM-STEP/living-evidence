@@ -141,8 +141,8 @@ main.wrap .btn:disabled{opacity:.5;cursor:default}
 #download-format{height:26px;min-height:26px;padding:3px 8px;border:1px solid #e4e4e8;border-radius:6px;background-color:#fafafb;color:#5f6069;font-size:12px;line-height:1.2}
 
 .term-section{margin-top:10px}.term-label{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px}
-.term-list{display:flex;align-items:flex-start;flex-wrap:wrap;gap:7px}.term-chip{position:relative;max-width:100%;padding:6px 24px 6px 8px;border:1px solid #eadfe8;border-radius:6px;background:#fbf7fa}
-.term-editor{display:block;max-width:100%;min-height:18px;padding:0;border:0;background:transparent;color:var(--ink2);font:12px/1.5 Inter,Arial,sans-serif;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;box-sizing:content-box}
+.term-list{display:flex;align-items:flex-start;flex-wrap:wrap;gap:7px}.term-chip{position:relative;max-width:100%;padding:3px 20px 3px 6px;border:1px solid #eadfe8;border-radius:6px;background:#fbf7fa}
+.term-editor{display:block;max-width:100%;min-height:15px;padding:0;border:0;background:transparent;color:var(--ink2);font:11px/1.35 Inter,Arial,sans-serif;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;box-sizing:content-box}
 .term-editor:focus{outline:2px solid #b88daf;outline-offset:2px;border-radius:2px}.term-remove{position:absolute;right:3px;top:1px;border:0;background:transparent;padding:1px 4px;color:#8c6b89;font-size:16px;line-height:18px}.term-remove:hover{color:var(--plum);background:#f2e7f0;border-radius:4px}
 .subject-term{background:#f5f0fa;border-color:#e2d7ed}.term-unverified{display:block;font-size:9px;color:#76677d;margin-top:3px}.term-add{display:flex;gap:6px;align-items:center;margin-top:7px}.term-add .text-input{width:220px;max-width:calc(100% - 66px);height:26px;padding:4px 8px;font-size:12px}.term-chip:focus-within{border-color:#b88daf}
 #selected-words{margin-top:16px;padding:14px;border:1px solid #e7dfe8;border-radius:9px;background:#fdfbfe}#selected-words>h3{font-size:14px;margin:0 0 12px}.expanded-concept+.expanded-concept{margin-top:16px;padding-top:12px;border-top:1px solid #eee8ef}.expanded-concept>h3{font-size:12px;color:var(--plum)}
@@ -312,7 +312,7 @@ function renderSelectedWords(){
 }
 function renderWordTerms(c,field,label){
   const words=lines(c[field]||'');
-  return `<section class="term-section" aria-label="${esc(label)}"><div class="term-label">${esc(label)}</div><div class="term-list">${words.map((word,i)=>`<div class="term-chip ${field==='mesh'?'subject-term':''}"><textarea rows="1" class="term-editor" data-term-field="${field}" data-term-index="${i}" aria-label="Edit ${esc(label)}: ${esc(word)}" style="width:${Math.min(34,Math.max(10,word.length+2))}ch" maxlength="300" spellcheck="false">${esc(word)}</textarea><button class="term-remove" type="button" data-remove-term="${field}" data-term-index="${i}" aria-label="Delete ${esc(word)}" title="Delete term">×</button>${field==='mesh'&&!c.wordAudit?.finalHeadings?.includes(word)?'<span class="term-unverified" title="Manually supplied heading; verify in the NLM MeSH Browser">Unverified</span>':''}</div>`).join('')}</div><div class="term-add"><input class="text-input" data-add-term-input="${field}" maxlength="300" placeholder="${field==='mesh'?'Add MeSH heading':'Add word or phrase'}" aria-label="Add ${esc(label)} for ${esc(c.label)}"><button class="btn small" type="button" data-add-term="${field}">+ Add</button></div></section>`;
+  return `<section class="term-section" aria-label="${esc(label)}"><div class="term-label">${esc(label)}</div><div class="term-list">${words.map((word,i)=>`<div class="term-chip ${field==='mesh'?'subject-term':''}"><textarea rows="1" class="term-editor" data-term-field="${field}" data-term-index="${i}" aria-label="Edit ${esc(label)}: ${esc(word)}" style="width:${Math.min(26,Math.max(6,word.length+1))}ch" maxlength="300" spellcheck="false">${esc(word)}</textarea><button class="term-remove" type="button" data-remove-term="${field}" data-term-index="${i}" aria-label="Delete ${esc(word)}" title="Delete term">×</button>${field==='mesh'&&!c.wordAudit?.finalHeadings?.includes(word)?'<span class="term-unverified" title="Manually supplied heading; verify in the NLM MeSH Browser">Unverified</span>':''}</div>`).join('')}</div><div class="term-add"><input class="text-input" data-add-term-input="${field}" maxlength="300" placeholder="${field==='mesh'?'Add MeSH heading':'Add word or phrase'}" aria-label="Add ${esc(label)} for ${esc(c.label)}"><button class="btn small" type="button" data-add-term="${field}">+ Add</button></div></section>`;
 }
 function resizeTermEditors(){document.querySelectorAll('.search-words-panel .term-editor').forEach(el=>{el.style.height='auto';el.style.height=el.scrollHeight+'px'})}
 function wordsEdited(c,termsChanged=true,field='terms'){
@@ -365,7 +365,7 @@ async function uploadWords(file,concept){
   concept.terms=merged.join('\n');(concept.uploads||=[]).push({id:entry.id,name:entry.name});saveDraft();renderConcepts();renderStrategies();toast('Words added to '+concept.label+'.');
 }
 
-function safeState(v){const d=defaults();if(!v||typeof v!=='object')return d;d.source=['upload','removed'].includes(v.source)?v.source:'previous';d.machineWords=safeMachineWords(v.machineWords);if(v.criteriaSnapshot)d.criteriaSnapshot=canonicalSnapshot(v.criteriaSnapshot,v.criteriaSnapshot.origin||'Saved criteria');d.sourceHash=str(v.sourceHash,100);d.method='machine';d.manualFramework=frameworkElements[v.manualFramework]?v.manualFramework:'';d.dismissedCriteria=Array.isArray(v.dismissedCriteria)?v.dismissedCriteria.filter(x=>typeof x==='string').slice(0,60):[];d.databases=Array.isArray(v.databases)?[...new Set(v.databases.filter(x=>DB[x]))]:['pubmed'];d.activeDb=DB[v.activeDb]?v.activeDb:d.databases[0]||'pubmed';d.limits=canonicalLimits(v.limits||{});d.recordLimit='all';d.machineInput='';d.knownPmids=str(v.knownPmids,5000);d.recallCheck=v.recallCheck&&typeof v.recallCheck==='object'?clone(v.recallCheck):null;d.machineSourceRevision=Number.isInteger(v.machineSourceRevision)?v.machineSourceRevision:0;d.concepts=Array.isArray(v.concepts)?v.concepts.slice(0,60).map(c=>({id:str(c.id||uid(),100),criterionId:str(c.criterionId,100),displayId:str(c.displayId||c.criterionId,100),label:str(c.label,200),role:roles.includes(c.role)?c.role:'other',sourceRule:str(c.sourceRule),sourceExclusion:str(c.sourceExclusion),sourceOther:str(c.sourceOther),uploads:Array.isArray(c.uploads)?c.uploads.slice(0,100).filter(f=>typeof f?.id==='string'&&typeof f?.name==='string').map(f=>({id:str(f.id,200),name:str(f.name,500)})):[],keywords:str(typeof c.keywords==='string'?c.keywords:(draftTerms(c.sourceRule||'').join('\n')||c.terms||''),100000),expansionStale:!!c.expansionStale,terms:str(Array.isArray(c.terms)?c.terms.join('\n'):c.terms,100000),mesh:str(c.mesh),emtree:str(c.emtree),verified:c.verified===true,searchWordsEdited:c.searchWordsEdited===true,wordAudit:c.wordAudit&&typeof c.wordAudit==='object'?clone(c.wordAudit):null,enabled:true})):[];for(const id of Object.keys(DB)){let q=v.queries?.[id];if(q&&typeof q.text==='string')d.queries[id]={text:str(q.text,100000),notes:Array.isArray(q.notes)?q.notes.map(n=>str(n,5000)).slice(0,30):[],source:str(q.source||'Saved draft',200),generatedAt:str(q.generatedAt,100),hash:str(q.hash,100),manualEdited:!!q.manualEdited,wordsChanged:!!q.wordsChanged}}if(Array.isArray(v.concepts)&&v.concepts.some(c=>c.enabled===false))for(const q of Object.values(d.queries))q.wordsChanged=true;if(v.modelRun&&typeof v.modelRun==='object')d.modelRun={provider:str(v.modelRun.provider,80),model:str(v.modelRun.model,200),date:str(v.modelRun.date,100),promptVersion:str(v.modelRun.promptVersion,100),stages:Number(v.modelRun.stages)||2};return d}
+function safeState(v){const d=defaults();if(!v||typeof v!=='object')return d;d.source=['upload','removed'].includes(v.source)?v.source:'previous';d.machineWords=safeMachineWords(v.machineWords);if(v.criteriaSnapshot)d.criteriaSnapshot=canonicalSnapshot(v.criteriaSnapshot,v.criteriaSnapshot.origin||'Saved criteria');d.sourceHash=str(v.sourceHash,100);d.method='machine';d.manualFramework=frameworkElements[v.manualFramework]?v.manualFramework:'';d.dismissedCriteria=Array.isArray(v.dismissedCriteria)?v.dismissedCriteria.filter(x=>typeof x==='string').slice(0,60):[];d.databases=Array.isArray(v.databases)?[...new Set(v.databases.filter(x=>DB[x]))]:['pubmed'];d.activeDb=DB[v.activeDb]?v.activeDb:d.databases[0]||'pubmed';d.limits=canonicalLimits(v.limits||{});d.recordLimit='all';d.machineInput='';d.knownPmids=str(v.knownPmids,5000);d.recallCheck=v.recallCheck&&typeof v.recallCheck==='object'?clone(v.recallCheck):null;d.machineSourceRevision=Number.isInteger(v.machineSourceRevision)?v.machineSourceRevision:0;d.concepts=Array.isArray(v.concepts)?v.concepts.slice(0,60).map(c=>({id:str(c.id||uid(),100),criterionId:str(c.criterionId,100),displayId:str(c.displayId||c.criterionId,100),label:str(c.label,200),role:roles.includes(c.role)?c.role:'other',sourceRule:str(c.sourceRule),sourceExclusion:str(c.sourceExclusion),sourceOther:str(c.sourceOther),uploads:Array.isArray(c.uploads)?c.uploads.slice(0,100).filter(f=>typeof f?.id==='string'&&typeof f?.name==='string').map(f=>({id:str(f.id,200),name:str(f.name,500)})):[],keywords:str(typeof c.keywords==='string'?c.keywords:(draftTerms(c.sourceRule||'').join('\n')||c.terms||''),100000),expansionStale:!!c.expansionStale,expansionPending:typeof c.expansionPending==='boolean'?c.expansionPending:c.wordAudit?.status==='draft',terms:str(Array.isArray(c.terms)?c.terms.join('\n'):c.terms,100000),mesh:str(c.mesh),emtree:str(c.emtree),verified:c.verified===true,searchWordsEdited:c.searchWordsEdited===true,wordAudit:c.wordAudit&&typeof c.wordAudit==='object'?clone(c.wordAudit):null,enabled:true})):[];for(const id of Object.keys(DB)){let q=v.queries?.[id];if(q&&typeof q.text==='string')d.queries[id]={text:str(q.text,100000),notes:Array.isArray(q.notes)?q.notes.map(n=>str(n,5000)).slice(0,30):[],source:str(q.source||'Saved draft',200),generatedAt:str(q.generatedAt,100),hash:str(q.hash,100),manualEdited:!!q.manualEdited,wordsChanged:!!q.wordsChanged}}if(Array.isArray(v.concepts)&&v.concepts.some(c=>c.enabled===false))for(const q of Object.values(d.queries))q.wordsChanged=true;if(v.modelRun&&typeof v.modelRun==='object')d.modelRun={provider:str(v.modelRun.provider,80),model:str(v.modelRun.model,200),date:str(v.modelRun.date,100),promptVersion:str(v.modelRun.promptVersion,100),stages:Number(v.modelRun.stages)||2};return d}
 try{state=safeState(JSON.parse(localStorage.getItem(stateKey)||'null'));for(const c of state.concepts){const row=state.criteriaSnapshot?.rows.find(r=>norm(r.title)===norm(c.label));if(row){c.criterionId||=row.id;c.sourceExclusion=row.uncertain;c.sourceOther=row.definition}}}catch(e){notice('storage-warning','The search draft could not be read. Existing result storage will be loaded separately.','warning')}
 function reportStorage(){if(!draftStored||!resultsStored)notice('storage-warning','Browser storage is unavailable or full. Keep this tab open and download a JSON backup to retain your work.','warning')}
 function saveDraft(){try{localStorage.setItem(stateKey,JSON.stringify(state));draftStored=true}catch(e){draftStored=false}reportStorage()}
@@ -504,13 +504,18 @@ window.addEventListener('beforeunload',event=>{if(criteriaEditDirty){event.preve
 function fillControls(){state.method='machine';$('start-date').value=state.limits.start;$('end-date').value=state.limits.end;$('limit-language').value=state.limits.language;$('limit-other').value=state.limits.other;updateClearLimits();$('limits-hint').textContent='Some databases support year limits rather than exact dates. The strategy notes show which limits are included. '+(state.method==='machine'?'Other is sent to the model; check its notes for restrictions that require screening or database filters.':'Other is recorded as a note.');renderDatabaseChoices();renderMachineWords();scheduleMachineWords();renderActiveCriteria()}
 function renderDatabaseChoices(){$('databases').innerHTML=Object.entries(DB).map(([id,d])=>`<label class="check"><input type="checkbox" value="${id}" ${state.databases.includes(id)?'checked':''}><span>${esc(d.label)}</span></label>`).join('');}
 function draftHash(){return fingerprint({method:state.method,databases:state.databases,criteria:comparableSnapshot(state.criteriaSnapshot),concepts:state.concepts.map(c=>({label:c.label,role:c.role,keywords:c.keywords,expansionStale:c.expansionStale,terms:c.terms,mesh:c.mesh,searchWordsEdited:!!c.searchWordsEdited,enabled:c.enabled})),limits:state.limits})}
+function searchWordsReady(){
+  return !mwController&&!machineWordPending&&state.concepts.length>0&&state.concepts.every(c=>!c.expansionPending&&!c.expansionStale&&(lines(c.terms||'').length||lines(c.mesh||'').length));
+}
 function renderStrategies(){
+  $('generate').disabled=busy||generating||!searchWordsReady();
+  $('generate').title=searchWordsReady()?'Generate search strategies':'Complete keyword expansion in Search words first';
   $('clear-databases').disabled=busy||generating||!state.databases.length;
   if(!state.databases.includes(state.activeDb))state.activeDb=state.databases[0]||'pubmed';
   $('strategy-tabs').innerHTML=state.databases.map(id=>`<button class="tab ${state.activeDb===id?'selected':''}" data-db="${id}" type="button" role="tab" aria-selected="${state.activeDb===id}">${esc(DB[id].label)}</button>`).join('');
   const id=state.activeDb,q=state.queries[id],selected=state.databases.includes(id);
   $('query').setAttribute('aria-label',DB[id].label+' query');  $('query').value=selected?(q?.text||''):'';
-  const qn=$('query-notes');qn.innerHTML=(q?.notes||[]).map(n=>'<li>'+esc(n)+'</li>').join('');qn.hidden=!(q?.notes||[]).length;if(q?.wordsChanged){qn.insertAdjacentHTML('afterbegin','<li>Search words changed. Click Generate in Search strategies to update this query.</li>');qn.hidden=false;}
+  const qn=$('query-notes');qn.textContent='';qn.hidden=true;
   $('query').readOnly=busy||generating||!selected;
   $('download-strategies').disabled=busy||generating||!state.databases.some(db=>state.queries[db]?.text?.trim()&&!state.queries[db].wordsChanged);$('clear-strategies').disabled=busy||generating||!Object.values(state.queries).some(q=>q?.text?.trim());
   $('run-search').textContent='Search';$('run-search').title=DB[id].direct?'Retrieve records from '+DB[id].label:'Open '+DB[id].label;
@@ -802,16 +807,16 @@ async function countQueries(ids,signal){
   return out.join('; ')+(out.length?'.':'');
 }
 async function generate(){
-  if(busy||generating)return;
+  if(busy||generating||!searchWordsReady())return;
   try{
-    checkUpstream();if(!state.databases.length)throw new Error('Select at least one database.');validateLimits();    // Both modes translate the selected concepts by rule; the local model's part ends with the word lists.
+    checkUpstream();if(!searchWordsReady())return;if(!state.databases.length)throw new Error('Select at least one database.');validateLimits();    // Both modes translate the selected concepts by rule; the local model's part ends with the word lists.
     let queries={};
     const selected=validateConcepts();for(const id of state.databases)queries[id]=compileQuery(id,selected);
     state.queries={...state.queries,...queries};state.modelRun=null;saveDraft();
-    notice('generation-message','Strategies translated for '+state.databases.length+' database'+(state.databases.length===1?'':'s')+'. Checking record counts…','success');toast('Search strategies generated.');
+    notice('generation-message','Generating search strategies…','success');toast('Search strategies generated.');
     setGenerating(true);modelController=new AbortController();
     const counts=await countQueries(state.databases.filter(id=>['pubmed','europepmc'].includes(id)),modelController.signal);
-    notice('generation-message','Strategies translated for '+state.databases.length+' database'+(state.databases.length===1?'':'s')+'.'+(counts?' '+counts:'')+' Review the strategies and their notes before retrieval.',/no records/.test(counts)?'warning':'success');
+    notice('generation-message','Search strategies generated.','success');
   }catch(e){notice('generation-message',e.name==='AbortError'?'Generation cancelled. Existing strategies have been kept.':e.message,'error')}
   finally{modelController=null;setGenerating(false);checkUpstream();renderStrategies(false);void checkRecall()}
 }
@@ -946,6 +951,7 @@ async function startMachineWords(){
   state.machineInput='';
   if(!hasCriteria){mwStatus('Add Keywords for each selected element before generating expanded terms.',true);$('add-concept').focus();return}
   const controller=new AbortController();mwController=controller;
+  const expanding=[...state.concepts];for(const c of expanding)c.expansionPending=true;for(const q of Object.values(state.queries))q.wordsChanged=true;saveDraft();renderStrategies();
   const button=$('mw-start');button.disabled=true;button.textContent='Generating…';
   let timedOut=false;const timer=setTimeout(()=>{timedOut=true;controller.abort()},900000);
   try{
@@ -959,6 +965,7 @@ async function startMachineWords(){
     saveDraft();renderConcepts();
     const verified=await enrichFilled(result,controller.signal,mwStatus);
     if(controller.signal.aborted)return;
+    for(const c of expanding)if(state.concepts.includes(c))c.expansionPending=false;
     if(result.filled)for(const q of Object.values(state.queries))q.wordsChanged=true;saveDraft();renderConcepts();renderStrategies();showConceptNotes(verified);
     mwStatus(conceptsDoneMessage(added,result.filled)+' Review the lists below, then use Generate.');
   }catch(error){
@@ -967,7 +974,7 @@ async function startMachineWords(){
     else if(error?.name==='AbortError')mwStatus('Generation stopped.');
     else if(isUnreachable(error))mwStatus(await explainUnreachable(),true);
     else mwStatus(error.message,true);
-  }finally{clearTimeout(timer);if(mwController===controller)mwController=null;button.disabled=busy||generating;button.textContent='Generate';renderMachineWords()}
+  }finally{clearTimeout(timer);if(mwController===controller)mwController=null;button.disabled=busy||generating;button.textContent='Generate';renderMachineWords();renderStrategies()}
 }
 $('mw-start').addEventListener('click',startMachineWords);
 /* ---------------- Verifying words against NLM and PubMed ----------------
