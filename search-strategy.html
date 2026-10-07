@@ -308,7 +308,7 @@ function renderFrameworkOptions(){
 }
 function renderSelectedWords(){
   const box=$('selected-words');box.hidden=!state.concepts.length;
-  box.innerHTML=state.concepts.length?'<div class="expanded-words-head"><h3>Expanded search terms</h3></div>'+state.concepts.map(c=>`<article class="expanded-concept" data-id="${esc(c.id)}"><h3>${esc(c.label)}</h3><p class="hint expansion-status" ${c.expansionStale?'':'hidden'}>Keywords changed. Generate expanded terms again, or edit the terms below.</p>${renderWordTerms(c,'terms','Synonyms and related terms')}${renderWordTerms(c,'mesh','MeSH · PubMed / Europe PMC / Ovid MEDLINE')}</article>`).join(''):'';
+  box.innerHTML=state.concepts.length?'<div class="expanded-words-head"><h3>Expanded search terms</h3></div>'+state.concepts.map(c=>`<article class="expanded-concept" data-id="${esc(c.id)}"><h3>${esc(c.label)}</h3><p class="hint expansion-status" hidden>Keywords changed. Generate expanded terms again, or edit the terms below.</p>${renderWordTerms(c,'terms','Synonyms and related terms')}${renderWordTerms(c,'mesh','MeSH · PubMed / Europe PMC / Ovid MEDLINE')}</article>`).join(''):'';
 }
 function progressMarkup(value,label){
   const known=Number.isFinite(value),percent=known?Math.max(0,Math.min(100,Math.round(value))):null;
@@ -331,7 +331,7 @@ function wordsEdited(c,termsChanged=true,field='terms'){
   else if(termsChanged){c.searchWordsEdited=true;c.verified=false;c.expansionStale=false;}
   c.wordAudit={...c.wordAudit,manualEditedAt:now()};
   for(const q of Object.values(state.queries))q.wordsChanged=true;
-  saveDraft();document.querySelectorAll('#selected-words [data-id]').forEach(card=>{const item=state.concepts.find(c=>c.id===card.dataset.id);card.querySelector('.expansion-status').hidden=!item?.expansionStale});renderStrategies();
+  saveDraft();renderStrategies();
 }
 function renderConcepts(){
   renderFrameworkOptions();renderWordPicker();
