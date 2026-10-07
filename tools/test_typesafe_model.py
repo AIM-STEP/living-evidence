@@ -78,6 +78,26 @@ class TypeSafeTest(unittest.TestCase):
         self.assertEqual(self.run_screen('met')['value']['decision'],'include')
         self.assertEqual(self.run_screen('unclear')['value']['decision'],'maybe')
 
+    def test_inclusion_evidence_and_reason_are_source_grounded(self):
+        self.payload['input']['record']['abstract'] = 'Participants were adults. Treatment was randomized.'
+        replies = [{'answers': {'c0': answer('met')}},
+                   {'answers': {'c0': answer('s1', ('none', 's0', 's1', 's2'))}}]
+        with patch.object(ts, 'request', side_effect=replies) as request:
+            result = ts.screen(self.payload)
+        criterion = result['value']['criteria'][0]
+        self.assertEqual(criterion['quote'], 'Participants were adults.')
+        self.assertIn('Inclusion: Adults', criterion['reason'])
+        self.assertNotIn('TypeSafe classified', criterion['reason'])
+        self.assertIn('TypeSafe classified', criterion['systemNote'])
+        self.assertIn('For met', request.call_args.args[2]['questions']['c0']['instructions'])
+        self.assertEqual(criterion['reasonSource'], 'criterion-and-model-selected-evidence')
+
+    def test_missing_inclusion_quote_is_not_fabricated(self):
+        result = self.run_screen('met', 'none')
+        self.assertEqual(result['value']['criteria'][0]['quote'], '')
+        self.assertIn('No supporting source passage', result['value']['criteria'][0]['reason'])
+        self.assertEqual(result['value']['decision'], 'include')
+
     def test_explicit_title_evidence_can_exclude_without_abstract(self):
         self.payload['input']['record']['title']='Children only.'
         self.payload['input']['record']['abstract']=''

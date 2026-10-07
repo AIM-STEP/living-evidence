@@ -1031,14 +1031,14 @@ function pilotDecision(value,record){
   const list=Array.isArray(value?.criteria)?value.criteria:Array.isArray(value?.criteriaJudgments)?value.criteriaJudgments:[];
   const judged=list.slice(0,30).map(c=>{
     const dim=pick(c,['dimension','criterion','name','domain']),quote=text(pick(c,['quote','evidence','quotation','text']),500).trim(),found=!!quote&&corpus.includes(squash(quote));
-    return {dimension:titles.get(squash(dim))||text(dim,200),known:titles.has(squash(dim)),judgment:verdict(pick(c,['judgment','judgement','result','status','assessment','met'])),quote:found?quote:'',quoteMissing:!!quote&&!found,reason:text(pick(c,['reason','explanation','rationale']),600),...(c.probabilities?{probabilities:c.probabilities,confidence:c.confidence}:{})};
+    return {dimension:titles.get(squash(dim))||text(dim,200),known:titles.has(squash(dim)),judgment:verdict(pick(c,['judgment','judgement','result','status','assessment','met'])),quote:found?quote:'',quoteMissing:!!quote&&!found,reason:text(pick(c,['reason','explanation','rationale']),2000),systemNote:text(c.systemNote,1000),reasonSource:text(c.reasonSource,100),...(c.probabilities?{probabilities:c.probabilities,confidence:c.confidence}:{})};
   });
   const notMet=judged.filter(c=>c.judgment==='not met'&&c.known&&c.quote),allMet=rows.every(r=>judged.some(c=>c.dimension===r.title&&c.judgment==='met'));
   let decision=notMet.length?'no':allMet?'yes':'maybe',note='';
   const said={include:'yes',maybe:'maybe',exclude:'no'}[squash(value?.decision)]||'';
   if(said==='no'&&decision!=='no')note='Kept as Maybe: no criterion was shown to be not met with an exact quotation.';
   else if(said==='yes'&&decision==='maybe')note='Maybe rather than Yes: not every criterion was judged met.';
-  return {decision,modelDecision:said,criteria:judged,reason:text(value?.reason,1000),note};
+  return {decision,modelDecision:said,criteria:judged,reason:text(value?.reason,1000),systemNote:text(value?.systemNote,1000),note};
 }
 async function screenPilotRecord(record,round,signal,variant=1,calibration=null){
   const prompt=pilotPrompt(record,round,variant,calibration),selected=await resolvePilotModel(signal);
@@ -1197,14 +1197,23 @@ function exclusionDetails(id){
     criteria:[...new Set(details.map(d=>d.criterion))],evidence:details,source:'AI',missing:!details.length};
 }
 
+// Keep provider boilerplate in saved assessments, never present it as a rationale.
+function visibleAIReason(value){
+  const reason=String(value||'').trim();
+  return /^(?:TypeSafe classified this criterion as met\.|TypeSafe selected the source passage below as exclusion evidence\.|Structured TypeSafe assessment; review the criterion judgments and source evidence\.|Insufficient explicit evidence; retain for review\.)$/i.test(reason)?'':reason;
+}
+function criterionReason(c){
+  const reason=visibleAIReason(c.reason);
+  return reason||(!c.quote?'No supporting rationale was saved for this criterion.':'');
+}
 function pilotCard(rec,st,index){
   const id=rec.uid,a=workspace.pilot.ai[id],available=!!a&&a.round===index,h=workspace.pilot.human[id],saved=validPilotReview(id,index),draft=pilotReviewDrafts.get(id);
   const collapsed=saved&&!expandedPilotAssessments.has(id)&&!draft&&!pilotReviewErrors.has(id),assessmentId='pilot-assessment-'+encodeURIComponent(id);
   const outcome=pilotAIOutcome(a),decisionLabel=d=>d==='no'?'Exclude':'Include';
   const quotes=available?(a.criteria||[]).map(c=>c.quote).filter(Boolean):[];
   const canReview=available&&st.aiDone&&index===workspace.pilot.rounds.length-1&&!stale()&&!pilotReviewSaving&&!busy;
-  const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+esc(c.judgment.replace(' ','-'))+'">'+esc(c.judgment)+'</span>'+(c.reason?' — '+esc(c.reason):'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
-  const explanation=(a?.originalDecision||a?.decision)==='maybe'?'Retained for full-text assessment because the available text does not establish an exclusion.':a?.reason||'';
+  const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+esc(c.judgment.replace(' ','-'))+'">'+esc(c.judgment)+'</span>'+(criterionReason(c)?' — '+esc(criterionReason(c)):'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
+  const explanation=visibleAIReason(a?.reason);
   const ai=available?'<div class="audit"><strong>AI decision: '+decisionLabel(outcome)+'</strong>'+(explanation?'<p class="hint">'+esc(explanation)+'</p>':'')+((a.criteria||[]).length?'<ul class="evidence-list">'+a.criteria.map(judge).join('')+'</ul>':'')+'</div>':'<p class="hint">Waiting for the AI assessment.</p>';
   const buttons=available?'<div class="decision-buttons" role="group" aria-label="Review AI decision">'+['agree','mistake'].map(choice=>'<button type="button" class="vote '+(choice==='agree'?'yes':'no')+((draft?choice==='mistake':saved&&h.review===choice)?' selected':'')+'" data-review="'+choice+'" data-id="'+esc(id)+'" aria-pressed="'+(draft?choice==='mistake':saved&&h.review===choice)+'"'+(canReview?'':' disabled')+'>'+(choice==='agree'?'Agree':'Mistake')+'</button>').join('')+'</div>':'';
   const correction=draft?'<p class="hint">Your corrected decision: '+decisionLabel(outcome==='yes'?'no':'yes')+'</p><label class="pilot-note">Reason<textarea class="textarea" data-review-reason="'+esc(id)+'" maxlength="1200" placeholder="Explain which eligibility criterion the AI applied incorrectly and why."'+(canReview?'':' disabled')+'>'+esc(draft.note)+'</textarea></label><button class="btn primary small" type="button" data-review-save="'+esc(id)+'"'+(canReview?'':' disabled')+'>Save</button>':saved&&h.review==='mistake'?'<p class="hint">Your corrected decision: '+decisionLabel(h.decision)+' · '+esc(h.note)+'</p>':'';
@@ -1391,8 +1400,8 @@ async function castFullVote(id,decision){
   }finally{fullReviewSaving=false;render();}
 }
 function aiDetails(a){
-  const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+c.judgment.replace(' ','-')+'">'+esc(c.judgment)+'</span>'+(c.reason?' — '+esc(c.reason):'')+(c.probabilities?'<br><span class="hint">TypeSafe probabilities: '+esc(JSON.stringify(c.probabilities))+'</span>':'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
-  return (a.criteria?.length?'<ul class="evidence-list">'+a.criteria.map(judge).join('')+'</ul>':'')+(a.reason?'<p class="hint">'+esc(a.reason)+'</p>':'')+(a.note?'<p class="hint">'+esc(a.note)+'</p>':'');
+  const judge=c=>'<li><b>'+esc(c.dimension)+'</b> · <span class="judg '+c.judgment.replace(' ','-')+'">'+esc(c.judgment)+'</span>'+(criterionReason(c)?' — '+esc(criterionReason(c)):'')+(c.quote?'<br><span class="hint">“'+esc(c.quote)+'”</span>':'')+'</li>';
+  return (a.criteria?.length?'<ul class="evidence-list">'+a.criteria.map(judge).join('')+'</ul>':'')+(visibleAIReason(a.reason)?'<p class="hint">'+esc(visibleAIReason(a.reason))+'</p>':'')+(a.note?'<p class="hint">'+esc(a.note)+'</p>':'');
 }
 // Every category uses the pilot record layout, including records assessed in the pilot.
 function fullCategoryIds(category){
