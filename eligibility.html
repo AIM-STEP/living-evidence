@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <script src="app/secure-origin.js"></script>
+<script src="app/online-model.js?v=online-auth-v1"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
 <title>AIM-STEP | Eligibility criteria</title>
@@ -266,8 +267,9 @@ const LOCAL_SERVER=String(window.AIMSTEP_LOCAL_SERVER||'http://127.0.0.1:8765').
 // feature ignore the unknown member, so one call path serves both.
 const LOOPBACK_HOSTS=['localhost','127.0.0.1','[::1]','::1'];
 function isLoopback(url){try{return LOOPBACK_HOSTS.includes(new URL(url,location.href).hostname)}catch(e){return false}}
-function localFetch(url,options){return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
+function localFetch(url,options){if(window.AIMSTEPOnlineModel?.online)return window.AIMSTEPOnlineModel.request(url,options);return fetch(url,isLoopback(url)?{...options,targetAddressSpace:'loopback'}:options)}
 async function findLocalBackend(signal){
+  if(window.AIMSTEPOnlineModel?.online){const base=window.AIMSTEPOnlineModel.base;const r=await localFetch(base+'/health',{signal});const h=await r.json();return {provider:'backend',source:'local',base,name:h.model||'local',slot:'local'};}
   const bases=[new URL('api/eligibility',location.href).href.replace(/\/+$/,'')];
   const local=LOCAL_SERVER+'/api/eligibility';if(!bases.includes(local))bases.push(local);
   for(const base of bases){
@@ -285,6 +287,7 @@ const unreachableModelMessage='Cannot reach the local model. On this computer, s
 // "Failed to fetch" covers a stopped server and a browser that refused to let a
 // public page reach this computer. Chrome says which, so ask before guessing.
 async function explainUnreachable(){
+  if(window.AIMSTEPOnlineModel?.online)return window.AIMSTEPOnlineModel.unavailable;
   const direct=' Or open '+LOCAL_SERVER+'/eligibility.html on this computer, which needs no permission.';
   if(['localhost','127.0.0.1','[::1]'].includes(location.hostname))return unreachableModelMessage;
   // Browsers only let a secure (https) page reach this computer; over http the
