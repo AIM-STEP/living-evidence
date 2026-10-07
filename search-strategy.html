@@ -85,7 +85,7 @@
   <div class="word-framework"><div class="framework-label"><span class="label">Question framework</span><span class="framework-help"><button class="framework-help-button" id="word-framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="word-framework-help-popup">i</button><span class="framework-help-popup" id="word-framework-help-popup" role="dialog" aria-label="Framework guide" hidden><strong>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your question.</span></span></div><div class="framework-options" id="word-framework" role="group" aria-label="Question framework"></div></div>
   <div class="word-element-picker" id="word-element-picker" aria-label="Choose an element" hidden></div>
   <div id="concepts" class="concept-list"></div>
-  <p class="hint machine-status" id="manual-start-status" role="status" aria-live="polite" hidden></p> <div class="words-empty" id="selected-words" aria-live="polite"></div>
+  <p class="hint machine-status" id="manual-start-status" role="status" aria-live="polite" hidden></p> <div class="words-empty" id="selected-words" aria-live="polite" hidden></div>
 </div>
 <div class="notice" id="generation-message" hidden role="status"></div>
 </div></section>
@@ -236,6 +236,8 @@ function renderFrameworkOptions(){
 }
 function renderSelectedWords(){
   const box=$('selected-words');
+  // Keep empty-state guidance available internally without showing its dashed box.
+  box.hidden=!state.concepts.some(c=>lines(c.terms).length||lines(c.mesh).length);
   if(!state.concepts.length){box.textContent=(state.criteriaSnapshot?.rows||[]).some(r=>r.condition.trim())?'Click Start to build word lists from the eligibility criteria, or use Add criterion.':'No criteria have been added. Use Add criterion to create a word list.';return}
   const chosen=state.concepts.filter(c=>c.enabled);
   if(!chosen.length){box.textContent='No words selected for search.';return}
