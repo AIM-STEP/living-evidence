@@ -1,0 +1,9 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync('search-strategy.html','utf8');
+const fill=html.slice(html.indexOf('async function fillConceptWords('),html.indexOf('function draftEmptyConcepts('));
+const start=html.slice(html.indexOf('let machineContext=null,mwController=null;'),html.indexOf("$('mw-start').addEventListener"));
+const elements=new Map(),$=id=>{if(!elements.has(id))elements.set(id,{textContent:'',classList:{toggle(){}},focus(){}});return elements.get(id)};
+const concept={id:'p',criterionId:'p',label:'Population',terms:''};let received=[];
+const ctx=vm.createContext({$,busy:false,generating:false,state:{concepts:[concept],criteriaSnapshot:{},machineInput:''},machineWordCriteria:()=>[{key:'p',criterionId:'p',title:'Population',eligibilityRule:'synthetic'},{key:'i',criterionId:'i',title:'Intervention',eligibilityRule:'synthetic'}],machineWordKey:()=> 'test',clone:v=>structuredClone(v),norm:s=>s.toLowerCase(),WORD_METHOD_VERSION:'synthetic',now:()=>'',currentFramework:()=> 'PICO',lastModel:null,DOMException,collectMachineWords:async(s,criteria)=>{received=criteria;return criteria.map(c=>({words:['synthetic keyword'],entities:[],note:''}))}});
+vm.runInContext(fill+start,ctx);
+(async()=>{await ctx.fillConceptWords(new AbortController().signal,{});assert.equal(received.length,1);assert.equal(received[0].criterionId,'p');assert.equal(ctx.state.concepts.length,1);assert.equal(concept.terms,'synthetic keyword');ctx.state.concepts=[];await ctx.startMachineWords();assert.match($('mw-status').textContent,/Choose an element/);assert.equal(ctx.state.concepts.length,0);assert(!html.includes('addCriteriaConcepts'));console.log('PASS: only selected elements enter model input; no automatic additions; empty selection blocked')})().catch(e=>{console.error(e);process.exitCode=1});

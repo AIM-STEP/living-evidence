@@ -365,7 +365,7 @@ async function uploadWords(file,concept){
 }
 
 function safeState(v){const d=defaults();if(!v||typeof v!=='object')return d;d.source=['upload','removed'].includes(v.source)?v.source:'previous';d.machineWords=safeMachineWords(v.machineWords);if(v.criteriaSnapshot)d.criteriaSnapshot=canonicalSnapshot(v.criteriaSnapshot,v.criteriaSnapshot.origin||'Saved criteria');d.sourceHash=str(v.sourceHash,100);d.method='machine';d.manualFramework=frameworkElements[v.manualFramework]?v.manualFramework:'';d.dismissedCriteria=Array.isArray(v.dismissedCriteria)?v.dismissedCriteria.filter(x=>typeof x==='string').slice(0,60):[];d.databases=Array.isArray(v.databases)?[...new Set(v.databases.filter(x=>DB[x]))]:['pubmed'];d.activeDb=DB[v.activeDb]?v.activeDb:d.databases[0]||'pubmed';d.limits=canonicalLimits(v.limits||{});d.recordLimit='all';d.machineInput='';d.knownPmids=str(v.knownPmids,5000);d.recallCheck=v.recallCheck&&typeof v.recallCheck==='object'?clone(v.recallCheck):null;d.machineSourceRevision=Number.isInteger(v.machineSourceRevision)?v.machineSourceRevision:0;d.concepts=Array.isArray(v.concepts)?v.concepts.slice(0,60).map(c=>({id:str(c.id||uid(),100),criterionId:str(c.criterionId,100),displayId:str(c.displayId||c.criterionId,100),label:str(c.label,200),role:roles.includes(c.role)?c.role:'other',sourceRule:str(c.sourceRule),sourceExclusion:str(c.sourceExclusion),sourceOther:str(c.sourceOther),uploads:Array.isArray(c.uploads)?c.uploads.slice(0,100).filter(f=>typeof f?.id==='string'&&typeof f?.name==='string').map(f=>({id:str(f.id,200),name:str(f.name,500)})):[],terms:str(Array.isArray(c.terms)?c.terms.join('\n'):c.terms,100000),mesh:str(c.mesh),emtree:str(c.emtree),verified:c.verified===true,searchWordsEdited:c.searchWordsEdited===true,wordAudit:c.wordAudit&&typeof c.wordAudit==='object'?clone(c.wordAudit):null,enabled:true})):[];for(const id of Object.keys(DB)){let q=v.queries?.[id];if(q&&typeof q.text==='string')d.queries[id]={text:str(q.text,100000),notes:Array.isArray(q.notes)?q.notes.map(n=>str(n,5000)).slice(0,30):[],source:str(q.source||'Saved draft',200),generatedAt:str(q.generatedAt,100),hash:str(q.hash,100),manualEdited:!!q.manualEdited,wordsChanged:!!q.wordsChanged}}if(Array.isArray(v.concepts)&&v.concepts.some(c=>c.enabled===false))for(const q of Object.values(d.queries))q.wordsChanged=true;if(v.modelRun&&typeof v.modelRun==='object')d.modelRun={provider:str(v.modelRun.provider,80),model:str(v.modelRun.model,200),date:str(v.modelRun.date,100),promptVersion:str(v.modelRun.promptVersion,100),stages:Number(v.modelRun.stages)||2};return d}
-try{state=safeState(JSON.parse(localStorage.getItem(stateKey)||'null'));for(const c of state.concepts){const row=state.criteriaSnapshot?.rows.find(r=>norm(r.title)===norm(c.label));if(row){c.criterionId||=row.id;c.sourceExclusion=row.uncertain;c.sourceOther=row.definition}}const rows=state.criteriaSnapshot?.rows||[];if(rows.length&&state.concepts.length===rows.length&&state.concepts.every(c=>{const r=rows.find(r=>r.id===c.criterionId);return r&&norm(c.label)===norm(r.title)&&c.terms===draftTerms(r.condition).join('\n')&&!c.mesh&&!c.emtree&&!c.verified&&!(c.uploads||[]).length}))state.concepts=[];}catch(e){notice('storage-warning','The search draft could not be read. Existing result storage will be loaded separately.','warning')}
+try{state=safeState(JSON.parse(localStorage.getItem(stateKey)||'null'));for(const c of state.concepts){const row=state.criteriaSnapshot?.rows.find(r=>norm(r.title)===norm(c.label));if(row){c.criterionId||=row.id;c.sourceExclusion=row.uncertain;c.sourceOther=row.definition}}}catch(e){notice('storage-warning','The search draft could not be read. Existing result storage will be loaded separately.','warning')}
 function reportStorage(){if(!draftStored||!resultsStored)notice('storage-warning','Browser storage is unavailable or full. Keep this tab open and download a JSON backup to retain your work.','warning')}
 function saveDraft(){try{localStorage.setItem(stateKey,JSON.stringify(state));draftStored=true}catch(e){draftStored=false}reportStorage()}
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open('aimstep-search-results',1);req.onupgradeneeded=()=>{req.result.createObjectStore('projects',{keyPath:'id'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);req.onblocked=()=>reject(new Error('Local results database is blocked by another tab.'))})}
@@ -940,6 +940,7 @@ function mwStatus(message,error=false){const el=$('mw-status');el.textContent=me
 function stopMachineWordsRun(){if(mwController){mwController.abort();mwController=null}}
 async function startMachineWords(){
   if(busy||generating||mwController)return;
+  if(!state.concepts.length){mwStatus('Choose an element using Add criterion before generating keywords.',true);$('add-concept').focus();return}
   const hasCriteria=machineWordCriteria().some(r=>r.eligibilityRule.trim());
   state.machineInput='';
   if(!hasCriteria){mwStatus('Add eligibility criteria before starting. Open Eligibility criteria to import or edit them.',true);$('show-previous-criteria').focus();return}
@@ -949,7 +950,7 @@ async function startMachineWords(){
   try{
     mwStatus('Connecting to the local model…');
     const input={texts:[],images:[]};machineContext=null;
-    const added=addCriteriaConcepts();saveDraft();renderConcepts();renderStrategies();
+    const added=0;saveDraft();renderConcepts();renderStrategies();
     mwStatus('Generating search words…');
     let result;
     try{result=await fillConceptWords(controller.signal,input)}
@@ -1125,18 +1126,6 @@ async function checkRecall(){
     save({status:'complete',found:[...exist],matched:[...hit],missing:[...exist].filter(p=>!hit.has(p)),unknown:pmids.filter(p=>!exist.has(p)),percent:exist.size?Math.round(100*hit.size/exist.size):null});
   }catch(error){save({status:'error',reason:error.message})}
   finally{if(recallInFlight===key)recallInFlight=''}
-}
-function addCriteriaConcepts(){
-  let added=0;
-  for(const r of (state.criteriaSnapshot?.rows||[]).filter(r=>r.condition.trim()||r.uncertain.trim()||r.definition.trim())){
-    if(state.concepts.length>=60)break;
-    if(state.dismissedCriteria.includes(r.id))continue;
-    if(state.concepts.some(c=>(c.criterionId&&c.criterionId===r.id)||norm(c.label)===norm(r.title)))continue;
-    const role=roleFor(r.title);
-    state.concepts.push({id:uid(),criterionId:r.id,displayId:r.id,label:r.title,role,sourceRule:r.condition,sourceExclusion:r.uncertain,sourceOther:r.definition,terms:'',mesh:'',emtree:'',verified:false,enabled:true,uploads:[]});
-    added++;
-  }
-  return added;
 }
 // Fills only empty lists: whatever the user typed or edited is kept.
 async function fillConceptWords(signal,context){

@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync('search-strategy.html','utf8');
-const code=html.slice(html.indexOf('function recallInputs(){'),html.indexOf('function addCriteriaConcepts()'));
+const code=html.slice(html.indexOf('function recallInputs(){'),html.indexOf('// Fills only empty lists:'));
 let calls=0,saves=0;
 const ctx=vm.createContext({state:{knownPmids:'',queries:{pubmed:{text:'pain'}}},now:()=> 'synthetic',saveDraft:()=>saves++,eutilsJSON:async()=>{calls++;return{esearchresult:{idlist:calls%2?['123','456']:['123']}}}});
 vm.runInContext(code,ctx);
