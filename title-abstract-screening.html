@@ -201,6 +201,7 @@ th{background:#f4f4f4}
 @media(max-width:620px){.tool-navigation>.step-btn{font-size:11px;padding:8px;line-height:1.35}}
 #open-criteria,#open-criteria:hover{background:transparent;border:0;box-shadow:none;color:#79548e}#open-criteria svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}#open-criteria:hover{color:var(--plum)}#criteria-dialog{width:min(940px,calc(100vw - 32px));max-height:85vh}#criteria-dialog .criteria-dialog-head{border:0}#criteria-dialog .criteria-preview-frame{display:block;width:100%;height:240px;border:0;background:#fff}#criteria-dialog #criteria-origin,#criteria-dialog #reason-order{display:none!important}
 #source-dialog .panel-head{padding:12px 16px}#source-dialog .panel-body{padding:12px 16px}#source-dialog .results-like th,#source-dialog .results-like td{padding-top:4px;padding-bottom:4px;line-height:1.3}#source-dialog .source-choice-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}#source-dialog #source-choice-summary{margin:0;line-height:1.35}#source-dialog #apply-source{flex:none;margin-left:auto}
+#import-dialog .import-file-heading{position:relative;display:flex;align-items:center;gap:6px;margin-top:12px}#import-dialog .import-file-heading .label{margin:0}#import-dialog #import-formats{position:absolute;z-index:2;top:100%;left:0;width:min(470px,100%);box-sizing:border-box;box-shadow:0 5px 20px #24152c20;margin:6px 0 0;padding:10px 12px;background:#faf7fc;border:1px solid #e6dfea;border-radius:8px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -288,13 +289,13 @@ th{background:#f4f4f4}
 <div class="panel-body"><p class="hint criteria-origin" id="criteria-origin"></p><p class="criteria-upload-error" id="criteria-upload-error" role="alert" hidden></p><div id="criteria-view"></div><div id="criteria-editor" class="criteria-editor" hidden><p class="hint">Review imported criteria, then save to use them for screening.</p><label class="label" for="crit-question">Review question</label><textarea class="textarea" id="crit-question" rows="2"></textarea><p class="hint" id="crit-editor-loading" role="status">Loading manual editor…</p><iframe id="crit-manual-frame" title="Manual eligibility criteria editor" allow="local-network-access; local-network; loopback-network" style="width:100%;height:62vh;border:0" hidden></iframe><p class="criteria-upload-error" id="crit-error" role="alert" tabindex="-1" hidden></p><div class="toolbar crit-actions"><button class="btn small" type="button" id="crit-cancel">Cancel</button><button class="btn small primary" type="button" id="crit-save">Save criteria</button></div></div></div>
 </dialog>
 <dialog id="source-dialog" class="dialog source-dialog" aria-labelledby="source-dialog-title"> <div class="panel-head"><h2 id="source-dialog-title">Search results from Search strategy</h2><button class="criteria-close" type="button" id="close-source" aria-label="Close search results import" title="Close"><span aria-hidden="true">×</span></button></div> <div class="panel-body"> <p class="hint" hidden data-developer-notes>Tick the searches whose records you want to screen. Records found by several searches are screened once.</p> <div class="table-wrap results-like"><table aria-label="Search results available for screening"><thead><tr><th scope="col" class="select-col"><input type="checkbox" id="source-select-all" aria-label="Select all searches"></th><th scope="col" class="date-col">Date</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th></tr></thead><tbody id="source-choice-rows"></tbody></table></div> <div class="source-choice-actions"><p class="hint" id="source-choice-summary" role="status" aria-live="polite"></p><button class="btn small" type="button" id="apply-source">Import</button></div> </div> </dialog> <dialog id="import-dialog" class="dialog" aria-labelledby="import-title">
-<div class="panel-head"><h2 id="import-title">Import search results</h2><button class="btn small" type="button" id="close-import">Close</button></div>
+<div class="panel-head"><h2 id="import-title">Import search results</h2><button class="criteria-close" type="button" id="close-import" aria-label="Close local import" title="Close"><span aria-hidden="true">×</span></button></div>
 <div class="panel-body">
 <label class="label" for="import-database">Database or source</label><input class="input" id="import-database" type="text" maxlength="150" placeholder="e.g. Embase, Scopus, Web of Science" required>
-<label class="label" for="import-file">Search results file</label><input class="input" id="import-file" type="file" accept=".ris,.nbib,.txt,.medline,.enw,.ciw,.csv,.tsv,.json,text/plain" aria-describedby="import-formats">
-<p class="hint" id="import-formats">RIS, NBIB, CSV, TSV, JSON (including a Search strategy backup) or text (.txt): PubMed (PubMed format or Abstract text), Web of Science plain text or tab-delimited, EndNote tagged, RIS or CSV saved as text.</p>
+<div class="import-file-heading"><label class="label" for="import-file">Search results file</label><button class="pilot-help-button" id="import-formats-toggle" type="button" aria-label="Supported search results file formats" aria-expanded="false" aria-controls="import-formats"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button><p class="hint" id="import-formats" hidden>RIS, NBIB, CSV, TSV, JSON (including a Search strategy backup) or text (.txt): PubMed (PubMed format or Abstract text), Web of Science plain text or tab-delimited, EndNote tagged, RIS or CSV saved as text.</p></div><input class="input" id="import-file" type="file" accept=".ris,.nbib,.txt,.medline,.enw,.ciw,.csv,.tsv,.json,text/plain" aria-describedby="import-formats">
+
 <div class="notice" id="import-message" hidden role="status"></div>
-<div class="toolbar"><button class="btn primary" id="confirm-import" type="button">Import records</button></div>
+<div class="toolbar"><button class="btn small" id="confirm-import" type="button">Import records</button></div>
 </div>
 </dialog>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -2105,6 +2106,11 @@ $('open-import').addEventListener('click',()=>{
   showNotice('import-message','');
   importDialog.showModal();
 });
+const hideImportFormats=()=>{$('import-formats').hidden=true;$('import-formats-toggle').setAttribute('aria-expanded','false');};
+$('import-formats-toggle').addEventListener('click',()=>{const show=$('import-formats').hidden;$('import-formats').hidden=!show;$('import-formats-toggle').setAttribute('aria-expanded',String(show));});
+importDialog.addEventListener('close',hideImportFormats);
+importDialog.addEventListener('cancel',event=>{if(!$('import-formats').hidden){event.preventDefault();hideImportFormats();}});
+document.addEventListener('pointerdown',event=>{if(!event.target.closest('#import-formats-toggle,#import-formats'))hideImportFormats();});
 $('close-import').addEventListener('click',()=>{if(!importing)importDialog.close()});
 importDialog.addEventListener('click',event=>{if(event.target===importDialog&&!importing)importDialog.close()});
 $('confirm-import').addEventListener('click',async()=>{
