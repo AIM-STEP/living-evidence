@@ -17,3 +17,9 @@ Legacy version 1 stage assignments remain readable until saved through the new e
 - PRISMA 2020 expanded checklist: report automation in study selection. https://www.prisma-statement.org/s/PRISMA_2020_expanded_checklist-yc78.pdf
 
 This interface is a product design choice, not a prescribed guideline interface or a claim of validated accuracy.
+
+## Full-text assess
+
+The same Screening criteria editor sits beside Eligibility criteria beneath Pilot full-text assessment. It uses the same framework options, compact layout and editable Inclusion/Exclusion fields. Settings are saved independently in the full-text workspace, initially seeded from the complete eligibility criteria. Both pilot and formal full-text assessment, evidence retrieval and reviewer calibration use these saved rules. Criteria signatures invalidate stale readings and approval; deleted elements cannot justify exclusion. Save archives existing assessments and restarts the pilot while retaining records and original PDFs. JSON exports and downstream handoff retain both original eligibility criteria and the separate screening configuration.
+
+Validation: `node tools/test_fulltext_ai_review.cjs` and `node tools/test_fulltext_stages_save.cjs` cover active prompts, exclusion validation, pilot/formal review, save/rollback/concurrent changes and PDF preservation.
