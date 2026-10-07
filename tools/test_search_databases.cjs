@@ -15,3 +15,5 @@ assert.equal(Object.keys(ctx.databases).length,13);
 const renderer=html.slice(html.indexOf('function renderDatabaseChoices()'),html.indexOf('\nfunction draftHash()'));
 assert(!renderer.includes('<small>'));
 console.log('PASS: all added databases compile drafts; external access, bilingual terms, limit guidance and hidden subtitles');
+
+const embase=ctx.compileQuery('embase',concepts);assert(!embase.text.includes('/exp'));assert(embase.notes.some(n=>n.includes('MeSH is not Emtree')));
