@@ -143,7 +143,7 @@
   <div class="panel-footer downloads"><div class="toolbar"><label class="label inline" for="download-format">Format</label><select class="select compact" id="download-format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="json">JSON</option></select><button class="btn" id="download-results" type="button" disabled>Download selected</button><span class="hint" id="download-summary"></span></div></div>
 </section>
 </main><dialog id="previous-criteria-dialog" class="criteria-dialog" aria-labelledby="previous-criteria-title">
-  <div class="criteria-dialog-head"><div class="criteria-heading-group"><h2 id="previous-criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" id="restore-criteria" type="button">Use previous criteria</button><button class="criteria-source-link" id="upload-criteria" type="button">Import from local</button><button class="criteria-source-link" id="edit-criteria" type="button">Edit previous criteria</button><button class="criteria-source-link" id="save-search-criteria" type="button">Save</button></div><input type="file" id="criteria-file" accept=".doc,.docx,.txt,.json,.csv,.tsv,.html,.htm" hidden aria-label="Import local eligibility criteria"></div><button type="button" id="close-previous-criteria" class="criteria-close" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
+  <div class="criteria-dialog-head"><div class="criteria-heading-group"><h2 id="previous-criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" id="upload-criteria" type="button">Import from local</button><button class="criteria-source-link" id="edit-criteria" type="button">Edit eligibility criteria</button><button class="criteria-source-link" id="save-search-criteria" type="button">Save</button></div><input type="file" id="criteria-file" accept=".doc,.docx,.txt,.json,.csv,.tsv,.html,.htm" hidden aria-label="Import local eligibility criteria"></div><button type="button" id="close-previous-criteria" class="criteria-close" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
   <div class="criteria-dialog-body"><div class="active-criteria" id="active-criteria" hidden></div><ul class="uploaded-criteria" id="uploaded-criteria-files" aria-label="Uploaded eligibility criteria files" hidden></ul><div class="notice" id="source-message" hidden role="status"></div><div id="criteria-rows" class="criteria-summary"></div></div>
 </dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div><script src="app/search-criteria-editor.js"></script><script>'use strict';
@@ -205,11 +205,11 @@ function currentFramework(){
   if(state.criteriaSnapshot?.framework)return state.criteriaSnapshot.framework;
   try{return eligibility()?.framework||'PICO'}catch(e){return 'PICO'}
 }
-function syncPreviousCriteria(){
-  if(state.source!=='previous')return false;
+function syncPreviousCriteria(preferPrevious=false){
+  if(criteriaEditDirty||(!preferPrevious&&state.source!=='previous'))return false;
   const snapshot=eligibility();
-  if(!snapshot)return false;
-  if(fingerprint(comparableSnapshot(snapshot))===state.sourceHash)return false;
+  if(!snapshot||(preferPrevious&&!snapshot.rows.length))return false;
+  if(state.source==='previous'&&fingerprint(comparableSnapshot(snapshot))===state.sourceHash)return false;
   const before=state.criteriaSnapshot;
   for(const concept of state.concepts){
     const row=snapshot.rows.find(r=>r.id===concept.criterionId)||snapshot.rows.find(r=>norm(r.title)===norm(concept.label));
@@ -218,7 +218,7 @@ function syncPreviousCriteria(){
     concept.sourceRule=row.condition;concept.sourceExclusion=row.uncertain;concept.sourceOther=row.definition;
   }
   if(!before||fingerprint(state.limits)===fingerprint(before.limits))state.limits=clone(snapshot.limits);
-  state.criteriaSnapshot=snapshot;state.sourceHash=fingerprint(comparableSnapshot(snapshot));saveDraft();return true;
+  state.criteriaSnapshot=snapshot;state.source='previous';state.sourceHash=fingerprint(comparableSnapshot(snapshot));saveDraft();return true;
 }
 
 // The criteria in use, with a × to take them out of this step. Removing does
@@ -394,7 +394,7 @@ function renderCriteria(){
   renderActiveCriteria();
   const box=$('criteria-rows');$('save-search-criteria').disabled=true;
   if(criteriaPreviewObserver){criteriaPreviewObserver.disconnect();criteriaPreviewObserver=null}
-  if(!rows.length){box.innerHTML='<p class="summary-muted">No eligibility rules saved for this search. Select Use previous criteria or Import from local.</p>';criteriaPreviewFrame=null;return}
+  if(!rows.length){box.innerHTML='<p class="summary-muted">No eligibility rules saved for this search. Complete Eligibility criteria or select Import from local.</p>';criteriaPreviewFrame=null;return}
   const previous=JSON.parse(criteriaEditBase.previous||'null');
   const workspace=state.source==='previous'&&previous?previous:AIMSearchCriteriaEditor.workspace(previous,snapshot,now());
   const frame=document.createElement('iframe');criteriaPreviewFrame=frame;
@@ -455,7 +455,7 @@ function renderStrategies(){
   $('execution-note').hidden=!info;
 }
 
-function setBusy(value){busy=value;for(const id of ['generate','add-concept','clear-words','refresh-banner','restore-criteria','edit-criteria','save-search-criteria','upload-criteria','criteria-file','generation-method','mw-start','mw-clear','mw-add-source','mw-voice','manual-start','check-recall'])$(id).disabled=value||generating||(id==='manual-start'&&!!manualController);updateClearLimits();$('stop-search').hidden=!value;document.querySelectorAll('#word-element-picker button,#concepts input,#concepts textarea,#concepts select,#concepts button,#databases input,#mw-question,#apply-limits,#start-date,#end-date,#limit-language,#limit-other').forEach(el=>el.disabled=value||generating);renderStrategies(false);renderHistory()}
+function setBusy(value){busy=value;for(const id of ['generate','add-concept','clear-words','refresh-banner','edit-criteria','save-search-criteria','upload-criteria','criteria-file','generation-method','mw-start','mw-clear','mw-add-source','mw-voice','manual-start','check-recall'])$(id).disabled=value||generating||(id==='manual-start'&&!!manualController);updateClearLimits();$('stop-search').hidden=!value;document.querySelectorAll('#word-element-picker button,#concepts input,#concepts textarea,#concepts select,#concepts button,#databases input,#mw-question,#apply-limits,#start-date,#end-date,#limit-language,#limit-other').forEach(el=>el.disabled=value||generating);renderStrategies(false);renderHistory()}
 function setGenerating(value){generating=value;$('cancel-generation').hidden=!value;setBusy(busy);$('generate').textContent=value?'Generating…':'Generate strategies'}
 
 function csvRows(text,separator=','){const rows=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){let c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else if(!cell||quoted)quoted=!quoted;else cell+=c}else if(c===separator&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=''}else cell+=c}if(quoted)throw new Error('The CSV contains an unclosed quoted field.');row.push(cell);if(row.some(x=>x.trim()))rows.push(row);return rows}
@@ -800,7 +800,6 @@ $('show-previous-criteria').addEventListener('click',()=>{renderCriteria();$('pr
 $('close-previous-criteria').addEventListener('click',()=>{if(discardCriteriaEdits())$('previous-criteria-dialog').close()});
 $('previous-criteria-dialog').addEventListener('cancel',event=>{if(!discardCriteriaEdits())event.preventDefault()});
 $('previous-criteria-dialog').addEventListener('click',event=>{const d=$('previous-criteria-dialog'),r=d.getBoundingClientRect();if(event.target===d&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)&&discardCriteriaEdits())d.close()});
-$('restore-criteria').addEventListener('click',()=>{if(!busy&&!generating&&discardCriteriaEdits())refreshCriteria()});
 $('edit-criteria').addEventListener('click',()=>{if(!busy&&!generating&&discardCriteriaEdits())location.href=pageLink('eligibility.html')});
 $('upload-criteria').addEventListener('click',()=>{if(!busy&&!generating&&discardCriteriaEdits())$('criteria-file').click()});
 $('refresh-banner').addEventListener('click',refreshCriteria);
@@ -1188,7 +1187,7 @@ try{
     sessionStorage.removeItem(eligibilityHandoffKey);
   }
 }catch(e){notice('source-message','Could not refresh eligibility criteria: '+e.message,'error')}
-if(!state.criteriaSnapshot&&state.source==='previous'){try{const s=eligibility();if(s){state.criteriaSnapshot=s;state.sourceHash=fingerprint(comparableSnapshot(s));state.concepts=[];state.limits=clone(s.limits)}}catch(e){notice('source-message',e.message,'error')}}fillControls();renderCriteria();renderConcepts();renderStrategies();renderResults();renderHistory();saveDraft();updateSummary();await loadWordFiles();renderConcepts();setBusy(false);checkUpstream();await renderUploadedCriteriaFiles();document.body.dataset.ready='true';scheduleMachineWords(0)}
+try{syncPreviousCriteria(true)}catch(e){notice('source-message',e.message,'error')}fillControls();renderCriteria();renderConcepts();renderStrategies();renderResults();renderHistory();saveDraft();updateSummary();await loadWordFiles();renderConcepts();setBusy(false);checkUpstream();await renderUploadedCriteriaFiles();document.body.dataset.ready='true';scheduleMachineWords(0)}
 init();
 })();
 
