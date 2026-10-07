@@ -40,6 +40,14 @@
 .tool-navigation>.next{margin-left:auto;text-align:right;justify-content:flex-end}
 .tool-navigation>.next:only-child{max-width:100%}
 @media(max-width:620px){.tool-navigation>.step-btn{font-size:11px;padding:8px;line-height:1.35}}
+
+.embedded-preview body{background:#fff}
+.embedded-preview .header,.embedded-preview .crumb,.embedded-preview .heading,.embedded-preview .editor,.embedded-preview .criteria-heading,.embedded-preview .preview-actions,.embedded-preview .toast{display:none!important}
+.embedded-preview .wrap{max-width:none;margin:0;padding:0}
+.embedded-preview .layout{display:block}
+.embedded-preview .right-column{position:static;width:100%;min-width:0}
+.embedded-preview .right-column>.panel{margin:0;border:0;border-radius:0;box-shadow:none}
+.embedded-preview .preview-body{padding:0}
 </style>
 <style>
 .embedded-manual body{background:#fff}
@@ -68,10 +76,13 @@
 (function(){
 const params=new URLSearchParams(location.search),projectId=params.get('project')||params.get('projectId')||'',contextKey='aimstep-active-project',key='aimstep-eligibility:'+ (projectId||'default'),completionKey=projectId?'aimstep-setup-completed:'+encodeURIComponent(projectId):'',modelSettingsKey='aimstep-screen-settings:'+(projectId||'default'),modelTokenKey=slot=>'aimstep-screen-token:'+slot+':'+(projectId||'default');
 const embeddedManual=params.get('embedded')==='fulltext-criteria';
+const embeddedPreview=params.get('embedded')==='search-criteria-preview';
+let embeddedPreviewSummary=null;
+if(embeddedPreview)document.documentElement.classList.add('embedded-preview');
 if(embeddedManual)document.documentElement.classList.add('embedded-manual');
 let lang='en';const $=id=>document.getElementById(id),list=$('criteria-list'),picker=$('criterion-picker');const criterionTypesByFramework={PICO:[{key:'pico-population',id:'INC-01',title:'Population'},{key:'pico-intervention',id:'INC-02',title:'Intervention'},{key:'pico-comparison',id:'INC-03',title:'Comparison'},{key:'pico-outcomes',id:'INC-04',title:'Outcomes'},{key:'pico-study-design',id:'INC-05',title:'Study design'}],PECO:[{key:'peco-population',id:'INC-01',title:'Population'},{key:'peco-exposure',id:'EXP-02',title:'Exposure'},{key:'peco-comparator',id:'CMP-03',title:'Comparator'},{key:'peco-outcomes',id:'OUT-04',title:'Outcomes'},{key:'peco-study-design',id:'SD-05',title:'Study design'}],PCC:[{key:'pcc-population',id:'INC-01',title:'Population'},{key:'pcc-concept',id:'CON-02',title:'Concept'},{key:'pcc-context',id:'CTX-03',title:'Context'}],PICo:[{key:'pico-population',id:'INC-01',title:'Population'},{key:'pico-interest',id:'INT-02',title:'Phenomenon of Interest'},{key:'pico-context',id:'CTX-03',title:'Context'}],Other:[{key:'other-custom',id:'OTH-01',title:'Other'}]};
 let state={framework:'PICO',question:'',reviewType:'Systematic Review',activeGenerator:'',generationMethodChoice:'',manualRefinement:null,machineRefinement:null,machineSourceRevision:0,machineRun:null,machineCriteria:[],criteria:[{id:'INC-01',title:'Population',condition:'Adults with the condition or population of interest',definition:'Define age threshold, diagnosis and how mixed populations are handled.',purpose:'Eligibility',stage:'',uncertain:''},{id:'INC-05',title:'Study design',condition:'Eligible study designs',definition:'Specify design features; distinguish design from report format.',purpose:'Eligibility',stage:'',uncertain:''}],outcomeGate:false,outcomeReason:'',years:'No restriction',language:'',dateRange:{start:{year:'',month:'',day:''},end:{year:'',month:'',day:''}},dateEnd:'Ongoing',reportType:'All formats',reportTypeOther:'',limitsReason:'',confirmed:false,versions:[]};
-try{const saved=embeddedManual?null:JSON.parse(localStorage.getItem(key)||'null');if(saved)state=Object.assign(state,saved)}catch(e){}if(!Array.isArray(state.machineCriteria))state.machineCriteria=[];if(state.generationMode==='machine'&&state.criteria.length&&state.criteria.every(c=>c.source==='machine')){state.machineCriteria=state.criteria;state.criteria=[{id:'INC-01',title:'Population',condition:'Adults with the condition or population of interest',definition:'Define age threshold, diagnosis and how mixed populations are handled.',purpose:'Eligibility',stage:'',uncertain:''},{id:'INC-05',title:'Study design',condition:'Eligible study designs',definition:'Specify design features; distinguish design from report format.',purpose:'Eligibility',stage:'',uncertain:''}]}if(!state.activeGenerator)state.activeGenerator=state.generationMode==='machine'?'machine':'manual';state.criteria.forEach(c=>{const known=criterionTypesByFramework.PICO.find(t=>t.title.toLowerCase()===String(c.title||'').toLowerCase());if(known)c.id=known.id;if(['Advance to full text','Human review','Contact author'].includes(c.uncertain))c.uncertain=''});
+try{const saved=(embeddedManual||embeddedPreview)?null:JSON.parse(localStorage.getItem(key)||'null');if(saved)state=Object.assign(state,saved)}catch(e){}if(!Array.isArray(state.machineCriteria))state.machineCriteria=[];if(state.generationMode==='machine'&&state.criteria.length&&state.criteria.every(c=>c.source==='machine')){state.machineCriteria=state.criteria;state.criteria=[{id:'INC-01',title:'Population',condition:'Adults with the condition or population of interest',definition:'Define age threshold, diagnosis and how mixed populations are handled.',purpose:'Eligibility',stage:'',uncertain:''},{id:'INC-05',title:'Study design',condition:'Eligible study designs',definition:'Specify design features; distinguish design from report format.',purpose:'Eligibility',stage:'',uncertain:''}]}if(!state.activeGenerator)state.activeGenerator=state.generationMode==='machine'?'machine':'manual';state.criteria.forEach(c=>{const known=criterionTypesByFramework.PICO.find(t=>t.title.toLowerCase()===String(c.title||'').toLowerCase());if(known)c.id=known.id;if(['Advance to full text','Human review','Contact author'].includes(c.uncertain))c.uncertain=''});
 delete state.machineModelSlot;delete state.manualModelSlot;
 let project=null;try{project=JSON.parse(sessionStorage.getItem(contextKey)||'null')}catch(e){};
 function pageLink(file,view){const url=new URL(file,location.href);if(projectId)url.searchParams.set('projectId',projectId);if(view)url.searchParams.set('view',view);return url.href}
@@ -95,7 +106,7 @@ function save(){
   state.language=$('language').value;state.limitsOther=$('limits-other').value;
   if(manualRefinementController&&manualRunSignature!==manualSourceSignature()){stopManualRefinement();setManualStatus('Inputs changed. Standardize again to update the AI draft.')}
   if(state.activeGenerator==='manual'&&state.manualRefinement&&state.manualRefinement.signature!==manualSourceSignature())setManualStatus('Inputs changed. Standardize again to update the AI draft.');
-  if(embeddedManual){renderPreview();return true;}
+  if(embeddedManual||embeddedPreview){renderPreview();return true;}
   let previous=null,saved=true;
   try{previous=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
   try{localStorage.setItem(key,JSON.stringify(state))}catch(e){saved=false}
@@ -724,7 +735,7 @@ function manuscriptDraft(rows,exclusions,limits){
 // from, so a later edit made elsewhere is never shown with an old summary.
 const summaryKey='aimstep-eligibility-summary:'+(projectId||'default');
 function summaryRowsSig(rows){let h=2166136261;for(const c of JSON.stringify((rows||[]).map(r=>[String(r.title||''),String(r.condition||''),String(r.uncertain||''),String(r.definition||'')])))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0).toString(16)}
-function shareSummary(data){if(embeddedManual)return;try{if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
+function shareSummary(data){if(embeddedPreview){embeddedPreviewSummary=data?{version:1,savedAt:new Date().toISOString(),...data}:null;return}if(embeddedManual)return;try{if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
 let previewDirty=false,previewBase=null;
 function editableCriteriaText(value,attributes,label,placeholder=''){
   return `<span class="criteria-editable" contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="${escapeHtml(label)}" data-placeholder="${escapeHtml(placeholder)}" ${attributes}>${escapeHtml(value)}</span>`;
@@ -935,7 +946,7 @@ function recordPendingChoice(item,decision){
   return true;
 }
 function currentPending(){return standardizedCriteria().pending}
-function persistQuietly(){if(embeddedManual)return;try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
+function persistQuietly(){if(embeddedManual||embeddedPreview)return;try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
 function sentence(t){t=String(t||'').replace(/\s+/g,' ').trim().replace(/[.。]+$/,'');return t?t.charAt(0).toUpperCase()+t.slice(1)+'.':''}
 function generateFinalCriteria(selectedItems=null){
   const before=structuredClone(state),wasDirty=previewDirty;
@@ -975,6 +986,16 @@ $('preview').addEventListener('click',e=>{
   const item=currentPending()[Number(button.dataset.pcI)];
   if(item!==undefined)recordPendingChoice(item,button.dataset.pcDec);
 });
+// Search uses this same preview and editing pipeline in an isolated draft.
+if(embeddedPreview){
+  const initial=structuredClone(state);
+  window.aimstepCriteriaPreview={
+    load(saved){stopMachineGeneration();stopManualRefinement();previewDirty=false;state={...structuredClone(initial),...structuredClone(saved)};fill();},
+    read(){if(!savePreviewEdits(false))throw new Error('Could not prepare edited criteria.');return {workspace:structuredClone(state),summary:structuredClone(embeddedPreviewSummary)};},
+    dirty(){return previewDirty;},
+    discard(){previewDirty=false;}
+  };
+}
 // Reuse this exact manual editor in Full-text assess, with an isolated draft.
 if(embeddedManual){
   window.aimstepManualEditor={
@@ -1004,7 +1025,7 @@ if(embeddedManual){
 // Collapse / expand each section. The head keeps its buttons; footers with
 // Next or Download stay visible. Remembered per browser, page and project.
 (()=>{
-  if(new URLSearchParams(location.search).get('embedded')==='fulltext-criteria')return;
+  if(['fulltext-criteria','search-criteria-preview'].includes(new URLSearchParams(location.search).get('embedded')))return;
   const q=new URLSearchParams(location.search),pid=q.get('projectId')||q.get('project')||'default',page=(location.pathname.split('/').pop()||'page').replace(/\.html$/,'');
   const icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg>';
   document.querySelectorAll('.editor > .section, aside .panel').forEach(box=>{

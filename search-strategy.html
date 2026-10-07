@@ -96,6 +96,8 @@
 .search-criteria-editable{display:inline-block;min-width:80px;max-width:100%;min-height:1.5em;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:3px;outline:none}
 .search-criteria-editable:empty::before{content:'Click to edit';color:var(--muted)}
 .search-criteria-editable:focus{background:#faf6fa;box-shadow:0 0 0 2px #eadbe7}
+
+.criteria-preview-frame{display:block;width:100%;height:240px;border:0;background:#fff}
 </style></head>
 <body>
 <header class="header"><a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span class="brand-text"><span class="brand-main">ACHIEVE</span><small class="brand-sub">for AIM-STEP Living evidence</small></span></a><nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a data-toolset href="index.html?view=toolset" class="active">Toolset</a><a href="contact.html">Contact</a></nav><a class="project-pill" id="project-name" hidden></a></header>
@@ -384,45 +386,55 @@ async function saveUploadedCriteriaFile(file){
   await criteriaFilesRequest('readwrite',store=>store.put(entry));
   await renderUploadedCriteriaFiles();
 }
+let criteriaPreviewFrame=null,criteriaPreviewObserver=null;
 function renderCriteria(){
   if(criteriaEditDirty)return;
   const snapshot=state.criteriaSnapshot,rows=snapshot?.rows||[];
   criteriaEditBase={previous:localStorage.getItem(eligibilityKey),snapshot:clone(snapshot)};
   renderActiveCriteria();
-  const box=$('criteria-rows');$('save-search-criteria').disabled=!rows.length||busy||generating;
-  if(!rows.length){box.innerHTML='<p class="summary-muted">No eligibility rules saved for this search. Select Use previous criteria or Import from local.</p>';return}
-  const editable=(text,attrs,label)=>`<span class="search-criteria-editable" contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="${esc(label)}" ${attrs}>${esc(text)}</span>`;
-  const rule=(row,index,field)=>`<div class="summary-inclusion"><strong>${esc(row.title)}:</strong> ${editable(row[field],`data-edit-row="${index}" data-edit-field="${field}"`,row.title+' '+field)}</div>`;
-  const include=rows.map((r,i)=>rule(r,i,'condition')).join('');
-  const exclude=rows.map((r,i)=>rule(r,i,'uncertain')).join('');
-  const other=rows.map((r,i)=>r.definition?rule(r,i,'definition'):'').join('');
-  box.innerHTML=`<div class="summary-intro"><p><strong>Review topic:</strong> ${editable(snapshot.question,'data-edit-topic','Review topic')}</p><p><strong>Framework:</strong> ${esc(snapshot.framework||'Other')}</p></div><section class="summary-block"><h3>Inclusion criteria</h3>${include}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclude}</section>${other?`<section class="summary-block"><h3>Other rules</h3>${other}</section>`:''}`;
+  const box=$('criteria-rows');$('save-search-criteria').disabled=true;
+  if(criteriaPreviewObserver){criteriaPreviewObserver.disconnect();criteriaPreviewObserver=null}
+  if(!rows.length){box.innerHTML='<p class="summary-muted">No eligibility rules saved for this search. Select Use previous criteria or Import from local.</p>';criteriaPreviewFrame=null;return}
+  const previous=JSON.parse(criteriaEditBase.previous||'null');
+  const workspace=state.source==='previous'&&previous?previous:AIMSearchCriteriaEditor.workspace(previous,snapshot,now());
+  const frame=document.createElement('iframe');criteriaPreviewFrame=frame;
+  frame.className='criteria-preview-frame';frame.title='Editable eligibility criteria';
+  frame.src=pageLink('eligibility.html')+(pageLink('eligibility.html').includes('?')?'&':'?')+'embedded=search-criteria-preview';
+  frame.addEventListener('load',()=>{
+    if(criteriaPreviewFrame!==frame)return;
+    try{
+      frame.contentWindow.aimstepCriteriaPreview.load(workspace);
+      const resize=()=>{frame.style.height=Math.ceil(frame.contentDocument.body.scrollHeight+8)+'px'};
+      criteriaPreviewObserver=new ResizeObserver(resize);criteriaPreviewObserver.observe(frame.contentDocument.body);resize();
+      frame.contentDocument.addEventListener('input',()=>{criteriaEditDirty=true});
+      frame.contentDocument.addEventListener('click',event=>{if(event.target.closest('[data-pc-dec]'))criteriaEditDirty=true});
+      $('save-search-criteria').disabled=busy||generating;
+    }catch(error){notice('source-message','Could not load previous criteria: '+error.message,'error')}
+  });
+  box.replaceChildren(frame);
 }
+
 function discardCriteriaEdits(){
   if(criteriaEditDirty&&!confirm('Discard unsaved criteria edits?'))return false;
+  criteriaPreviewFrame?.contentWindow?.aimstepCriteriaPreview?.discard();
   criteriaEditDirty=false;return true;
 }
 function saveSearchCriteria(){
   if(busy||generating||!criteriaEditBase?.snapshot)return false;
   try{
     if(criteriaEditBase.previous!==localStorage.getItem(eligibilityKey)||fingerprint(comparableSnapshot(criteriaEditBase.snapshot))!==fingerprint(comparableSnapshot(state.criteriaSnapshot)))throw new Error('Criteria changed elsewhere. Copy your edits before reopening this dialog.');
-    const snapshot=clone(criteriaEditBase.snapshot);
-    for(const el of $('criteria-rows').querySelectorAll('[data-edit-row]')){
-      const row=snapshot.rows[Number(el.dataset.editRow)],field=el.dataset.editField;
-      if(row&&['condition','uncertain','definition'].includes(field))row[field]=String(el.innerText??el.textContent??'').trim();
-    }
-    snapshot.question=$('criteria-rows').querySelector('[data-edit-topic]').innerText.trim();
-    const previous=JSON.parse(criteriaEditBase.previous||'null'),updated=AIMSearchCriteriaEditor.workspace(previous,snapshot,now());
+    const api=criteriaPreviewFrame?.contentWindow?.aimstepCriteriaPreview;
+    if(!api)throw new Error('Criteria are still loading. Please try again.');
+    const prepared=api.read(),updated=prepared.workspace,snapshot=canonicalSnapshot(updated,'Previous step');
     const next=clone(state);next.criteriaSnapshot=snapshot;next.source='previous';next.sourceHash=fingerprint(comparableSnapshot(snapshot));next.machineWords=null;
     for(const c of next.concepts){const row=snapshot.rows.find(r=>r.id===c.criterionId);if(row){c.sourceRule=row.condition;c.sourceExclusion=row.uncertain;c.sourceOther=row.definition}}
-    const changes=[[eligibilityKey,JSON.stringify(updated)],[stateKey,JSON.stringify(next)],['aimstep-eligibility-summary:'+scope,null]];
+    const changes=[[eligibilityKey,JSON.stringify(updated)],[stateKey,JSON.stringify(next)],['aimstep-eligibility-summary:'+scope,prepared.summary?JSON.stringify(prepared.summary):null]];
     if(projectId){const key='aimstep-setup-completed:'+encodeURIComponent(projectId),done=JSON.parse(localStorage.getItem(key)||'[]');changes.push([key,JSON.stringify(Array.isArray(done)?done.filter(n=>![1,2,3].includes(Number(n))):[])])}
     AIMSearchCriteriaEditor.commit(localStorage,changes);
     state=next;criteriaEditDirty=false;draftStored=true;renderCriteria();renderConcepts();renderMachineWords();renderStrategies();
     notice('source-message','Criteria saved and synchronized with previous criteria.','success');return true;
   }catch(error){notice('source-message',error.message,'error');return false}
 }
-$('criteria-rows').addEventListener('input',event=>{if(event.target.closest('.search-criteria-editable'))criteriaEditDirty=true});
 $('save-search-criteria').addEventListener('click',saveSearchCriteria);
 window.addEventListener('beforeunload',event=>{if(criteriaEditDirty){event.preventDefault();event.returnValue=''}});
 

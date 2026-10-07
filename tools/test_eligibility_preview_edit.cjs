@@ -6,7 +6,7 @@ function el(id){if(!elements.has(id))elements.set(id,{value:'',hidden:false,inne
 const ctx={console,URL,URLSearchParams,AbortController,structuredClone,TextEncoder,Blob,setTimeout(){},clearTimeout(){},navigator:{},
  localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},sessionStorage:{getItem(){return null}},
  location:{search:'',href:'http://127.0.0.1:8765/eligibility.html',pathname:'/eligibility.html'},document:{getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{addEventListener(){}}};
-const code=source.replace('// Reuse this exact manual editor',`globalThis.criteriaTest={get:()=>state,set:s=>{state=s;fill()},pending:currentPending,generate:generateFinalCriteria,export:criteriaWordFile,savePreviewEdits,clearPreviewCriteria,dirty(){previewDirty=true},normalized:standardizedCriteria,exportState:()=>({dirty:previewDirty}),save,renderCards,updateVisibleRule};\n// Reuse this exact manual editor`);
+const code=source.replace('// Reuse this exact manual editor',`globalThis.criteriaTest={get:()=>state,set:s=>{previewDirty=false;state=s;fill()},pending:currentPending,generate:generateFinalCriteria,export:criteriaWordFile,savePreviewEdits,clearPreviewCriteria,dirty(){previewDirty=true},normalized:standardizedCriteria,exportState:()=>({dirty:previewDirty}),save,renderCards,updateVisibleRule};\n// Reuse this exact manual editor`);
 vm.runInNewContext(code,ctx);const api=ctx.criteriaTest;
 function setup(mode){const state=api.get();Object.assign(state,{activeGenerator:mode,generationMethodChoice:mode,framework:'Other',finalCriteria:null,resolvedPending:[],pendingDecisions:{},manualRefinement:null,machineRefinement:null,criteria:[{title:'Population',condition:'Adults.\nDefine the age threshold',uncertain:'Children',definition:''},{title:'Study design',condition:'Randomized trials',uncertain:'',definition:'Define the excluded study designs'}]});state.machineCriteria=structuredClone(state.criteria);state.machineRun={question:'Synthetic question',reviewType:'Systematic Review',sourceRevision:0};state.machineSourceRevision=0;state.question='Synthetic question';api.set(state);return state;}
 function docXml(){const bytes=Buffer.from(api.export());let offset=0;while(bytes.readUInt32LE(offset)===0x04034b50){const size=bytes.readUInt32LE(offset+18),n=bytes.readUInt16LE(offset+26),extra=bytes.readUInt16LE(offset+28),name=bytes.subarray(offset+30,offset+30+n).toString();const start=offset+30+n+extra;if(name==='word/document.xml')return bytes.subarray(start,start+size).toString();offset=start+size;}throw Error('Missing Word document XML');}
@@ -76,3 +76,23 @@ edit([node(0,'include',0,'Stale preview text.')]);api.get().machineCriteria[0].c
 assert.equal(api.savePreviewEdits(),false);assert.equal(api.get().machineCriteria[0].condition,'New source criterion.');
 assert(html.indexOf('id="save-criteria"')<html.indexOf('id="download"'));assert(!html.includes('Download criteria'));assert(html.indexOf('id="download"')<html.indexOf('id="clear-criteria"'));assert(!html.includes('<h3>Inclusion criteria</h3>'));assert(html.includes('<h3>Inclusion</h3>'));
 console.log('PASS: editable criteria save/export/handoff/reload, hidden rules, failed-save retry, escaped text and filtered-domain mapping');
+
+// Search embeds the actual preview; raw input and polished display must not diverge.
+const previewContext={...ctx,location:{...ctx.location,search:'?embedded=search-criteria-preview'},document:{...ctx.document,documentElement:{classList:{add(){}}}},window:{addEventListener(){}}};
+vm.runInNewContext(source,previewContext);
+const embedded=previewContext.window.aimstepCriteriaPreview;
+for(const mode of ['manual','machine']){
+ const sample=setup(mode);
+ sample.finalCriteria=null;sample.pendingDecisions={};sample.resolvedPending=[];
+ api.set(sample);
+ const originalHtml=el('preview').innerHTML,beforeStorage=JSON.stringify([...storage]);
+ embedded.load(JSON.parse(JSON.stringify(sample)));
+ assert.equal(el('preview').innerHTML,originalHtml,'embedded preview must use exactly the first-tool renderer');
+ el('preview').querySelectorAll=selector=>selector==='[data-criteria-row]'?[node(0,'include',0,'Synthetic synchronized exact wording.')]:[];
+ el('preview').handlers.input({target:{closest:()=>true}});
+ const prepared=embedded.read();
+ assert.match(prepared.workspace[mode==='machine'?'machineCriteria':'criteria'][0].condition,/synchronized exact wording/);
+ assert(prepared.summary.includes.some(row=>row.text.includes('synchronized exact wording')));
+ assert.equal(JSON.stringify([...storage]),beforeStorage,'embedded edits must stay isolated until parent commits');
+}
+console.log('PASS: identical standalone/embedded previews in both modes, prepared summary, isolated editing');
