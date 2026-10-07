@@ -51,22 +51,22 @@
 .btn:not(.primary):not(.btn-primary):not(.btn-link):not(.activated):not([aria-pressed="true"]):hover:not(:disabled),.vote:not(.selected):hover:not(:disabled),.round:not(.current):not(.done):hover:not(:disabled),.pc-btn:not(.selected):hover:not(:disabled),.collapse-toggle:hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.pc-btn:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.pc-btn:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
+
+.search-words-heading{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+#previous-criteria-dialog .criteria-dialog-head{align-items:flex-start}
+.criteria-heading-group{min-width:0;flex:1}.criteria-source-actions{display:flex;flex-wrap:wrap;gap:4px 16px}
+.criteria-source-link{display:block;margin:4px 0 0;padding:5px 0;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;line-height:1.5;text-align:left;cursor:pointer}
+.criteria-source-link:hover:not(:disabled){color:var(--plum);text-decoration:underline;text-underline-offset:3px}
+.criteria-close{display:inline-grid;place-items:center;width:36px;height:36px;flex-shrink:0;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted);font:inherit;font-size:26px;line-height:1;cursor:pointer}.criteria-close:hover{background:#f3f1f4;color:var(--ink)}
+.criteria-summary{font-size:12px;line-height:1.7;color:var(--ink2);overflow-wrap:anywhere}.summary-intro p{margin:0}.summary-block{margin:18px 0}.summary-block h3{font-size:12px;color:var(--ink);margin:0 0 7px}.summary-inclusion{margin:4px 0;white-space:pre-line}.summary-muted{color:var(--muted)}
+.criteria-dialog-body .active-criteria{padding:0 0 12px}.criteria-dialog-body .uploaded-criteria{padding:0 0 12px}
 </style></head>
 <body>
 <header class="header"><a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span class="brand-text"><span class="brand-main">ACHIEVE</span><small class="brand-sub">for AIM-STEP Living evidence</small></span></a><nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a data-toolset href="index.html?view=toolset" class="active">Toolset</a><a href="contact.html">Contact</a></nav><a class="project-pill" id="project-name" hidden></a></header>
 <main class="wrap"><div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Search strategy</div><div class="heading"><div class="heading-actions"><a class="step-btn back" data-eligibility href="eligibility.html"><span aria-hidden="true">←</span> Back: Eligibility criteria</a></div></div>
 <div id="storage-warning" class="notice warning" hidden role="status"></div><div id="upstream-notice" class="notice" hidden>Eligibility criteria have changed. <button class="link-button" id="refresh-banner">Refresh criteria</button> to update this search draft.</div>
 <div class="columns"><div class="left-column">
-<section class="panel eligibility-panel" aria-label="Eligibility criteria">
-  <div class="panel-head">
-    <h2><button class="criteria-heading" id="show-previous-criteria" type="button" aria-haspopup="dialog" aria-controls="previous-criteria-dialog">Eligibility criteria</button></h2>
-    <button class="btn small" id="upload-criteria" type="button">Upload</button>
-    <input type="file" id="criteria-file" accept=".doc,.docx,.txt,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden aria-label="Upload Word or text eligibility criteria">
-  </div>
-  <div class="active-criteria" id="active-criteria" hidden></div> <ul class="uploaded-criteria" id="uploaded-criteria-files" aria-label="Uploaded eligibility criteria files" hidden></ul>
-  <div class="notice" id="source-message" hidden role="status"></div>
-</section>
-<section class="panel search-words-panel"><div class="panel-head"><h2>Search words</h2></div><div class="panel-body">
+<section class="panel search-words-panel"><div class="panel-head"><div class="search-words-heading"><h2>Search words</h2><button class="btn small" id="show-previous-criteria" type="button" aria-haspopup="dialog" aria-controls="previous-criteria-dialog">Eligibility criteria</button></div></div><div class="panel-body">
 <label class="label" for="generation-method">Generation Method</label><select id="generation-method" class="select"><option value="manual">Manual generate</option><option value="machine">Machine generate</option></select>
 <div id="machine-words-panel" class="machine-words-panel" hidden> <div class="machine-input"><textarea id="mw-question" class="textarea" aria-label="Topic, concepts or known terms for search words" placeholder="Describe the review topic, or add known synonyms and key papers. Eligibility criteria above are used automatically."></textarea><div class="machine-input-tools"><button class="machine-tool" id="mw-add-source" type="button" aria-label="Upload Word, PDF, text or image" title="Upload a document or image">＋</button><button class="machine-tool" id="mw-voice" type="button" aria-label="Start voice input" aria-pressed="false" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg></button><input id="mw-source-files" type="file" accept=".docx,.pdf,.txt,.md,.csv,image/png,image/jpeg,image/webp" multiple hidden></div></div><div id="mw-attachments" class="machine-attachments" aria-live="polite" hidden></div><div class="machine-actions"><button class="btn small" id="mw-clear" type="button">Clear</button><button class="btn small primary" id="mw-start" type="button">Start</button></div><div id="mw-status" class="hint machine-status" role="status" aria-live="polite" hidden></div> <div class="machine-words-box" aria-label="Model-generated search words" aria-busy="false">
     <table class="machine-words-table"><thead><tr><th scope="col">Criterion</th><th scope="col">Search words</th></tr></thead><tbody id="machine-word-rows"></tbody></table>
@@ -105,8 +105,8 @@
   <div class="panel-footer downloads"><div class="toolbar"><label class="label inline" for="download-format">Format</label><select class="select compact" id="download-format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="json">JSON</option></select><button class="btn" id="download-results" type="button" disabled>Download selected</button><span class="hint" id="download-summary"></span></div><div class="toolbar"><a class="step-btn next" data-screening href="title-abstract-screening.html">Next: Title and abstract screening <span aria-hidden="true">→</span></a></div></div>
 </section>
 </main><dialog id="previous-criteria-dialog" class="criteria-dialog" aria-labelledby="previous-criteria-title">
-  <div class="criteria-dialog-head"><h2 id="previous-criteria-title">Eligibility criteria</h2><button type="button" id="close-previous-criteria" class="btn small" aria-label="Close eligibility criteria">Close</button></div>
-  <div class="criteria-dialog-body"><div class="table-wrap"><table class="matrix"><thead><tr><th>Criterion dimension</th><th>Eligibility rule</th><th>Exclusion rule</th></tr></thead><tbody id="criteria-rows"></tbody></table></div></div>
+  <div class="criteria-dialog-head"><div class="criteria-heading-group"><h2 id="previous-criteria-title">Eligibility criteria</h2><div class="criteria-source-actions"><button class="criteria-source-link" id="restore-criteria" type="button">Use previous criteria</button><button class="criteria-source-link" id="upload-criteria" type="button">Import from local</button><button class="criteria-source-link" id="edit-criteria" type="button">Edit</button></div><input type="file" id="criteria-file" accept=".doc,.docx,.txt,.json,.csv,.tsv,.html,.htm" hidden aria-label="Import local eligibility criteria"></div><button type="button" id="close-previous-criteria" class="criteria-close" aria-label="Close eligibility criteria" title="Close"><span aria-hidden="true">×</span></button></div>
+  <div class="criteria-dialog-body"><div class="active-criteria" id="active-criteria" hidden></div><ul class="uploaded-criteria" id="uploaded-criteria-files" aria-label="Uploaded eligibility criteria files" hidden></ul><div class="notice" id="source-message" hidden role="status"></div><div id="criteria-rows" class="criteria-summary"></div></div>
 </dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div><script>'use strict';
 (() => {
@@ -363,9 +363,15 @@ async function saveUploadedCriteriaFile(file){
   await renderUploadedCriteriaFiles();
 }
 function renderCriteria(){
-  let snapshot=null,error='';try{snapshot=eligibility()}catch(e){error=e.message}
-  const rows=snapshot?.rows||[];
-  $('criteria-rows').innerHTML=rows.length?rows.map(r=>`<tr><td><strong>${esc(r.title)}</strong></td><td>${esc(r.condition)}${r.definition?`<span class="other">Other rule: ${esc(r.definition)}</span>`:''}</td><td>${esc(r.uncertain)}</td></tr>`).join(''):`<tr><td colspan="3" class="empty">${esc(error||'No eligibility criteria are saved in the previous step for this project.')}</td></tr>`;
+  const snapshot=state.criteriaSnapshot,rows=snapshot?.rows||[];
+  renderActiveCriteria();
+  const box=$('criteria-rows');
+  if(!rows.length){box.innerHTML='<p class="summary-muted">No eligibility rules saved for this search. Select Use previous criteria or Import from local.</p>';return}
+  const rule=(row,text)=>`<div class="summary-inclusion"><strong>${esc(row.title)}:</strong> ${esc(text)}</div>`;
+  const include=rows.filter(r=>r.condition).map(r=>rule(r,r.condition)).join('');
+  const exclude=rows.filter(r=>r.uncertain).map(r=>rule(r,r.uncertain)).join('');
+  const other=rows.filter(r=>r.definition).map(r=>rule(r,r.definition)).join('');
+  box.innerHTML=`<div class="summary-intro"><p><strong>Review topic:</strong> ${esc(snapshot.question||'To be defined')}</p><p><strong>Framework:</strong> ${esc(snapshot.framework||'Other')}</p></div><section class="summary-block"><h3>Inclusion criteria</h3>${include||'<p class="summary-muted">No inclusion rules entered.</p>'}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclude||'<p class="summary-muted">No explicit exclusion rules entered.</p>'}</section>${other?`<section class="summary-block"><h3>Other rules</h3>${other}</section>`:''}`;
 }
 function fillControls(){$('generation-method').value=state.method;$('manual-words-panel').hidden=false;$('words-heading').textContent=state.method==='machine'?'Search concepts':'Manual generate';$('manual-start').hidden=state.method==='machine';$('clear-words').textContent=state.method==='machine'?'Clear words':'Clear';$('mw-question').value=state.machineInput||'';$('known-pmids').value=state.knownPmids||'';$('apply-limits').checked=state.limits.apply;$('start-date').value=state.limits.start;$('end-date').value=state.limits.end;$('limit-language').value=state.limits.language;$('limit-other').value=state.limits.other;updateClearLimits();$('record-limit').value=state.recordLimit;$('limits-hint').textContent='Some databases support year limits rather than exact dates. The strategy notes show which limits are included. '+(state.method==='machine'?'Other is sent to the model; check its notes for restrictions that require screening or database filters.':'Other is recorded as a note.');renderDatabaseChoices();renderMachineWords();scheduleMachineWords();renderActiveCriteria()}
 function renderDatabaseChoices(){$('databases').innerHTML=Object.entries(DB).map(([id,d])=>`<label class="check"><input type="checkbox" value="${id}" ${state.databases.includes(id)?'checked':''}><span>${esc(d.label)}<small>${d.direct?'Direct retrieval':'Institutional search + import'}</small></span></label>`).join('');}
@@ -384,7 +390,7 @@ function renderStrategies(){
   $('execution-note').hidden=!info;
 }
 
-function setBusy(value){busy=value;for(const id of ['generate','add-concept','clear-words','refresh-banner','upload-criteria','criteria-file','generation-method','mw-start','mw-clear','mw-add-source','mw-voice','manual-start','check-recall'])$(id).disabled=value||generating||(id==='manual-start'&&!!manualController);updateClearLimits();$('stop-search').hidden=!value;document.querySelectorAll('#word-element-picker button,#concepts input,#concepts textarea,#concepts select,#concepts button,#databases input,#mw-question,#apply-limits,#start-date,#end-date,#limit-language,#limit-other').forEach(el=>el.disabled=value||generating);renderStrategies(false);renderHistory()}
+function setBusy(value){busy=value;for(const id of ['generate','add-concept','clear-words','refresh-banner','restore-criteria','edit-criteria','upload-criteria','criteria-file','generation-method','mw-start','mw-clear','mw-add-source','mw-voice','manual-start','check-recall'])$(id).disabled=value||generating||(id==='manual-start'&&!!manualController);updateClearLimits();$('stop-search').hidden=!value;document.querySelectorAll('#word-element-picker button,#concepts input,#concepts textarea,#concepts select,#concepts button,#databases input,#mw-question,#apply-limits,#start-date,#end-date,#limit-language,#limit-other').forEach(el=>el.disabled=value||generating);renderStrategies(false);renderHistory()}
 function setGenerating(value){generating=value;$('cancel-generation').hidden=!value;setBusy(busy);$('generate').textContent=value?'Generating…':'Generate strategies'}
 
 function csvRows(text,separator=','){const rows=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){let c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else if(!cell||quoted)quoted=!quoted;else cell+=c}else if(c===separator&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))rows.push(row);row=[];cell=''}else cell+=c}if(quoted)throw new Error('The CSV contains an unclosed quoted field.');row.push(cell);if(row.some(x=>x.trim()))rows.push(row);return rows}
@@ -728,6 +734,8 @@ function downloadStrategies(){let s=state.criteriaSnapshot,out=['AIM-STEP — Se
 $('show-previous-criteria').addEventListener('click',()=>{renderCriteria();$('previous-criteria-dialog').showModal()});
 $('close-previous-criteria').addEventListener('click',()=>$('previous-criteria-dialog').close());
 $('previous-criteria-dialog').addEventListener('click',event=>{const d=$('previous-criteria-dialog'),r=d.getBoundingClientRect();if(event.target===d&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom))d.close()});
+$('restore-criteria').addEventListener('click',()=>{if(!busy&&!generating)refreshCriteria()});
+$('edit-criteria').addEventListener('click',()=>{if(!busy&&!generating)location.href=pageLink('eligibility.html')});
 $('upload-criteria').addEventListener('click',()=>{if(!busy&&!generating)$('criteria-file').click()});
 $('refresh-banner').addEventListener('click',refreshCriteria);
 $('criteria-file').addEventListener('change',async event=>{
