@@ -142,6 +142,19 @@ class TypeSafeTest(unittest.TestCase):
             self.assertIn('reviewerCalibration',request['questions']['c0']['instructions'])
             self.assertNotIn('synthetic-key',json.dumps(request))
 
+    def test_stage_policy_reaches_model_and_exclusion_only_rule_is_explicit(self):
+        self.payload['input']['stagePolicy'] = 'Only supplied conditions apply; defer other criteria to full text.'
+        seen = []
+        def respond(path, key, body):
+            seen.append(body)
+            q = body['questions']['c0']
+            return {'answers': {'c0': answer('not_met' if len(seen) == 1 else 's1', q['criteria'])}}
+        with patch.object(ts, 'request', side_effect=respond):
+            ts.screen(self.payload)
+        self.assertTrue(all(r['state']['stagePolicy'] == self.payload['input']['stagePolicy'] for r in seen))
+        self.assertIn('exclusion-only', seen[0]['questions']['c0']['instructions'])
+        self.assertIn('cannot activate deferred criteria', seen[0]['questions']['c0']['instructions'])
+
     def test_fixed_destination_and_bearer_auth(self):
         from unittest.mock import MagicMock
         response=MagicMock();response.__enter__.return_value.read.return_value=b'{"models":[]}'
