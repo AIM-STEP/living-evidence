@@ -103,6 +103,12 @@
 .framework-start-row{display:flex;align-items:center;gap:12px;margin-top:8px}
 .search-words-panel .framework-start-row .framework-options{margin-top:0;flex:1;min-width:0}
 .framework-start-row>#mw-start{margin-left:auto;flex-shrink:0}
+
+.framework-heading-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.framework-heading-row>.toolbar{margin:0;gap:6px}
+.search-words-panel .framework-label{gap:6px}
+.search-words-panel .framework-help-button{width:14px;height:14px;font-size:10px;line-height:12px;display:inline-grid;place-items:center}
+.search-words-panel .framework-help-popup{top:20px}
 </style></head>
 <body>
 <header class="header"><a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span class="brand-text"><span class="brand-main">ACHIEVE</span><small class="brand-sub">for AIM-STEP Living evidence</small></span></a><nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a data-toolset href="index.html?view=toolset" class="active">Toolset</a><a href="contact.html">Contact</a></nav><a class="project-pill" id="project-name" hidden></a></header>
@@ -111,8 +117,8 @@
 <div class="columns"><div class="left-column">
 <section class="panel search-words-panel"><div class="panel-head"><div class="search-words-heading"><h2>Search words</h2><button class="btn small" id="show-previous-criteria" type="button" aria-haspopup="dialog" aria-controls="previous-criteria-dialog">Eligibility criteria</button></div></div><div class="panel-body">
 <div id="search-concepts-panel">
-  <div class="manual-words-head"><h3 id="words-heading">Search concepts</h3><div class="toolbar"><button class="btn small" id="clear-words" type="button">Clear</button><button class="btn small" id="add-concept" type="button" aria-expanded="false" aria-controls="word-element-picker">+ Add criterion</button></div></div>
-  <div class="word-framework"><div class="framework-label"><span class="label">Question framework</span><span class="framework-help"><button class="framework-help-button" id="word-framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="word-framework-help-popup">i</button><span class="framework-help-popup" id="word-framework-help-popup" role="dialog" aria-label="Framework guide" hidden><strong>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your question.</span></span></div><div class="framework-start-row"><div class="framework-options" id="word-framework" role="group" aria-label="Question framework"></div><button class="btn small primary" id="mw-start" type="button">Start</button></div></div>
+
+  <div class="word-framework"><div class="framework-heading-row"><div class="framework-label"><span class="label">Question framework</span><span class="framework-help"><button class="framework-help-button" id="word-framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="word-framework-help-popup">i</button><span class="framework-help-popup" id="word-framework-help-popup" role="dialog" aria-label="Framework guide" hidden><strong>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your question.</span></span></div><div class="toolbar"><button class="btn small" id="clear-words" type="button">Clear</button><button class="btn small" id="add-concept" type="button" aria-expanded="false" aria-controls="word-element-picker">+ Add criterion</button></div></div><div class="framework-start-row"><div class="framework-options" id="word-framework" role="group" aria-label="Question framework"></div><button class="btn small primary" id="mw-start" type="button">Start</button></div></div>
 <div id="machine-words-panel" class="machine-words-panel" hidden> <div id="mw-status" class="hint machine-status" role="status" aria-live="polite" hidden></div> <div class="machine-words-box" aria-label="Model-generated search words" aria-busy="false">
     <table class="machine-words-table"><thead><tr><th scope="col">Criterion</th><th scope="col">Search words</th></tr></thead><tbody id="machine-word-rows"></tbody></table>
   </div>
