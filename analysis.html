@@ -178,6 +178,13 @@ th{background:#f4f4f4}
 .btn:not(.primary):not(.btn-primary):not(.btn-link):not(.activated):not([aria-pressed="true"]):hover:not(:disabled),.vote:not(.selected):hover:not(:disabled),.round:not(.current):not(.done):hover:not(:disabled),.pc-btn:not(.selected):hover:not(:disabled),.collapse-toggle:hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.pc-btn:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.pc-btn:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
+
+/* Previous and next tools share the top navigation row. */
+.heading.tool-navigation{display:flex;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:12px;width:100%;margin:0 0 20px}
+.tool-navigation>.step-btn{min-width:0;max-width:calc(50% - 6px);white-space:normal}
+.tool-navigation>.next{margin-left:auto;text-align:right;justify-content:flex-end}
+.tool-navigation>.next:only-child{max-width:100%}
+@media(max-width:620px){.tool-navigation>.step-btn{font-size:11px;padding:8px;line-height:1.35}}
 </style>
 </head>
 <body>
@@ -188,7 +195,7 @@ th{background:#f4f4f4}
 </header>
 <main class="wrap">
 <div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Analysis</div>
-<div class="heading"><a class="step-btn back" data-prev href="risk-of-bias.html"><span aria-hidden="true">←</span> Back: Risk of bias assessment</a></div>
+<div class="heading tool-navigation"><a class="step-btn back" data-prev href="risk-of-bias.html"><span aria-hidden="true">←</span> Back: Risk of bias assessment</a><a class="step-btn next" data-next href="certainty-of-evidence.html">Next: Certainty of evidence <span aria-hidden="true">→</span></a></div>
 <div class="layout">
 <div class="stack">
 
@@ -234,7 +241,7 @@ th{background:#f4f4f4}
 <div class="panel-footer toolbar"><span class="coe-out"><button class="btn small primary" type="button" id="coe-export">Send to Certainty of evidence (CSV)</button><label class="hint"><input type="checkbox" id="coe-pairs"> every pair, not only versus the reference</label></span></div>
 </section>
 
-<div class="step-foot toolbar between"><span class="hint">Steps run in order, from Eligibility criteria (step 1) to Certainty of evidence (step 8).</span><a class="step-btn next" data-next href="certainty-of-evidence.html">Next: Certainty of evidence <span aria-hidden="true">→</span></a></div>
+<div class="step-foot toolbar between"><span class="hint">Steps run in order, from Eligibility criteria (step 1) to Certainty of evidence (step 8).</span></div>
 <details class="references" hidden data-developer-references><summary>Method and research references</summary><ul>
 <li>Rücker G. Network meta-analysis, electrical networks and graph theory. Res Synth Methods 2012;3:312-24. netmeta 3.7-0 (CRAN, 2026): results reproduced to 6 decimals on smokingcessation (OR, RR) and Franchini2012 (MD).</li>
 <li>Jackson D, White IR, Riley RD. Generalised DerSimonian–Laird estimator. Stat Med 2012. Krahn U, et al. Design-by-treatment decomposition. BMC Med Res Methodol 2013;13:35.</li>

@@ -219,6 +219,13 @@ th{background:#f4f4f4}
 .pilot-controls .pilot-rounds{flex-basis:var(--pilot-control-width);min-width:var(--pilot-control-width)}
 .full-summary>div:has(.full-category){padding:0}.full-category{display:block;width:100%;height:100%;border:0;border-bottom:2px solid transparent;padding:8px 12px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}.full-category:hover{background:#f0eaf3}.full-category[aria-pressed="true"]{background:#eee4f1;border-bottom-color:var(--plum)}.full-category:focus-visible{outline:2px solid var(--plum);outline-offset:-3px}
 
+
+/* Previous and next tools share the top navigation row. */
+.heading.tool-navigation{display:flex;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:12px;width:100%;margin:0 0 20px}
+.tool-navigation>.step-btn{min-width:0;max-width:calc(50% - 6px);white-space:normal}
+.tool-navigation>.next{margin-left:auto;text-align:right;justify-content:flex-end}
+.tool-navigation>.next:only-child{max-width:100%}
+@media(max-width:620px){.tool-navigation>.step-btn{font-size:11px;padding:8px;line-height:1.35}}
 </style>
 </head>
 <body>
@@ -229,7 +236,7 @@ th{background:#f4f4f4}
 </header>
 <main class="wrap">
 <div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Full-text assess</div>
-<div class="heading"><a class="step-btn back" data-screening href="title-abstract-screening.html"><span aria-hidden="true">←</span> Back: Title and abstract screening</a></div>
+<div class="heading tool-navigation"><a class="step-btn back" data-screening href="title-abstract-screening.html"><span aria-hidden="true">←</span> Back: Title and abstract screening</a><a class="step-btn next" data-extraction href="extraction.html">Next: Extraction <span aria-hidden="true">→</span></a></div>
 <div class="layout">
 <div class="stack">
 <section class="panel">
@@ -275,7 +282,7 @@ th{background:#f4f4f4}
 <h3 class="sub-head">PRISMA 2020 counts</h3>
 <div class="table-wrap results-like prisma"><table><tbody id="prisma-rows"></tbody></table></div></div>
 </div>
-<div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Reports</label><select class="select compact" id="export-option"><option value="include">Included</option><option value="exclude">Excluded, with reasons</option><option value="unclear">Awaiting classification</option><option value="missing">Not retrieved</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan RIS</option><option value="csv">CSV (Excel, with decisions and reasons)</option><option value="bib">BibTeX</option><option value="json">JSON (with decisions and evidence)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div><a class="step-btn next" data-extraction href="extraction.html">Next: Extraction <span aria-hidden="true">→</span></a></div>
+<div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option">Reports</label><select class="select compact" id="export-option"><option value="include">Included</option><option value="exclude">Excluded, with reasons</option><option value="unclear">Awaiting classification</option><option value="missing">Not retrieved</option></select><label class="label inline" for="export-format">Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan RIS</option><option value="csv">CSV (Excel, with decisions and reasons)</option><option value="bib">BibTeX</option><option value="json">JSON (with decisions and evidence)</option></select><button class="btn small" type="button" id="export-results">Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div></div>
 </section>
 </div>
 </div>

@@ -185,6 +185,13 @@ th{background:#f4f4f4}
 .btn:not(.primary):not(.btn-primary):not(.btn-link):not(.activated):not([aria-pressed="true"]):hover:not(:disabled),.vote:not(.selected):hover:not(:disabled),.round:not(.current):not(.done):hover:not(:disabled),.pc-btn:not(.selected):hover:not(:disabled),.collapse-toggle:hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.pc-btn:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.pc-btn:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
+
+/* Previous and next tools share the top navigation row. */
+.heading.tool-navigation{display:flex;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:12px;width:100%;margin:0 0 20px}
+.tool-navigation>.step-btn{min-width:0;max-width:calc(50% - 6px);white-space:normal}
+.tool-navigation>.next{margin-left:auto;text-align:right;justify-content:flex-end}
+.tool-navigation>.next:only-child{max-width:100%}
+@media(max-width:620px){.tool-navigation>.step-btn{font-size:11px;padding:8px;line-height:1.35}}
 </style>
 </head>
 <body>
@@ -195,7 +202,7 @@ th{background:#f4f4f4}
 </header>
 <main class="wrap">
 <div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Risk of bias assessment</div>
-<div class="heading"><a class="step-btn back" data-prev href="extraction.html"><span aria-hidden="true">←</span> Back: Extraction</a></div>
+<div class="heading tool-navigation"><a class="step-btn back" data-prev href="extraction.html"><span aria-hidden="true">←</span> Back: Extraction</a><a class="step-btn next" data-next href="analysis.html">Next: Analysis <span aria-hidden="true">→</span></a></div>
 <div class="layout">
 <div class="stack">
 
@@ -230,7 +237,7 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2>Summary</h2><div class="toolbar"><span class="export-results"><label class="label" for="export-format">Export</label><select class="select compact" id="export-format"><option value="csv">Traffic-light table (CSV, robvis layout)</option><option value="json">Full assessments with quotations and audit (JSON)</option></select><button class="btn small primary" type="button" id="export-btn">Export</button></span><button class="collapse-toggle" type="button" id="toggle-summary" aria-expanded="true" aria-controls="summary-body-wrap" title="Collapse Summary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Summary</span></button></div></div>
 <div class="panel-body" id="summary-body-wrap"><div id="summary-body"></div><p class="hint" id="agree"></p></div>
-<div class="panel-footer toolbar between"><span class="hint">Steps run in order, from Eligibility criteria (step 1) to Certainty of evidence (step 8).</span><a class="step-btn next" data-next href="analysis.html">Next: Analysis <span aria-hidden="true">→</span></a></div>
+<div class="panel-footer toolbar between"><span class="hint">Steps run in order, from Eligibility criteria (step 1) to Certainty of evidence (step 8).</span></div>
 </section>
 
 <details class="references" hidden data-developer-references><summary>Method and research references</summary><ul>
