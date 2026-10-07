@@ -421,7 +421,11 @@ const synthesisInstruction=[
   'Required propositions become inclusion rules; prohibited propositions become explicit exclusion rules. Allowed cases are exceptions or conditional permissions, not mandatory inclusion requirements. An uncertain item belongs in uncertainties unless its meaning is resolved by the same source.',
   'Merge overlapping items only when all conditions, operators, quantifiers, alternatives, numerical thresholds, dates, units, arm-level/subgroup qualifiers, scope of negation and exceptions remain intact. Do not infer an exclusion merely as the complement of inclusion. Do not require a reported outcome or invent a design/language/publication restriction.',
   'Use parallel, screening-ready sentences, no boilerplate, no repetition. Translate sources into precise, concise, professional academic English. A sentence about a participant threshold within a study describes eligible studies, not clinical trial recruitment.',
-  'The manuscriptParagraph must follow the SAME final rules and supplied limits, normally beginning We included and then We excluded if there are explicit exclusions. Omit unresolved claims. Never claim validation, give citations or include Markdown.',
+  'Write manuscriptParagraph as the Eligibility criteria subsection of a BMJ systematic-review Methods section, informed by PRISMA 2020 item 5 (BMJ 2021;372:n160). This is a reporting and prose convention, not a mandatory journal template. Use one coherent paragraph of concise academic British English, complete sentences and no domain-labelled list, bullets, numbered criteria or headings.',
+  'Describe eligible STUDIES, not recruitment for a new clinical trial. Begin with the supplied study designs and population where specified, then intervention/exposure/concept and eligible comparators; include setting, diagnostic definitions, numerical thresholds, follow-up and outcome-based eligibility ONLY when explicitly specified. Preserve alternatives, required combinations, subgroup conditions and exceptions exactly. Use neutral eligibility phrasing (e.g. Studies were eligible if) without claiming that screening has already been completed.',
+  'Distinguish outcomes of interest from mandatory outcome-reporting eligibility: never imply that a study must report a named outcome unless the source explicitly requires it. Report language, date and publication-status restrictions or absence of restrictions ONLY when the source explicitly states them. Describe grouping for synthesis and reasons for restrictions ONLY if provided; never invent them to fill PRISMA items.',
+  'State explicit exclusions clearly after inclusions, without repeating each inclusion as its opposite. Do not add database searches, screening reviewers, duplicate handling, risk-of-bias appraisal, statistical methods, registration or guideline-compliance claims unless they are actual eligibility rules in the supplied input. Do not add an explanation of BMJ or PRISMA to the paragraph.',
+  'The manuscriptParagraph must convey the SAME final include/exclude rules and supplied limits without adding or dropping substantive conditions. Omit unresolved claims and report ambiguities in uncertainties. Never claim validation, give citations, include Markdown, or invent a rationale. Length follows the supplied criteria rather than a fixed word count.',
   'Atom IDs belong only in evidenceIds. Never write an ID such as A001 or [A001, A002] inside text, reviewTopic or manuscriptParagraph.'
 ].join(' ');
 // Local models cite anyway ("... chronic insomnia [A001, A002]."). The IDs are
@@ -506,16 +510,15 @@ function validateAcademicDraft(answer,input,signature,model,extracts){
     if(both.length){exclude=exclude.filter(item=>!both.includes(item));both.forEach(rule=>dropped.push(row.dimension+': "'+rule+'" was proposed as both inclusion and exclusion; it was kept as inclusion only. Check it against the source.'))}
     return {dimension:row.dimension,include,exclude};
   });
-  const topic=stripAtomCitations(answer.reviewTopic).trim().replace(/\s+/g,' '),paragraph=stripAtomCitations(answer.manuscriptParagraph).trim().replace(/\s+/g,' ');
+  const topic=stripAtomCitations(answer.reviewTopic).trim().replace(/\s+/g,' ');let paragraph=stripAtomCitations(answer.manuscriptParagraph).trim().replace(/\s+/g,' ');
   if(!topic||topic.length>300||!paragraph||paragraph.length>3500||!Array.isArray(answer.uncertainties)||answer.uncertainties.length>20)throw new Error('The model returned incomplete manuscript wording.');
   if(/[\u3400-\u9fff]/u.test(topic+paragraph)||!supportedNumbers(topic+paragraph,sourceText))throw new Error('The manuscript paragraph introduced an unsupported number or untranslated text.');
   if(!rows.some(row=>row.include.length))throw new Error('The model returned no supported inclusion rule.');
-  // The paragraph is written in the same model call as the rules, so it can
-  // still state a rule that was just removed.
-  if(dropped.length)dropped.push('Description: it was written before the rule'+(dropped.length>1?'s':'')+' above '+(dropped.length>1?'were':'was')+' removed and may still state '+(dropped.length>1?'them':'it')+'. Edit it to match the criteria.');
+  // Rebuild from accepted rules if validation removed a proposition; never show rejected content in Description.
+  if(dropped.length){paragraph=manuscriptDraft(rows.map(r=>({label:r.dimension,include:r.include,exclude:r.exclude})),rows.flatMap(r=>r.exclude.map(rule=>({rule,domains:[r.dimension]}))),[input.limits?.startDate?'Publication date from '+input.limits.startDate:'',input.limits?.endDate?'Publication date through '+input.limits.endDate:'',input.limits?.language?'Language: '+input.limits.language:'',input.limits?.other||''].filter(Boolean));dropped.push('Description was rebuilt from accepted criteria after unsupported rules were removed. Review wording and any supplied limits.');}
   const missed=extracts.atoms.filter(atom=>!used.has(atom.id)).map(atom=>atom.dimension+': check the omitted or conditional proposition '+atom.sourceSentence);
   const notes=answer.uncertainties.filter(item=>typeof item==='string'&&item.trim()&&item.length<500).map(item=>item.trim());
-  return {signature,slot:model.slot,modelName:model.name,generatedAt:new Date().toISOString(),reviewTopic:topic,rows,uncertainties:[...new Set([...dropped,...extracts.issues,...notes,...missed])],manuscriptParagraph:paragraph,trace:extracts.atoms.map(atom=>({...atom,used:used.has(atom.id)}))};
+  return {signature,slot:model.slot,modelName:model.name,descriptionStyle:'BMJ-PRISMA2020-item5-v1',generatedAt:new Date().toISOString(),reviewTopic:topic,rows,uncertainties:[...new Set([...dropped,...extracts.issues,...notes,...missed])],manuscriptParagraph:paragraph,trace:extracts.atoms.map(atom=>({...atom,used:used.has(atom.id)}))};
 }
 async function autoCriteriaPipeline(model,input,signature,signal,progress){
   const segments=sourceSegments(input);if(!segments.length)throw new Error('No source rules were entered.');
@@ -726,13 +729,19 @@ function standardizedCriteria(){
   return {rows:normalized,framework,pending:openPending([...new Set(pending)]),exclusions:[...exclusions.values()],limits,topic:'',paragraph:state.activeGenerator==='machine'?manuscriptDraft(normalized,[...exclusions.values()],limits):'',refined:false};
 }
 function manuscriptDraft(rows,exclusions,limits){
-  const included=rows.filter(row=>row.include.length).map(row=>row.label.toLowerCase()+'—'+row.include.join(' ').replace(/\.$/,''));
-  if(!included.length)return '';
-  const sentences=['We included studies meeting the following criteria: '+included.join('; ')+'.'];
-  if(exclusions.length)sentences.push('We excluded studies for the following reasons: '+exclusions.map(item=>item.rule.replace(/\.$/,'')).join('; ')+'.');
-  if(limits.length)sentences.push('Additional limits were '+limits.join('; ').replace(/[.\s]+$/,'')+'.');
+  const order=['Study design','Population','Intervention','Exposure','Phenomenon of Interest','Concept','Comparison','Outcomes','Context'];
+  const ranked=rows.map((r,i)=>({r,i,rank:order.includes(r.label)?order.indexOf(r.label):order.length})).sort((a,b)=>a.rank-b.rank||a.i-b.i).map(x=>x.r);
+  const sentences=[];
+  for(const row of ranked){if(!row.include.length)continue;const rules=row.include.join(' ').trim();
+    const lead={'Study design':'Eligible study designs were specified as follows: ','Population':'Eligible populations were defined as follows: ','Intervention':'Eligible interventions were defined as follows: ','Exposure':'Eligible exposures were defined as follows: ','Comparison':'Eligible comparators were defined as follows: ','Outcomes':'Outcome-related criteria were specified as follows: ','Context':'Eligible settings were defined as follows: '}[row.label]||'Additional eligibility criteria were as follows: ';
+    sentences.push(lead+rules.replace(/[.\s]+$/,'')+'.');
+  }
+  if(!sentences.length)return '';
+  if(exclusions.length)sentences.push('The exclusion criteria were '+exclusions.map(item=>item.rule.replace(/[.\s]+$/,'')).join('; ')+'.');
+  if(limits.length)sentences.push('The following report restrictions applied: '+limits.join('; ').replace(/[.\s]+$/,'')+'.');
   return sentences.join(' ');
 }
+
 // The summary exactly as shown below, for Title and abstract screening to
 // display the same criteria. rowsSig ties it to the rows those criteria came
 // from, so a later edit made elsewhere is never shown with an old summary.
