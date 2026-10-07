@@ -146,6 +146,7 @@ main.wrap .btn:disabled{opacity:.5;cursor:default}
 .term-editor:focus{outline:2px solid #b88daf;outline-offset:2px;border-radius:2px}.term-remove{position:absolute;right:3px;top:1px;border:0;background:transparent;padding:1px 4px;color:#8c6b89;font-size:16px;line-height:18px}.term-remove:hover{color:var(--plum);background:#f2e7f0;border-radius:4px}
 .subject-term{background:#f5f0fa;border-color:#e2d7ed}.term-unverified{display:block;font-size:9px;color:#76677d;margin-top:3px}.term-add{display:flex;gap:6px;align-items:center;margin-top:7px}.term-add .text-input{width:220px;max-width:calc(100% - 66px);height:26px;padding:4px 8px;font-size:12px}.term-chip:focus-within{border-color:#b88daf}
 #selected-words{margin-top:16px;padding:14px;border:1px solid #e7dfe8;border-radius:9px;background:#fdfbfe}.expanded-words-head{display:flex;align-items:center;gap:14px;margin-bottom:12px}.expanded-words-head h3{font-size:14px;margin:0}.compact-progress{display:flex;align-items:center;gap:8px;min-width:0}#word-progress{width:min(100%,320px);margin:8px 0 12px}.compact-progress progress{appearance:none;flex:1;min-width:40px;width:100%;height:6px;border:0;border-radius:8px;overflow:hidden;background:#eee5f1;accent-color:#9b77b4}.compact-progress progress::-webkit-progress-bar{background:#eee5f1;border-radius:8px}.compact-progress progress::-webkit-progress-value{background:#9b77b4;border-radius:8px}.compact-progress progress::-moz-progress-bar{background:#9b77b4;border-radius:8px}.compact-progress progress:indeterminate{background:linear-gradient(90deg,#eee5f1 25%,#9b77b4 50%,#eee5f1 75%);background-size:200% 100%;animation:search-progress-pulse 1.5s linear infinite}.compact-progress progress:indeterminate::-webkit-progress-bar{background:transparent}.compact-progress span{font-size:11px;color:#79548e;white-space:nowrap}.retrieval-progress{margin-top:12px}.retrieval-progress .progress-detail{font-size:12px;margin:6px 0 0}.retrieval-progress[data-error="true"] .progress-detail{color:#9c3349}@keyframes search-progress-pulse{to{background-position:-200% 0}}@media(prefers-reduced-motion:reduce){.compact-progress progress:indeterminate{animation:none}}.expanded-concept+.expanded-concept{margin-top:16px;padding-top:12px;border-top:1px solid #eee8ef}.expanded-concept>h3{font-size:12px;color:var(--plum)}
+.progress-meter{position:relative;flex:1;width:100%;padding-top:18px;--progress:0%}.progress-track{height:7px;background:#eee5f1;border-radius:8px;overflow:hidden}.progress-fill{height:100%;width:var(--progress);background:#86549f;border-radius:8px;transition:width 1.2s ease}.compact-progress .progress-percent{position:absolute;top:0;left:clamp(14px,var(--progress),calc(100% - 17px));transform:translateX(-50%);font-size:11px;line-height:15px;color:#79548e;transition:left 1.2s ease}.progress-meter>progress.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0)}.retrieval-meter{flex:1;min-width:0}@media(prefers-reduced-motion:reduce){.progress-fill,.compact-progress .progress-percent{transition:none}}
 </style></head>
 <body>
 <header class="header"><a class="brand" data-home href="index.html"><span class="brand-mark">A</span><span class="brand-text"><span class="brand-main">ACHIEVE</span><small class="brand-sub">for AIM-STEP Living evidence</small></span></a><nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a data-toolset href="index.html?view=toolset" class="active">Toolset</a><a href="contact.html">Contact</a></nav><a class="project-pill" id="project-name" hidden></a></header>
@@ -311,15 +312,23 @@ function renderSelectedWords(){
   box.innerHTML=state.concepts.length?'<div class="expanded-words-head"><h3>Expanded search terms</h3></div>'+state.concepts.map(c=>`<article class="expanded-concept" data-id="${esc(c.id)}"><h3>${esc(c.label)}</h3><p class="hint expansion-status" hidden>Keywords changed. Generate expanded terms again, or edit the terms below.</p>${renderWordTerms(c,'terms','Synonyms and related terms')}${renderWordTerms(c,'mesh','MeSH · PubMed / Europe PMC / Ovid MEDLINE')}</article>`).join(''):'';
 }
 function progressMarkup(value,label){
-  const known=Number.isFinite(value),percent=known?Math.max(0,Math.min(100,Math.round(value))):null;
-  return `<progress max="100" ${known?'value="'+percent+'"':''} aria-label="${esc(label)}" title="${esc(label)}"></progress><span aria-hidden="true">${known?percent+'%':'…'}</span>`;
+  const percent=Number.isFinite(value)?Math.max(0,Math.min(100,Math.round(value))):0;
+  return `<div class="progress-meter" style="--progress:${percent}%"><progress class="sr-only" max="100" value="${percent}" aria-label="${esc(label)}"></progress><div class="progress-track"><div class="progress-fill"></div></div><span class="progress-percent" aria-hidden="true">${percent}%</span></div>`;
+}
+function updateProgress(el,value,label){
+  const percent=Number.isFinite(value)?Math.max(0,Math.min(100,Math.round(value))):0;
+  const meter=el.querySelector('.progress-meter');
+  if(!meter){el.innerHTML=progressMarkup(percent,label);return}
+  meter.style.setProperty('--progress',percent+'%');
+  const native=meter.querySelector('progress');native.value=percent;native.setAttribute('aria-label',label);
+  meter.querySelector('.progress-percent').textContent=percent+'%';
 }
 function renderWordProgress(){
   const el=$('word-progress');if(!el)return;
   const running=!!mwController||!!machineWordPending,ready=searchWordsReady();
   el.hidden=!running&&!state.concepts.length;
   const label=running?'Generating and checking search terms':ready?'Search terms completed':'Search terms not completed';
-  el.innerHTML=progressMarkup(running?null:ready?100:0,label);
+  updateProgress(el,running?Math.min(99,state.wordProgressPercent||0):ready?100:0,label);
 }
 function renderWordTerms(c,field,label){
   const words=lines(c[field]||'');
@@ -884,7 +893,8 @@ function progress(run,message){
   const label=DB[run.db].label+' · '+(complete?'Complete':run.status)+' · '+run.downloaded+' retrieved'+(run.total!==null?' / '+run.total+' matches':'');
   el.hidden=false;el.className='retrieval-progress';el.dataset.error=String(run.status==='Error');
   const detail=['Error','Paused','Partial'].includes(run.status)?message:'';
-  el.innerHTML='<div class="compact-progress"><span>'+esc(DB[run.db].label)+'</span>'+progressMarkup(percent,label)+'</div>'+(detail?'<p class="progress-detail">'+esc(detail)+'</p>':'');
+  if(!el.querySelector('.retrieval-meter'))el.innerHTML='<div class="compact-progress"><span class="retrieval-db"></span><div class="retrieval-meter"></div></div><p class="progress-detail" hidden></p>';
+  el.querySelector('.retrieval-db').textContent=DB[run.db].label;updateProgress(el.querySelector('.retrieval-meter'),percent,label);const detailEl=el.querySelector('.progress-detail');detailEl.hidden=!detail;detailEl.textContent=detail;
   renderResults();renderHistory();
 }
 async function retrievePubmed(run,signal,target){const base='https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';if(!run.initialized){let u=new URL('esearch.fcgi',base);for(const [k,v] of Object.entries({db:'pubmed',tool:'aimstep_search_strategy',term:run.query,retmode:'json',retmax:'10000'}))u.searchParams.set(k,v);progress(run,'Discovering matching PubMed IDs…');const data=await(await ncbi(u.href,signal)).json(),result=data.esearchresult;if(!result||result.ERROR||data.error)throw new Error(result?.ERROR||data.error||'PubMed returned no search metadata.');const total=Number(result.count);if(!Number.isFinite(total)||total<0)throw new Error('PubMed returned an invalid result count.');run.total=total;run.queryTranslation=str(result.querytranslation||'',200000);run.apiWarnings=result.warninglist||{};run.apiErrors=result.errorlist||{};run.requestedIds=Array.isArray(result.idlist)?result.idlist.filter(id=>/^\d+$/.test(id)):[];run.initialized=true;if(total>10000&&!run.notices.includes('PubMed 10,000-ID cap'))run.notices.push('PubMed 10,000-ID cap');if(total&&!run.requestedIds.length)throw new Error('PubMed reports matches but returned no IDs. Check the query warnings.');await persistResults()}let seen=new Set(run.seenIds||[]);while(run.downloaded<target&&!signal.aborted){const remaining=run.requestedIds.filter(id=>!seen.has(id));if(!remaining.length)break;const ids=remaining.slice(0,Math.min(200,target-run.downloaded));const u=new URL('efetch.fcgi',base);for(const [k,v] of Object.entries({db:'pubmed',tool:'aimstep_search_strategy',id:ids.join(','),retmode:'xml'}))u.searchParams.set(k,v);progress(run,'Retrieving article metadata and abstracts…');const parsed=pubmedRecords(await(await ncbi(u.href,signal)).text(),run);const returned=new Set();for(const r of parsed){if(!r.pmid||!ids.includes(r.pmid)||seen.has(r.pmid))continue;returned.add(r.pmid);seen.add(r.pmid);run.downloaded++;if(addRecord(r))run.added++}run.seenIds=[...seen];run.updatedAt=now();await persistResults();progress(run,'Batch saved on this device.');if(ids.some(id=>!returned.has(id)))throw new Error('PubMed did not return every requested record. Retrieved records are saved; use Continue to retry missing IDs.')}if(signal.aborted)throw new DOMException('Stopped','AbortError');if(run.total===0||run.downloaded>=run.total)run.status='Complete';else{run.status='Partial';run.notices.push(run.downloaded>=10000?'Only the first 10,000 PubMed IDs are available through ESearch. Split the query into documented non-overlapping ranges, or import a full database / EDirect export.':'The selected retrieval limit was reached. Continue to retrieve more records.')}}
@@ -1019,7 +1029,7 @@ window.addEventListener('focus',()=>{checkUpstream();refreshSharedModel()});
 
 /* Generate search words directly from the saved eligibility criteria. */
 let machineContext=null,mwController=null;
-function mwStatus(message,error=false){const el=$('mw-status');el.textContent=message;el.hidden=!error||!message;el.classList.toggle('error',error);state.wordProgressLog=[...(state.wordProgressLog||[]),{message,error,date:now()}].slice(-60);saveDraft();renderWordProgress()}
+function mwStatus(message,error=false,percent){if(Number.isFinite(percent))state.wordProgressPercent=Math.max(state.wordProgressPercent||0,Math.min(99,percent));const el=$('mw-status');el.textContent=message;el.hidden=!error||!message;el.classList.toggle('error',error);state.wordProgressLog=[...(state.wordProgressLog||[]),{message,error,date:now()}].slice(-60);saveDraft();renderWordProgress()}
 function stopMachineWordsRun(){if(mwController){mwController.abort();mwController=null}}
 async function startMachineWords(){
   if(busy||generating||mwController)return;
@@ -1028,7 +1038,7 @@ async function startMachineWords(){
   const hasCriteria=state.concepts.every(c=>lines(c.keywords||'').length);
   state.machineInput='';
   if(!hasCriteria){mwStatus('Add Keywords for each selected element before generating expanded terms.',true);$('add-concept').focus();return}
-  const controller=new AbortController();mwController=controller;
+  state.wordProgressPercent=0;const controller=new AbortController();mwController=controller;
   const expanding=[...state.concepts];for(const c of expanding)c.expansionPending=true;for(const q of Object.values(state.queries))q.wordsChanged=true;saveDraft();renderStrategies();
   const button=$('mw-start');button.disabled=true;button.textContent='Generating…';
   let timedOut=false;const timer=setTimeout(()=>{timedOut=true;controller.abort()},900000);
@@ -1036,7 +1046,7 @@ async function startMachineWords(){
     mwStatus('Connecting to the local model…');
     const input={texts:[],images:[]};machineContext=null;
     const added=0;saveDraft();renderConcepts();renderStrategies();
-    mwStatus('Generating search words…');
+    mwStatus('Generating search words…',false,5);
     let result;
     try{result=await fillConceptWords(controller.signal,input)}
     catch(error){if(error?.name==='AbortError'||isUnreachable(error))throw error;saveDraft();renderConcepts();renderStrategies();mwStatus(error.message+' Existing Keywords and expanded terms have been kept.',true);return}    if(controller.signal.aborted)return;
@@ -1111,7 +1121,7 @@ async function reviewWordBatch(groups,signal){
   for(const d of response.decisions){if(!ids.includes(d?.id)||decisions.has(d.id)||typeof d.accept!=='boolean'||typeof d.reason!=='string'||d.reason.length>1000||(!d.accept&&!d.reason.trim()))throw new Error('Invalid vocabulary review.');decisions.set(d.id,d)}
   return decisions;
 }
-async function reviewWordCandidates(groups,signal){
+async function reviewWordCandidates(groups,signal,onProgress=()=>{}){
   const all=groups.flatMap(g=>g.candidates),out=new Map();
   // Keep responses short enough for local models; at most one retry per batch.
   for(let i=0;i<all.length;i+=24){
@@ -1122,7 +1132,7 @@ async function reviewWordCandidates(groups,signal){
       if(signal.aborted)throw new DOMException('Stopped','AbortError');
       try{reviewed=await reviewWordBatch(batch,signal);break}catch(e){if(e.name==='AbortError'||attempt===1)throw e}
     }
-    for(const [id,decision] of reviewed)out.set(id,decision);
+    for(const [id,decision] of reviewed)out.set(id,decision);onProgress(Math.min(all.length,i+24)/all.length);
   }
   return out;
 }
@@ -1134,9 +1144,9 @@ async function verifyConcepts(ids,entities,signal,progress){
     if(isRctDesign(c)){c.wordAudit={...c.wordAudit,status:'design-filter',filter:'Cochrane HSSS; database-specific where supported'};notes.set(c.id,'Study-design terms retained; supported databases use the validated RCT filter.');continue}
     const add=(term,kind,source,descriptor)=>{if(g.candidates.some(x=>x.kind===kind&&wordIdentity(x.term)===wordIdentity(term)))return;g.candidates.push({id:'g'+groups.length+'t'+g.candidates.length,term,kind,source,...(descriptor?{descriptor}:{} )})};
     cleanGeneratedWords(lines(c.terms)).forEach(t=>add(t,'freeText','model'));
-    progress('Matching '+c.label+' to official MeSH vocabulary…');
+    progress('Matching '+c.label+' to official MeSH vocabulary…',false,20+30*groups.length/Math.max(1,ids.size));
     const seeds=cleanGeneratedWords([...(entities.get(c.id)||[]),...lines(c.keywords||''),...lines(c.terms).slice(0,6)]).filter(t=>!t.includes('*')).slice(0,10);
-    for(const entity of seeds){
+    for(const [seedIndex,entity] of seeds.entries()){
       if(signal.aborted)throw new DOMException('Stopped','AbortError');
       try{
         const key=wordIdentity(entity);if(!lookupCache.has(key))lookupCache.set(key,await meshLookup(entity,signal));
@@ -1146,12 +1156,13 @@ async function verifyConcepts(ids,entities,signal,progress){
           for(const t of [descriptor.heading,...descriptor.entry])if(g.candidates.filter(x=>x.kind==='freeText').length<120)add(t,'freeText','NLM MeSH',descriptor);
         }
       }catch(e){if(e.name==='AbortError')throw e;g.lookupErrors.push(entity+': '+e.message)}
+      progress('Matching '+c.label+' to official MeSH vocabulary…',false,20+30*(groups.length+(seedIndex+1)/seeds.length)/Math.max(1,ids.size));
     }
     groups.push(g);
   }
   if(signal.aborted)throw new DOMException('Stopped','AbortError');
   let decisions=new Map(),reviewError='';
-  if(groups.length){progress('Reviewing synonyms and vocabulary matches against the criteria…');try{decisions=await reviewWordCandidates(groups,signal)}catch(e){if(e.name==='AbortError')throw e;reviewError=e.message}}
+  if(groups.length){progress('Reviewing synonyms and vocabulary matches against the criteria…',false,50);try{decisions=await reviewWordCandidates(groups,signal,f=>progress('Reviewing synonyms and vocabulary matches against the criteria…',false,50+20*f))}catch(e){if(e.name==='AbortError')throw e;reviewError=e.message}}
   for(const g of groups){
     if(!active(g))continue;
     let accepted=g.candidates.filter(x=>decisions.get(x.id)?.accept),fallback=!!reviewError;
@@ -1161,8 +1172,9 @@ async function verifyConcepts(ids,entities,signal,progress){
     const words=cleanGeneratedWords(accepted.filter(x=>x.kind==='freeText').map(x=>x.term));
     const headings=accepted.filter(x=>x.kind==='subjectHeading').map(x=>x.term);
     const checks=[];let countError='';
-    progress('Checking retrieval signals for '+g.c.label+'…');
+    progress('Checking retrieval signals for '+g.c.label+'…',false,70+25*groups.indexOf(g)/groups.length);
     for(const [index,term] of words.entries()){
+      progress('Checking retrieval signals for '+g.c.label+'…',false,70+25*(groups.indexOf(g)+(index+1)/words.length)/groups.length);
       if(!active(g))break;
       if(/[\u3400-\u9fff]/.test(term)){checks.push({term,status:'not-checked',reason:'Chinese terms require the target database.'});continue}
       if(index>=30){checks.push({term,status:'not-checked',reason:'Per-element retrieval-check budget reached; term retained.'});continue}
