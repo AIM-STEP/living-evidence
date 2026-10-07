@@ -199,6 +199,7 @@ th{background:#f4f4f4}
 .tool-navigation>.next{margin-left:auto;text-align:right;justify-content:flex-end}
 .tool-navigation>.next:only-child{max-width:100%}
 @media(max-width:620px){.tool-navigation>.step-btn{font-size:11px;padding:8px;line-height:1.35}}
+#open-criteria,#open-criteria:hover{background:transparent;border:0;box-shadow:none;color:#79548e}#open-criteria svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}#open-criteria:hover{color:var(--plum)}#criteria-dialog{width:min(940px,calc(100vw - 32px));max-height:85vh}#criteria-dialog .criteria-dialog-head{border:0}#criteria-dialog .criteria-preview-frame{display:block;width:100%;height:240px;border:0;background:#fff}#criteria-dialog #criteria-origin,#criteria-dialog #reason-order{display:none!important}
 </style>
 </head>
 <body>
@@ -223,7 +224,7 @@ th{background:#f4f4f4}
 </div>
 <div class="stack">
 <section class="panel">
-<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2>Pilot screening</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot screening works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
+<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2>Pilot screening</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot screening works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10v15H5V5h4m0-2h6v4H9zM8 11l1 1 2-2m2 1h3M8 16l1 1 2-2m2 1h3"/></svg>Eligibility criteria</button></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
 <div class="panel-body" id="pilot-body">
 <button class="btn small" type="button" id="screen-model-archives" hidden>Download previous screening runs</button>
 
@@ -297,7 +298,7 @@ th{background:#f4f4f4}
 </dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
-<script>
+<script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js"></script><script>
 'use strict';
 (() => {
 const $=id=>document.getElementById(id);
@@ -1764,6 +1765,7 @@ function summaryHtml(m){
   return `<div class="criteria-summary"><div class="summary-rule" aria-hidden="true"></div><div class="summary-intro"><p><strong>Review topic:</strong> ${esc(m.topic||'To be defined')}</p><p><strong>Framework:</strong> ${esc(m.framework||'Other')}</p></div><div class="summary-rule" aria-hidden="true"></div><section class="summary-block"><h3>Inclusion criteria</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong>Limits:</strong> ${esc(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3>Exclusion criteria</h3>${exclusionHtml}</section><section class="summary-block"><h3>Pending clarification</h3>${pending.length?`<ul class="summary-list summary-pending">${pending.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`:'<p class="summary-muted">None identified.</p>'}</section><section class="summary-block"><h3>Manuscript wording</h3>${m.paragraph?`<p class="summary-paragraph">${esc(m.paragraph)}</p>`:`<p class="summary-muted">${esc(m.paragraphNote||'No manuscript wording was generated for these criteria.')}</p>`}</section>${traceHtml}<div class="summary-rule" aria-hidden="true"></div></div>`;
 }
 function renderCriteriaView(){
+  if(window.screeningCriteriaDialog?.active)return;
   const c=source.criteria,origin=$('criteria-origin');
   if(!c?.rows?.length){origin.textContent='';origin.hidden=true;$('criteria-view').innerHTML='<p class="summary-muted">No eligibility rules saved for this project. Complete the Eligibility criteria tool or select Import from local.</p>';return}
   let saved=null;
@@ -2004,6 +2006,7 @@ $('crit-cancel').addEventListener('click',closeCriteriaEditor);
 $('crit-save').addEventListener('click',saveCriteriaEdit);
 criteriaDialog.addEventListener('cancel',e=>{if(busy?.startsWith('criteria-'))e.preventDefault();});
 criteriaDialog.addEventListener('close',closeCriteriaEditor);
+window.screeningCriteriaDialog=AIMScreeningCriteriaDialog({scope,projectId,pageLink,busy:()=>!!busy||pilotReviewSaving,snapshot:()=>source.criteria,parse:parseCriteriaFile,apply:async snapshot=>{busy='criteria-save';try{await setCriteriaUpload({name:'Eligibility criteria',edited:true,uploadedAt:now(),snapshot})}finally{busy='';render()}}});
 $('open-criteria').addEventListener('click',()=>{closeCriteriaEditor();uploadError('');renderCriteriaFile();criteriaDialog.showModal()});
 $('close-criteria').addEventListener('click',()=>{if(!busy?.startsWith('criteria-'))criteriaDialog.close()});
 criteriaDialog.addEventListener('click',event=>{if(event.target===criteriaDialog&&!busy?.startsWith('criteria-'))criteriaDialog.close()});

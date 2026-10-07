@@ -226,6 +226,7 @@ th{background:#f4f4f4}
 .tool-navigation>.next{margin-left:auto;text-align:right;justify-content:flex-end}
 .tool-navigation>.next:only-child{max-width:100%}
 @media(max-width:620px){.tool-navigation>.step-btn{font-size:11px;padding:8px;line-height:1.35}}
+#open-criteria,#open-criteria:hover{background:transparent;border:0;box-shadow:none;color:#79548e}#open-criteria svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}#open-criteria:hover{color:var(--plum)}#criteria-dialog{width:min(940px,calc(100vw - 32px));max-height:85vh}#criteria-dialog .criteria-dialog-head{border:0}#criteria-dialog .criteria-preview-frame{display:block;width:100%;height:240px;border:0;background:#fff}#criteria-dialog #criteria-origin,#criteria-dialog #reason-order{display:none!important}
 </style>
 </head>
 <body>
@@ -253,7 +254,7 @@ th{background:#f4f4f4}
 </div>
 </section>
 <section class="panel">
-<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2>Pilot full-text assessment</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot full-text assessment works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog">Eligibility criteria</button></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available when a round has been compared">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot full-text assessment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot full-text assessment</span></button></div></div>
+<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2>Pilot full-text assessment</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot full-text assessment works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10v15H5V5h4m0-2h6v4H9zM8 11l1 1 2-2m2 1h3M8 16l1 1 2-2m2 1h3"/></svg>Eligibility criteria</button></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available when a round has been compared">Approve pilot</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot full-text assessment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot full-text assessment</span></button></div></div>
 <div class="panel-body" id="pilot-body">
 <button class="btn small" type="button" id="screen-model-archives" hidden>Download previous screening runs</button>
 
@@ -343,7 +344,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js?v=20261006-queue1"></script>
 <script src="app/fulltext-assistant.js?v=20261006-queue1"></script>
-<script>
+<script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js"></script><script>
 'use strict';
 (() => {
 const $=id=>document.getElementById(id);
@@ -2207,6 +2208,12 @@ function bindScreeningHelp(prefix){
 bindScreeningHelp('pilot');
 bindScreeningHelp('full');
 
+window.screeningCriteriaDialog=AIMScreeningCriteriaDialog({scope,projectId,pageLink,busy:()=>!!busy||syncingSource,snapshot:()=>workspace.criteria,parse:parseCriteriaFile,apply:async criteria=>{
+    busy='criteria-save';pauseRetrieval();let before,previousView=pilotView;
+    try{await retrievalSettled;before=structuredClone(workspace);const sig=fingerprint(criteria);if(sig!==workspace.criteriaSig){archiveRun('Eligibility criteria edited');workspace.criteria=criteria;workspace.criteriaSig=sig;workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1}workspace.criteriaEdited=true;workspace.criteriaImportName='';log('criteria-edited',{criteriaSig:sig});await save();}
+    catch(e){if(before){workspace=before;pilotView=previousView;indexRecords();publishSummary()}throw e}
+    finally{busy='';render()}
+  }});
 $('open-criteria').addEventListener('click',()=>{
   closeCriteriaEditor();$('crit-import').disabled=!!busy;$('edit-criteria').disabled=!!busy;$('crit-restore').disabled=!!busy||!handoff?.criteria;
   $('criteria-origin').textContent=workspace.criteriaEdited?(workspace.criteriaImportName?'Imported from '+workspace.criteriaImportName+'. Used for Full-text assess.':'Edited for Full-text assess. Upstream criteria are unchanged.'):workspace.criteria?'From Title and abstract screening (the criteria in use there when the reports were imported).':'';
