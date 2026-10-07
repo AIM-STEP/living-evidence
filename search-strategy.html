@@ -877,7 +877,7 @@ async function generate(){
     strategyProgress(75,'Database strategies compiled; checking retrieval');
     const counts=await countQueries(state.databases.filter(id=>['pubmed','europepmc'].includes(id)),modelController.signal,f=>strategyProgress(75+20*f,'Checking retrieval for selected databases'));
     strategyProgress(100,'Search strategies generated');
-  }catch(e){notice('generation-message',e.name==='AbortError'?'Generation cancelled. Existing strategies have been kept.':e.message,'error')}
+  }catch(e){if(e.name==='AbortError'){state.strategyProgressLog=[...(state.strategyProgressLog||[]),{label:'Generation cancelled. Existing strategies have been kept.',date:now()}].slice(-60);saveDraft();notice('generation-message','')}else notice('generation-message',e.message,'error')}
   finally{modelController=null;setGenerating(false);checkUpstream();renderStrategies(false);void checkRecall()}
 }
 
