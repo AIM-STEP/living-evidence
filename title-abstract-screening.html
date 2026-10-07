@@ -138,7 +138,7 @@ th{background:#f4f4f4}
 .criteria-origin{margin:0 0 12px}.criteria-file{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-height:30px;padding:0 4px 0 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:12px;color:var(--ink2)}.criteria-file .file-name{border:0;background:none;padding:0;color:var(--plum);font:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}.criteria-file .file-name:hover{text-decoration:underline}.criteria-file .file-meta{color:var(--muted);white-space:nowrap}.criteria-upload-error{font-size:12px;color:var(--red)}
 .pilot-steps{margin:0 0 12px;padding-left:20px;font-size:12px;color:var(--ink2);line-height:1.7}.pilot-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}.pilot-controls .label{margin:0}.pilot-controls .input{width:76px}.pilot-rounds{display:flex;flex-wrap:nowrap;gap:6px;margin-bottom:10px;overflow-x:auto;padding:2px 0;max-width:100%}.pilot-rounds .round{min-width:0;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 7px;font-size:10px;line-height:1.3;white-space:nowrap}.pilot-rounds .round b{font-size:inherit;font-weight:600}.pilot-rounds .round span{font-size:inherit}.pilot-summary{grid-template-columns:repeat(5,minmax(0,1fr))}.pilot-summary>div.alert strong{color:var(--red)}.pilot-detail{margin:8px 0}.pilot-detail .ok{color:var(--green);font-weight:700}.pilot-detail .warn{color:var(--amber);font-weight:700}.pilot-filter [aria-pressed="true"]{border-color:var(--plum);color:var(--plum);background:var(--pale)}.record.differ{border-color:#e3b4ad}.badge.differ{background:#fff0ef;color:var(--red)}.judg{font-weight:700}.judg.met{color:var(--green)}.judg.not-met{color:var(--red)}.judg.unclear{color:var(--amber)}.pilot-note{display:block;font-size:11px;font-weight:700;margin-top:8px}.pilot-note .input{margin-top:4px}
 @media(max-width:760px){.pilot-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.pilot-summary>div{border-left:0;border-top:1px solid var(--line)}}
-.export-source{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.export-source .label{margin:0;font-size:12px}.select.compact{width:auto;min-height:30px;padding:3px 8px;font-size:12px}
+.export-source{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.export-source .label{margin:0;font-size:12px}#source-format,#export-source{box-sizing:border-box;height:26px;min-height:26px;padding:4px 8px;line-height:1.25}.select.compact{width:auto;min-height:30px;padding:3px 8px;font-size:12px}
 .source-foot{margin-top:10px}
 .full-intro{margin:0 0 10px}.full-track{margin:12px 0 6px}.full-now{display:flex;align-items:center;gap:8px;margin:4px 0 8px;font-size:12px;color:var(--ink2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.pulse{flex:none;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}.sub-head{font-size:14px;margin:16px 0 6px}.full-feed{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:6px;background:#fff}.full-feed li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--soft);font-size:12px;min-width:0}.full-feed li:first-child{border-top:0}.feed-title{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.feed-why{flex:none;color:var(--muted);max-width:40%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.check-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}.check-head .sub-head{margin:0 8px 0 0}.check-head .label{margin:0}.check-summary .ok{color:var(--green);font-weight:700}.check-summary .warn{color:var(--red);font-weight:700}#check-more{margin-top:8px}
 .full-summary{grid-template-columns:repeat(6,minmax(0,1fr))}.full-summary>div.alert strong{color:var(--red)}.feed-pass{flex:none;font-size:11px;color:var(--muted);width:44px}.badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}.pilot-filter .count{font-weight:400;color:var(--muted);margin-left:2px}.panel.is-collapsed>.panel-footer{border-top:0}
@@ -220,7 +220,7 @@ th{background:#f4f4f4}
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span>Databases</span></div><div><strong id="stat-total">0</strong><span>Records imported</span></div><div><strong id="stat-dups">0</strong><span>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden data-developer-notes></p>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col">Imported</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="num-col">Duplicates</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
-<div class="toolbar source-foot"><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button><span class="export-source"><label class="label inline" for="source-format">Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Download all records after deduplication">Export records</button></span></div>
+<div class="toolbar source-foot"><button class="btn small" id="sync-source" type="button" hidden>Use latest source</button><span class="export-source"><label class="label inline" for="source-format">Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Export deduplicated records still to screen">Export</button></span></div>
 </div>
 </section>
 </div>
@@ -703,7 +703,7 @@ function renderSource(){  // Databases of the imports in use, not every database
     return '<tr><td title="'+esc(when)+'">'+esc(when)+'</td><td title="'+esc(dbn+' · '+src)+'">'+esc(dbn)+'<span class="src">'+esc(run.kind==='local'?'local file':'search strategy')+'</span></td><td class="num-col">'+count.toLocaleString()+'</td><td class="num-col" title="Records already found by an earlier import">'+st.duplicates.toLocaleString()+'</td><td class="del-col"><button type="button" class="remove-import" data-delete-import="'+esc(run.kind+':'+run.id)+'" title="Delete this import" aria-label="Delete the '+esc(dbn)+' import of '+esc(when)+'">×</button></td></tr>';
   }).join(''):'<tr><td colspan="5" class="empty">Nothing imported yet. Use Import from search strategy or Import from local.</td></tr>';
   renderCriteriaFile();
-  $('export-source').disabled=!source.records.length;
+  $('export-source').disabled=!pendingSourceRecords().length;
   let warning='';
   if(sourceError)warning=sourceError;
   if(!source.records.length)warning+=(warning?'\n':'')+'No local search records found. Complete Search strategy for this project or import a results file.';
@@ -1926,9 +1926,10 @@ $('criteria-file-input').addEventListener('change',async event=>{
   finally{busy='';setCriteriaControls(false);renderCriteriaFile();}
 });
 
-/* Export of every record after deduplication, as listed in Screening source.
+/* Export of pending records after deduplication, matching To screen.
    Each record keeps the databases it was found in; nothing about screening
    decisions is included (those are in Download at the end of the page). */
+function pendingSourceRecords(){return source.records.filter(r=>!workspace||!['yes','maybe','no'].includes(finalDecision(r.uid)))}
 function sourceDatabases(r){return [...new Set((r.provenance||[]).map(p=>databaseNames[p.db]||p.db).filter(Boolean))]}
 function splitPages(pages){const m=String(pages||'').match(/^\s*([^-–—]+?)\s*[-–—]+\s*(.+?)\s*$/);return m?[m[1],m[2]]:[String(pages||'').trim(),'']}
 function sourceRIS(records){
@@ -1952,15 +1953,15 @@ function sourceBibTeX(records,screening=false){
   }).join('\n\n')+'\n';
 }
 $('export-source').addEventListener('click',()=>{
-  const records=source.records,format=$('source-format').value;
-  if(!records.length){toast('There are no records to export.');return}
-  const name='deduplicated-records-'+(projectId?projectId.replace(/[^\w-]+/g,'_')+'-':'')+stamp();
+  const records=pendingSourceRecords(),format=$('source-format').value;
+  if(!records.length){toast('There are no pending records to export.');return}
+  const name='pending-deduplicated-records-'+(projectId?projectId.replace(/[^\w-]+/g,'_')+'-':'')+stamp();
   if(format==='csv')download(name+'.csv','text/csv;charset=utf-8',sourceCSV(records));
   else if(format==='bib')download(name+'.bib','application/x-bibtex;charset=utf-8',sourceBibTeX(records));
-  else if(format==='json')download(name+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-deduplicated-records/v1',project:projectId,exportedAt:now(),imported:dedupStats.total,duplicates:Math.max(0,dedupStats.total-records.length),records:records.map(r=>({...r,databases:sourceDatabases(r)}))},null,2));
+  else if(format==='json')download(name+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-deduplicated-records/v1',project:projectId,exportedAt:now(),imported:dedupStats.total,duplicates:Math.max(0,dedupStats.total-source.records.length),scope:'pending',pending:records.length,records:records.map(r=>({...r,databases:sourceDatabases(r)}))},null,2));
   else download(name+'.ris','application/x-research-info-systems;charset=utf-8',sourceRIS(records));
-  log('source-exported',{format,records:records.length});save().catch(()=>{});
-  toast(records.length.toLocaleString()+' deduplicated records exported.');
+  log('source-exported',{format,scope:'pending',records:records.length});save().catch(()=>{});
+  toast(records.length.toLocaleString()+' pending deduplicated records exported.');
 });
 // Imports use the same isolated manual editor as Full-text assess.
 let pendingCriteriaImport=null,manualEditorReady=false;
