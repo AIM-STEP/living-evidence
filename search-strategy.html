@@ -165,7 +165,7 @@ main.wrap .btn:disabled{opacity:.5;cursor:default}
 <section class="panel limits-panel" aria-label="Limits"><div class="panel-head"><h2>Limits</h2><button class="btn small clear-action" id="clear-limits" type="button" aria-label="Clear limits"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div class="panel-body"><div class="two"><div><label class="label" for="start-date">Start date</label><input class="text-input" id="start-date" type="date"></div><div><label class="label" for="end-date">End date</label><input class="text-input" id="end-date" type="date"></div></div><div class="two"><div><label class="label" for="limit-language">Language</label><select class="select" id="limit-language"><option value="">No restriction</option><option value="english">English</option><option value="chinese">Chinese</option></select></div><div><label class="label" for="limit-other">Other</label><input class="text-input" id="limit-other" placeholder="Notes for database limits / screening"></div></div><p class="hint" id="limits-hint" hidden data-developer-notes></p></div></section>
 </div><aside class="right-column"><section class="panel strategy-panel"><div class="panel-head"><h2>Search strategies</h2><button class="btn small clear-action" id="download-strategies" type="button" aria-label="Export search strategies" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn small clear-action" id="clear-strategies" type="button" aria-label="Clear search strategies" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn small primary" id="generate" type="button">Generate</button><button class="btn small" id="cancel-generation" hidden type="button">Cancel</button></div><div class="panel-body"><div id="strategy-tabs" class="tabs" role="tablist" aria-label="Database strategies"></div><textarea class="textarea query" id="query" rows="11" spellcheck="false" placeholder="Generate a strategy from your criteria or search words."></textarea><ul class="query-notes" id="query-notes" hidden></ul><p class="hint" id="execution-note" hidden></p><div class="notice" id="search-progress" role="status" aria-live="polite" hidden></div></div></section>
 <section class="panel results-panel" id="results">
-  <div class="panel-head"><h2>Search results</h2><button class="btn small primary" id="run-search" type="button">Run</button><button class="btn small" id="stop-search" type="button" hidden>Stop</button></div>
+  <div class="panel-head"><h2>Search results</h2><button class="btn small clear-action" id="clear-results" type="button" aria-label="Clear search results" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn small primary" id="run-search" type="button">Run</button><button class="btn small" id="stop-search" type="button" hidden>Stop</button></div>
   <div class="panel-body">
     <div class="notice" id="import-message" hidden role="status"></div>
     <div class="table-wrap history-wrap"><table class="matrix history-table" aria-label="Search results"><thead><tr><th scope="col" class="select-col"><input type="checkbox" id="select-all-runs" aria-label="Select all searches for download"></th><th scope="col" class="date-col">Date</th><th scope="col">Database</th><th scope="col" class="num-col">Records</th><th scope="col" class="del-col"><span class="sr-only">Delete</span></th></tr></thead><tbody id="history-rows"></tbody></table></div>
@@ -831,6 +831,7 @@ async function importResults(file){if(!file)return;if(file.size>80*1024*1024)thr
 const deselectedRuns=new Set();
 function filteredRecords(){return records.filter(r=>(r.provenance||[]).some(p=>!deselectedRuns.has(p.runId)))}
 function renderResults(){
+  $('clear-results').disabled=busy||generating||(!runs.length&&!records.length);
   const n=filteredRecords().length,chosen=runs.filter(r=>!deselectedRuns.has(r.id)).length;
   $('download-results').disabled=busy||!n;
   $('download-summary').textContent=runs.length?n.toLocaleString()+' unique record'+(n===1?'':'s')+' from '+chosen+' of '+runs.length+' search'+(runs.length===1?'':'es')+' selected':'';
@@ -1053,6 +1054,21 @@ const conceptsDoneMessage=(added,filled)=>(added?added+' concept'+(added>1?'s':'
 // Deletes one search. Records found only by it go; records another search
 // also found stay, without this search in their provenance. The screening step
 // sees the changed set through the summary it already watches.
+async function clearResults(){
+  if(busy||generating||(!runs.length&&!records.length))return;
+  if(!confirm('Clear all search results in this project?\n\nThis will delete all search runs and their retrieved records. Search words and strategies will be kept. This cannot be undone.'))return;
+  const previous={runs,records};
+  setBusy(true);
+  try{
+    runs=[];records=[];indexRecords();
+    await persistResults();
+    if(!resultsStored){runs=previous.runs;records=previous.records;indexRecords();updateSummary();notice('import-message','Results could not be cleared from storage. Your records have been retained.','error');return}
+    deselectedRuns.clear();page=1;
+    if(projectId){try{const key='aimstep-setup-completed:'+encodeURIComponent(projectId),saved=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(saved)){localStorage.setItem(key,JSON.stringify(saved.map(Number).filter(n=>n!==2&&n!==3)));if(parent!==window&&parent.location.origin===location.origin)parent.AIMSTEP?.setSetupStepCompleted?.(2,false)}}catch(e){}}
+    notice('search-progress','');notice('import-message','');toast('Search results cleared.');
+  }finally{setBusy(false)}
+}
+$('clear-results').addEventListener('click',clearResults);
 function deleteRun(id){
   if(busy||generating)return;
   const run=runs.find(r=>r.id===id);if(!run)return;
