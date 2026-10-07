@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync('search-strategy.html','utf8'),els=new Map();const $=id=>{if(!els.has(id))els.set(id,{dataset:{}});return els.get(id)};
-const ctx={$,esc:v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'),mwController:null,machineWordPending:null,searchWordsReady:()=>true,DB:{pubmed:{label:'PubMed'}},renderResults(){},renderHistory(){}};vm.createContext(ctx);
+const ctx={$,state:{concepts:[{}]},esc:v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'),mwController:null,machineWordPending:null,searchWordsReady:()=>true,DB:{pubmed:{label:'PubMed'}},renderResults(){},renderHistory(){}};vm.createContext(ctx);
 vm.runInContext(html.slice(html.indexOf('function progressMarkup('),html.indexOf('function renderWordTerms('))+html.slice(html.indexOf('function progress(run,message)'),html.indexOf('async function retrievePubmed(')),ctx);
 ctx.renderWordProgress();assert($('word-progress').innerHTML.includes('value="100"'));ctx.mwController={};ctx.renderWordProgress();assert(!$('word-progress').innerHTML.includes('value='));ctx.mwController=null;ctx.searchWordsReady=()=>false;ctx.renderWordProgress();assert($('word-progress').innerHTML.includes('value="0"'));
 const run={db:'pubmed',downloaded:80,total:160,status:'Running'};ctx.progress(run,'Fetching');assert($('search-progress').innerHTML.includes('value="50"'));assert(!$('search-progress').innerHTML.includes('Fetching'));
