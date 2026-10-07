@@ -171,12 +171,12 @@ th{background:#f4f4f4}
 .pilot-review-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .review-chevron{display:inline-block;line-height:1;transform:rotate(180deg)}
 .pilot-review-toggle[aria-expanded="false"] .review-chevron{transform:none}
-.pilot-controls{--pilot-control-width:144px;--pilot-control-height:40px}
-.pilot-controls>.input,.pilot-controls>.btn,.pilot-controls .round{box-sizing:border-box;width:var(--pilot-control-width);min-width:var(--pilot-control-width);max-width:var(--pilot-control-width);height:var(--pilot-control-height);min-height:var(--pilot-control-height);padding:4px 8px;border-radius:6px;flex-shrink:0}
-.pilot-controls>.input{text-align:center}
-.pilot-controls>.btn{white-space:normal;line-height:1.25}
-.pilot-controls .round{justify-content:center}
-.pilot-controls .pilot-rounds{flex-basis:var(--pilot-control-width);min-width:var(--pilot-control-width)}
+.pilot-controls{--pilot-control-height:26px}
+.pilot-controls>.input,.pilot-controls>.btn,.pilot-controls .round{box-sizing:border-box;width:auto;min-width:0;max-width:none;height:var(--pilot-control-height);min-height:var(--pilot-control-height);padding:4px 8px;border-radius:6px;flex-shrink:0}
+.pilot-controls>.input{width:64px;text-align:center;font-size:12px}
+.pilot-controls>.btn{white-space:nowrap;line-height:1.25}
+.pilot-controls .round{justify-content:center;gap:0;padding:1px 8px;line-height:11px}
+.pilot-controls .pilot-rounds{flex-basis:120px;min-width:0}
 #criteria-dialog .criteria-dialog-head{align-items:flex-start;gap:16px}
 .criteria-heading{min-width:0;flex:1}.criteria-heading h2{margin:0}
 .criteria-source-actions{display:flex;flex-wrap:wrap;gap:4px 16px}.criteria-source-link{display:block;margin:4px 0 0;padding:5px 0;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;line-height:1.5;text-align:left;cursor:pointer}
@@ -270,7 +270,7 @@ th{background:#f4f4f4}
 <button class="btn small" type="button" id="screen-model-archives" hidden>Download previous screening runs</button>
 
 
-<div class="pilot-controls"><label class="label" for="sample-size">Records per round</label><input class="input" id="sample-size" type="number" min="5" max="100" step="1" value="20"><button class="btn primary" id="run-pilot" type="button">Start round 1</button><div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-calibration" type="button">Restart pilot</button></div>
+<div class="pilot-controls"><label class="label" for="sample-size">Records per round</label><input class="input" id="sample-size" type="number" min="5" max="100" step="1" value="20"><button class="btn primary" id="run-pilot" type="button">Round 1</button><div class="rounds pilot-rounds" id="rounds" aria-label="Pilot rounds" hidden></div><button class="btn small" id="stop-pilot" type="button" hidden>Stop</button><button class="btn small" id="reset-calibration" type="button">Restart pilot screening</button></div>
 <div class="audit" id="calibration-panel" hidden><h3 class="sub-head">Learning from pilot corrections</h3><p class="hint">Confirm the criterion and correction for each disagreement. All corrections are saved; relevant rules and examples are selected for each subsequent request. The screening model uses this feedback; model weights are not changed. Approval freezes the feedback for formal screening.</p><p class="hint" id="calibration-summary" role="status"></p><ul id="calibration-pending"></ul><details><summary>Confirmed correction rules</summary><ul id="calibration-rules"></ul></details><div class="toolbar"><button class="btn small" id="calibration-check" type="button">Check corrections (optional)</button><button class="btn small" id="calibration-stop" type="button" hidden>Stop check</button><button class="btn small" id="calibration-download" type="button">Download calibration</button></div><p class="hint" id="calibration-check-status" role="status" aria-live="polite"></p></div>
 <div class="notice" id="pilot-message" hidden role="status"></div>
 <p class="hint pilot-detail" id="pilot-detail" hidden></p>
@@ -1286,7 +1286,7 @@ function renderPilot(){
   $('rounds').hidden=!p.rounds.length;
   $('sample-size').value=p.size;
   const resume=lastSt&&!lastSt.aiDone;
-  $('run-pilot').textContent=resume?'Resume round '+(last+1):last<0?'Start round 1':'Run another round (optional)';
+  $('run-pilot').textContent='Round '+(resume?last+1:last+2);
   $('run-pilot').disabled=!ready||!!busy||pilotReviewSaving||!!pilotReviewDrafts.size||(!!lastSt&&!lastSt.revealed&&lastSt.aiDone);
   $('run-pilot').title=lastSt&&!lastSt.revealed&&lastSt.aiDone?'Save your review for every record in this round first.':'';
   $('stop-pilot').hidden=busy!=='pilot';
