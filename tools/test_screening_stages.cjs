@@ -27,7 +27,7 @@ vm.runInContext(extract('function screeningStagesReady()', 'function readySource
  extract('function pilotDecision(', 'async function screenPilotRecord(')+
  extract('function fullAI(', 'const isConflict='),ctx);
 const record={uid:'synthetic',title:'Adults with fibromyalgia',abstract:'Exercise lasted six weeks.'};ctx.recordById=new Map([[record.uid,record]]);
-const prompt=JSON.parse(ctx.pilotPrompt(record,0));assert.equal(prompt.criteria.length,3);assert(!prompt.criteria.some(c=>c.dimension.includes('Duration')));assert(prompt.stagePolicy.includes('deferred'));
+const prompt=JSON.parse(ctx.pilotPrompt(record,0));assert.equal(prompt.criteria.length,3);assert(!prompt.criteria.some(c=>c.dimension.includes('Duration')));assert(prompt.stagePolicy.includes('Disabled and deleted'));
 const active=stages.active(criteria,config).rows;
 let answer={decision:'exclude',criteria:[{dimension:items[3].label,judgment:'not met',quote:'Exercise lasted six weeks.'}]};
 assert.equal(ctx.pilotDecision(answer,record).decision,'maybe');assert.equal(ctx.pilotDecision(answer,record).criteria.length,0);
@@ -38,3 +38,17 @@ ctx.workspace.full.ai.synthetic=reading;ctx.workspace.full.ai2.synthetic={...rea
 assert.equal(ctx.aiPair('synthetic'),'conflict');ctx.workspace.full.ai2.synthetic=reading;assert.equal(ctx.aiPair('synthetic'),'no');
 ctx.workspace.screeningStages={...config,assignments:{...assignments,[items[0].id]:'fulltext'}};assert.equal(ctx.fullAI('synthetic'),null);
 console.log('PASS: stage configuration, safe splitting, alternatives, upstream changes, active prompt, exclusion gate, exact evidence, conflicts and stale results');
+
+// Version 2 is an independent, editable element list.
+const edited=stages.editable(criteria,null);
+assert.equal(edited.length,3);assert.equal(edited[0].inclusion,'1. Adults. 2. Fibromyalgia.');
+edited[0].inclusion='Adults or adolescents with fibromyalgia.';edited[0].exclusion='Animal studies.';edited[1].enabled=false;edited.splice(2,1);
+const v2={version:2,sourceSig:'criteria-v1',elements:edited};
+assert(stages.valid(v2,criteria,'criteria-v1'));assert(stages.draftValid([]));assert(!stages.valid({...v2,elements:[]},criteria,'criteria-v1'));
+const projection=stages.active(criteria,v2);assert.equal(projection.rows.length,1);assert.equal(projection.rows[0].condition,edited[0].inclusion);assert.equal(projection.rows[0].uncertain,'Animal studies.');
+assert.equal(JSON.stringify(criteria),original);assert.deepEqual(stages.editable(criteria,v2),edited);
+const migrated=stages.editable(criteria,config);assert.equal(migrated[2].enabled,false);
+ctx.workspace.screeningStages=v2;
+const editedPrompt=JSON.parse(ctx.pilotPrompt(record,0));assert.equal(editedPrompt.criteria.length,1);assert.equal(editedPrompt.criteria[0].inclusionRule,edited[0].inclusion);
+assert.equal(ctx.pilotDecision({decision:'exclude',criteria:[{dimension:'Intervention',judgment:'not met',quote:'Exercise lasted six weeks.'}]},record).decision,'maybe');
+console.log('PASS: editable inclusion/exclusion, disabled/deleted elements, empty save gating, legacy migration and prompt isolation');

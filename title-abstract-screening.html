@@ -222,6 +222,17 @@ th{background:#f4f4f4}
 .stage-options input{accent-color:#86549f}.stage-group{font-size:13px;margin:14px 0 2px}
 .stages-footer{justify-content:flex-end;margin-top:12px}
 @media(max-width:620px){.stage-row{align-items:flex-start;flex-direction:column;gap:8px}.stage-options{flex-wrap:wrap}}
+
+#open-screening-criteria svg,#screening-stages-title svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;flex:none}
+#screening-stages-title{display:flex;align-items:center;gap:6px}
+.screening-element{padding:10px 0;border-bottom:1px solid #eee8ef}
+.screening-element .element-title{flex:1;min-width:0;padding:5px 8px;min-height:30px;font-weight:600}
+.screening-element input[type=checkbox]{accent-color:#86549f}
+.screening-element-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.screening-element-fields .label{margin:8px 0 0}
+.screening-element-fields textarea{display:block;margin-top:4px;min-height:76px;font-size:12px;padding:8px;line-height:1.45;font-weight:400}
+.stages-footer #stage-add-choice{max-width:190px;margin-right:0}
+@media(max-width:620px){.screening-element-fields{grid-template-columns:1fr;gap:0}.stages-footer{flex-wrap:wrap}}
 </style>
 </head>
 <body>
@@ -246,7 +257,7 @@ th{background:#f4f4f4}
 </div>
 <div class="stack">
 <section class="panel">
-<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2>Pilot screening</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot screening works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar pilot-criteria-actions"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10v15H5V5h4m0-2h6v4H9zM8 11l1 1 2-2m2 1h3M8 16l1 1 2-2m2 1h3"/></svg>Eligibility criteria</button><button class="btn small" id="open-screening-criteria" type="button" aria-haspopup="dialog" aria-controls="screening-stages-dialog">Screening criteria <span aria-hidden="true">⚙</span></button></div></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="btn small clear-action" id="clear-pilot" type="button" aria-label="Clear pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
+<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2>Pilot screening</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot screening works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar pilot-criteria-actions"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10v15H5V5h4m0-2h6v4H9zM8 11l1 1 2-2m2 1h3M8 16l1 1 2-2m2 1h3"/></svg>Eligibility criteria</button><button class="btn small" id="open-screening-criteria" type="button" aria-haspopup="dialog" aria-controls="screening-stages-dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4"/></svg>Screening criteria</button></div></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round">Approve pilot</button><button class="btn small clear-action" id="clear-pilot" type="button" aria-label="Clear pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Pilot screening</span></button></div></div>
 <div class="panel-body" id="pilot-body">
 <button class="btn small" type="button" id="screen-model-archives" hidden>Download previous screening runs</button>
 
@@ -320,16 +331,16 @@ th{background:#f4f4f4}
 </dialog>
 
 <dialog id="screening-stages-dialog" class="dialog" aria-labelledby="screening-stages-title">
-<div class="panel-head"><div class="toolbar"><h2 id="screening-stages-title">Screening criteria</h2><button type="button" class="pilot-help-button" id="stages-help" aria-label="About screening criteria" aria-expanded="false" aria-controls="stages-help-text">i</button></div><button type="button" class="criteria-close" id="close-stages" aria-label="Close screening criteria">×</button></div>
+<div class="panel-head"><div class="toolbar"><h2 id="screening-stages-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4"/></svg>Screening criteria</h2></div><button type="button" class="criteria-close" id="close-stages" aria-label="Close screening criteria">×</button></div>
 <div class="panel-body">
-<p class="hint" id="stages-help-text" hidden>Only explicitly unmet criteria selected for title and abstract screening can justify exclusion. Missing information is retained for full-text assessment. All criteria still apply at full text. Compound alternatives stay grouped to preserve their original logic.</p>
-<p class="hint" id="stages-status" role="status"></p>
+<p class="hint" id="stages-help-text" hidden data-developer-notes>Only explicitly unmet criteria selected for title and abstract screening can justify exclusion. Missing information is retained for full-text assessment. All criteria still apply at full text. Compound alternatives stay grouped to preserve their original logic.</p>
+<p class="hint" id="stages-status" role="status" hidden></p>
 <div id="stages-items"></div>
 <p class="notice error" id="stages-error" role="alert" hidden></p>
-<div class="toolbar stages-footer"><button type="button" class="btn small" id="reset-stages">Reset</button><button type="button" class="btn small" id="save-stages">Save</button></div>
+<div class="toolbar stages-footer"><select class="select compact" id="stage-add-choice" aria-label="Element to add"></select><button type="button" class="btn small" id="add-stage-element">Add element</button><button type="button" class="btn small clear-action" id="reset-stages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button type="button" class="btn small clear-action" id="save-stages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button></div>
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
-<script src="app/screening-stages.js"></script>
+<script src="app/screening-stages.js?v=editable-v2"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js"></script><script>
 'use strict';
@@ -669,7 +680,7 @@ function publishForFullText(){
       if(!workspace||!source)return;
       const s=summary(),records=source.records.filter(r=>forward(finalDecision(r.uid))).map(r=>({uid:r.uid,title:r.title,authors:r.authors,year:r.year,journal:r.journal,volume:r.volume,issue:r.issue,pages:r.pages,doi:r.doi,pmid:r.pmid,url:r.url,abstract:r.abstract,databases:sourceDatabases(r),taDecision:finalDecision(r.uid),taSource:decisionSource(r.uid),returnId:workspace.returnTokens?.[r.uid]||''}));
       const db=await openDB('aimstep-fulltext-input');
-      await putProject(db,{id:scope,updatedAt:now(),criteria:source.criteria||null,criteriaSig:source.criteriaSig,criteriaOrigin:criteriaOrigin||null,records,screeningStages:workspace.screeningStages||null,deferredCriteria:AimstepScreeningStages.items(source.criteria).filter(i=>workspace.screeningStages?.assignments?.[i.id]==='fulltext'),pending:s.pending,screeningComplete:s.completed});
+      await putProject(db,{id:scope,updatedAt:now(),criteria:source.criteria||null,criteriaSig:source.criteriaSig,criteriaOrigin:criteriaOrigin||null,records,pending:s.pending,screeningComplete:s.completed});
       db.close();
     }catch(e){console.error('Full-text hand-off failed',e)}
   },800);
@@ -1048,7 +1059,7 @@ $('calibration-pending').addEventListener('click',e=>{const b=e.target.closest('
 function pilotPrompt(record,round,variant=1,calibration=null){
   const c=activeScreeningCriteria(),rows=variant===2?c.rows.slice().reverse():c.rows,rec={title:record.title,abstract:record.abstract||'(no abstract available)'};
   const feedback=calibrationEngine.select(calibration,record);
-  return JSON.stringify({...(variant===2?{record:rec,task:'Read this record, then judge it against each criterion. Return JSON only.'}:{task:'Screen this record against each criterion. Return JSON only.'}),question:c.question||'',stagePolicy:'Only the supplied criteria are active for title and abstract screening. Other eligibility conditions are deferred to full text and must not cause exclusion, even if mentioned in the question or reviewer feedback. Missing information is not an exclusion. For an exclusion-only rule, not met means the stated exclusion applies; met means the text explicitly rules it out; otherwise unclear.',
+  return JSON.stringify({...(variant===2?{record:rec,task:'Read this record, then judge it against each criterion. Return JSON only.'}:{task:'Screen this record against each criterion. Return JSON only.'}),question:c.question||'',stagePolicy:'Use only the supplied edited screening criteria. Disabled and deleted elements must not cause exclusion, even if mentioned in the question or reviewer feedback. Missing information is not an exclusion. For an exclusion-only rule, not met means the stated exclusion applies; met means the text explicitly rules it out; otherwise unclear.',
     criteria:rows.map(r=>({dimension:r.title,inclusionRule:[r.condition,r.definition].filter(Boolean).join('\n'),exclusionRule:r.uncertain})),
     reviewerCalibration:feedback,reviewerExamples:feedback.examples,...(variant===2?{}:{record:rec}),
     answerFormat:{criteria:rows.map(r=>({dimension:r.title,judgment:'met | not met | unclear',quote:'exact words copied from the title or abstract, or empty',reason:'one short sentence'})),decision:'include | maybe | exclude',reason:'one short sentence'}});
@@ -2188,19 +2199,14 @@ const stagesDialog=$('screening-stages-dialog');
 function renderStageButton(){
   const button=$('open-screening-criteria');
   button.disabled=clearActionsBlocked()||!source.criteria?.rows?.length;
-  button.title=screeningStagesReady()?'Set the stage for each eligibility condition.':'Set and save the stage for each eligibility condition before starting the pilot.';
+  button.title=screeningStagesReady()?'Edit the criteria used for title and abstract screening.':'Set and save screening criteria before starting the pilot.';
 }
 function stagesDirty(){return !!stagesDraft&&JSON.stringify(stagesDraft)!==stagesInitial}
 function renderStageRows(){
-  const items=AimstepScreeningStages.items(source.criteria);
-  let last='';
-  $('stages-items').innerHTML=items.map(item=>{
-    const group=last!==item.dimension?'<h3 class="stage-group">'+esc(item.dimension)+'</h3>':'';last=item.dimension;
-    return group+'<div class="stage-row"><div class="stage-text" id="stage-label-'+item.id+'"><span class="stage-kind">'+(item.kind==='inclusion'?'Inclusion':'Exclusion')+'</span>'+esc(item.text)+'</div><div class="stage-options" role="group" aria-labelledby="stage-label-'+item.id+'">'+[['abstract','Title & abstract'],['fulltext','Full text only']].map(([value,label])=>'<label><input type="radio" name="stage-'+item.id+'" data-stage-id="'+item.id+'" value="'+value+'"'+(stagesDraft[item.id]===value?' checked':'')+'>'+label+'</label>').join('')+'</div></div>';
-  }).join('');
-  const pending=items.filter(i=>!['abstract','fulltext'].includes(stagesDraft[i.id])).length;
-  $('stages-status').textContent=!items.length?'Create eligibility criteria first.':pending?pending+' condition'+(pending===1?' needs':'s need')+' a stage.':'All conditions have a stage.';
-  $('save-stages').disabled=stagesSaving||!items.length;
+  $('stages-items').innerHTML=stagesDraft.map((e,index)=>'<section class="screening-element"><div class="toolbar"><input type="checkbox" data-element-enabled="'+index+'" aria-label="Use '+esc(e.title||'element')+'"'+(e.enabled?' checked':'')+'><input class="input element-title" aria-label="Element name" data-element-field="title" data-element-index="'+index+'" value="'+esc(e.title)+'"><button class="criteria-close" type="button" data-element-delete="'+index+'" aria-label="Delete '+esc(e.title||'element')+'">×</button></div><div class="screening-element-fields"><label class="label">Inclusion<textarea class="textarea" data-element-field="inclusion" data-element-index="'+index+'">'+esc(e.inclusion)+'</textarea></label><label class="label">Exclusion<textarea class="textarea" data-element-field="exclusion" data-element-index="'+index+'">'+esc(e.exclusion)+'</textarea></label></div></section>').join('');
+  const seeds=AimstepScreeningStages.seed(source.criteria).filter(e=>!stagesDraft.some(x=>x.id===e.id));
+  $('stage-add-choice').innerHTML=seeds.map(e=>'<option value="'+esc(e.id)+'">'+esc(e.title)+'</option>').join('')+'<option value="custom">Custom element</option>';
+  $('save-stages').disabled=stagesSaving;
 }
 function closeStageDialog(){
   if(stagesSaving)return;
@@ -2210,16 +2216,29 @@ function closeStageDialog(){
 $('open-screening-criteria').addEventListener('click',()=>{
   if(clearActionsBlocked())return;
   stagesBase=source.criteriaSig;
-  stagesDraft=Object.fromEntries(AimstepScreeningStages.items(source.criteria).map(i=>[i.id,workspace.screeningStages?.assignments?.[i.id]||'']));
+  stagesDraft=AimstepScreeningStages.editable(source.criteria,workspace.screeningStages);
   stagesInitial=JSON.stringify(stagesDraft);
-  $('stages-error').hidden=true;$('stages-help-text').hidden=true;$('stages-help').setAttribute('aria-expanded','false');
+  $('stages-error').hidden=true;$('stages-help-text').hidden=true;
   renderStageRows();stagesDialog.showModal();
 });
-$('stages-items').addEventListener('change',event=>{
-  const id=event.target.dataset.stageId;if(!id||!stagesDraft||stagesSaving)return;
-  stagesDraft[id]=event.target.value;renderStageRows();
+$('stages-items').addEventListener('input',event=>{
+  if(stagesSaving||!stagesDraft)return;
+  const field=event.target.dataset.elementField,index=Number(event.target.dataset.elementIndex);
+  if(['title','inclusion','exclusion'].includes(field)&&stagesDraft[index])stagesDraft[index][field]=event.target.value;
 });
-$('stages-help').addEventListener('click',()=>{const el=$('stages-help-text');el.hidden=!el.hidden;$('stages-help').setAttribute('aria-expanded',String(!el.hidden))});
+$('stages-items').addEventListener('change',event=>{
+  if(stagesSaving||event.target.dataset.elementEnabled===undefined)return;
+  const e=stagesDraft?.[Number(event.target.dataset.elementEnabled)];if(e)e.enabled=event.target.checked;
+});
+$('stages-items').addEventListener('click',event=>{
+  const button=event.target.closest('[data-element-delete]');if(!button||stagesSaving)return;
+  stagesDraft.splice(Number(button.dataset.elementDelete),1);renderStageRows();
+});
+$('add-stage-element').addEventListener('click',()=>{
+  if(stagesSaving)return;
+  const selected=AimstepScreeningStages.seed(source.criteria).find(e=>e.id===$('stage-add-choice').value);
+  stagesDraft.push(selected||{id:'custom-'+crypto.randomUUID(),title:'',inclusion:'',exclusion:'',enabled:true});renderStageRows();
+});
 $('close-stages').addEventListener('click',closeStageDialog);
 stagesDialog.addEventListener('cancel',event=>{event.preventDefault();closeStageDialog()});
 stagesDialog.addEventListener('click',event=>{
@@ -2229,9 +2248,8 @@ stagesDialog.addEventListener('click',event=>{
 stagesDialog.addEventListener('close',()=>{stagesDraft=null;stagesInitial=''});
 window.addEventListener('beforeunload',event=>{if(stagesDirty()){event.preventDefault();event.returnValue=''}});
 $('reset-stages').addEventListener('click',()=>{
-  if(stagesSaving||!confirm('Reset to the first saved stage settings? Changes apply only after Save.'))return;
-  stagesDraft=Object.fromEntries(AimstepScreeningStages.items(source.criteria).map(i=>[i.id,workspace.screeningStagesInitial?.assignments?.[i.id]||'']));
-  renderStageRows();
+  if(stagesSaving||!confirm('Clear all screening criteria elements? Click Save to apply this change.'))return;
+  stagesDraft=[];renderStageRows();
 });
 async function saveStageSettings(){
   if(clearActionsBlocked()||stagesSaving)return;
@@ -2241,25 +2259,25 @@ async function saveStageSettings(){
   finally{stagesSaving=false;$('save-stages').disabled=false;render()}
   if(!stagesDraft)return;
   if(stagesBase!==source.criteriaSig){error('Eligibility criteria changed. Close and reopen this dialog to review the updated conditions.');return}
-  const next={version:1,sourceSig:source.criteriaSig,criteriaSnapshot:structuredClone(source.criteria),items:AimstepScreeningStages.items(source.criteria),assignments:{...stagesDraft},savedAt:now()};
-  if(next.items.length>100){error('At most 100 conditions can be configured. Keep related conditions grouped.');return}
-  if(!AimstepScreeningStages.valid(next,source.criteria,source.criteriaSig)){error('Select a stage for every condition and select Title & abstract for at least one condition.');return}
+  const next={version:2,sourceSig:source.criteriaSig,criteriaSnapshot:structuredClone(source.criteria),elements:structuredClone(stagesDraft),savedAt:now()};
+  if(next.elements.length>100){error('At most 100 elements can be configured.');return}
+  if(!AimstepScreeningStages.draftValid(next.elements)){error('Give each selected element a name and at least one inclusion or exclusion rule.');return}
   if(screeningStagesReady()&&screeningStageSig()===AimstepScreeningStages.signature(next)){
-    stagesInitial=JSON.stringify(stagesDraft);$('stages-status').textContent='Screening criteria saved.';return;
+    stagesInitial=JSON.stringify(stagesDraft);$('stages-status').textContent='Screening criteria saved.';toast('Screening criteria saved.');return;
   }
   const hasResults=screeningHasProgress();
   if(hasResults&&!confirm('Save these screening criteria? Existing pilot and formal assessments will be archived. Start a new pilot and re-screen all records, including earlier exclusions.'))return;
   const previous=structuredClone(workspace);
   stagesSaving=true;busy='stage-settings';$('save-stages').disabled=true;$('reset-stages').disabled=true;$('stages-items').inert=true;
   try{
-    if(hasResults)(workspace.screeningStageArchives??=[]).push({at:now(),reason:'screening-stage-settings-changed',settings:previous.screeningStages||null,criteriaSnapshot:previous.screeningStages?.criteriaSnapshot||structuredClone(source.criteria),criteriaSig:previous.criteriaSig,records:structuredClone(source.records),pilot:previous.pilot,full:previous.full});
+    if(hasResults)(workspace.screeningStageArchives??=[]).push({at:now(),reason:'screening-criteria-edited',settings:previous.screeningStages||null,criteriaSnapshot:previous.screeningStages?.criteriaSnapshot||structuredClone(source.criteria),criteriaSig:previous.criteriaSig,records:structuredClone(source.records),pilot:previous.pilot,full:previous.full});
     workspace.screeningStages=next;
     if(!workspace.screeningStagesInitial)workspace.screeningStagesInitial=structuredClone(next);
     clearCalibration();workspace.sourceSig=source.sourceSig;workspace.criteriaSig=source.criteriaSig;
-    log('screening-stages-saved',{signature:screeningStageSig(),assignments:next.assignments});
+    log('screening-stages-saved',{signature:screeningStageSig(),elements:next.elements});
     await save();
     pilotReviewDrafts.clear();pilotReviewErrors.clear();expandedPilotAssessments.clear();fullReviewErrors.clear();exclusionDrafts.clear();expandedFullAssessments.clear();collapsedFullAssessments.clear();fullNow.clear();fullDone.length=0;pilotView=-1;pilotFilter='agreed';fullFilter='';
-    stagesInitial=JSON.stringify(stagesDraft);$('stages-error').hidden=true;$('stages-status').textContent='Screening criteria saved. Start a new pilot to use these settings.';
+    stagesInitial=JSON.stringify(stagesDraft);$('stages-error').hidden=true;$('stages-status').textContent='Screening criteria saved. Start a new pilot to use these settings.';toast(next.elements.length?'Screening criteria saved.':'Screening criteria cleared.');
     showNotice('pilot-message','');showNotice('full-message','');
   }catch(e){workspace=previous;publishSummary();error('Could not save screening criteria: '+e.message)}
   finally{stagesSaving=false;busy='';$('save-stages').disabled=false;$('reset-stages').disabled=false;$('stages-items').inert=false;render();}

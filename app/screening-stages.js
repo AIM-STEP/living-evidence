@@ -29,16 +29,40 @@
     const names=new Map();
     return out.map(item=>{const n=(names.get(item.label)||0)+1;names.set(item.label,n);return {...item,label:item.label+(n>1?' ('+n+')':'')}});
   }
+  function seed(criteria){
+    return (criteria?.rows||[]).map((r,index)=>({id:'element-'+hash([r.title,index]),title:clean(r.title)||'Criterion',inclusion:[clean(r.condition),clean(r.definition)].filter(Boolean).join('\n'),exclusion:clean(r.uncertain),enabled:true}));
+  }
+  function editable(criteria,config){
+    if(config?.version===2)return structuredClone(config.elements||[]);
+    if(!config)return seed(criteria);
+    return seed(criteria).map(element=>{
+      const original=items(criteria).filter(i=>i.dimension===element.title&&config.assignments?.[i.id]==='abstract');
+      return {...element,enabled:!!original.length};
+    });
+  }
+  function draftValid(elements){
+    return Array.isArray(elements)&&elements.length<=100&&elements.every(e=>e&&typeof e.id==='string'&&typeof e.enabled==='boolean'&&['title','inclusion','exclusion'].every(k=>typeof e[k]==='string')&&(!e.enabled||(clean(e.title)&&!!(clean(e.inclusion)||clean(e.exclusion)))))&&new Set(elements.map(e=>e.id)).size===elements.length;
+  }
   function valid(config,criteria,sig){
+    if(config?.version===2)return config.sourceSig===sig&&draftValid(config.elements)&&config.elements.some(e=>e.enabled);
+
     const list=items(criteria);
     return !!config&&config.sourceSig===sig&&list.length>0&&list.length<=100&&list.every(i=>['abstract','fulltext'].includes(config.assignments?.[i.id]))&&list.some(i=>config.assignments[i.id]==='abstract');
   }
   function active(criteria,config){
+    if(config?.version===2){
+      const names=new Map();
+      return {...criteria,rows:(config.elements||[]).filter(e=>e.enabled).map(e=>{
+        const title=clean(e.title),n=(names.get(title)||0)+1;names.set(title,n);
+        return {title:title+(n>1?' ('+n+')':''),condition:clean(e.inclusion),uncertain:clean(e.exclusion),definition:'',stageItemId:e.id};
+      })};
+    }
+
     return {...criteria,rows:items(criteria).filter(i=>config?.assignments?.[i.id]==='abstract').map(i=>({
       title:i.label,condition:i.kind==='inclusion'?i.text:'',uncertain:i.kind==='exclusion'?i.text:'',definition:'',stageItemId:i.id
     }))};
   }
-  function signature(config){return config?hash([config.sourceSig,config.assignments]):''}
-  const api={items,parts,valid,active,signature};
+  function signature(config){return config?hash([config.sourceSig,config.version===2?config.elements:config.assignments]):''}
+  const api={items,parts,seed,editable,draftValid,valid,active,signature};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepScreeningStages=api;
 })(typeof globalThis==='undefined'?this:globalThis);
