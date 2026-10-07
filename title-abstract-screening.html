@@ -65,8 +65,8 @@ p{margin:8px 0}
 .stat span{font-size:11px;color:var(--muted)}
 .team-overview{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:24px;margin-bottom:20px}
 .team-overview h3{font-size:17px;margin:0 0 15px}
-.team-track{height:12px;border-radius:20px;background:#e3e5e8;overflow:hidden;margin:0 0 17px}
-.team-track span{display:block;height:100%;background:#78b272;transition:width .2s}
+.screening-progress{display:flex;align-items:center;gap:8px;margin:12px 0 6px}.screening-progress-percent{flex:none;min-width:32px;font-size:11px;line-height:15px;color:#79548e;font-variant-numeric:tabular-nums}.team-track{flex:1;min-width:0;height:14px;border-radius:8px;background:#eee5f1;overflow:hidden}.screening-progress .full-track{margin:0}
+.team-track span{display:block;height:100%;background:#86549f;border-radius:8px;transition:width 1.2s ease}@media(prefers-reduced-motion:reduce){.team-track span{transition:none}}
 .team-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .team-metric{display:flex;align-items:center;gap:8px;min-width:0;padding:6px 0;background:none;border:0;color:var(--ink);text-align:left}
 .team-metric strong{font-size:22px;line-height:1}
@@ -253,7 +253,7 @@ th{background:#f4f4f4}
 <div class="panel-body" id="full-body">
 
 <div class="source-summary pilot-summary full-summary" id="full-categories"><div><strong id="full-screened">0 / 0</strong><span>Completed</span></div><div><button class="full-category" type="button" data-full-category="yes" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-yes">0</strong><span>Yes</span></button></div><div><button class="full-category" type="button" data-full-category="maybe" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-maybe">0</strong><span>Maybe</span></button></div><div><button class="full-category" type="button" data-full-category="no" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-no">0</strong><span>No</span></button></div><div><button class="full-category" type="button" data-full-category="conflicts" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-conflicts">0</strong><span>Conflicts</span></button></div><div><button class="full-category" type="button" data-full-category="check" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-check">0</strong><span>Check</span></button></div></div>
-<div class="team-track full-track" role="progressbar" aria-label="Screening complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="team-track"><span id="team-bar" style="width:0"></span></div>
+<div class="screening-progress"><span class="screening-progress-percent" id="screening-progress-percent" aria-hidden="true">0%</span><div class="team-track full-track" role="progressbar" aria-label="Screening complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="team-track"><span id="team-bar" style="width:0"></span></div></div>
 <p class="hint" id="full-progress" hidden></p>
 <p class="full-now" id="full-now" hidden></p>
 <div class="notice" id="full-message" hidden role="status"></div>
@@ -1441,7 +1441,7 @@ function renderFull(){
   $('full-conflicts').textContent=s.conflicts.toLocaleString();
   $('full-conflicts').parentElement.classList.toggle('alert',s.conflicts>s.conflictsResolved);
   $('full-check').textContent=s.humanCheck.toLocaleString();
-  $('team-bar').style.width=share+'%';$('team-track').setAttribute('aria-valuenow',String(share));
+  $('screening-progress-percent').textContent=share+'%';$('team-bar').style.width=share+'%';$('team-track').setAttribute('aria-valuenow',String(share));
   const times=workspace.full.times||[],avg=fullDone.length>=4?(fullDone.at(-1)-fullDone[0])/(fullDone.length-1):times.length?times.reduce((a,b)=>a+b,0)/times.length/(screeningProvider()==='typesafe'?1:AI_WORKERS):0;
   $('full-progress').textContent=share+'% · '+s.done.toLocaleString()+' of '+s.sourceCount.toLocaleString()+' records decided · AI passes '+s.aiScreened.toLocaleString()+' / '+aiRecords().length.toLocaleString()+' records'+(calls&&avg?' · '+(avg*calls<60000?'under a minute':'about '+fmtDuration(avg*calls))+' of AI screening left':'')+(s.humanReviewed?' · '+s.humanReviewed.toLocaleString()+' decided by you':'');
   // Summarize exclusions by the first supported unmet criterion from either pass.
