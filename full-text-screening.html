@@ -238,7 +238,7 @@ th{background:#f4f4f4}
 <div class="panel-body" id="source-body">
 <div id="source-background" hidden>
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span>To screen</span></div></div>
-<p class="hint" id="source-hint"></p><details id="retrieval-settings" hidden><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC and PubMed Central, OpenAlex, Semantic Scholar, Crossref publisher links, Unpaywall, arXiv, and saved full-text links. Retrieval starts automatically while this page is open and idle. Sources are tried in order until a readable file is found; unreadable or mismatched files are skipped. Failed lookups retry after six hours; Download retries immediately. Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent directly to these services. Downloads use your browser and current network without an AI model or local server. Browser cross-origin rules and website access permissions still apply.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
+<p class="hint" id="source-hint"></p><details id="retrieval-settings" hidden><summary>Open-access sources and retrieval settings</summary><p class="hint">Europe PMC and PubMed Central, OpenAlex, Semantic Scholar, Crossref publisher links, Unpaywall, arXiv, and saved full-text links. The local assistant queues missing files automatically and keeps working after this page closes. Original PDFs are preferred; readable XML is retained as a fallback. Identifiers and file contents are checked. Temporary failures retry with backoff; Download retries immediately. Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent directly to these services. The local assistant uses the network of the computer running port 8765, public repositories and available Zotero attachments. If it is unavailable, retrieval falls back to this browser and its network. No AI model is used for downloading. Browser cross-origin rules and website access permissions still apply.</p><label class="label" for="oa-email">Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint">Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
 <div class="notice" id="source-notice" hidden role="status"></div>
 </div>
 <div class="source-record-list" id="doc-rows" role="list" aria-label="Reports for Full-text assess"></div>
@@ -334,7 +334,8 @@ th{background:#f4f4f4}
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
-<script src="app/fulltext-browser.js"></script>
+<script src="app/fulltext-browser.js?v=20261006-queue1"></script>
+<script src="app/fulltext-assistant.js?v=20261006-queue1"></script>
 <script>
 'use strict';
 (() => {
@@ -854,6 +855,7 @@ async function removeSourceRecord(id,move=false){
     if(workspace.pilot.rounds.some(r=>r.ids.includes(id))){workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;}
     else{delete workspace.full.ai[id];delete workspace.full.ai2[id];delete workspace.full.human[id];workspace.full.completedAt='';}
     indexRecords();log(move?'report-returned-to-screening':'source-report-deleted',{recordId:id});await save();
+    getDownloadAssistant()?.cancel([assistantRecord(rec)]).catch(()=>{});
     toast(move?'Moved to Title and abstract screening for a new decision.':'Record deleted from Full-text assess.');
   }catch(e){workspace=before;indexRecords();publishSummary();toast('Could not update the record: '+e.message);}
   finally{busy='';render();}
@@ -951,9 +953,10 @@ async function clearSource(){
   if(busy||pdfDownloading||syncingSource)return;
   if(!confirm('Clear all '+workspace.records.length+' records from Full-text assess? Current assessment results will be archived. Locally imported records will need to be imported again. Records in Title and abstract screening and saved full-text files will be kept.'))return;
   pauseRetrieval();retrievalStatus='';
+  const removed=workspace.records.map(assistantRecord);
   archiveRun('Upstream results cleared from Full-text assess');
   workspace.sourceCleared=true;workspace.records=[];workspace.imports=[];workspace.pilot=newPilot(workspace.pilot.size);workspace.full=newFull();pilotView=-1;
-  indexRecords();log('source-cleared');await save();showNotice('source-notice','Results cleared from this page. The previous step and saved full-text files are unchanged. Select Restore results to show the latest results again.');render();
+  indexRecords();log('source-cleared');await save();getDownloadAssistant()?.cancel(removed).catch(()=>{});showNotice('source-notice','Results cleared from this page. The previous step and saved full-text files are unchanged. Select Restore results to show the latest results again.');render();
 }
 async function restoreSource(){
   if(busy||syncingSource)return;
@@ -1095,11 +1098,29 @@ function retrievalDue(rec){
   const d=workspace.docs[rec.uid];
   return !hasOriginalPdf(rec.uid)&&d?.kind!=='not-retrievable'&&(!d?.retryAt||Date.parse(d.retryAt)<=Date.now()||d.lookupSig!==fingerprint([rec.title,rec.doi,rec.pmid]));
 }
-async function retrieveReadable(rec,base,signal,email){
-  return globalThis.AimstepFulltextBrowser.retrieve(rec,{signal,email,extraUrl:workspace.fulltextLinks?.[rec.uid]?.url||'',
-    readPdf:async(file,record)=>{const pages=await pdfPages(file);if(!matchPdf(pages.map(p=>p.text).join('\n'),[record]))throw new Error('PDF does not match this report.');const paras=pdfParagraphs(pages);if(chunkParagraphs(paras).length<3)throw new Error('Insufficient readable text.');return paras;},
+let downloadAssistant=null;
+function getDownloadAssistant(){
+  if(downloadAssistant||!globalThis.AimstepFulltextAssistant)return downloadAssistant;
+  try{
+    const storageKey='aimstep-fulltext-queue-token:'+scope;
+    let token=localStorage.getItem(storageKey);
+    if(!/^[a-f0-9]{64}$/.test(token||'')){token=Array.from(crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,'0')).join('');localStorage.setItem(storageKey,token);}
+    downloadAssistant=globalThis.AimstepFulltextAssistant.create({base:LOCAL_SERVER,token});
+  }catch(e){return null;}
+  return downloadAssistant;
+}
+function assistantRecord(rec){return {...rec,url:workspace.fulltextLinks?.[rec.uid]?.url||rec.url||''};}
+async function retrieveReadable(rec,base,signal,email,{pdfOnly=false}={}){
+  const options={signal,email,pdfOnly,waitMs:pdfOnly?60000:0,extraUrl:workspace.fulltextLinks?.[rec.uid]?.url||'',
+    readPdf:async(file,record)=>{const pages=await pdfPages(file);if(!matchPdf(pages.slice(0,2).map(p=>p.text).join('\n'),[record]))throw new Error('PDF does not match this report.');const paras=pdfParagraphs(pages);if(chunkParagraphs(paras).length<3)throw new Error('Insufficient readable text.');return paras;},
+    readXml:xml=>{const paras=jatsParagraphs(xml);if(chunkParagraphs(paras).length<3)throw new Error('Insufficient readable text.');return paras;},
     extractLinks:(html,url)=>{const doc=new DOMParser().parseFromString(html,'text/html'),values=[...doc.querySelectorAll('meta[name="citation_pdf_url"],meta[name="wkhealth_pdf_url"]')].map(el=>el.getAttribute('content'));for(const a of doc.querySelectorAll('a[href]'))if(/\.pdf(?:$|[?#])|\/pdf(?:\/|$|[?#])/i.test(a.getAttribute('href')))values.push(a.getAttribute('href'));return values.map(v=>{try{return new URL(v,url).href}catch{return '';}});}
-  });
+  };
+  const helper=await getDownloadAssistant()?.retrieve(assistantRecord(rec),options);
+  if(helper?.got||helper?.pending)return helper;
+  const result=await globalThis.AimstepFulltextBrowser.retrieve(rec,options);
+  if(helper)result.attempts=[...helper.attempts,...result.attempts];
+  return result;
 }
 async function findOpenAccess(){
   if(!workspace||busy||pdfDownloading||syncingSource||retrievalRunning||!workspace.records.length||document.hidden||navigator.onLine===false)return;
@@ -1112,21 +1133,22 @@ async function findOpenAccess(){
   try{
     retrievalStatus='Automatically checking free full-text sources…';renderRetrievalStatus();
     base='browser';
+    await getDownloadAssistant()?.submit(todo.map(assistantRecord),{signal:ctl.signal});
     for(const rec of todo){
       if(ctl.signal.aborted||busy||!workspace.records.length||document.hidden)break;
       if(!recordById.has(rec.uid)||hasOriginalPdf(rec.uid))continue;
-      let got=null,attempts=[];
+      let got=null,attempts=[],pending=false;
       const lookupSig=fingerprint([rec.title,rec.doi,rec.pmid]);
       try{
         if(!rec.doi&&!rec.pmid&&!rec.title)attempts=[{source:'Automatic retrieval',status:'missing-identifier',detail:'A DOI, PMID or title is needed. Update this record in the previous step.'}];
-        else ({got,attempts}=await retrieveReadable(rec,base,ctl.signal,email));
+        else ({got,attempts,pending=false}=await retrieveReadable(rec,base,ctl.signal,email));
       }catch(e){if(ctl.signal.aborted)throw e;attempts.push({source:'Automatic retrieval',status:'failed',detail:text(e.message,200)});}
       if(ctl.signal.aborted||!workspace.records.length||busy)break;
       const current=recordById.get(rec.uid);
       if(!current||fingerprint([current.title,current.doi,current.pmid])!==lookupSig)continue;
-      if(got){await storeText(rec.uid,got,got.file);found++;}
+      if(got){if(!(got.kind==='xml'&&workspace.docs[rec.uid]?.hash&&workspace.docs[rec.uid].hash===fingerprint(chunkParagraphs(got.paras)))){await storeText(rec.uid,got,got.file);found++;}}
       else if(!hasDoc(rec.uid))workspace.docs[rec.uid]={kind:'none',source:!rec.doi&&!rec.pmid&&!rec.title?'DOI, PMID or title required':'No readable free full text yet; automatic retry scheduled',at:now()};
-      workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,lookupSig,retryAt:new Date(Date.now()+(base?RETRIEVAL_RETRY_MS:5*60*1000)).toISOString(),url:got?.url||workspace.docs[rec.uid]?.url||''};
+      workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,lookupSig,retryAt:new Date(Date.now()+(pending?15000:base?RETRIEVAL_RETRY_MS:5*60*1000)).toISOString(),url:got?.url||workspace.docs[rec.uid]?.url||''};
       done++;retrievalStatus='Background retrieval: '+done+' / '+todo.length+' checked · '+found+' full texts added.';await save();render();
     }
     retrievalStatus='Background retrieval: '+found+' full texts added.'+(todo.some(r=>!hasDoc(r.uid))?' Missing files will be retried automatically.':'');
@@ -1136,12 +1158,12 @@ async function findOpenAccess(){
 
 
 async function downloadFulltextPdfs(){
-  if(pdfDownloading){pdfDownloadController?.abort();return;}
+  if(pdfDownloading){if(pdfDownloadController)pdfDownloadController.userStopped=true;pdfDownloadController?.abort();return;}
   if(busy||syncingSource||!workspace.records.length)return;
   pdfDownloading=true;pauseRetrieval();render();
   const ctl=new AbortController();pdfDownloadController=ctl;
   const timeout=setTimeout(()=>ctl.abort(),10*60*1000);
-  let found=0,checked=0;const pending=[];
+  let found=0,checked=0,queued=0;const pending=[],submitted=[];
   const current=rec=>{const r=recordById.get(rec.uid);return r&&fingerprint([r.title,r.doi,r.pmid])===fingerprint([rec.title,rec.doi,rec.pmid]);};
   async function applyPending(){
     while(pending.length&&!busy&&!syncingSource){
@@ -1152,7 +1174,7 @@ async function downloadFulltextPdfs(){
       try{
         if(got?.kind==='pdf'&&got.file){await storeText(rec.uid,got,got.file);workspace.docs[rec.uid].url=got.url||'';found++;}
         else if(!workspace.docs[rec.uid])workspace.docs[rec.uid]={kind:'none',source:'No free PDF found',at:now()};
-        workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,pdfCheckedAt:now()};
+        workspace.docs[rec.uid]={...workspace.docs[rec.uid],attempts,pdfCheckedAt:now(),retryAt:new Date(Date.now()+15000).toISOString()};
         log('pdf-download-retried',{recordId:rec.uid,found:got?.kind==='pdf'});await save();
       }catch(e){if(before)workspace.docs[rec.uid]=before;else delete workspace.docs[rec.uid];if(old)await saveDoc(old);else{await deleteKey(docStore,docKey(rec.uid));docCache.delete(rec.uid);}publishSummary();throw e;}
     }
@@ -1163,12 +1185,13 @@ async function downloadFulltextPdfs(){
     for(const rec of workspace.records){const doc=hasDoc(rec.uid)?await loadDoc(rec.uid):null;if(!doc?.pdf)todo.push(rec);}
     if(!todo.length){toast('Every report already has a saved PDF.');return;}
     const base='browser';
+    if(await getDownloadAssistant()?.submit(todo.map(assistantRecord),{signal:ctl.signal,force:true}))submitted.push(...todo.map(assistantRecord));
     const email=$('oa-email').checkValidity()?$('oa-email').value.trim():'';
     for(const rec of todo){
       if(ctl.signal.aborted)throw new DOMException('Stopped','AbortError');
       if(!current(rec))continue;
-      let got=null,attempts=[];
-      try{({got,attempts}=await retrieveReadable(rec,base,ctl.signal,email,{pdfOnly:true}));}
+      let got=null,attempts=[],waiting=false;
+      try{({got,attempts,pending:waiting=false}=await retrieveReadable(rec,base,ctl.signal,email,{pdfOnly:true}));if(waiting)queued++;}
       catch(e){if(ctl.signal.aborted)throw e;attempts.push({source:'PDF retrieval',status:'failed',detail:text(e.message,200)});}
       if(ctl.signal.aborted)throw new DOMException('Stopped','AbortError');
       pending.push({rec,got,attempts});await applyPending();
@@ -1176,9 +1199,9 @@ async function downloadFulltextPdfs(){
     }
     clearTimeout(timeout);
     while(pending.length){if(ctl.signal.aborted)throw new DOMException('Stopped','AbortError');await applyPending();if(pending.length)await new Promise(resolve=>setTimeout(resolve,100));}
-    toast(found+' PDF'+(found===1?'':'s')+' downloaded; '+(checked-found)+' could not be downloaded automatically on this network.');
-  }catch(e){toast(ctl.signal.aborted?'PDF download stopped. Saved files are retained.':e.message);}
-  finally{clearTimeout(timeout);pdfDownloading=false;pdfDownloadController=null;render();}
+    toast(found+' PDF'+(found===1?'':'s')+' downloaded; '+queued+' queued for automatic retrieval; '+(checked-found-queued)+' unavailable on this network.');
+  }catch(e){toast(ctl.signal.aborted?(submitted.length&&!ctl.userStopped?'Remaining downloads continue in the local queue.':'PDF download stopped. Saved files are retained.'):e.message);}
+  finally{if(ctl.userStopped&&submitted.length)try{await getDownloadAssistant()?.cancel(submitted);}catch(e){}clearTimeout(timeout);pdfDownloading=false;pdfDownloadController=null;render();}
 }
 
 // A PDF is matched to a report by DOI on its first pages, else by its title:

@@ -18,7 +18,7 @@ class SourceError(ValueError):
     pass
 
 
-def fetch(url, limit=LIMIT, redirects=4):
+def fetch(url, limit=LIMIT, redirects=4, *, response_info=False, timeout=18):
     """Validate every redirect and pin TLS connection to a checked public IP."""
     p = urlsplit(url)
     if p.scheme != 'https' or not p.hostname or p.username or p.password or p.port not in (None, 443):
@@ -28,8 +28,8 @@ def fetch(url, limit=LIMIT, redirects=4):
         raise ValueError('Non-public source blocked.')
     address = addresses[0][4]
     sock = socket.socket(addresses[0][0], socket.SOCK_STREAM)
-    sock.settimeout(18)
-    conn = http.client.HTTPSConnection(p.hostname, timeout=18)
+    sock.settimeout(timeout)
+    conn = http.client.HTTPSConnection(p.hostname, timeout=timeout)
     try:
         sock.connect(address)
         conn.sock = ssl.create_default_context().wrap_socket(sock, server_hostname=p.hostname)
@@ -40,13 +40,16 @@ def fetch(url, limit=LIMIT, redirects=4):
             if not target or redirects <= 0:
                 raise ValueError('Too many source redirects.')
             conn.close()
-            return fetch(urljoin(url, target), limit, redirects - 1)
+            return fetch(urljoin(url, target), limit, redirects - 1, response_info=response_info, timeout=timeout)
         if response.status != 200:
-            raise SourceError('Source HTTP %s' % response.status)
+            error = SourceError('Source HTTP %s' % response.status)
+            error.status = response.status
+            error.retry_after = response.getheader('Retry-After', '')
+            raise error
         data = response.read(limit + 1)
         if len(data) > limit:
             raise ValueError('Source exceeds download size limit.')
-        return data
+        return (data, url, dict(response.getheaders())) if response_info else data
     finally:
         conn.close()
         sock.close()

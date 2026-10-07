@@ -106,6 +106,24 @@ class ServerTest(unittest.TestCase):
 
     # ------------------------------------------------------------- health
 
+    def test_download_health_independent_of_models(self):
+        with patch.object(srv, 'check_model', side_effect=AssertionError('No model required')):
+            status, body = self.req('GET', '/api/eligibility/fulltext/health')
+        self.assertEqual(status, 200)
+        self.assertEqual(body['service'], 'aimstep-fulltext-assistant')
+        self.assertFalse(body['modelsRequired'])
+
+    def test_download_origin_and_payload_guards(self):
+        path = '/api/eligibility/fulltext'
+        with patch.object(srv.fulltext_assistant, 'instance') as instance:
+            status, _ = self.req('POST', path, {'token': 'a'*64}, {'Origin': 'https://untrusted.example'})
+            self.assertEqual(status, 403); instance.assert_not_called()
+            instance.return_value.request.return_value = {'jobs': []}
+            status, body = self.req('POST', path, {'token': 'a'*64, 'action': 'status', 'ids': []}, {'Origin': 'https://aimsetp.com'})
+            self.assertEqual(status, 200); self.assertEqual(body, {'jobs': []})
+            instance.return_value.request.side_effect = ValueError('Invalid private queue token.')
+            self.assertEqual(self.req('POST', path, {'token':'invalid'})[0], 400)
+
     def test_health_names_the_service_the_page_looks_for(self):
         status, body = self.req("GET", "/api/eligibility/health")
         self.assertEqual(status, 200)

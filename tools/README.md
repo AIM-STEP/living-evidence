@@ -481,3 +481,67 @@ a matching year when supplied. Ambiguous or near matches are not accepted.
 Unpaywall requires a real contact email; the other configured sources run without
 it. Background work requires this page to remain open and the Mac Studio backend
 for multi-source retrieval; this is not a server-side job after closing the page.
+
+## Automatic full-text download assistant (October 2026)
+
+The existing `local_model_server.py` now also serves an independent download queue
+on loopback port 8765. Ollama and TypeSafe are not involved in downloading. The
+launchd service on the configured Mac Studio starts the queue with the server;
+queued work continues after the browser closes and resumes after server restart.
+Only one process owns the queue worker lock. An SSH forward of the existing port
+also carries this API; no additional port is required.
+
+Private configuration is `../private/fulltext.json`, relative to the site root's
+parent AIM-STEP folder (absolute example:
+`/Users/achieve/AIM-STEP/private/fulltext.json`). Use the keys in
+`fulltext-assistant.example.json`; keep the real file outside this Git repository.
+`contactEmail` enables Unpaywall's DOI API; `openalexKey` is optional. Changes are
+read on the next job. No API key is sent to the browser. PyMuPDF, already installed
+on the configured Mac, checks downloaded PDF identity; other installations need
+`python3 -m pip install PyMuPDF` in the server's Python environment.
+
+Private originals and queue diagnostics live in `../private/fulltext/`:
+`queue.sqlite3` stores scoped jobs, attempts, retries and file metadata; hashed
+`.bin` files contain the unmodified original PDF or XML bytes. Directory mode is
+0700; originals/database are 0600. A random per-project browser token scopes result
+access. This is local trusted-machine isolation, not a multi-user authentication
+service. Cache limit defaults to 2 GiB; reaching it is recorded rather than deleting
+saved originals. Clear/record removal cancels submitted unfinished jobs; saved
+files remain, matching the existing Clear behavior. Clearing browser site data
+also loses its queue token, so that browser cannot automatically recover the old
+queue's results. Ordinary refresh preserves the token and IndexedDB PDFs.
+
+Discovery checks the local read-only Zotero API, Europe PMC, the new PMC cloud
+version metadata/PDF objects, Unpaywall OA locations, OpenAlex repositories,
+Crossref PDF links, Semantic Scholar, arXiv and publisher/record landing-page PDF
+metadata. HTTP links are upgraded to HTTPS. Every public-network connection and
+redirect is checked against private IPs and pinned to a resolved public address.
+PMC article HTML is not crawled. PDFs take precedence over XML; checksum (when
+provided) and DOI/title checks reject incorrect files. XML remains a readable
+fallback and never increments With PDF. Failed jobs retry after 15 minutes and
+6 hours (three attempts total), respecting longer Retry-After values. Download
+forces a new attempt for exhausted jobs. Jobs have a four-minute network budget,
+bounded candidates, 40 MiB files and one worker to limit publisher load.
+
+The helper uses **the Mac Studio's network**, not a remote browser's VPN or cookies.
+If the helper is unreachable, the existing browser downloader uses the browser's
+network instead. A browser may still require local-network permission. No login,
+captcha, institution credentials or paywall is bypassed. Zotero is optional and
+must actually be installed/running with its local API and matching attachments;
+the configured Mac currently has no Zotero installation/library. Scanned or
+identity-unverifiable PDFs are logged for later resolution, not silently attached.
+No new model was installed: discovery/network access, rather than model size, was
+the failure addressed here.
+
+Sources verified during implementation:
+- https://pmc.ncbi.nlm.nih.gov/tools/cloud/ (2026 cloud migration)
+- https://pmc.ncbi.nlm.nih.gov/tools/pmcaws/ (versioned public objects)
+- https://unpaywall.org/products/api (DOI API; retired search is not used)
+- https://help.openalex.org/api/authentication/
+- https://www.zotero.org/support/dev/web_api/v3/local_api
+
+Validation: `python3 -m unittest discover -s tools -p 'test_fulltext_assistant.py'`,
+`node tools/test_fulltext_assistant.cjs`, existing full-text workflow/reload/browser
+regressions, and `python3 tools/test_local_model_server.py`. A live retrieval of
+DOI `10.1093/pm/pnaf089` returned the original PMC PDF (2,485,544 bytes) in 6.5 s;
+this is one network measurement, not a general retrieval-rate guarantee.

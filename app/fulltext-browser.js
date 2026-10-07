@@ -6,7 +6,7 @@ const doiKey=s=>String(s||'').trim().replace(/^doi:\s*/i,'').replace(/^https?:\/
 function safeUrl(value){try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch{return '';}}
 async function retrieve(record,{signal,email='',fetchImpl=globalThis.fetch,readPdf,extractLinks=()=>[],extraUrl=''}={}){
   const attempts=[],candidates=[],seen=new Set();let doi=doiKey(record.doi),pmid=String(record.pmid||'');
-  const add=(source,value)=>{const url=safeUrl(value);if(url&&!seen.has(url)){seen.add(url);candidates.push({source,url});}};
+  const add=(source,value)=>{const url=safeUrl(typeof value==='string'?value.replace(/^http:\/\//,'https://'):value);if(url&&!['pmc.ncbi.nlm.nih.gov','www.ncbi.nlm.nih.gov'].includes(new URL(url).hostname)&&!seen.has(url)){seen.add(url);candidates.push({source,url});}};
   async function request(url,credentials='omit',limit=4*1024*1024){
     if(signal?.aborted)throw new DOMException('Stopped','AbortError');
     const ctl=new AbortController(),abort=()=>ctl.abort();signal?.addEventListener('abort',abort,{once:true});const timer=setTimeout(abort,15000);
@@ -28,7 +28,13 @@ async function retrieve(record,{signal,email='',fetchImpl=globalThis.fetch,readP
     let hits=data.resultList?.result||[];
     if(!doi&&!pmid){hits=hits.filter(h=>titleKey(h.title)===titleKey(record.title)&&(!record.year||String(h.pubYear)===String(record.year)));if(hits.length!==1)return;}
     for(const h of hits){doi=doi||doiKey(h.doi);if(h.source==='MED')pmid=pmid||String(h.id||'');for(const link of h.fullTextUrlList?.fullTextUrl||[])add('Europe PMC '+(link.site||'full text'),link.url);
-      if(/^PMC\d+$/.test(h.pmcid||'')){add('PubMed Central','https://pmc.ncbi.nlm.nih.gov/articles/'+h.pmcid+'/pdf/');add('Europe PMC PDF','https://europepmc.org/articles/'+h.pmcid+'?pdf=render');}}
+      if(/^PMC\d+$/.test(h.pmcid||''))await provider('PMC cloud',async()=>{
+        const cloud='https://pmc-oa-opendata.s3.amazonaws.com/';
+        const listing=new TextDecoder().decode((await request(cloud+'?'+new URLSearchParams({'list-type':'2',prefix:h.pmcid+'.',delimiter:'/', 'max-keys':'30'}))).bytes);
+        const folders=[...listing.matchAll(/<Prefix>(PMC\d+\.\d+\/)<\/Prefix>/g)].map(m=>m[1]).filter(f=>f.startsWith(h.pmcid+'.')).sort((a,b)=>Number(b.split('.')[1].replace('/',''))-Number(a.split('.')[1].replace('/','')));
+        for(const folder of [...new Set(folders)].slice(0,4)){const meta=await json(cloud+folder+folder.slice(0,-1)+'.json');if(doi&&doiKey(meta.doi).toLowerCase()!==doi.toLowerCase())continue;add('PMC cloud',String(meta.pdf_url||'').replace('s3://pmc-oa-opendata/',cloud));}
+      });}
+
   });
   await provider('OpenAlex',async()=>{const data=await json(doi?'https://api.openalex.org/works/https://doi.org/'+encodeURIComponent(doi):'https://api.openalex.org/works?'+new URLSearchParams({search:record.title||'','per-page':'5'}));let hits=doi?[data]:(data.results||[]).filter(h=>titleKey(h.title)===titleKey(record.title)&&(!record.year||String(h.publication_year)===String(record.year)));if(!doi&&hits.length!==1)return;for(const h of hits){doi=doi||doiKey(h.doi);for(const l of [h.best_oa_location,...(h.locations||[])].filter(Boolean))add('OpenAlex repository/publisher',l.pdf_url);for(const l of [h.best_oa_location,...(h.locations||[])].filter(l=>l?.is_oa))add('OpenAlex repository/publisher',l.landing_page_url);add('OpenAlex open access',h.open_access?.oa_url);}});
   await Promise.all([

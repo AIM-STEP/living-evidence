@@ -38,7 +38,8 @@ timing) to DIR/eligibility-YYYY-MM-DD.jsonl, so a draft can be traced back to
 exactly what the model was asked and answered. Off by default: the log holds
 the research text.
 
-Standard library only; Python 3.8+.
+Model routes use the standard library. The optional full-text assistant uses
+PyMuPDF for PDF identity checks; Python 3.10+.
 """
 
 from __future__ import annotations
@@ -47,6 +48,7 @@ import argparse
 import api_model
 import typesafe_model
 import fulltext_sources
+import fulltext_assistant
 import json
 import os
 import sys
@@ -316,6 +318,10 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if not self._host_ok():
             return self._send_json(421, {"error": "local requests only"})
+        if urlsplit(self.path).path == '/api/eligibility/fulltext/health':
+            if not self._origin_ok():
+                return self._send_json(403, {"error": "local requests only"})
+            return self._send_json(200, fulltext_assistant.health())
         if urlsplit(self.path).path == HEALTH:
             if not self._origin_ok():
                 return self._send_json(403, {"error": "local requests only"})
@@ -341,7 +347,7 @@ class Handler(SimpleHTTPRequestHandler):
         if not self._host_ok() or not self._origin_ok():
             return self._send_json(403, {"error": "local requests only"})
         route = urlsplit(self.path).path
-        if route not in (MODEL, EMBED):
+        if route not in (MODEL, EMBED, '/api/eligibility/fulltext'):
             return self._send_json(404, {"error": "not found"})
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -349,6 +355,12 @@ class Handler(SimpleHTTPRequestHandler):
             length = -1
         if length <= 0 or length > MAX_BODY:
             return self._send_json(413 if length > MAX_BODY else 400, {"error": "request body missing or too large"})
+        if route == '/api/eligibility/fulltext':
+            try:
+                result = fulltext_assistant.instance().request(json.loads(self.rfile.read(length).decode('utf-8')))
+                return self._send_json(200, result)
+            except (ValueError, UnicodeError) as e:
+                return self._send_json(400, {"error": str(e)})
         if route == EMBED:
             try:
                 texts = clean_embed(json.loads(self.rfile.read(length).decode("utf-8")))
@@ -470,6 +482,7 @@ def main(argv=None):
                       log_dir=args.log_dir, allowed_origins=allowed, embed_model=args.embed_model,
                       embed_ollama=embed_ollama)
     httpd = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
+    fulltext_assistant.instance()
     print("AIM-STEP 本地站点：http://127.0.0.1:%d/eligibility.html   (Ctrl+C 停止)" % args.port)
     if allowed:
         print("另允许以下线上站点调用本机模型：%s" % ", ".join(allowed))
