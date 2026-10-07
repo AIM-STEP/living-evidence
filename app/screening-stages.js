@@ -29,6 +29,13 @@
     const names=new Map();
     return out.map(item=>{const n=(names.get(item.label)||0)+1;names.set(item.label,n);return {...item,label:item.label+(n>1?' ('+n+')':'')}});
   }
+  const frameworks={PICO:['Population','Intervention','Comparison','Outcomes','Study design'],PECO:['Population','Exposure','Comparator','Outcomes','Study design'],PCC:['Population','Concept','Context'],PICo:['Population','Phenomenon of Interest','Context'],Other:['Other']};
+  const normalized=v=>clean(v).toLowerCase().replace(/[^a-z0-9]/g,'').replace(/^comparator$/,'comparison').replace(/^outcome$/,'outcomes');
+  function candidates(criteria,framework,elements){
+    const originals=seed(criteria),options=[...(frameworks[framework]||frameworks.PICO).map(title=>originals.find(e=>normalized(e.title)===normalized(title))||{id:'framework-'+hash(title),title,inclusion:'',exclusion:'',enabled:true}),...originals];
+    const used=new Set(elements.map(e=>normalized(e.title))),ids=new Set(elements.map(e=>e.id)),seen=new Set();
+    return options.filter(e=>{const key=normalized(e.title);if(ids.has(e.id)||used.has(key)||seen.has(key))return false;seen.add(key);return true});
+  }
   function seed(criteria){
     return (criteria?.rows||[]).map((r,index)=>({id:'element-'+hash([r.title,index]),title:clean(r.title)||'Criterion',inclusion:[clean(r.condition),clean(r.definition)].filter(Boolean).join('\n'),exclusion:clean(r.uncertain),enabled:true}));
   }
@@ -52,7 +59,7 @@
   function active(criteria,config){
     if(config?.version===2){
       const names=new Map();
-      return {...criteria,rows:(config.elements||[]).filter(e=>e.enabled).map(e=>{
+      return {...criteria,framework:config.framework||criteria?.framework,rows:(config.elements||[]).filter(e=>e.enabled).map(e=>{
         const title=clean(e.title),n=(names.get(title)||0)+1;names.set(title,n);
         return {title:title+(n>1?' ('+n+')':''),condition:clean(e.inclusion),uncertain:clean(e.exclusion),definition:'',stageItemId:e.id};
       })};
@@ -62,7 +69,7 @@
       title:i.label,condition:i.kind==='inclusion'?i.text:'',uncertain:i.kind==='exclusion'?i.text:'',definition:'',stageItemId:i.id
     }))};
   }
-  function signature(config){return config?hash([config.sourceSig,config.version===2?config.elements:config.assignments]):''}
-  const api={items,parts,seed,editable,draftValid,valid,active,signature};
+  function signature(config){return config?hash([config.sourceSig,config.version===2?[config.framework||'',config.elements]:config.assignments]):''}
+  const api={items,parts,frameworks,candidates,seed,editable,draftValid,valid,active,signature};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepScreeningStages=api;
 })(typeof globalThis==='undefined'?this:globalThis);

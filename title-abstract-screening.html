@@ -231,8 +231,16 @@ th{background:#f4f4f4}
 .screening-element-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .screening-element-fields .label{margin:8px 0 0}
 .screening-element-fields textarea{display:block;margin-top:4px;min-height:76px;font-size:12px;padding:8px;line-height:1.45;font-weight:400}
-.stages-footer #stage-add-choice{max-width:190px;margin-right:0}
+
 @media(max-width:620px){.screening-element-fields{grid-template-columns:1fr;gap:0}.stages-footer{flex-wrap:wrap}}
+
+.screening-element{border:0;box-shadow:none;background:transparent}
+.screening-element .element-title{border:0;background:transparent;border-radius:0;padding-left:0}
+.stage-framework{margin-bottom:12px}
+.stage-framework>.label{margin:0 0 6px}
+#stage-framework-options [aria-pressed="true"]{background:#eadce9;border-color:#a27da0;color:#5c004d}
+#stage-add-picker:not([hidden]){display:flex;margin:8px 0 12px}
+#screening-stages-dialog .panel-head{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -331,16 +339,16 @@ th{background:#f4f4f4}
 </dialog>
 
 <dialog id="screening-stages-dialog" class="dialog" aria-labelledby="screening-stages-title">
-<div class="panel-head"><div class="toolbar"><h2 id="screening-stages-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4"/></svg>Screening criteria</h2></div><button type="button" class="criteria-close" id="close-stages" aria-label="Close screening criteria">×</button></div>
+<div class="panel-head"><div class="toolbar"><h2 id="screening-stages-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4"/></svg>Screening criteria</h2></div><div class="toolbar"><button type="button" class="btn small" id="add-stage-element" aria-expanded="false" aria-controls="stage-add-picker">Add criteria</button><button type="button" class="criteria-close" id="close-stages" aria-label="Close screening criteria">×</button></div></div>
 <div class="panel-body">
 <p class="hint" id="stages-help-text" hidden data-developer-notes>Only explicitly unmet criteria selected for title and abstract screening can justify exclusion. Missing information is retained for full-text assessment. All criteria still apply at full text. Compound alternatives stay grouped to preserve their original logic.</p>
 <p class="hint" id="stages-status" role="status" hidden></p>
-<div id="stages-items"></div>
+<div class="stage-framework"><span class="label">Question framework</span><div id="stage-framework-options" class="toolbar" role="group" aria-label="Question framework"></div></div><div id="stage-add-picker" class="toolbar" hidden></div><div id="stages-items"></div>
 <p class="notice error" id="stages-error" role="alert" hidden></p>
-<div class="toolbar stages-footer"><select class="select compact" id="stage-add-choice" aria-label="Element to add"></select><button type="button" class="btn small" id="add-stage-element">Add element</button><button type="button" class="btn small clear-action" id="reset-stages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button type="button" class="btn small clear-action" id="save-stages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button></div>
+<div class="toolbar stages-footer"><button type="button" class="btn small clear-action" id="reset-stages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button type="button" class="btn small clear-action" id="save-stages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button></div>
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
-<script src="app/screening-stages.js?v=editable-v2"></script>
+<script src="app/screening-stages.js?v=framework-editor-v3"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js"></script><script>
 'use strict';
@@ -2194,19 +2202,23 @@ $('pilot-filter').addEventListener('click',e=>{const b=e.target.closest('[data-f
 $('run-pilot').addEventListener('click',()=>startPilotRound().catch(e=>showNotice('pilot-message',e.message,'error')));
 $('approve-pilot').addEventListener('click',()=>approvePilotRound().catch(e=>showNotice('pilot-message','Could not save approval: '+e.message,'error')));
 $('stop-pilot').addEventListener('click',()=>controller?.abort());
-let stagesDraft=null,stagesBase='',stagesInitial='',stagesSaving=false;
+let stagesDraft=null,stagesFramework='PICO',stagesBase='',stagesInitial='',stagesSaving=false;
 const stagesDialog=$('screening-stages-dialog');
 function renderStageButton(){
   const button=$('open-screening-criteria');
   button.disabled=clearActionsBlocked()||!source.criteria?.rows?.length;
   button.title=screeningStagesReady()?'Edit the criteria used for title and abstract screening.':'Set and save screening criteria before starting the pilot.';
 }
-function stagesDirty(){return !!stagesDraft&&JSON.stringify(stagesDraft)!==stagesInitial}
+function stageDraftSignature(){return JSON.stringify([stagesFramework,stagesDraft])}
+function stagesDirty(){return !!stagesDraft&&stageDraftSignature()!==stagesInitial}
 function renderStageRows(){
-  $('stages-items').innerHTML=stagesDraft.map((e,index)=>'<section class="screening-element"><div class="toolbar"><input type="checkbox" data-element-enabled="'+index+'" aria-label="Use '+esc(e.title||'element')+'"'+(e.enabled?' checked':'')+'><input class="input element-title" aria-label="Element name" data-element-field="title" data-element-index="'+index+'" value="'+esc(e.title)+'"><button class="criteria-close" type="button" data-element-delete="'+index+'" aria-label="Delete '+esc(e.title||'element')+'">×</button></div><div class="screening-element-fields"><label class="label">Inclusion<textarea class="textarea" data-element-field="inclusion" data-element-index="'+index+'">'+esc(e.inclusion)+'</textarea></label><label class="label">Exclusion<textarea class="textarea" data-element-field="exclusion" data-element-index="'+index+'">'+esc(e.exclusion)+'</textarea></label></div></section>').join('');
-  const seeds=AimstepScreeningStages.seed(source.criteria).filter(e=>!stagesDraft.some(x=>x.id===e.id));
-  $('stage-add-choice').innerHTML=seeds.map(e=>'<option value="'+esc(e.id)+'">'+esc(e.title)+'</option>').join('')+'<option value="custom">Custom element</option>';
+  $('stages-items').innerHTML=stagesDraft.map((e,index)=>'<section class="screening-element"><div class="toolbar"><input class="input element-title" aria-label="Element name" data-element-field="title" data-element-index="'+index+'" value="'+esc(e.title)+'"><button class="criteria-close" type="button" data-element-delete="'+index+'" aria-label="Delete '+esc(e.title||'element')+'">×</button></div><div class="screening-element-fields"><label class="label">Inclusion<textarea class="textarea" data-element-field="inclusion" data-element-index="'+index+'">'+esc(e.inclusion)+'</textarea></label><label class="label">Exclusion<textarea class="textarea" data-element-field="exclusion" data-element-index="'+index+'">'+esc(e.exclusion)+'</textarea></label></div></section>').join('');
+  renderStageFramework();
   $('save-stages').disabled=stagesSaving;
+}
+function renderStageFramework(){
+  $('stage-framework-options').innerHTML=Object.keys(AimstepScreeningStages.frameworks).map(name=>'<button type="button" class="btn small" data-stage-framework="'+name+'" aria-pressed="'+(stagesFramework===name)+'">'+name+'</button>').join('');
+  $('stage-add-picker').innerHTML=AimstepScreeningStages.candidates(source.criteria,stagesFramework,stagesDraft).map(e=>'<button class="btn small" type="button" data-stage-add="'+esc(e.id)+'">'+esc(e.title)+'</button>').join('')||'<span class="hint">All available criteria have been added.</span>';
 }
 function closeStageDialog(){
   if(stagesSaving)return;
@@ -2216,8 +2228,11 @@ function closeStageDialog(){
 $('open-screening-criteria').addEventListener('click',()=>{
   if(clearActionsBlocked())return;
   stagesBase=source.criteriaSig;
-  stagesDraft=AimstepScreeningStages.editable(source.criteria,workspace.screeningStages);
-  stagesInitial=JSON.stringify(stagesDraft);
+  stagesDraft=AimstepScreeningStages.editable(source.criteria,workspace.screeningStages).filter(e=>e.enabled);
+  stagesFramework=workspace.screeningStages?.framework||source.criteria?.framework||'PICO';
+  if(!AimstepScreeningStages.frameworks[stagesFramework])stagesFramework='Other';
+  $('stage-add-picker').hidden=true;$('add-stage-element').setAttribute('aria-expanded','false');
+  stagesInitial=stageDraftSignature();
   $('stages-error').hidden=true;$('stages-help-text').hidden=true;
   renderStageRows();stagesDialog.showModal();
 });
@@ -2226,18 +2241,22 @@ $('stages-items').addEventListener('input',event=>{
   const field=event.target.dataset.elementField,index=Number(event.target.dataset.elementIndex);
   if(['title','inclusion','exclusion'].includes(field)&&stagesDraft[index])stagesDraft[index][field]=event.target.value;
 });
-$('stages-items').addEventListener('change',event=>{
-  if(stagesSaving||event.target.dataset.elementEnabled===undefined)return;
-  const e=stagesDraft?.[Number(event.target.dataset.elementEnabled)];if(e)e.enabled=event.target.checked;
-});
 $('stages-items').addEventListener('click',event=>{
   const button=event.target.closest('[data-element-delete]');if(!button||stagesSaving)return;
   stagesDraft.splice(Number(button.dataset.elementDelete),1);renderStageRows();
 });
 $('add-stage-element').addEventListener('click',()=>{
   if(stagesSaving)return;
-  const selected=AimstepScreeningStages.seed(source.criteria).find(e=>e.id===$('stage-add-choice').value);
-  stagesDraft.push(selected||{id:'custom-'+crypto.randomUUID(),title:'',inclusion:'',exclusion:'',enabled:true});renderStageRows();
+  renderStageFramework();const picker=$('stage-add-picker');picker.hidden=!picker.hidden;$('add-stage-element').setAttribute('aria-expanded',String(!picker.hidden));
+});
+$('stage-framework-options').addEventListener('click',event=>{
+  const button=event.target.closest('[data-stage-framework]');if(!button||stagesSaving)return;
+  stagesFramework=button.dataset.stageFramework;renderStageFramework();
+});
+$('stage-add-picker').addEventListener('click',event=>{
+  const button=event.target.closest('[data-stage-add]');if(!button||stagesSaving)return;
+  const selected=AimstepScreeningStages.candidates(source.criteria,stagesFramework,stagesDraft).find(e=>e.id===button.dataset.stageAdd);
+  if(selected){stagesDraft.push(selected);renderStageRows();}
 });
 $('close-stages').addEventListener('click',closeStageDialog);
 stagesDialog.addEventListener('cancel',event=>{event.preventDefault();closeStageDialog()});
@@ -2259,11 +2278,11 @@ async function saveStageSettings(){
   finally{stagesSaving=false;$('save-stages').disabled=false;render()}
   if(!stagesDraft)return;
   if(stagesBase!==source.criteriaSig){error('Eligibility criteria changed. Close and reopen this dialog to review the updated conditions.');return}
-  const next={version:2,sourceSig:source.criteriaSig,criteriaSnapshot:structuredClone(source.criteria),elements:structuredClone(stagesDraft),savedAt:now()};
+  const next={version:2,sourceSig:source.criteriaSig,criteriaSnapshot:structuredClone(source.criteria),elements:structuredClone(stagesDraft),framework:stagesFramework,savedAt:now()};
   if(next.elements.length>100){error('At most 100 elements can be configured.');return}
-  if(!AimstepScreeningStages.draftValid(next.elements)){error('Give each selected element a name and at least one inclusion or exclusion rule.');return}
+  if(!AimstepScreeningStages.draftValid(next.elements)){error('Give each element a name and at least one inclusion or exclusion rule.');return}
   if(screeningStagesReady()&&screeningStageSig()===AimstepScreeningStages.signature(next)){
-    stagesInitial=JSON.stringify(stagesDraft);$('stages-status').textContent='Screening criteria saved.';toast('Screening criteria saved.');return;
+    stagesInitial=stageDraftSignature();$('stages-status').textContent='Screening criteria saved.';toast('Screening criteria saved.');return;
   }
   const hasResults=screeningHasProgress();
   if(hasResults&&!confirm('Save these screening criteria? Existing pilot and formal assessments will be archived. Start a new pilot and re-screen all records, including earlier exclusions.'))return;
@@ -2277,7 +2296,7 @@ async function saveStageSettings(){
     log('screening-stages-saved',{signature:screeningStageSig(),elements:next.elements});
     await save();
     pilotReviewDrafts.clear();pilotReviewErrors.clear();expandedPilotAssessments.clear();fullReviewErrors.clear();exclusionDrafts.clear();expandedFullAssessments.clear();collapsedFullAssessments.clear();fullNow.clear();fullDone.length=0;pilotView=-1;pilotFilter='agreed';fullFilter='';
-    stagesInitial=JSON.stringify(stagesDraft);$('stages-error').hidden=true;$('stages-status').textContent='Screening criteria saved. Start a new pilot to use these settings.';toast(next.elements.length?'Screening criteria saved.':'Screening criteria cleared.');
+    stagesInitial=stageDraftSignature();$('stages-error').hidden=true;$('stages-status').textContent='Screening criteria saved. Start a new pilot to use these settings.';toast(next.elements.length?'Screening criteria saved.':'Screening criteria cleared.');
     showNotice('pilot-message','');showNotice('full-message','');
   }catch(e){workspace=previous;publishSummary();error('Could not save screening criteria: '+e.message)}
   finally{stagesSaving=false;busy='';$('save-stages').disabled=false;$('reset-stages').disabled=false;$('stages-items').inert=false;render();}

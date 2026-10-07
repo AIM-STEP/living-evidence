@@ -52,3 +52,12 @@ ctx.workspace.screeningStages=v2;
 const editedPrompt=JSON.parse(ctx.pilotPrompt(record,0));assert.equal(editedPrompt.criteria.length,1);assert.equal(editedPrompt.criteria[0].inclusionRule,edited[0].inclusion);
 assert.equal(ctx.pilotDecision({decision:'exclude',criteria:[{dimension:'Intervention',judgment:'not met',quote:'Exercise lasted six weeks.'}]},record).decision,'maybe');
 console.log('PASS: editable inclusion/exclusion, disabled/deleted elements, empty save gating, legacy migration and prompt isolation');
+
+assert.deepEqual(Object.keys(stages.frameworks),['PICO','PECO','PCC','PICo','Other']);
+const candidates=stages.candidates(criteria,'PECO',[stages.seed(criteria)[0]]);
+assert(candidates.some(e=>e.title==='Exposure'));assert(!candidates.some(e=>e.title==='Population'||e.title==='Custom element'));
+assert.equal(stages.candidates(criteria,'PICO',stages.seed(criteria)).filter(e=>e.title==='Intervention').length,0);
+const renamed=stages.seed(criteria);renamed[0].title='Participants';
+assert(!stages.candidates(criteria,'PICO',renamed).some(e=>e.id===renamed[0].id));
+assert.equal(stages.active(criteria,{...v2,framework:'PCC'}).framework,'PCC');
+console.log('PASS: all framework options, candidate selection, duplicate prevention and saved framework');
