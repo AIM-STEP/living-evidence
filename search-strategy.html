@@ -991,6 +991,12 @@ async function verifyConcepts(ids,entities,signal,progress){
   }
   return notes;
 }
+function showConceptNotes(notes){
+  for(const [id,note] of notes){
+    const el=document.querySelector(`.concept[data-id="${CSS.escape(id)}"] [data-word-message]`);
+    if(el){el.textContent=note;el.hidden=!note}
+  }
+}
 function mergeNotes(a,b){const out=new Map(a);for(const [k,v] of b)out.set(k,[out.get(k),v].filter(Boolean).join(' '));return out}
 async function enrichFilled(result,signal,status){
   if(!result.filledIds?.size)return result.notes;
