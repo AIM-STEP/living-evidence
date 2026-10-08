@@ -15,3 +15,5 @@ Validation: synthetic source merge tests; inline script parsing; full-text stage
 ## Extraction form sections
 
 The form is organized as Baseline information, Participant, Intervention and Outcome. Existing fields keep their IDs and saved extraction values; legacy labels are categorized without deleting fields. The first three sections support adding/removing fields independently, and Outcome retains typed outcome and time-point configuration. Tests cover legacy classification and custom section preservation; the browser add-field flow and compact mobile layout were checked.
+
+The form now also includes Other information. One shared Question framework row (PICO, PECO, PCC, PICo, Other) and Clear / Add item sit above all five sections. Framework selection is saved and included in extraction prompt context; it does not silently rename or remove the five information sections. Each section has a remove ×; its schema is archived and can be restored with Add item, keeping IDs and extraction values. Clear requires confirmation and removes all active sections; an explicitly empty section list persists across reload and is not repopulated by upstream synchronization.

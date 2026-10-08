@@ -203,6 +203,8 @@ th{background:#f4f4f4}
 
 .source-record-title{margin:0}.source-record-top .toolbar{margin:0}.source-record-list{margin-bottom:16px}#reader-pdf-frame{width:100%;height:70vh;border:0}
 .extraction-form-section+.extraction-form-section{border-top:1px solid var(--soft);margin-top:18px;padding-top:14px}.extraction-form-section>.sub-head{margin:0 0 10px;font-size:15px}.extraction-form-section .field-add{margin-top:8px}.extraction-form-section .field-add .input{width:230px;max-width:100%;min-width:0}
+.extraction-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.extraction-section-head .sub-head{margin:0;font-size:15px}
+.extraction-framework{margin-bottom:18px}.extraction-framework .label{margin:0}.extraction-framework .toolbar{margin:0}.extraction-framework #form-item-picker{margin-top:10px}.extraction-framework [aria-pressed="true"]{background:#eadce9;border-color:#a27da0;color:#5c004d}.extraction-clear svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.extraction-form-section[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -236,13 +238,15 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2>Extraction form</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-form" aria-expanded="true" aria-controls="form-body" title="Collapse Extraction form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Extraction form</span></button></div></div>
 <div class="panel-body" id="form-body">
-<section class="extraction-form-section" aria-labelledby="baseline-title"><h3 id="baseline-title" class="sub-head">Baseline information</h3><div id="baseline-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="baseline-field-input" placeholder="Add a field" aria-label="Add baseline information field" autocomplete="off"><button class="btn small" type="button" data-add-field="baseline">Add</button></div></section>
-<section class="extraction-form-section" aria-labelledby="participant-title"><h3 id="participant-title" class="sub-head">Participant</h3><div id="participant-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="participant-field-input" placeholder="Add a field" aria-label="Add participant field" autocomplete="off"><button class="btn small" type="button" data-add-field="participant">Add</button></div></section>
-<section class="extraction-form-section" aria-labelledby="intervention-title"><h3 id="intervention-title" class="sub-head">Intervention</h3><div id="intervention-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="intervention-field-input" placeholder="Add a field" aria-label="Add intervention field" autocomplete="off"><button class="btn small" type="button" data-add-field="intervention">Add</button></div></section>
-<section class="extraction-form-section" aria-labelledby="outcome-title"><h3 id="outcome-title" class="sub-head">Outcome</h3>
+<div class="extraction-framework"><div class="extraction-section-head"><span class="label">Question framework</span><div class="toolbar"><button class="btn small extraction-clear" id="clear-form" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn small" id="add-form-item" type="button" aria-expanded="false" aria-controls="form-item-picker">+ Add item</button></div></div><div id="form-framework" class="toolbar" role="group" aria-label="Question framework"></div><div id="form-item-picker" class="toolbar" hidden></div></div>
+<section class="extraction-form-section" aria-labelledby="baseline-title"><div class="extraction-section-head"><h3 id="baseline-title" class="sub-head">Baseline information</h3><button type="button" class="source-delete" data-remove-section="baseline" aria-label="Remove Baseline information">×</button></div><div id="baseline-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="baseline-field-input" placeholder="Add a field" aria-label="Add baseline information field" autocomplete="off"><button class="btn small" type="button" data-add-field="baseline">Add</button></div></section>
+<section class="extraction-form-section" aria-labelledby="participant-title"><div class="extraction-section-head"><h3 id="participant-title" class="sub-head">Participant</h3><button type="button" class="source-delete" data-remove-section="participant" aria-label="Remove Participant">×</button></div><div id="participant-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="participant-field-input" placeholder="Add a field" aria-label="Add participant field" autocomplete="off"><button class="btn small" type="button" data-add-field="participant">Add</button></div></section>
+<section class="extraction-form-section" aria-labelledby="intervention-title"><div class="extraction-section-head"><h3 id="intervention-title" class="sub-head">Intervention</h3><button type="button" class="source-delete" data-remove-section="intervention" aria-label="Remove Intervention">×</button></div><div id="intervention-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="intervention-field-input" placeholder="Add a field" aria-label="Add intervention field" autocomplete="off"><button class="btn small" type="button" data-add-field="intervention">Add</button></div></section>
+<section class="extraction-form-section" aria-labelledby="outcome-title"><div class="extraction-section-head"><h3 id="outcome-title" class="sub-head">Outcome</h3><button type="button" class="source-delete" data-remove-section="outcome" aria-label="Remove Outcome">×</button></div>
 <div class="table-wrap"><table class="grid form-t"><thead><tr><th>Outcome</th><th>Type</th><th>Time point</th><th>Accepted window</th><th></th></tr></thead><tbody id="outcome-rows"></tbody></table></div>
 <button class="btn small" type="button" id="add-outcome">Add outcome</button>
 </section>
+<section class="extraction-form-section" aria-labelledby="other-title"><div class="extraction-section-head"><h3 id="other-title" class="sub-head">Other information</h3><button type="button" class="source-delete" data-remove-section="other" aria-label="Remove Other information">×</button></div><div id="other-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="other-field-input" placeholder="Add a field" aria-label="Add other information field" autocomplete="off"><button class="btn small" type="button" data-add-field="other">Add</button></div></section>
 </div>
 </section>
 
@@ -476,7 +480,7 @@ function keywordScores(chunks,query){
    passage and an exact quotation, and the reviewer verifies each row. The
    arm-level network dataset goes to Analysis. */
 const DEFAULT_FIELDS=['Country','Setting','Number randomised','Population (key characteristics)','Mean age (years)','Female (%)','Disease duration','Background therapy','Funding'];
-const FIELD_SECTIONS={baseline:'Baseline information',participant:'Participant',intervention:'Intervention'};
+const FIELD_SECTIONS={baseline:'Baseline information',participant:'Participant',intervention:'Intervention',other:'Other information'};
 function fieldSection(field){
   if(Object.hasOwn(FIELD_SECTIONS,field.section))return field.section;
   const label=String(field.label||'');
@@ -485,6 +489,28 @@ function fieldSection(field){
   return 'baseline';
 }
 function groupFormFields(fields){return fields.map(field=>({...field,section:fieldSection(field)}));}
+const FORM_ITEMS={baseline:'Baseline information',participant:'Participant',intervention:'Intervention',outcome:'Outcome',other:'Other information'};
+const FORM_FRAMEWORKS=['PICO','PECO','PCC','PICo','Other'];
+function prepareFormSections(form){
+  form.fields=groupFormFields(form.fields||[]);
+  if(!Array.isArray(form.sections))form.sections=Object.keys(FORM_ITEMS);
+  form.sections=[...new Set(form.sections.filter(key=>Object.hasOwn(FORM_ITEMS,key)))];
+  if(!FORM_FRAMEWORKS.includes(form.framework))form.framework='PICO';
+  form.sectionArchives??={};
+}
+function removeFormSection(form,key){
+  if(!form.sections.includes(key))return;
+  form.sectionArchives[key]=key==='outcome'?structuredClone(form.outcomes):structuredClone(form.fields.filter(f=>fieldSection(f)===key));
+  if(key==='outcome')form.outcomes=[];else form.fields=form.fields.filter(f=>fieldSection(f)!==key);
+  form.sections=form.sections.filter(k=>k!==key);
+}
+function restoreFormSection(form,key){
+  if(!Object.hasOwn(FORM_ITEMS,key)||form.sections.includes(key))return;
+  if(key==='outcome')form.outcomes=structuredClone(form.sectionArchives[key]||[]);
+  else{const ids=new Set(form.fields.map(f=>f.id));form.fields.push(...structuredClone(form.sectionArchives[key]||[]).filter(f=>!ids.has(f.id)));}
+  form.sections.push(key);
+  form.sections=Object.keys(FORM_ITEMS).filter(k=>form.sections.includes(k));
+}
 let ws=null,store=null,docStore=null,controller=null,busy='',current=null,saveChain=Promise.resolve();
 const docCache=new Map();
 const uid8=()=>Math.random().toString(36).slice(2,10);
@@ -528,7 +554,7 @@ async function importStudies(){
     const merged=AimstepExtractionSources.merge(ws.records,incoming,ws.sourceNumbers);
     if(JSON.stringify(merged.records)===JSON.stringify(ws.records)&&h.updatedAt===ws.handoffAt)return;
     ws.records=merged.records;ws.sourceNumbers=merged.numbers;ws.handoffAt=h.updatedAt||now();
-    if(!ws.form.outcomes.length)ws.form.outcomes=outcomesFromCriteria(h.criteria).map(n=>({id:uid8(),name:n.slice(0,120),type:'binary',timepoint:'',window:''}));
+    if(ws.form.sections.includes('outcome')&&!ws.form.outcomes.length)ws.form.outcomes=outcomesFromCriteria(h.criteria).map(n=>({id:uid8(),name:n.slice(0,120),type:'binary',timepoint:'',window:''}));
     for(const r of ws.records){docCache.delete(r.uid);await loadDoc(r.uid);}
     if(current&&!recBy(current))current=null;
     log('fulltext-synced',{studies:incoming.length});await save();render();
@@ -594,7 +620,7 @@ async function aiExtract(uid,signal){
   const abstract=doc.chunks.filter(c=>/abstract/i.test(c.section||'')).slice(0,2).map(c=>c.id);
   const tables=doc.chunks.filter(c=>/table/i.test(c.section||'')).slice(0,6).map(c=>c.id);
   const passages=[...new Set([...abstract,...ids,...tables])].slice(0,40).map(id=>doc.chunks.find(c=>c.id===id)).filter(Boolean).map(c=>({id:c.id,section:c.section,page:c.page,text:c.text}));
-  const form={fields:fields.map(f=>({id:f.id,label:f.label})),outcomes:outs.map(o=>({id:o.id,name:o.name,type:o.type,timepoint:o.timepoint,acceptedWindow:o.window||'',extract:o.type==='binary'?'events and total analysed per arm':'mean, SD and number analysed per arm'}))};
+  const form={framework:ws.form.framework,sections:ws.form.sections,fields:fields.map(f=>({id:f.id,label:f.label,section:fieldSection(f)})),outcomes:outs.map(o=>({id:o.id,name:o.name,type:o.type,timepoint:o.timepoint,acceptedWindow:o.window||'',extract:o.type==='binary'?'events and total analysed per arm':'mean, SD and number analysed per arm'}))};
   const q={type:'object',properties:{value:{type:'string'},passage:{type:'string'},quote:{type:'string'}},required:['value','passage','quote']};
   const schema={type:'object',properties:{fields:{type:'array',items:{type:'object',properties:{id:{type:'string'},...q.properties},required:['id','value','passage','quote']}},
     arms:{type:'array',items:{type:'object',properties:{label:{type:'string'},dose:{type:'string'},randomised:{type:'string'},passage:{type:'string'},quote:{type:'string'}},required:['label','dose','randomised','passage','quote']}},
@@ -663,6 +689,10 @@ function renderSource(){
 }
 function renderForm(){
   const O=ws.form.outcomes;
+  for(const key of Object.keys(FORM_ITEMS))$(key+'-title').closest('.extraction-form-section').hidden=!ws.form.sections.includes(key);
+  $('form-framework').innerHTML=FORM_FRAMEWORKS.map(name=>`<button type="button" class="btn small" data-form-framework="${name}" aria-pressed="${ws.form.framework===name}">${name}</button>`).join('');
+  $('form-item-picker').innerHTML=Object.entries(FORM_ITEMS).filter(([key])=>!ws.form.sections.includes(key)).map(([key,title])=>`<button type="button" class="btn small" data-restore-section="${key}">${title}</button>`).join('')||'<span class="hint">All items have been added.</span>';
+
   $('outcome-rows').innerHTML=O.map(o=>`<tr><td><input class="input compact w-full" data-o="${o.id}" data-k="name" value="${esc(o.name)}" aria-label="Outcome name"></td><td><select class="select compact" data-o="${o.id}" data-k="type" aria-label="Type"><option value="binary"${o.type==='binary'?' selected':''}>Binary (events / total)</option><option value="continuous"${o.type==='continuous'?' selected':''}>Continuous (mean, SD, n)</option></select></td><td><input class="input compact w-full${o.timepoint.trim()?'':' need'}" data-o="${o.id}" data-k="timepoint" value="${esc(o.timepoint)}" placeholder="Required, e.g. 12 weeks" aria-label="Time point"></td><td><input class="input compact w-full" data-o="${o.id}" data-k="window" value="${esc(o.window||'')}" placeholder="e.g. 10–16 weeks" aria-label="Accepted window"></td><td><button class="chip-x" type="button" data-del-o="${o.id}" aria-label="Remove outcome">×</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">No outcomes yet.</td></tr>';
   for(const section of Object.keys(FIELD_SECTIONS))$(section+'-fields').innerHTML=ws.form.fields.filter(f=>fieldSection(f)===section).map(f=>`<span class="chip">${esc(f.label)}<button type="button" class="chip-x" data-del-f="${esc(f.id)}" aria-label="Remove ${esc(f.label)}">×</button></span>`).join('');
 }
@@ -784,6 +814,13 @@ function bind(){
       log('form-changed',{outcome:o.id,key:t.dataset.k,from:prev,to:o[t.dataset.k]});save();render()}
   });
   $('form-body').addEventListener('click',e=>{
+    const remove=e.target.closest('[data-remove-section]'),restore=e.target.closest('[data-restore-section]'),framework=e.target.closest('[data-form-framework]');
+    if(remove){removeFormSection(ws.form,remove.dataset.removeSection);save();render();return;}
+    if(restore){restoreFormSection(ws.form,restore.dataset.restoreSection);$('form-item-picker').hidden=true;$('add-form-item').setAttribute('aria-expanded','false');save();render();return;}
+    if(framework){ws.form.framework=framework.dataset.formFramework;save();renderForm();return;}
+    if(e.target.closest('#add-form-item')){const picker=$('form-item-picker');picker.hidden=!picker.hidden;$('add-form-item').setAttribute('aria-expanded',String(!picker.hidden));return;}
+    if(e.target.closest('#clear-form')){if(!confirm('Clear all extraction form items? You can add them again with Add item. Saved extraction values are kept.'))return;for(const key of [...ws.form.sections])removeFormSection(ws.form,key);save();render();return;}
+
     const d=e.target.closest('[data-del-o]'),df=e.target.closest('[data-del-f]');
     if(d){const o=ws.form.outcomes.find(x=>x.id===d.dataset.delO);if(!confirm(`Remove "${o.name}" and its extracted data?`))return;ws.form.outcomes=ws.form.outcomes.filter(x=>x!==o);log('outcome-removed',{name:o.name});save();render()}
     if(df){ws.form.fields=ws.form.fields.filter(f=>f.id!==df.dataset.delF);save();render()}
@@ -846,7 +883,7 @@ async function init(){
   try{
     store=await openDB('aimstep-extraction');try{docStore=await openDB('aimstep-fulltext-docs')}catch(e){docStore=null}
     const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});ws.form=Object.assign(defaults().form,ws.form||{});
-    ws.form.fields=groupFormFields(ws.form.fields);
+    prepareFormSections(ws.form);
     bind();
     await importStudies();
     await Promise.all(ws.records.map(r=>loadDoc(r.uid)));
