@@ -1,0 +1,7 @@
+const assert=require('node:assert/strict'),B=require('../app/extraction-baseline.js');
+const form={sections:['baseline','other'],fields:[{id:'old-country',label:'Country',section:'baseline'},{id:'old-setting',label:'Setting',section:'baseline'},{id:'old-funding',label:'Funding',section:'baseline'}],sectionArchives:{}};
+B.migrate(form);assert.equal(form.fields.filter(f=>f.section==='baseline').length,9);assert.equal(form.fields.find(f=>f.baselineKey==='country').id,'old-country');assert.equal(form.fields.find(f=>f.id==='old-setting').section,'other');
+const record={sourceNumber:39,year:'2026',journal:'Synthetic',doi:'10.1234/synthetic'},study={fields:{'old-country':{v:'Human entry',src:'you',ok:true}}};B.prefill(study,record,form,()=> 'Jane');assert.equal(study.fields['baseline-systemId'].v,'#39');assert.equal(study.fields['baseline-firstName'].v,'Jane');assert.equal(study.fields['old-country'].v,'Human entry');assert.equal(study.fields['baseline-registration'],undefined);
+form.fields=form.fields.filter(f=>f.baselineKey!=='journal');B.migrate(form);assert(!form.fields.some(f=>f.baselineKey==='journal'));
+const cleared={sections:[],fields:[],sectionArchives:{baseline:[]}};B.migrate(cleared);assert.equal(cleared.fields.length,0);assert.equal(cleared.sectionArchives.baseline.length,9);
+assert.equal(B.values({...record,extractionOrigin:'local'},()=> '').systemId,'#L39');console.log('PASS nine defaults, old IDs and values, fixed ID, metadata prefill, missing data, user edits and cleared form preservation');

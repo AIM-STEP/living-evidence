@@ -268,6 +268,7 @@ th{background:#f4f4f4}
 <dialog id="reader" class="dialog reader-dialog" aria-labelledby="reader-title"><div class="panel-head"><h2 id="reader-title">Full text</h2><button class="btn small" type="button" id="close-reader">Close</button></div><div class="panel-body reader-body" id="reader-body"></div><iframe id="reader-pdf-frame" title="Original PDF" hidden></iframe></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app/extraction-sources.js?v=1"></script>
+<script src="app/extraction-baseline.js?v=1"></script>
 <script>
 'use strict';
 (() => {
@@ -493,6 +494,7 @@ function prepareFormSections(form){
   form.sections=[...new Set(form.sections.filter(key=>Object.hasOwn(FORM_ITEMS,key)))];
   if(!FORM_FRAMEWORKS.includes(form.framework))form.framework='PIOO';
   form.sectionArchives??={};
+  AimstepExtractionBaseline.migrate(form);
 }
 function removeFormSection(form,key){
   if(!form.sections.includes(key))return;
@@ -522,7 +524,7 @@ function save(){
 const recBy=uid=>ws.records.find(r=>r.uid===uid);
 function firstAuthor(r){const a=(r.authors||[])[0]||'';return String(a).split(/[ ,]/)[0]||'Study'}
 function studyLabel(r){const base=(firstAuthor(r)+' '+(r.year||'')).trim(),same=ws.records.filter(x=>(firstAuthor(x)+' '+(x.year||'')).trim()===base);return same.length>1?base+String.fromCharCode(97+same.indexOf(r)):base}
-function st(uid){return ws.studies[uid]||(ws.studies[uid]={fields:{},arms:[],tp:{},res:{},nr:{},ai:null,done:null})}
+function st(uid){const study=ws.studies[uid]||(ws.studies[uid]={fields:{},arms:[],tp:{},res:{},nr:{},ai:null,done:null});AimstepExtractionBaseline.prefill(study,recBy(uid),ws.form,firstAuthorGivenName);return study;}
 /* A value: {v, src:'ai'|'you', ok, quote, passage}. AI values need the
    reviewer's check; values the reviewer types are checked by definition. */
 const cell=(v,src='you',extra={})=>({v:v===undefined||v===null?'':String(v),src,ok:src==='you',...extra});
@@ -745,7 +747,7 @@ function renderStudy(){
   box.hidden=false;const s=st(r.uid),locked=!!s.done,dis=locked?' disabled':'';
   $('study-title').textContent=studyLabel(r);
   $('study-sub').innerHTML=`${esc(r.title||'')}${r.fullText?` · <button class="link-btn" type="button" data-reader="${esc(r.uid)}">Read full text</button>`:''}${s.ai?` · AI draft by ${esc(s.ai.model)}`:''}`;
-  const fields=ws.form.fields.length?`<h3 class="sub-head">Study characteristics</h3><div class="grid-fields">${ws.form.fields.map(f=>{const c=s.fields[f.id];return `<label class="fl"><span>${esc(f.label)}</span>${inp(c,`data-field="${f.id}"${dis}`)}${c&&c.src==='ai'&&!c.ok&&val(c)?`<button class="ok-btn" type="button" data-okf="${f.id}" title="Checked against the quotation">✓</button>`:''}</label>`}).join('')}</div>`:'';
+  const fields=ws.form.fields.length?`<h3 class="sub-head">Study characteristics</h3><div class="grid-fields">${ws.form.fields.map(f=>{const c=s.fields[f.id];return `<label class="fl"><span>${esc(f.label)}</span>${inp(c,`data-field="${f.id}"${dis}${f.baselineKey==='systemId'?' readonly':''}`)}${c&&c.src==='ai'&&!c.ok&&val(c)?`<button class="ok-btn" type="button" data-okf="${f.id}" title="Checked against the quotation">✓</button>`:''}</label>`}).join('')}</div>`:'';
   const arms=`<h3 class="sub-head">Arms </h3><table class="grid"><thead><tr><th>Treatment (as reported)</th><th>Dose / regimen</th><th>Randomised</th><th></th></tr></thead><tbody>${s.arms.map(a=>`<tr><td>${inp(a.label,`data-arm="${a.id}" data-k="label"${dis}`,'e.g. Drug X')}</td><td>${inp(a.dose,`data-arm="${a.id}" data-k="dose"${dis}`,'e.g. 10 mg daily')}</td><td>${inp(a.n,`data-arm="${a.id}" data-k="n"${dis}`,'n','num')}</td><td class="act">${rowCheck([a.label,a.dose,a.n],`data-okarm="${a.id}"`,locked)}${locked?'':`<button class="chip-x" type="button" data-del-arm="${a.id}" aria-label="Remove arm">×</button>`}</td></tr>`).join('')}</tbody></table>${locked?'':'<button class="btn small" type="button" id="add-arm">Add arm</button>'}`;
   const outs=ws.form.outcomes.map(o=>{const nr=!!s.nr[o.id],tp=s.tp[o.id],cols=o.type==='binary'?['Events','Total analysed']:['Mean','SD','N analysed'],keys=o.type==='binary'?['events','total']:['mean','sd','n'];
     return `<div class="outcome-block${nr?' nr':''}"><div class="ob-head"><b>${esc(o.name)}</b><span class="hint">${o.type==='binary'?'Binary':'Continuous'} · wanted: ${esc(o.timepoint||'time point not set')}${o.window?` (accept ${esc(o.window)})`:''}</span><label class="tp">Time point used ${inp(tp,`data-tp="${o.id}"${dis||(nr?' disabled':'')}`,'e.g. 12 weeks')}${tp&&tp.src==='ai'&&!tp.ok?`<button class="ok-btn" type="button" data-oktp="${o.id}" title="Checked">✓</button>`:''}</label><label class="nr-l"><input type="checkbox" data-nr="${o.id}"${nr?' checked':''}${dis}> Not reported</label></div>
@@ -857,7 +859,8 @@ async function init(){
   try{
     store=await openDB('aimstep-extraction');try{docStore=await openDB('aimstep-fulltext-docs')}catch(e){docStore=null}
     const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});ws.form=Object.assign(defaults().form,ws.form||{});
-    prepareFormSections(ws.form);
+    const previousForm=JSON.stringify(ws.form);prepareFormSections(ws.form);
+    if(JSON.stringify(ws.form)!==previousForm)await putProject(store,{id:scope,state:ws,updatedAt:now()});
     bind();
     await importStudies();
     await Promise.all(ws.records.map(r=>loadDoc(r.uid)));
