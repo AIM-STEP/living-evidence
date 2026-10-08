@@ -192,6 +192,23 @@ th{background:#f4f4f4}
 .tool-navigation>.next{margin-left:auto;text-align:right;justify-content:flex-end}
 .tool-navigation>.next:only-child{max-width:100%}
 @media(max-width:620px){.tool-navigation>.step-btn{font-size:11px;padding:8px;line-height:1.35}}
+.source-footer{justify-content:flex-end;margin-top:12px}.source-record-list{margin-top:0}.source-record{padding:20px 0 22px;border-bottom:1px solid var(--soft)}.source-record:first-child{padding-top:0}.source-record:last-child{border-bottom:0}
+.source-record-heading{margin-bottom:10px}.source-record-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.source-record-tools{display:flex;align-items:center;gap:8px}.source-move,.source-delete{border:0;background:transparent;color:#a081ad;font:inherit;font-size:12px;cursor:pointer;padding:2px 0;display:inline-flex;align-items:center;gap:4px}.source-move svg{width:14px;height:14px}.source-delete{font-size:18px;padding:0 4px}.source-move:disabled,.source-delete:disabled{opacity:.35;cursor:default}.source-move:hover:not(:disabled),.source-delete:hover:not(:disabled){color:var(--plum)}.source-record-number{font-size:12px;color:#5f6069;margin-bottom:5px;overflow-wrap:anywhere}.source-record-title{flex:1;min-width:0;margin:0;font-size:18px;line-height:1.45;font-weight:650;color:#30394c;overflow-wrap:anywhere}
+.source-record-meta{font-size:14px;line-height:1.65;color:#687188;overflow-wrap:anywhere}.source-record-meta p{margin:0}.source-record-id{font-size:12px;margin-top:3px!important}
+.source-record-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:16px}.source-record-actions .btn{gap:10px}
+.source-chevron{display:inline-block;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);margin:0 3px}.source-record-actions [aria-expanded="true"] .source-chevron{transform:translateY(2px) rotate(225deg)}
+.source-disclosure-body{min-width:0;margin-top:10px;padding:12px 14px;background:#fafafb;border-radius:6px;overflow-wrap:anywhere}
+.source-disclosure-body p{margin:0 0 10px}.source-disclosure-body p:last-child{margin-bottom:0}.source-abstract{white-space:pre-wrap;line-height:1.7;font-size:13px;color:var(--ink2)}.source-file-status{font-size:12px;color:var(--muted)}.source-retrieval-log{font-size:12px;color:var(--muted);margin-top:12px}.source-retrieval-log ul{padding-left:20px}
+.source-disclosure-body[aria-label="Full text"]{padding:0;background:transparent}.source-disclosure-body[aria-label="Full text"]>.hint{margin-bottom:3px}.source-abstract-fulltext{margin-top:8px}.source-abstract-fulltext>.hint{margin-bottom:3px}
+.source-file-row{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px}
+.source-file-link{border:0;padding:0;background:none;color:#5f6069;font:inherit;font-size:12px;font-weight:500;text-decoration:underline;cursor:pointer;text-align:left;overflow-wrap:anywhere}
+.source-file-primary{background:#eee4f4;color:#79588b;font-size:11px;font-weight:650;padding:2px 5px;border-radius:2px}
+.source-file-origin{color:#5f6069;font-size:12px;font-weight:500;margin:2px 0 3px!important}
+.source-manage{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:#a081ad;padding:4px 0;font:inherit;font-size:12px;font-weight:500;cursor:pointer}.source-manage:hover:not(:disabled){color:#876492}.source-manage svg rect:last-child{fill:#fff}
+.source-manage:disabled{opacity:.4;cursor:default}.source-manage svg{width:11.33px;height:12.67px;flex:none}.source-file-link:focus-visible,.source-manage:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
+
+.source-record-title{margin:0}.source-record-top .toolbar{margin:0}.source-record-list{margin-bottom:16px}#reader-pdf-frame{width:100%;height:70vh;border:0}
+
 </style>
 </head>
 <body>
@@ -207,22 +224,23 @@ th{background:#f4f4f4}
 <div class="stack">
 
 <section class="panel">
-<div class="panel-head"><h2>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft">Import from Full-text assess</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Included studies</span></button></div></div>
+<div class="panel-head"><h2>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft">Import from local</button><input type="file" id="import-pdfs" accept=".pdf,application/pdf" multiple hidden><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Included studies</span></button></div></div>
 <div class="panel-body" id="source-body">
-<ol class="pilot-steps">
-<li>Check each study's design, and choose the tool for each design (the recommended one is first; every study of that design uses the same tool).</li>
-<li>Start the AI pre-fill: the local model drafts every answer with a quotation from the full text. Drafts stay hidden.</li>
-<li>Open each result, answer on your own, then compare with the AI draft, resolve the conflicts and confirm.</li>
-</ol>
-<div class="source-summary" id="src-stats"></div>
+<div class="source-record-list" id="study-table" role="list" aria-label="Included studies"></div>
+
+<div class="source-summary" id="src-stats" hidden></div>
 <div class="notice" id="source-notice" hidden></div>
-<div class="outcome-row"><span class="label">Outcome results to assess</span><span id="outcomes"></span><input class="input compact" id="outcome-input" placeholder="Add an outcome, e.g. ACR20 at 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
+
+
+</div>
+</section>
+
+<section class="panel"><div class="panel-head"><h2>Assessment setup</h2></div><div class="panel-body"><div class="outcome-row"><span class="label">Outcome results to assess</span><span id="outcomes"></span><input class="input compact" id="outcome-input" placeholder="Add an outcome, e.g. ACR20 at 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
 <div class="tool-choice" id="tool-choice"></div>
 <div class="toolbar ai-row"><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
 <div class="team-track full-track" id="ai-progress" hidden><span style="width:0%"></span></div><div class="hint" id="ai-now"></div>
-<div class="table-wrap"><table class="study-table" id="study-table"></table></div>
-</div>
-</section>
+<div class="table-wrap"><table class="study-table" id="assessment-study-table"></table></div>
+</div></section>
 
 <section class="panel" id="assess" hidden>
 <div class="panel-head"><div><h2 id="assess-title"></h2><p class="hint assess-sub" id="assess-sub"></p></div></div>
@@ -254,8 +272,9 @@ th{background:#f4f4f4}
 </div>
 </div>
 </main>
-<dialog id="reader" class="dialog reader-dialog" aria-labelledby="reader-title"><div class="panel-head"><h2 id="reader-title">Full text</h2><button class="btn small" type="button" id="close-reader">Close</button></div><div class="panel-body reader-body" id="reader-body"></div></dialog>
+<dialog id="reader" class="dialog reader-dialog" aria-labelledby="reader-title"><div class="panel-head"><h2 id="reader-title">Full text</h2><button class="btn small" type="button" id="close-reader">Close</button></div><div class="panel-body reader-body" id="reader-body"></div><iframe id="reader-pdf-frame" title="Original PDF" hidden></iframe></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
+<script src="app/extraction-sources.js?v=1"></script>
 <script>
 'use strict';
 (() => {
@@ -643,18 +662,71 @@ function outcomesFromCriteria(c){
   const t=String(row?.condition||row?.definition||'').trim();
   return t?[t.split(/\n|;/)[0].replace(/^(include|includes|studies reporting)\s*:?\s*/i,'').slice(0,160)]:[];
 }
-async function importFromFullText(){
-  handoff=await readHandoff();
-  if(!handoff||!handoff.records.length){showNotice('source-notice','No included studies yet. Finish Full-text assess first; studies you include there appear here.','warning');return}
-  const before=new Set(ws.records.map(r=>r.uid));
-  ws.records=handoff.records.map(r=>({...r}));ws.criteriaSig=handoff.criteriaSig||'';ws.handoffAt=now();
-  if(!ws.outcomes.length)ws.outcomes=outcomesFromCriteria(handoff.criteria);
-  if(!ws.outcomes.length)ws.outcomes=['Primary outcome'];
-  const added=ws.records.filter(r=>!before.has(r.uid)).length;
-  for(const r of ws.records)if(!ws.studies[r.uid]?.design)guessDesign(r);
-  log('imported',{studies:ws.records.length,added});await save();render();
-  showNotice('source-notice',`${ws.records.length} included stud${ws.records.length===1?'y':'ies'} from Full-text assess${added&&before.size?` (${added} new)`:''}.${handoff.pending?` Full-text assess still has ${handoff.pending} undecided report${handoff.pending===1?'':'s'}.`:''} Check each study design; it decides the tool.`,handoff.pending?'warning':'success');
+let syncingStudies=false;
+async function importStudies(){
+  if(!ws||busy||syncingStudies)return;
+  syncingStudies=true;
+  try{
+    const h=await readHandoff();if(!h)return;
+    // Enrich older hand-offs with the original bibliography and fixed record number.
+    const db=await openDB('aimstep-fulltext');let full;
+    try{full=(await getProject(db))?.state;}finally{db.close();}
+    const original=new Map((full?.records||[]).map(r=>[r.uid,r]));
+    const incoming=h.records.filter(r=>!(ws.deletedStudyIds||[]).includes(r.uid)).map(r=>({...original.get(r.uid),...r,sourceNumber:r.sourceNumber||full?.sourceNumbers?.byUid?.['uid:'+r.uid]}));
+    const merged=AimstepExtractionSources.merge(ws.records,incoming,ws.sourceNumbers);
+    if(JSON.stringify(merged.records)===JSON.stringify(ws.records)&&h.updatedAt===ws.handoffAt)return;
+    ws.records=merged.records;ws.sourceNumbers=merged.numbers;ws.handoffAt=h.updatedAt||now();
+    ws.criteriaSig=h.criteriaSig||'';if(!ws.outcomes.length)ws.outcomes=outcomesFromCriteria(h.criteria);if(!ws.outcomes.length)ws.outcomes=['Primary outcome'];for(const r of ws.records)if(!ws.studies[r.uid]?.design)guessDesign(r);
+    for(const r of ws.records){docCache.delete(r.uid);await loadDoc(r.uid);}
+    if(current&&!recBy(current.split('|')[0]))current=null;
+    log('fulltext-synced',{studies:incoming.length});await save();render();
+  }finally{syncingStudies=false;renderSource();renderStudies();}
 }
+async function deleteIncludedStudy(uid){
+  if(busy||syncingStudies||!recBy(uid))return;
+  const previousRecords=ws.records,previousDeleted=ws.deletedStudyIds,previousCurrent=current;
+  busy='delete';
+  try{
+    await saveChain.catch(()=>{});
+    ws.records=ws.records.filter(r=>r.uid!==uid);
+    ws.deletedStudyIds=[...new Set([...(ws.deletedStudyIds||[]),uid])];
+    if(current?.split('|')[0]===uid)current=null;
+    await putProject(store,{id:scope,state:ws,updatedAt:now()});
+    publishSummary();
+  }catch(e){
+    ws.records=previousRecords;ws.deletedStudyIds=previousDeleted;current=previousCurrent;
+    showNotice('source-notice','Could not delete the record: '+e.message,'error');
+  }finally{busy='';render();}
+}
+async function importLocalPdfs(files){
+  if(busy||syncingStudies||!files.length)return;
+  busy='import';renderSource();let added=0,duplicates=0;const failed=[];
+  try{
+    if(!docStore)throw Error('PDF storage is unavailable in this browser.');
+    for(const file of files){
+      $('ai-now').textContent='Importing '+file.name+'…';
+      try{
+        const {record,doc}=await AimstepExtractionSources.readPdf(file);
+        if(ws.records.some(r=>r.uid===record.uid||r.contentHash===record.contentHash)){duplicates++;continue;}
+        let duplicate=false;
+        for(const r of ws.records){const existing=await loadDoc(r.uid);if(!existing?.pdf)continue;const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await existing.pdf.arrayBuffer()))).map(x=>x.toString(16).padStart(2,'0')).join('');if(hash===record.contentHash){duplicate=true;break;}}
+        if(duplicate){duplicates++;continue;}
+        await putProject(docStore,{...doc,id:scope+'|'+record.uid});
+        const before=ws.records,numbers=ws.sourceNumbers,deleted=ws.deletedStudyIds;
+        ws.deletedStudyIds=(ws.deletedStudyIds||[]).filter(id=>id!==record.uid);
+        const merged=AimstepExtractionSources.merge([...ws.records,record],ws.records.filter(r=>r.extractionOrigin!=='local'),ws.sourceNumbers);
+        ws.records=merged.records;ws.sourceNumbers=merged.numbers;
+        try{await putProject(store,{id:scope,state:ws,updatedAt:now()});}catch(e){ws.records=before;ws.sourceNumbers=numbers;ws.deletedStudyIds=deleted;throw e;}
+        docCache.set(record.uid,doc);if(!ws.outcomes.length)ws.outcomes=['Primary outcome'];guessDesign(record);await save();added++;
+      }catch(e){failed.push(file.name+': '+e.message);}
+    }
+    publishSummary();renderStudies();
+    showNotice('source-notice',failed.length?failed.join('\n'):'','error');
+    toast(added+' PDF'+(added===1?'':'s')+' imported.'+(duplicates?' '+duplicates+' duplicate'+(duplicates===1?'':'s')+' skipped.':''));
+  }catch(e){showNotice('source-notice',e.message,'error');}
+  finally{busy='';$('ai-now').textContent='';$('import-pdfs').value='';render();}
+}
+
 /* A first guess from the title and abstract, marked as a guess; the AI
    pre-fill confirms it from the methods, and the reviewer has the last word. */
 function guessDesign(r){
@@ -742,9 +814,10 @@ function renderSource(){
   $('outcomes').innerHTML=ws.outcomes.map((o,i)=>`<span class="chip">${esc(o)}<button type="button" class="chip-x" data-del-outcome="${i}" aria-label="Remove ${esc(o)}"${ws.outcomes.length<2?' disabled':''}>×</button></span>`).join('');
   const present=[...new Set(ws.records.map(r=>studyOf(r.uid).design).filter(d=>toolsOf(d).length))];
   $('tool-choice').innerHTML=present.length?`<span class="label">Tool for each design</span>`+present.map(d=>{const ids=toolsOf(d),cur=toolFor(d)?.id;return `<label class="tc">${esc(DESIGN_BY_ID[d].label)} <select class="select compact" data-toolchoice="${d}"${ids.length<2?' disabled':''}>${ids.map(id=>`<option value="${id}"${id===cur?' selected':''}>${esc(TOOLS[id].name)}${id===ids[0]?' (recommended)':''}</option>`).join('')}</select></label>`}).join(''):'';
+  $('import-ft').disabled=!!busy||syncingStudies;
   $('start-ai').disabled=!!busy||!n;$('stop-ai').hidden=busy!=='ai';$('start-ai').hidden=busy==='ai';
 }
-function renderStudies(){
+function renderAssessmentStudies(){
   const rows=ws.records.map(r=>{
     const s=studyOf(r.uid),tool=toolFor(s.design);
     const outs=ws.outcomes.map((o,i)=>{const u={uid:r.uid,o:i,key:akey(r.uid,i)},st=statusOf(u),x=ws.assess[u.key],j=tool&&x?judgements(tool,x):null;
@@ -753,7 +826,53 @@ function renderStudies(){
 <td><select class="select compact" data-design="${esc(r.uid)}" aria-label="Design of ${esc(r.title||'')}"><option value="">Choose design</option>${DESIGNS.map(d=>`<option value="${d.id}"${s.design===d.id?' selected':''}>${esc(d.label)}</option>`).join('')}</select><span class="design-by">${s.designBy?esc({keywords:'Guessed from title/abstract',ai:'AI, from the methods',reviewer:'Set by reviewer'}[s.designBy]):''}</span></td>
 <td>${tool?`<b>${esc(tool.name)}</b>`:DESIGN_BY_ID[s.design]?.ext?`<span class="design-by">${esc(DESIGN_BY_ID[s.design].ext)}</span>`:'—'}${r.fullText?'':'<span class="design-by warn">No full text</span>'}</td><td class="units">${outs}</td></tr>`;
   }).join('');
-  $('study-table').innerHTML=`<thead><tr><th>Study</th><th>Design</th><th>Tool</th><th>Result${ws.outcomes.length>1?'s':''} (outcome)</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">No studies yet. Import the studies included in Full-text assess.</td></tr>'}</tbody>`;
+  $('assessment-study-table').innerHTML=`<thead><tr><th>Study</th><th>Design</th><th>Tool</th><th>Result${ws.outcomes.length>1?'s':''} (outcome)</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">No studies yet. Included reports sync from Full-text assess, or use Import from local above.</td></tr>'}</tbody>`;
+}
+const sourceDetailsOpen=new Set(),sourceDetailsInitialized=new Set();
+function hasOriginalPdf(id){return !!docCache.get(id)?.pdf;}
+function fulltextFilename(id){return docCache.get(id)?.pdf?.name||recBy(id)?.fullText?.filename||'';}
+function doiLink(value){
+  const label=String(value||'').trim(),doi=label.replace(/^doi:\s*/i,'').replace(/^https?:\/\/(?:dx\.)?doi\.org\//i,'').trim();
+  if(!/^10\.\d{4,9}\/\S+$/i.test(doi))return esc(label);
+  const href='https://doi.org/'+doi.split('/').map(encodeURIComponent).join('/');
+  return '<a class="doi-link" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>';
+}
+function firstAuthorGivenName(r){
+  const first=Array.isArray(r.authors)?r.authors[0]:String(r.authors||'').split(';')[0];
+  if(!first)return '';
+  if(typeof first==='object')return String(first.givenName||first.given||first.firstName||'').trim().split(/\s+/)[0]||'';
+  const name=String(first).trim(),comma=name.indexOf(',');
+  if(comma>=0)return name.slice(comma+1).trim().split(/\s+/)[0]||name.slice(0,comma).trim();
+  const parts=name.split(/\s+/),last=parts.at(-1);
+  // PubMed-style names commonly end with given-name initials (e.g. Smith JA).
+  return parts.length>1&&/^(?:[A-Z]\.?){1,3}$/.test(last)?last:parts[0];
+}
+function recordHeadingMeta(r){return ['#'+(r.extractionOrigin==='local'?'L':'')+r.sourceNumber,[firstAuthorGivenName(r),r.year].filter(Boolean).join(' ')].filter(Boolean).join(' · ');}
+function sourceRecordCard(r,index){
+  if(!sourceDetailsInitialized.has(r.uid)){sourceDetailsInitialized.add(r.uid);sourceDetailsOpen.add(r.uid+'|fulltext');}
+  const d=r.fullText,has=hasOriginalPdf(r.uid),authors=Array.isArray(r.authors)?r.authors.filter(Boolean).join(', '):String(r.authors||'');
+  const citation=[r.year,[r.volume,r.issue?'('+r.issue+')':''].filter(Boolean).join('')].filter(Boolean).join('; ')+(r.pages?': '+r.pages:'');
+  const bibliography=[r.journal,citation].filter(Boolean).join(' · ');
+  const headingMeta=recordHeadingMeta(r);
+
+  const actions='<button class="source-delete" type="button" data-delete-study="'+esc(r.uid)+'" aria-label="Delete record" title="Delete this record from Included studies"'+(busy||syncingStudies?' disabled':'')+'>×</button>';
+
+  const expanded=kind=>sourceDetailsOpen.has(r.uid+'|'+kind);
+  const disclosureButton=(kind,label)=>'<button class="btn small" id="source-'+kind+'-button-'+index+'" type="button" data-source-toggle="'+kind+'" data-source-record="'+esc(r.uid)+'" aria-expanded="'+expanded(kind)+'" aria-controls="source-'+kind+'-'+index+'">'+label+'<span class="source-chevron" aria-hidden="true"></span></button>';
+  const disclosurePanel=(kind,label,body)=>'<section class="source-disclosure-body" id="source-'+kind+'-'+index+'" aria-label="'+label+'"'+(expanded(kind)?'':' hidden')+'>'+body+'</section>';
+
+  let filename=fulltextFilename(r.uid);
+  try{const url=new URL(d?.url||'');if(['https:','http:'].includes(url.protocol)){
+    if(!filename){const name=decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1)||'');if(/\.pdf$/i.test(name))filename=name;}
+  }}catch(e){}
+  const label=filename||'Saved PDF';
+  const fileLink='<button class="source-file-link" type="button" data-original-pdf="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="reader">'+esc(label)+'</button>';
+  const file=has?'<div class="source-file-row">'+fileLink+''+'</div><p class="source-file-origin">'+esc(d?.source==='Uploaded locally'?'Full text uploaded locally':d?.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">'+(!!r.fullText&&!docCache.has(r.uid)?'Loading saved file…':'No PDF saved yet.')+'</p>';
+  const full=file+(r.fullText?.readable===false?'<p class="hint">No readable text detected. The original PDF is available for manual extraction.</p>':'');
+  return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-heading"><div class="source-record-top"><div class="source-record-number">'+esc(headingMeta)+'</div>'+actions+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3></div><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+doiLink(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full)+disclosurePanel('abstract','Abstract',(r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint">No abstract is available for this report.</p>')+'<div class="source-abstract-fulltext">'+full+'</div>')+'</article>';
+}
+function renderStudies(){
+  $('study-table').innerHTML=ws.records.map(sourceRecordCard).join('');renderAssessmentStudies();
 }
 function firstAuthor(r){const a=(r.authors||[])[0]||'';return String(a).split(/[ ,]/)[0]||'Study'}
 function renderAssess(){
@@ -842,7 +961,9 @@ function publishSummary(){
 /* ---------------- Events ---------------- */
 function reviewer(){return ($('reviewer-name').value||'').trim()}
 function bind(){
-  $('import-ft').addEventListener('click',()=>importFromFullText());
+  $('import-ft').addEventListener('click',()=>$('import-pdfs').click());
+  $('import-pdfs').addEventListener('change',()=>importLocalPdfs([...$('import-pdfs').files]));
+  $('study-table').addEventListener('click',e=>{const remove=e.target.closest('[data-delete-study]');if(remove){deleteIncludedStudy(remove.dataset.deleteStudy);return;}const pdf=e.target.closest('[data-original-pdf]');if(pdf){openReader(pdf.dataset.originalPdf,true);return;}const t=e.target.closest('[data-source-toggle]');if(!t)return;const id=t.dataset.sourceRecord,kind=t.dataset.sourceToggle,key=id+'|'+kind,open=sourceDetailsOpen.has(key);sourceDetailsOpen.delete(id+'|fulltext');sourceDetailsOpen.delete(id+'|abstract');if(!open)sourceDetailsOpen.add(key);renderStudies();});
   $('start-ai').addEventListener('click',()=>runAI());
   $('stop-ai').addEventListener('click',()=>controller?.abort());
   $('add-outcome').addEventListener('click',()=>{const v=$('outcome-input').value.trim();if(!v)return;if(!ws.outcomes.includes(v)){ws.outcomes.push(v);log('outcome-added',{outcome:v});save();render()}$('outcome-input').value=''});
@@ -858,11 +979,11 @@ function bind(){
     if(done&&!confirm(`Switch ${DESIGN_BY_ID[d].label} to ${TOOLS[sel.value].name}? ${done} started or confirmed ${TOOLS[prev].name} assessment${done===1?'':'s'} will be cleared (they stay in the audit trail).`)){sel.value=prev;return}
     keys.forEach(k=>delete ws.assess[k]);ws.toolChoice[d]=sel.value;log('tool-chosen',{design:d,from:prev,to:sel.value,cleared:keys.length});save();render();
     toast(`${DESIGN_BY_ID[d].label}: ${TOOLS[sel.value].name}. Start the AI pre-fill again for these studies.`)});
-  $('study-table').addEventListener('change',e=>{const sel=e.target.closest('[data-design]');if(!sel)return;const s=studyOf(sel.dataset.design),prev=s.design;s.design=sel.value;s.designBy='reviewer';s.designWhy='';
+  $('assessment-study-table').addEventListener('change',e=>{const sel=e.target.closest('[data-design]');if(!sel)return;const s=studyOf(sel.dataset.design),prev=s.design;s.design=sel.value;s.designBy='reviewer';s.designWhy='';
     // a different tool means different questions: drop drafts made for the old tool
     if(toolFor(prev)?.id!==toolFor(s.design)?.id)ws.outcomes.forEach((o,i)=>{delete ws.assess[akey(sel.dataset.design,i)]});
     log('design-set',{uid:sel.dataset.design,from:prev,to:s.design});save();render()});
-  $('study-table').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(!b)return;const [uid]=b.dataset.open.split('|');if(!toolFor(studyOf(uid).design)){toast(DESIGN_BY_ID[studyOf(uid).design]?.ext||'Choose the study design first; it decides the tool.');return}current=b.dataset.open;render();$('assess').scrollIntoView({block:'start',behavior:'smooth'})});
+  $('assessment-study-table').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(!b)return;const [uid]=b.dataset.open.split('|');if(!toolFor(studyOf(uid).design)){toast(DESIGN_BY_ID[studyOf(uid).design]?.ext||'Choose the study design first; it decides the tool.');return}current=b.dataset.open;render();$('assess').scrollIntoView({block:'start',behavior:'smooth'})});
   $('assess').addEventListener('click',async e=>{
     const x=current&&assessOf(current);if(!x)return;
     const ans=e.target.closest('[data-ans]'),res=e.target.closest('[data-res]'),ov=e.target.closest('[data-override]'),rd=e.target.closest('[data-reader]');
@@ -883,12 +1004,20 @@ function bind(){
   $('assess').addEventListener('change',e=>{const n=e.target.closest('[data-note]');if(!n||!current)return;const x=assessOf(current);x.notes[n.dataset.note]=n.value.trim();save()});
   $('export-btn').addEventListener('click',exportResults);
   $('close-reader').addEventListener('click',()=>$('reader').close());
+  $('reader').addEventListener('close',()=>{if(readerObjectUrl)URL.revokeObjectURL(readerObjectUrl);readerObjectUrl=null;$('reader-pdf-frame').removeAttribute('src');});
+  let refreshTimer;
+  const refresh=()=>{clearTimeout(refreshTimer);if(!document.hidden)refreshTimer=setTimeout(()=>importStudies().catch(e=>showNotice('source-notice','Could not refresh included studies: '+e.message,'error')),1200);};
+  window.addEventListener('focus',refresh);window.addEventListener('storage',refresh);document.addEventListener('visibilitychange',refresh);
   collapsible('toggle-source','source-body','Included studies','source');
   collapsible('toggle-summary','summary-body-wrap','Summary','summary');
 }
-async function openReader(uid){
+let readerObjectUrl=null;
+async function openReader(uid,original=false){
   const doc=await loadDoc(uid),r=recBy(uid);if(!doc){toast('The full text is not stored in this browser.');return}
-  const x=assessOf(current),quotes=new Set([...Object.values(x.ai?.answers||{}).map(a=>a.quote).filter(Boolean),...Object.values(x.notes).filter(Boolean)].map(squash));
+  if(readerObjectUrl){URL.revokeObjectURL(readerObjectUrl);readerObjectUrl=null;}
+  $('reader-pdf-frame').hidden=true;$('reader-pdf-frame').removeAttribute('src');$('reader-body').hidden=false;
+  if(original&&doc.pdf){readerObjectUrl=URL.createObjectURL(doc.pdf);$('reader-title').textContent=doc.pdf.name||r.fullText?.filename||r.title;$('reader-body').hidden=true;$('reader-pdf-frame').hidden=false;$('reader-pdf-frame').src=readerObjectUrl;$('reader').showModal();return;}
+  const x=current?assessOf(current):{notes:{},ai:null},quotes=new Set([...Object.values(x.ai?.answers||{}).map(a=>a.quote).filter(Boolean),...Object.values(x.notes).filter(Boolean)].map(squash));
   $('reader-title').textContent=r.title||'Full text';
   $('reader-body').innerHTML=doc.chunks.map(c=>{const hit=[...quotes].some(q=>q.length>12&&squash(c.text).includes(q));return `<p class="${hit?'ev-hit':''}"><span class="muted">${esc(c.id)}${c.section?' · '+esc(c.section):''}</span> ${esc(c.text)}</p>`}).join('');
   $('reader').showModal();
@@ -898,10 +1027,8 @@ async function init(){
   try{
     store=await openDB('aimstep-rob');try{docStore=await openDB('aimstep-fulltext-docs')}catch(e){docStore=null}
     const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});
-    handoff=await readHandoff();
-    if(!ws.records.length&&handoff?.records?.length)await importFromFullText();
-    else if(!ws.records.length)showNotice('source-notice',handoff?`No included studies yet. Full-text assess has ${handoff.pending||0} report${handoff.pending===1?'':'s'} still undecided; studies you include there appear here.`:'No included studies yet. Studies you include in Full-text assess appear here.','warning');
-    else if(handoff&&handoff.updatedAt>ws.handoffAt&&ws.records.length)showNotice('source-notice','Full-text assess has changed since the studies were imported. Import again to update the list; assessments are kept.','warning');
+    await importStudies();
+    await Promise.all(ws.records.map(r=>loadDoc(r.uid)));
     bind();render();document.body.dataset.ready='true';
   }catch(e){showNotice('source-notice','The risk of bias workspace could not be opened: '+e.message,'error')}
 }
