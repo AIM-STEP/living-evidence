@@ -5,3 +5,5 @@ const record={sourceNumber:39,year:'2026',journal:'Synthetic',doi:'10.1234/synth
 form.fields=form.fields.filter(f=>f.baselineKey!=='journal');B.migrate(form);assert(!form.fields.some(f=>f.baselineKey==='journal'));
 const cleared={sections:[],fields:[],sectionArchives:{baseline:[]}};B.migrate(cleared);assert.equal(cleared.fields.length,0);assert.equal(cleared.sectionArchives.baseline.length,9);
 assert.equal(B.values({...record,extractionOrigin:'local'},()=> '').systemId,'#L39');console.log('PASS nine defaults, old IDs and values, fixed ID, metadata prefill, missing data, user edits and cleared form preservation');
+
+const existing={baselineVersion:1,sections:['baseline'],fields:[{id:'id',section:'baseline',baselineKey:'systemId'},{id:'name',section:'baseline',baselineKey:'firstName'},{id:'doi',section:'baseline',baselineKey:'doi'},{id:'journal',section:'baseline',baselineKey:'journal'}],sectionArchives:{}};B.migrate(existing);assert.deepEqual(existing.fields.map(f=>f.id),['id','doi','journal','name']);assert.equal(existing.fields.length,4);console.log('PASS existing fields reordered without restoring removed defaults');
