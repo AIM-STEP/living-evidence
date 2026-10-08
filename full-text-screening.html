@@ -376,6 +376,7 @@ th{background:#f4f4f4}
 <dialog id="screening-stages-dialog" class="dialog" aria-labelledby="screening-stages-title">
 <div class="panel-head"><div class="toolbar"><h2 id="screening-stages-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4"/></svg>Screening criteria</h2></div><div class="toolbar"><button type="button" class="btn small" id="add-stage-element" aria-expanded="false" aria-controls="stage-add-picker">Add criteria</button><button type="button" class="criteria-close" id="close-stages" aria-label="Close screening criteria">×</button></div></div>
 <div class="panel-body">
+<div class="toolbar"><button type="button" class="btn small" id="import-screening-stages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg>Import from title and abstract screening</button></div>
 <p class="hint" id="stages-help-text" hidden data-developer-notes>Only the saved screening criteria apply to full-text assessment. Exclusion requires explicit evidence from the report. Missing evidence does not establish noncompliance.</p>
 <p class="hint" id="stages-status" role="status" hidden></p>
 <div class="stage-framework"><span class="label">Question framework</span><div id="stage-framework-options" class="toolbar" role="group" aria-label="Question framework"></div></div><div id="stage-add-picker" class="toolbar" hidden></div><div id="stages-items"></div>
@@ -2291,6 +2292,26 @@ $('open-screening-criteria').addEventListener('click',()=>{
   $('stages-error').hidden=true;$('stages-help-text').hidden=true;
   renderStageRows();stagesDialog.showModal();
 });
+async function importTitleAbstractStages(){
+  if(stagesSaving||clearActionsBlocked()||!stagesDraft)return;
+  if(stagesDirty()&&!confirm('Replace unsaved edits with the saved title and abstract screening criteria?'))return;
+  stagesSaving=true;$('import-screening-stages').disabled=true;$('save-stages').disabled=true;
+  $('stages-error').hidden=true;
+  let db;
+  try{
+    db=await openDB('aimstep-title-abstract');
+    const saved=await getProject(db),config=saved?.state?.screeningStages;
+    if(!config)throw new Error('Save Screening criteria in Title and abstract screening for this project first.');
+    const elements=AimstepScreeningStages.editable(config.criteriaSnapshot,config).filter(e=>e.enabled);
+    if(!elements.length||!AimstepScreeningStages.draftValid(elements))throw new Error('No usable screening criteria were found. Save valid criteria in Title and abstract screening first.');
+    stagesDraft=structuredClone(elements);
+    stagesFramework=AimstepScreeningStages.frameworks[config.framework]?config.framework:'Other';
+    renderStageRows();
+    toast('Screening criteria imported. Review and click Save to apply.');
+  }catch(e){$('stages-error').textContent=e.message;$('stages-error').hidden=false;}
+  finally{db?.close();stagesSaving=false;$('import-screening-stages').disabled=false;$('save-stages').disabled=false;}
+}
+$('import-screening-stages').addEventListener('click',importTitleAbstractStages);
 $('stages-items').addEventListener('input',event=>{
   if(stagesSaving||!stagesDraft)return;
   const field=event.target.dataset.elementField,index=Number(event.target.dataset.elementIndex);
