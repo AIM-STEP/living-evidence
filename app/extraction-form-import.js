@@ -51,16 +51,16 @@ function word(files){
   else if(current)current.definition+=(current.definition?'\n':'')+t;
  }return items;
 }
-async function read(file){if(file.size>10*1024*1024)throw Error('Each form file must be 10 MB or smaller.');const ext=file.name.split('.').pop().toLowerCase();let items;
+async function read(file,options={}){if(!options.permissive&&file.size>10*1024*1024)throw Error('Each form file must be 10 MB or smaller.');const ext=file.name.split('.').pop().toLowerCase();let items;
  if(ext==='xlsx'||ext==='docx'){const files=await unzip(file);items=ext==='xlsx'?spreadsheet(files):word(files);}
  else if(['csv','tsv','txt'].includes(ext)){const t=(await file.text()).replace(/^\ufeff/,'');items=table(csv(t,ext==='tsv'||t.split(/\r?\n/)[0].includes('\t')?'\t':','),file.name.replace(/\.[^.]+$/,''));}
  else if(ext==='json'){const data=JSON.parse(await file.text()),rows=Array.isArray(data)?data:data.fields||data.items;if(!Array.isArray(rows))throw Error('JSON must contain an items or fields array.');items=rows.map(f=>({label:String(f.label||f.item||f.name||''),section:section(f.section),definition:String(f.definition??''),hasDefinition:Object.hasOwn(f,'definition')}));}
  else throw Error('Use .xlsx, .docx, .csv, .tsv, .txt or .json.');
- items=dedupe(items);if(!items.length)throw Error('No items were found. Use columns Section, Item and Definition, or a Word item-definition table.');return items;
+ items=options.permissive?items.filter(f=>f.label?.trim()):dedupe(items);if(!items.length)throw Error('No items were found. Use columns Section, Item and Definition, or a Word item-definition table.');return items;
 }
-function build(form,items,mode,id){
- const next=JSON.parse(JSON.stringify(form));items=dedupe(items);if(!items.length)throw Error('Add at least one item.');const fields=mode==='replace'?[]:[...next.fields];
- for(const f of items){const existing=next.fields.find(x=>x.section===f.section&&key(x.label)===key(f.label));const field={...existing,id:existing?.id||id(),section:f.section,label:f.label};if(f.hasDefinition)field.definition=f.definition;else if(!existing)field.definition='Extract '+f.label+' exactly as reported. Use NR if not reported and NA only if not applicable. Provide the supporting quotation and passage.';
+function build(form,items,mode,id,options={}){
+ const next=JSON.parse(JSON.stringify(form));items=options.allowDuplicates?items:dedupe(items);if(!items.length&&!options.allowDuplicates)throw Error('Add at least one item.');const fields=mode==='replace'?[]:[...next.fields];
+ for(const f of items){const existing=next.fields.find(x=>x.section===f.section&&key(x.label)===key(f.label));const field={...existing,id:existing?.id||id(),section:f.section,label:f.label};if(f.hasDefinition)field.definition=f.definition;else if(options.preserveMissing)field.definition='';else if(!existing)field.definition='Extract '+f.label+' exactly as reported. Use NR if not reported and NA only if not applicable. Provide the supporting quotation and passage.';
   if(f.section==='baseline'){const baseline=({'id':'systemId','system id':'systemId','author':'firstName','year':'year','doi':'doi','journal':'journal'})[key(f.label)];if(baseline)field.baselineKey=baseline;}
   if(f.section==='intervention'&&key(f.label)==='number of arm')field.piooKey='intervention.armCount';
   const at=fields.findIndex(x=>x.id===field.id);if(at<0)fields.push(field);else fields[at]=field;
@@ -76,21 +76,18 @@ async function sourceText(file){
  if(ext==='xlsx')return JSON.stringify(spreadsheet(await unzip(file),true));
  throw Error('Upload PDF, Word (.docx), Excel (.xlsx), text, Markdown, CSV, TSV or JSON source materials.');
 }
+function combine(items){const result=[];for(const item of items){const matches=result.filter(f=>f.section===item.section&&key(f.label)===key(item.label));const same=matches.find(f=>!f.definition.trim()||!item.definition.trim()||f.definition===item.definition);if(same){if(item.definition.trim()){same.definition=item.definition;same.hasDefinition=item.hasDefinition;}}else result.push({...item});}return result;}
 function mount(api){
- const $=id=>document.getElementById(id),dialog=$('form-import-dialog');let items=[],reading=false,saving=false,files=[];
- const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const error=message=>{$('form-import-error').textContent=message;$('form-import-error').hidden=!message;};
- function render(){const rows=items.map((f,i)=>`<tr data-import-row="${i}"><td><select class="select compact" data-import-key="section" aria-label="Section">${Object.entries(sections).map(([k,v])=>`<option value="${k}" ${f.section===k?'selected':''}>${v}</option>`).join('')}</select></td><td><input class="input compact" data-import-key="label" aria-label="Item" value="${esc(f.label)}"></td><td><textarea class="input" data-import-key="definition" aria-label="Item definition" rows="3">${esc(f.definition)}</textarea></td><td><button class="source-delete" type="button" data-import-delete="${i}" aria-label="Remove ${esc(f.label)}">×</button></td></tr>`).join('');$('form-import-preview').innerHTML=rows?`<table class="grid"><thead><tr><th>Section</th><th>Item</th><th>Definition</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'';$('apply-form-import').disabled=!items.length||reading||saving;}
- $('import-local-form').addEventListener('click',()=>{if(api.busy())return;items=[];files=[];if($('form-import-name'))$('form-import-name').value='';$('form-import-files').value='';$('form-import-mode').value='merge';error('');render();$('form-import-files').click();});
- $('close-form-import').addEventListener('click',()=>{if(!reading&&!saving)dialog.close();});dialog.addEventListener('cancel',e=>{if(reading||saving)e.preventDefault();});
- $('form-import-files').addEventListener('change',async e=>{if(!e.target.files?.length)return;if(!dialog.open)dialog.showModal();reading=true;items=[];error('');render();$('form-import-files').disabled=true;try{const selected=[...e.target.files];if(selected.length>12)throw Error('Upload at most 12 files at once.');files=selected.map(f=>f.name);const all=[];for(const file of selected)all.push(...await read(file));
-   // A standalone definition file may omit its section; resolve only unique item-name matches.
-   for(const f of all.filter(f=>f.section==='other')){const matches=[...all,...api.form().fields].filter(x=>x.section!=='other'&&key(x.label)===key(f.label));const groups=[...new Set(matches.map(x=>x.section))];if(groups.length===1)f.section=groups[0];}
-   items=dedupe(all);
-  }catch(e){error(e.message||'Could not read the selected files.');}finally{reading=false;$('form-import-files').disabled=false;render();}});
- $('form-import-preview').addEventListener('input',e=>{const row=e.target.closest('[data-import-row]'),k=e.target.dataset.importKey;if(row&&k){const f=items[Number(row.dataset.importRow)];f[k]=e.target.value;if(k==='definition')f.hasDefinition=true;}});
- $('form-import-preview').addEventListener('click',e=>{const b=e.target.closest('[data-import-delete]');if(b&&!saving){items.splice(Number(b.dataset.importDelete),1);render();}});
- $('apply-form-import').addEventListener('click',async()=>{if(reading||saving||!items.length)return;saving=true;error('');$('form-import-preview').inert=true;$('form-import-files').disabled=true;$('form-import-mode').disabled=true;$('apply-form-import').disabled=true;try{if(items.some(f=>!f.label.trim()))throw Error('Every item needs a name.');await api.apply(items,$('form-import-mode').value,files,$('form-import-name')?.value||'');dialog.close();}catch(e){error(e.message||'Could not save the imported form.');}finally{saving=false;$('form-import-preview').inert=false;$('form-import-files').disabled=false;$('form-import-mode').disabled=false;render();}});
+ const $=id=>document.getElementById(id);let reading=false;
+ const status=(message,isError=false)=>{$('form-import-status').textContent=message;$('form-import-status').hidden=!message;$('form-import-status').className=isError?'notice error':'hint';};
+ $('import-local-form').addEventListener('click',()=>{if(reading||api.busy())return;$('form-import-files').value='';$('form-import-files').click();});
+ $('form-import-files').addEventListener('change',async e=>{const selected=[...e.target.files];if(!selected.length||reading||api.busy())return;reading=true;api.lock(true);$('import-local-form').disabled=true;status('Importing…');let id;
+  try{const items=[],unparsed=[],warnings=[];for(const file of selected){try{items.push(...await read(file,{permissive:true}));}catch(error){try{const text=/\.pdf$/i.test(file.name)?(await api.pdf.readPdf(file)).doc.fullText:await sourceText(file);if(text.trim())unparsed.push({name:file.name,text});else warnings.push(file.name+': no readable text was found.');}catch(e){warnings.push(file.name+': '+e.message);}}}
+   for(const f of items.filter(f=>f.section==='other')){const groups=[...new Set(items.filter(x=>x.section!=='other'&&key(x.label)===key(f.label)).map(x=>x.section))];if(groups.length===1)f.section=groups[0];}
+   id=await api.apply(combine(items),selected.map(f=>f.name),selected,unparsed,warnings);status('');
+  }catch(e){status('Could not save the imported form: '+e.message,true);}finally{reading=false;api.lock(false);$('import-local-form').disabled=false;}
+  if(id)api.review(id);
+ });
 }
-const api={sections,table,csv,dedupe,read,build,sourceText,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepExtractionFormImport=api;
+const api={sections,table,csv,dedupe,read,build,sourceText,combine,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepExtractionFormImport=api;
 })(globalThis);
