@@ -11,6 +11,18 @@ const fields=[
  ['registration','Registration',['study registration number','trial registration number']],
  ['funding','Funding',['funding']]
 ];
+const definitions={
+ systemId:'Use the fixed ID assigned by AIM-STEP to this record. Copy it exactly; never infer an ID from the paper, DOI or registration number, and never renumber it.',
+ doi:'Extract the DOI of this exact report from its bibliographic metadata or full text. Return the identifier beginning with 10., without a DOI URL or doi: prefix. Do not use DOIs from cited references. If absent, leave blank.',
+ journal:'Extract the journal in which this exact report was published, using its name as reported. Do not substitute the publisher, database or a journal from the reference list. If not reported, leave blank.',
+ firstName:'Extract the given name (first name) of the first listed author of this report. For surname-first names, use the given-name component. If only initials are reported, retain those initials; never invent an expanded name. For a group author with no personal name, leave blank.',
+ year:'Extract the publication year of this exact report as four digits. Prefer the year of its final journal citation; use the online publication year only when no final citation year is available. Do not use recruitment dates, registration dates or PDF creation dates. If uncertain, leave blank.',
+ country:'Extract the country or countries where participants were recruited or the study was conducted. List all explicitly reported countries for a multinational study. Do not infer study location from author affiliations, the journal or the funding organization. If not reported, leave blank.',
+ studyType:'Extract the study design explicitly described in the methods (for example, randomized controlled trial, cohort or case-control study), including parallel, crossover or cluster design when reported. Do not infer randomization from the word trial alone. If design cannot be established from the report, leave blank.',
+ registration:'Extract the registry name and study registration identifier for the study reported in this paper (for example, ClinicalTrials.gov and an NCT identifier). Include multiple identifiers if explicitly linked to this study. Do not use an ethics approval number, DOI or registration of a cited study. If no registration is reported, leave blank.',
+ funding:'Extract explicitly reported financial support, funder names and grant numbers for this study. Record an explicit statement of no funding when present. Distinguish funding from author affiliations, conflicts of interest and the role of the sponsor. If no funding statement is reported, leave blank.'
+};
+function definition(field){return typeof field.definition==='string'?field.definition:definitions[field.baselineKey]||('Extract '+field.label+' as explicitly reported for this study. Use the supplied report as evidence; do not infer missing values. Leave blank if not reported.');}
 function upgrade(list){
  const remaining=[...list],baseline=[];
  for(const [key,label,aliases] of fields){const index=remaining.findIndex(f=>f.baselineKey===key||aliases.includes(String(f.label).trim().toLowerCase()));const old=index<0?null:remaining.splice(index,1)[0];baseline.push({...old,id:old?.id||'baseline-'+key,label,section:'baseline',baselineKey:key});}
@@ -38,9 +50,12 @@ function values(record,firstName){
 }
 function prefill(study,record,form,firstName){
  if(!record)return;const data=values(record,firstName);
- for(const field of form.fields){const key=field.baselineKey;if(!key)continue;const value=data[key],old=study.fields[field.id];
+ for(const field of form.fields){const key=field.baselineKey;if(!key)continue;
+  // A custom extraction meaning must not be replaced by a metadata shortcut.
+  if(key!=='systemId'&&typeof field.definition==='string'&&field.definition.trim()&&field.definition.trim()!==definitions[key])continue;
+  const value=data[key],old=study.fields[field.id];
   if(value&&(key==='systemId'||(!old||old.src==='record')))study.fields[field.id]={v:value,src:'record',ok:true};
  }
 }
-const api={fields,upgrade,migrate,values,prefill};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepExtractionBaseline=api;
+const api={fields,definitions,definition,upgrade,migrate,values,prefill};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepExtractionBaseline=api;
 })(globalThis);
