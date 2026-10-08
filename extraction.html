@@ -227,7 +227,6 @@ th{background:#f4f4f4}
 </ol>
 <div class="source-summary" id="src-stats" hidden></div>
 <div class="notice" id="source-notice" hidden></div>
-<div class="toolbar ai-row"><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><span class="hint">Optional</span><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
 <div class="team-track full-track" id="ai-progress" hidden><span style="width:0%"></span></div><div class="hint" id="ai-now"></div>
 
 </div>
@@ -515,7 +514,7 @@ async function importStudies(){
     const db=await openDB('aimstep-fulltext');let full;
     try{full=(await getProject(db))?.state;}finally{db.close();}
     const original=new Map((full?.records||[]).map(r=>[r.uid,r]));
-    const incoming=h.records.map(r=>({...original.get(r.uid),...r,sourceNumber:r.sourceNumber||full?.sourceNumbers?.byUid?.['uid:'+r.uid]}));
+    const incoming=h.records.filter(r=>!(ws.deletedStudyIds||[]).includes(r.uid)).map(r=>({...original.get(r.uid),...r,sourceNumber:r.sourceNumber||full?.sourceNumbers?.byUid?.['uid:'+r.uid]}));
     const merged=AimstepExtractionSources.merge(ws.records,incoming,ws.sourceNumbers);
     if(JSON.stringify(merged.records)===JSON.stringify(ws.records)&&h.updatedAt===ws.handoffAt)return;
     ws.records=merged.records;ws.sourceNumbers=merged.numbers;ws.handoffAt=h.updatedAt||now();
@@ -523,7 +522,23 @@ async function importStudies(){
     for(const r of ws.records){docCache.delete(r.uid);await loadDoc(r.uid);}
     if(current&&!recBy(current))current=null;
     log('fulltext-synced',{studies:incoming.length});await save();render();
-  }finally{syncingStudies=false;renderSource();}
+  }finally{syncingStudies=false;renderSource();renderStudies();}
+}
+async function deleteIncludedStudy(uid){
+  if(busy||syncingStudies||!recBy(uid))return;
+  const previousRecords=ws.records,previousDeleted=ws.deletedStudyIds,previousCurrent=current;
+  busy='delete';
+  try{
+    await saveChain.catch(()=>{});
+    ws.records=ws.records.filter(r=>r.uid!==uid);
+    ws.deletedStudyIds=[...new Set([...(ws.deletedStudyIds||[]),uid])];
+    if(current===uid)current=null;
+    await putProject(store,{id:scope,state:ws,updatedAt:now()});
+    publish();
+  }catch(e){
+    ws.records=previousRecords;ws.deletedStudyIds=previousDeleted;current=previousCurrent;
+    showNotice('source-notice','Could not delete the record: '+e.message,'error');
+  }finally{busy='';render();}
 }
 async function importLocalPdfs(files){
   if(busy||syncingStudies||!files.length)return;
@@ -539,10 +554,11 @@ async function importLocalPdfs(files){
         for(const r of ws.records){const existing=await loadDoc(r.uid);if(!existing?.pdf)continue;const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await existing.pdf.arrayBuffer()))).map(x=>x.toString(16).padStart(2,'0')).join('');if(hash===record.contentHash){duplicate=true;break;}}
         if(duplicate){duplicates++;continue;}
         await putProject(docStore,{...doc,id:scope+'|'+record.uid});
-        const before=ws.records,numbers=ws.sourceNumbers;
+        const before=ws.records,numbers=ws.sourceNumbers,deleted=ws.deletedStudyIds;
+        ws.deletedStudyIds=(ws.deletedStudyIds||[]).filter(id=>id!==record.uid);
         const merged=AimstepExtractionSources.merge([...ws.records,record],ws.records.filter(r=>r.extractionOrigin!=='local'),ws.sourceNumbers);
         ws.records=merged.records;ws.sourceNumbers=merged.numbers;
-        try{await putProject(store,{id:scope,state:ws,updatedAt:now()});}catch(e){ws.records=before;ws.sourceNumbers=numbers;throw e;}
+        try{await putProject(store,{id:scope,state:ws,updatedAt:now()});}catch(e){ws.records=before;ws.sourceNumbers=numbers;ws.deletedStudyIds=deleted;throw e;}
         docCache.set(record.uid,doc);added++;
       }catch(e){failed.push(file.name+': '+e.message);}
     }
@@ -633,7 +649,7 @@ function render(){safely(renderSource);safely(renderForm);safely(renderStudies);
 function renderSource(){
   const n=ws.records.length,done=ws.records.filter(r=>st(r.uid).done).length;
   $('src-stats').innerHTML=[[n,'Included studies'],[ws.records.filter(r=>r.fullText).length,'With full text'],[ws.form.outcomes.length,'Outcomes in the form'],[done,'Confirmed']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');
-  $('start-ai').hidden=busy==='ai';$('stop-ai').hidden=busy!=='ai';$('start-ai').disabled=!n||!!busy;$('import-ft').disabled=!!busy||syncingStudies;
+  $('import-ft').disabled=!!busy||syncingStudies;
 }
 function renderForm(){
   const O=ws.form.outcomes;
@@ -667,7 +683,7 @@ function sourceRecordCard(r,index){
   const bibliography=[r.journal,citation].filter(Boolean).join(' · ');
   const headingMeta=recordHeadingMeta(r);
 
-  const actions='<div class="toolbar"><span class="st st-'+statusOf(r.uid)+'">'+STATUS[statusOf(r.uid)]+'</span><button class="btn small" type="button" data-open="'+esc(r.uid)+'">Extract</button></div>';
+  const actions='<button class="source-delete" type="button" data-delete-study="'+esc(r.uid)+'" aria-label="Delete record" title="Delete this record from Included studies"'+(busy||syncingStudies?' disabled':'')+'>×</button>';
 
   const expanded=kind=>sourceDetailsOpen.has(r.uid+'|'+kind);
   const disclosureButton=(kind,label)=>'<button class="btn small" id="source-'+kind+'-button-'+index+'" type="button" data-source-toggle="'+kind+'" data-source-record="'+esc(r.uid)+'" aria-expanded="'+expanded(kind)+'" aria-controls="source-'+kind+'-'+index+'">'+label+'<span class="source-chevron" aria-hidden="true"></span></button>';
@@ -745,12 +761,11 @@ function publish(){
 }
 
 /* ---------------- Events ---------------- */
-const reviewer=()=>($('reviewer-name').value||'').trim()||'reviewer';
+const reviewer=()=> 'reviewer';
 function bind(){
   $('import-ft').addEventListener('click',()=>$('import-pdfs').click());
   $('import-pdfs').addEventListener('change',e=>importLocalPdfs([...e.target.files]));
-  $('study-table').addEventListener('click',e=>{const pdf=e.target.closest('[data-original-pdf]');if(pdf){openReader(pdf.dataset.originalPdf,true);return;}const t=e.target.closest('[data-source-toggle]');if(!t)return;const id=t.dataset.sourceRecord,kind=t.dataset.sourceToggle,key=id+'|'+kind,open=sourceDetailsOpen.has(key);sourceDetailsOpen.delete(id+'|fulltext');sourceDetailsOpen.delete(id+'|abstract');if(!open)sourceDetailsOpen.add(key);renderStudies();});
-  $('start-ai').addEventListener('click',runAI);$('stop-ai').addEventListener('click',()=>controller?.abort());
+  $('study-table').addEventListener('click',e=>{const remove=e.target.closest('[data-delete-study]');if(remove){deleteIncludedStudy(remove.dataset.deleteStudy);return;}const pdf=e.target.closest('[data-original-pdf]');if(pdf){openReader(pdf.dataset.originalPdf,true);return;}const t=e.target.closest('[data-source-toggle]');if(!t)return;const id=t.dataset.sourceRecord,kind=t.dataset.sourceToggle,key=id+'|'+kind,open=sourceDetailsOpen.has(key);sourceDetailsOpen.delete(id+'|fulltext');sourceDetailsOpen.delete(id+'|abstract');if(!open)sourceDetailsOpen.add(key);renderStudies();});
   $('add-outcome').addEventListener('click',()=>{ws.form.outcomes.push({id:uid8(),name:'New outcome',type:'binary',timepoint:'',window:''});log('outcome-added');save();render()});
   $('form-body').addEventListener('change',e=>{
     const t=e.target;
