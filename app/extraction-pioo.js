@@ -51,8 +51,8 @@ const groups={
   ['notes','Notes / discrepancies','Record unresolved discrepancies across supplied passages, unclear arm/time-point labels and author clarifications that affect extraction. Identify the conflicting sources; do not silently choose a preferred number or invent an explanation.',[]]
  ]};
 const common=' Use only the supplied report as evidence. Identify the arm, outcome and time point wherever relevant. Preserve reported units and statistic labels. Leave unreported values blank; never interpret silence as zero or no. Provide the exact supporting quotation and passage ID for any extracted value.';
-function seed(section){return (groups[section]||[]).map(([key,label])=>({id:'pioo-'+section+'-'+key,label,section,piooKey:section+'.'+key}));}
-function upgrade(section,list){const remaining=[...list],out=[];for(const [key,label,,aliases] of groups[section]||[]){const pk=section+'.'+key,index=remaining.findIndex(f=>f.piooKey===pk||[label,...aliases].some(x=>x.toLowerCase()===String(f.label).toLowerCase()));const old=index<0?null:remaining.splice(index,1)[0];out.push({...old,id:old?.id||'pioo-'+section+'-'+key,label,section,piooKey:pk});}return [...out,...remaining];}
+function seed(section){return (section==='other'?[]:groups[section]||[]).map(([key,label])=>({id:'pioo-'+section+'-'+key,label,section,piooKey:section+'.'+key}));}
+function upgrade(section,list){if(section==='other')return [...list];const remaining=[...list],out=[];for(const [key,label,,aliases] of groups[section]||[]){const pk=section+'.'+key,index=remaining.findIndex(f=>f.piooKey===pk||[label,...aliases].some(x=>x.toLowerCase()===String(f.label).toLowerCase()));const old=index<0?null:remaining.splice(index,1)[0];out.push({...old,id:old?.id||'pioo-'+section+'-'+key,label,section,piooKey:pk});}return [...out,...remaining];}
 function migrate(form){
  if(form.piooVersion===1){migrateTidier(form);return;}
  for(const section of Object.keys(groups)){
