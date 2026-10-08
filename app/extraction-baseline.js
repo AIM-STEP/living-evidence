@@ -1,14 +1,14 @@
 (function(root){
 'use strict';
 const fields=[
- ['systemId','System ID',['system id','fixed id','record id']],
+ ['systemId','ID',['system id','fixed id','record id']],
  ['doi','DOI',['doi','doi number']],
  ['journal','Journal',['journal']],
- ['firstName','First author first name',['first author first name']],
- ['year','Publication year',['publication year','year']],
+ ['firstName','Author',['first author first name']],
+ ['year','Year',['publication year','year']],
  ['country','Country',['country']],
  ['studyType','Study type',['study type','study design']],
- ['registration','Study registration number',['study registration number','trial registration number']],
+ ['registration','Registration',['study registration number','trial registration number']],
  ['funding','Funding',['funding']]
 ];
 function upgrade(list){
@@ -18,7 +18,7 @@ function upgrade(list){
  return [...baseline,...remaining.map(f=>String(f.label).toLowerCase()==='setting'?{...f,section:'other'}:f)];
 }
 function migrate(form){
- if(form.baselineVersion===2)return;
+ if(form.baselineVersion===3)return;
  if(!form.baselineVersion){
   if(form.sections.includes('baseline')){const selected=form.fields.filter(f=>f.section==='baseline'),other=form.fields.filter(f=>f.section!=='baseline');form.fields=[...upgrade(selected),...other];}
   else if(form.sectionArchives.baseline)form.sectionArchives.baseline=upgrade(form.sectionArchives.baseline);
@@ -27,7 +27,10 @@ function migrate(form){
  const reorder=list=>{const ordered=list.filter(f=>f.section==='baseline').sort((a,b)=>rank(a)-rank(b));let index=0;return list.map(f=>f.section==='baseline'?ordered[index++]:f);};
  form.fields=reorder(form.fields);
  if(form.sectionArchives.baseline)form.sectionArchives.baseline=reorder(form.sectionArchives.baseline);
- form.baselineVersion=2;
+ const rename=list=>list.map(field=>{const match=fields.find(([key])=>key===field.baselineKey);return match?{...field,label:match[1]}:field;});
+ form.fields=rename(form.fields);
+ if(form.sectionArchives.baseline)form.sectionArchives.baseline=rename(form.sectionArchives.baseline);
+ form.baselineVersion=3;
 }
 function values(record,firstName){
  const plain=value=>typeof value==='string'||typeof value==='number'?String(value):'';
