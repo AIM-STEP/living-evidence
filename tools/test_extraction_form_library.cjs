@@ -6,3 +6,17 @@ console.log('PASS legacy migration, manual draft isolation, three-source catalog
 // A rejected storage write must restore the catalogue, active form and results together.
 const fs=require('node:fs'),vm=require('node:vm'),html=fs.readFileSync('extraction.html','utf8');const before={form:structuredClone(form),formLibrary:[],studies:{s:{value:'keep'}},activeFormId:null};const context={ws:structuredClone(before),busy:'',structuredClone,saveChain:Promise.resolve(),$:()=>({}),store:{},scope:'synthetic',now:()=>'',putProject:async()=>{throw Error('Storage full')},render(){},publish(){}};vm.createContext(context);vm.runInContext(html.slice(html.indexOf('async function changeFormLibrary('),html.indexOf('/* ---------------- Events ---------------- */')),context);
 (async()=>{await assert.rejects(context.changeFormLibrary(ws=>L.create(ws,{id:'new',name:'New',source:'Manual generate',form,createdAt:'2026-10-08'})),/Storage full/);assert.deepEqual(context.ws,before);assert.equal(context.busy,'');console.log('PASS failed catalogue save rolls back active form, entries and study results');})().catch(e=>{console.error(e);process.exitCode=1});
+
+// Inline edits preserve identity/results, invalidate stale AI approval and isolate other forms.
+const local={form:L.empty(),formLibrary:[],studies:{}};
+L.create(local,{id:'local',name:'Imported',source:'Local import',form,createdAt:'2026-10-08'});
+assert.equal(local.formCreation.hidden,true);
+local.studies={s:{done:true,fields:{ai:{v:'retained',src:'ai',ok:true},manual:{v:'human',src:'manual',ok:true}}}};
+local.extractionFlow={approved:true,main:{done:{s:true}},rounds:[]};
+const draft={base:JSON.stringify(local.form),name:'Edited',form:structuredClone(local.form)};draft.form.fields[0].definition='';
+L.update(local,'local',draft,{status:'stale'});
+assert.equal(local.formLibrary.length,1);assert.equal(local.formLibrary[0].createdAt,'2026-10-08');assert.equal(local.form.fields[0].id,'field');assert.equal(local.form.fields[0].definition,'');assert.equal(local.studies.s.fields.ai.ok,false);assert.equal(local.studies.s.fields.ai.v,'retained');assert.equal(local.studies.s.fields.manual.ok,true);assert.equal(local.extractionFlow.approved,null);assert.deepEqual(local.extractionFlow.main.done,{});assert.equal(local.formLibrary[0].revisions.length,1);
+assert.throws(()=>L.update(local,'local',draft,{}),/saved form changed/);
+L.create(local,{id:'other',name:'Other',source:'Manual generate',form,createdAt:'date'});assert.equal(local.formCreation.hidden,false);
+const stored=local.formLibrary.find(f=>f.id==='local');L.update(local,'local',{base:JSON.stringify(stored.form),name:'Inactive edited',form:structuredClone(stored.form)},{status:'complete'});assert.equal(local.activeFormId,'other');assert.equal(local.form.fields[0].definition,'Extract recruitment country');
+console.log('PASS inline edit identity, blank definitions, stale drafts, retained data and inactive form isolation');
