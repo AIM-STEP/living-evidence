@@ -12,7 +12,7 @@ const groups={
  ['instrument','Instrument / scale','Record the instrument/version, units, scale bounds and favorable direction as stated. Keep different instruments separate. Do not infer ranges or reverse scores.'],
  ['metric','Endpoint / change','Identify endpoint, baseline or change-from-baseline values and the subtraction direction. Never place baseline or endpoint dispersion into a change-score SD cell.'],
  ['mean','Mean','Extract each reported arm mean for the specified metric and time, retaining units. Do not substitute a median, geometric mean or adjusted between-group contrast for an arithmetic arm mean.'],
- ['sd','SD','Extract the explicitly reported standard deviation belonging to the same arm, metric and time as the mean. Never label SE, confidence limits, IQR or range as SD. Missing SD stays blank.'],
+ ['sd','SD','Extract the explicitly reported standard deviation belonging to the same arm, metric and time as the mean. Never label SE, confidence limits, IQR or range as SD. Missing SD is NR.'],
  ['n','N analysed','Extract the sample size used for that arm summary at that time. Do not substitute randomized N, overall trial N, repeated observations or number of clusters.'],
  ['alternative','Alternative summaries','Retain median, quartiles, range, SE, confidence limits and their levels, geometric summaries and relevant sample sizes exactly labeled. Do not automatically estimate means or convert/impute SDs; any later derivation requires an explicit method, inputs and review.'],
  ['effect','Effect / precision','Extract a reported between-group contrast with effect measure (such as MD or SMD), estimate, CI level/limits or SE, reference group, units, adjustment and covariates. Keep arm summaries and comparative estimates distinct.'],
@@ -28,7 +28,7 @@ const groups={
  ['harms','Harms / ascertainment','Distinguish participants with any, serious or treatment-related harm and withdrawals due to harms. Retain collection method, observation period, severity and analysis denominator; do not merge recurrent counts with persons affected.'],
  ['missing','Missing data / discrepancies','Record missing outcome status, exclusions, imputation and conflicting counts. Do not assume missing participants had no event or derive unreported counts by subtraction.']
  ]};
-const common=' Use only supplied sources. Separate every arm, outcome and time point. Provide the exact quotation and source passage for each value. Leave missing information blank. Numerical extraction is a draft requiring human verification.';
+const common=' Use only supplied sources. Separate every arm, outcome and time point. Provide the exact quotation and source passage for each value. Return NR for missing information and NA only for inapplicable information. Numerical extraction is a draft requiring human verification.';
 function seed(section){return (groups[section]||[]).map(([key,label])=>({id:'picdo-'+section+'-'+key,label,section,outcomeKey:section+'.'+key}));}
 function definition(f){if(!f.outcomeKey)return null;if(typeof f.definition==='string')return f.definition;const [s,k]=f.outcomeKey.split('.');return (groups[s]?.find(x=>x[0]===k)?.[2]||'Extract this item exactly as reported.')+common;}
 const typeFor={continuous:'continuous',dichotomous:'binary'};

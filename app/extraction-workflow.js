@@ -1,15 +1,16 @@
 /* Reviewable, project-scoped pilot and main extraction. */
 (function(root){
 'use strict';
+const Results=typeof module==='object'&&module.exports?require('./extraction-results.js'):root.AimstepExtractionResults;
 const clone=x=>JSON.parse(JSON.stringify(x));
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function state(ws){return ws.extractionFlow??={rounds:[],selected:0,approved:null,main:{done:{},errors:{}}};}
-function signature(ws,definition){return JSON.stringify({sections:ws.form.sections,fields:ws.form.fields.map(f=>({id:f.id,label:f.label,definition:definition(f)})),outcomes:ws.form.outcomes,records:ws.records.map(r=>[r.uid,r.fullText])});}
+function signature(ws,definition){return JSON.stringify({missingValues:"NR/NA",sections:ws.form.sections,fields:ws.form.fields.map(f=>({id:f.id,label:f.label,definition:definition(f)})),outcomes:ws.form.outcomes,records:ws.records.map(r=>[r.uid,r.fullText])});}
 function complete(round){return !!round?.ids.length&&round.ids.every(id=>round.entries[id]?.draft&&['agree','mistake'].includes(round.entries[id].review?.decision));}
 function accuracy(round){return complete(round)?Math.round(round.ids.filter(id=>round.entries[id].review.decision==='agree').length/round.ids.length*100):null;}
 function differences(before,after,path=[]){if(before===after)return [];if(after&&typeof after==='object')return Object.keys(after).flatMap(k=>differences(before?.[k],after[k],[...path,k]));return [{path:path.join('.'),before:before??'',after:after??''}];}
 function corrections(flow,sig){return flow.rounds.filter(r=>r.signature===sig).flatMap(r=>r.ids.flatMap(id=>{const e=r.entries[id];return e?.review?.decision==='mistake'?[{report:id,note:e.review.note,changes:differences(e.draft.value,e.review.corrected)}]:[]}));}
-function normalize(value,form){const v=clone(value);v.fields=form.fields.filter(f=>f.baselineKey!=='systemId'&&!(f.section==='intervention'&&f.piooKey!=='intervention.armCount')).map(f=>v.fields?.find(x=>x.id===f.id)||{id:f.id,value:'',quote:'',passage:''});v.arms??=[];v.results??=[];for(const o of form.outcomes)for(const arm of v.arms)if(!v.results.some(r=>(r.outcome===o.id||r.outcome===o.name)&&r.arm===arm.label))v.results.push({outcome:o.id,arm:arm.label,timepoint:'',quote:'',passage:'',...(o.type==='binary'?{events:'',total:''}:{mean:'',sd:'',n:''})});return v;}
+function normalize(value,form){return Results.normalize(value,form);}
 function approved(flow,sig){return flow.approved===sig&&flow.rounds.some(r=>r.signature===sig&&complete(r));}
 function sample(ids,n,random=Math.random){const a=[...ids];for(let i=a.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,n);}
 function flatten(value,form){const rows=[],labels=new Map(form.fields.map(f=>[f.id,f.label]));
@@ -36,12 +37,12 @@ function mount(api){
  const clearIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>';
  const toggle=part=>button(collapsed[part]?'⌄':'⌃',`data-action="toggle" data-part="${part}" aria-label="${collapsed[part]?'Expand':'Collapse'} ${part==='pilot'?'Pilot extract':'Main extract'}" aria-expanded="${!collapsed[part]}"`);
  const bar=part=>running===part?`<div class="extract-progress" role="progressbar" aria-label="${part} extraction progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress.done/Math.max(1,progress.total)*100)}"><span style="width:${progress.done/Math.max(1,progress.total)*100}%"><b>${Math.round(progress.done/Math.max(1,progress.total)*100)}%</b></span></div>`:'';
- const header=(title,part,instructions,actions)=>`<div class="panel-head"><div class="extract-heading"><h2>${title}</h2>${help(instructions)}</div><div class="toolbar">${actions}${button(clearIcon+'Clear',`data-action="clear" data-part="${part}" ${running?'disabled':''}`)}${toggle(part)}</div></div>`;
+ const header=(title,part,instructions,actions)=>`<div class="panel-head"><div class="extract-heading"><h2>${title}</h2>${help(instructions)}</div><div class="toolbar">${actions}${button('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export',`data-action="export" data-part="${part}" ${running?'disabled':''}`)}${button(clearIcon+'Clear',`data-action="clear" data-part="${part}" ${running?'disabled':''}`)}${toggle(part)}</div></div>`;
  function title(uid){const r=api.record(uid);return `<strong>${esc(r?.sourceNumber?'#'+(r.extractionOrigin==='local'?'L':'')+r.sourceNumber+' ':'')}${esc(r?.title||uid)}</strong>`;}
  function render(){
   const f=flow(),r=selected(),s=sig(),valid=approved(f,s),roundReady=complete(r)&&r.signature===s;
   const pilotCards=(r?.ids||[]).filter(id=>filter==='all'||r.entries[id]?.review?.decision===filter).map(id=>{const e=r.entries[id]||{},review=e.review,raw=e.draft?.value;
-   const rows=raw?flatten(review?.corrected||raw,ws().form):[];
+   const rows=raw?flatten(normalize(review?.corrected||raw,r.form||ws().form),r.form||ws().form):[];
    return `<article class="record" data-pilot-card="${esc(id)}">${title(id)}<div class="toolbar">${button('Full text',`data-action="pdf" data-id="${esc(id)}"`)}${review?`<span>${review.decision==='agree'?'Agreed':'Corrected'}</span>`:''}</div>${e.error?`<p class="notice error">${esc(e.error)}</p>`:''}${raw?`<details ${review?'':'open'}><summary>AI extraction</summary><div class="table-wrap"><table class="grid"><thead><tr><th>Item</th><th>Value</th><th>Source quotation</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${esc(x.label)}</td><td><input class="input compact" data-edit="${i}" value="${esc(x.value)}" aria-label="${esc(x.label)}" disabled></td><td>${esc(x.passage)} ${esc(x.quote)}${x.value&&!e.draft.verified?.[i]?'<small class="hint"> · Source quotation not verified</small>':''}</td></tr>`).join('')}</tbody></table></div></details><div class="toolbar">${button('Agree',`data-action="agree" data-id="${esc(id)}" ${running||r.signature!==s?'disabled':''}`)}${button('Mistake',`data-action="mistake" data-id="${esc(id)}" ${running||r.signature!==s?'disabled':''}`)}</div><div data-correction hidden><label>Correction reason<textarea class="input" data-note required aria-label="Correction reason">${esc(review?.note||'')}</textarea></label>${button('Save',`data-action="save-review" data-id="${esc(id)}"`)}</div>`:'<p class="hint">Awaiting extraction.</p>'}</article>`;
   }).join('');
   const total=ws().records.length,done=ws().records.filter(r=>api.study(r.uid).done).length;
@@ -57,7 +58,7 @@ function mount(api){
    if(abort.signal.aborted)return;if(!readable.length)throw Error('No readable full texts are available. Import a readable PDF first.');
    let r=selected(),ids;const learned=corrections(f,signatureAtStart),runKey=JSON.stringify({signature:signatureAtStart,learned});
    if(part==='pilot'){
-    if(!r||complete(r)||r.signature!==signatureAtStart){r={ids:sample(readable,Math.min(f.sampleSize||3,readable.length)),entries:{},signature:signatureAtStart,at:new Date().toISOString()};await atomic(()=>{f.rounds.push(r);f.selected=f.rounds.length-1;f.approved=null;});}
+    if(!r||complete(r)||r.signature!==signatureAtStart){r={form:clone(ws().form),ids:sample(readable,Math.min(f.sampleSize||3,readable.length)),entries:{},signature:signatureAtStart,at:new Date().toISOString()};await atomic(()=>{f.rounds.push(r);f.selected=f.rounds.length-1;f.approved=null;});}
     ids=r.ids.filter(id=>!r.entries[id]?.draft);
    }else ids=readable.filter(id=>!api.study(id).done&&f.main.done[id]!==runKey);
    progress={done:0,total:ids.length};render();
@@ -78,6 +79,7 @@ function mount(api){
   if(action==='toggle'){collapsed[b.dataset.part]=!collapsed[b.dataset.part];render();return;}
   if(running)return;
   error='';
+  if(action==='export'){api.exportResults(b.dataset.part,selected());return;}
   if(action==='round'||action==='main'){await run(action==='round'?'pilot':'main');return;}
   if(action==='round-tab'){flow().selected=Number(b.dataset.index);filter='all';await api.persist();}
   if(action==='filter')filter=b.dataset.filter;
@@ -89,7 +91,7 @@ function mount(api){
   if(action==='agree'||action==='save-review'){
    const round=selected(),entry=round?.entries[id];if(!entry?.draft||round.signature!==sig())throw Error('This pilot round no longer matches the current form.');
    let review={decision:'agree',at:new Date().toISOString()};
-   if(action==='save-review'){const card=b.closest('[data-pilot-card]'),note=card.querySelector('[data-note]').value.trim();if(!note){card.querySelector('[data-note]').reportValidity();return;}const corrected=clone(entry.review?.corrected||entry.draft.value),rows=flatten(corrected,ws().form);card.querySelectorAll('[data-edit]').forEach(input=>{const path=rows[Number(input.dataset.edit)].path;let target=corrected;for(const key of path.slice(0,-1))target=target[key];target[path.at(-1)]=input.value;});review={decision:'mistake',note,corrected,at:new Date().toISOString()};}
+   if(action==='save-review'){const card=b.closest('[data-pilot-card]'),note=card.querySelector('[data-note]').value.trim();if(!note){card.querySelector('[data-note]').reportValidity();return;}const corrected=normalize(entry.review?.corrected||entry.draft.value,round.form||ws().form),rows=flatten(corrected,ws().form);card.querySelectorAll('[data-edit]').forEach(input=>{const path=rows[Number(input.dataset.edit)].path;let target=corrected;for(const key of path.slice(0,-1))target=target[key];target[path.at(-1)]=Results.value(input.value);});review={decision:'mistake',note,corrected,at:new Date().toISOString()};}
    await atomic(()=>{entry.review=review;flow().approved=null;});
   }
   render();
