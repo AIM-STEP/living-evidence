@@ -1,0 +1,13 @@
+# Extraction included studies
+
+Updated 2026-10-08.
+
+- Included studies synchronizes from the current project's `aimstep-rob-input` hand-off on page load and after focus/visibility/storage updates. Only the included records published by Full-text assess are consumed. Existing extraction values remain in `state.studies` even if an upstream record is subsequently removed.
+- The Full-text assess hand-off now preserves the original record metadata, stable source number and PDF filename. Older hand-offs are enriched from the same project's saved full-text workspace.
+- Records use the preceding tool's card layout: stable number, first author given name/year, title, authors, journal/volume/issue/pages, linked DOI, Abstract and Full text. Full text opens initially; the two sections close one another. The original PDF file name opens the original Blob in the PDF reader. Extraction status and Extract remain available.
+- Import from local opens a multiple-PDF file picker. Bundled pdf.js reads text and metadata on the user's device. Titles fall back to the file name when metadata is absent; unknown bibliographic fields are not invented. Scanned PDFs are retained for manual extraction without pretending text was extracted or automatically running OCR.
+- PDF bytes and extracted chunks are stored in the existing `aimstep-fulltext-docs` IndexedDB under the project scope and an `extraction-local-<SHA256>` UID. Local records are persisted in `aimstep-extraction`, marked `extractionOrigin: local`, and cannot be removed by upstream synchronization. Local display numbers carry an L prefix to distinguish them from upstream numbers.
+- Exact duplicate PDFs are skipped, including PDFs already saved for upstream included reports. Per-file failures are reported; successful files stay available. Uploads and synchronization do not start an AI call.
+- Browser-local storage behavior is unchanged: refresh retains records and PDF bytes; other devices do not share this storage automatically.
+
+Validation: synthetic source merge tests; inline script parsing; full-text stage-save regression; isolated browser upload of a valid one-page synthetic PDF; bibliography/number display; original PDF opens; duplicate upload skipped; refresh persists; an empty upstream selection leaves the local PDF intact; Extract opens the extraction form. Mobile layout screenshot reviewed.

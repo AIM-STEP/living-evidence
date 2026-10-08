@@ -1578,7 +1578,7 @@ function publishForRob(){
   robTimer=setTimeout(async()=>{
     try{
       if(!workspace)return;
-      const records=workspace.records.filter(r=>finalOf(r.uid).decision==='include').map(r=>({uid:r.uid,title:r.title,authors:r.authors,year:r.year,journal:r.journal,doi:r.doi,pmid:r.pmid,url:r.url,abstract:r.abstract,fullText:workspace.docs[r.uid]?{kind:workspace.docs[r.uid].kind,source:workspace.docs[r.uid].source,chunks:workspace.docs[r.uid].chunks}:null,ftSource:finalOf(r.uid).source}));
+      const records=workspace.records.filter(r=>finalOf(r.uid).decision==='include').map(r=>({...r,sourceNumber:workspace.sourceNumbers?.byUid?.['uid:'+r.uid],fullText:workspace.docs[r.uid]?{kind:workspace.docs[r.uid].kind,source:workspace.docs[r.uid].source,chunks:workspace.docs[r.uid].chunks,filename:workspace.docs[r.uid].filename}:null,ftSource:finalOf(r.uid).source}));
       const db=await openDB('aimstep-rob-input');
       await putProject(db,{id:scope,updatedAt:now(),criteria:workspace.criteria||null,criteriaSig:workspace.criteriaSig,screeningCriteria:workspace.screeningStages||null,records,pending:summary().pending,screeningComplete:summary().completed});
       db.close();
