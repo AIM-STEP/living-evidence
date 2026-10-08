@@ -238,7 +238,7 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2>Extraction form</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-form" aria-expanded="true" aria-controls="form-body" title="Collapse Extraction form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Extraction form</span></button></div></div>
 <div class="panel-body" id="form-body">
-<div class="extraction-framework"><div class="extraction-section-head"><span class="label">Question framework</span><div class="toolbar"><button class="btn small extraction-clear" id="clear-form" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn small" id="add-form-item" type="button" aria-expanded="false" aria-controls="form-item-picker">+ Add item</button></div></div><div id="form-framework" class="toolbar" role="group" aria-label="Question framework"></div><div id="form-item-picker" class="toolbar" hidden></div></div>
+<div class="extraction-framework"><div class="extraction-section-head"><span class="label">Question framework</span><div class="toolbar"><button class="btn small extraction-clear" id="clear-form" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn small" id="add-form-item" type="button" aria-expanded="false" aria-controls="form-item-picker">+ Add section</button></div></div><div id="form-framework" class="toolbar" role="group" aria-label="Question framework"></div><div id="form-item-picker" class="toolbar" hidden></div></div>
 <section class="extraction-form-section" aria-labelledby="baseline-title"><div class="extraction-section-head"><h3 id="baseline-title" class="sub-head">Baseline information</h3><button type="button" class="source-delete" data-remove-section="baseline" aria-label="Remove Baseline information">×</button></div><div id="baseline-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="baseline-field-input" placeholder="Add a field" aria-label="Add baseline information field" autocomplete="off"><button class="btn small" type="button" data-add-field="baseline">Add</button></div></section>
 <section class="extraction-form-section" aria-labelledby="participant-title"><div class="extraction-section-head"><h3 id="participant-title" class="sub-head">Participant</h3><button type="button" class="source-delete" data-remove-section="participant" aria-label="Remove Participant">×</button></div><div id="participant-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="participant-field-input" placeholder="Add a field" aria-label="Add participant field" autocomplete="off"><button class="btn small" type="button" data-add-field="participant">Add</button></div></section>
 <section class="extraction-form-section" aria-labelledby="intervention-title"><div class="extraction-section-head"><h3 id="intervention-title" class="sub-head">Intervention</h3><button type="button" class="source-delete" data-remove-section="intervention" aria-label="Remove Intervention">×</button></div><div id="intervention-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="intervention-field-input" placeholder="Add a field" aria-label="Add intervention field" autocomplete="off"><button class="btn small" type="button" data-add-field="intervention">Add</button></div></section>
@@ -255,11 +255,7 @@ th{background:#f4f4f4}
 <div class="panel-body"><div id="study-body"></div><div class="toolbar study-step" id="study-step"></div></div>
 </section>
 
-<section class="panel">
-<div class="panel-head"><h2>Network dataset</h2><div class="toolbar"><span class="export-results"><label class="label" for="export-format">Export</label><select class="select compact" id="export-format"><option value="csv">Arm-level data (CSV, netmeta/gemtc layout)</option><option value="json">Everything with quotations and audit (JSON)</option></select><button class="btn small primary" type="button" id="export-btn">Export</button></span><button class="collapse-toggle" type="button" id="toggle-ds" aria-expanded="true" aria-controls="ds-body" title="Collapse Network dataset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Network dataset</span></button></div></div>
-<div class="panel-body" id="ds-body"><h3 class="sub-head">Treatment nodes</h3><div id="node-map"></div><h3 class="sub-head">Data for Analysis</h3><div id="datasets"></div></div>
-<div class="panel-footer toolbar between"><span class="hint">Steps run in order, from Eligibility criteria (step 1) to Certainty of evidence (step 8).</span></div>
-</section>
+
 
 <details class="references" hidden data-developer-references><summary>Method and research references</summary><ul id="refs"><li>Cochrane Handbook v6.5, chapter 5 (what to collect; outcomes with timing; dual extraction, MECIR C45–C46) and chapter 6 (SD from SE or CI; multi-arm trials).</li>
 <li>Gartlehner G, et al. LLM-assisted data extraction with human verification vs human-only extraction (SWAR, 9,341 data elements). Ann Intern Med 2025;178:1763-71: incorrect data 9.0% vs 11.0%.</li>
@@ -681,7 +677,7 @@ function statusOf(uid){const s=st(uid);if(s.done)return 'done';if(!s.arms.length
 const STATUS={todo:'Not started',ai:'AI draft ready',check:'Values to check',progress:'In progress',done:'Confirmed'};
 
 /* ---------------- Rendering ---------------- */
-function render(){safely(renderSource);safely(renderForm);safely(renderStudies);safely(renderStudy);safely(renderDataset)}
+function render(){safely(renderSource);safely(renderForm);safely(renderStudies);safely(renderStudy)}
 function renderSource(){
   const n=ws.records.length,done=ws.records.filter(r=>st(r.uid).done).length;
   $('src-stats').innerHTML=[[n,'Included studies'],[ws.records.filter(r=>r.fullText).length,'With full text'],[ws.form.outcomes.length,'Outcomes in the form'],[done,'Confirmed']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');
@@ -691,7 +687,7 @@ function renderForm(){
   const O=ws.form.outcomes;
   for(const key of Object.keys(FORM_ITEMS))$(key+'-title').closest('.extraction-form-section').hidden=!ws.form.sections.includes(key);
   $('form-framework').innerHTML=FORM_FRAMEWORKS.map(name=>`<button type="button" class="btn small" data-form-framework="${name}" aria-pressed="${ws.form.framework===name}">${name}</button>`).join('');
-  $('form-item-picker').innerHTML=Object.entries(FORM_ITEMS).filter(([key])=>!ws.form.sections.includes(key)).map(([key,title])=>`<button type="button" class="btn small" data-restore-section="${key}">${title}</button>`).join('')||'<span class="hint">All items have been added.</span>';
+  $('form-item-picker').innerHTML=Object.entries(FORM_ITEMS).filter(([key])=>!ws.form.sections.includes(key)).map(([key,title])=>`<button type="button" class="btn small" data-restore-section="${key}">${title}</button>`).join('')||'<span class="hint">All sections have been added.</span>';
 
   $('outcome-rows').innerHTML=O.map(o=>`<tr><td><input class="input compact w-full" data-o="${o.id}" data-k="name" value="${esc(o.name)}" aria-label="Outcome name"></td><td><select class="select compact" data-o="${o.id}" data-k="type" aria-label="Type"><option value="binary"${o.type==='binary'?' selected':''}>Binary (events / total)</option><option value="continuous"${o.type==='continuous'?' selected':''}>Continuous (mean, SD, n)</option></select></td><td><input class="input compact w-full${o.timepoint.trim()?'':' need'}" data-o="${o.id}" data-k="timepoint" value="${esc(o.timepoint)}" placeholder="Required, e.g. 12 weeks" aria-label="Time point"></td><td><input class="input compact w-full" data-o="${o.id}" data-k="window" value="${esc(o.window||'')}" placeholder="e.g. 10–16 weeks" aria-label="Accepted window"></td><td><button class="chip-x" type="button" data-del-o="${o.id}" aria-label="Remove outcome">×</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">No outcomes yet.</td></tr>';
   for(const section of Object.keys(FIELD_SECTIONS))$(section+'-fields').innerHTML=ws.form.fields.filter(f=>fieldSection(f)===section).map(f=>`<span class="chip">${esc(f.label)}<button type="button" class="chip-x" data-del-f="${esc(f.id)}" aria-label="Remove ${esc(f.label)}">×</button></span>`).join('');
@@ -750,7 +746,7 @@ function renderStudy(){
   $('study-title').textContent=studyLabel(r);
   $('study-sub').innerHTML=`${esc(r.title||'')}${r.fullText?` · <button class="link-btn" type="button" data-reader="${esc(r.uid)}">Read full text</button>`:''}${s.ai?` · AI draft by ${esc(s.ai.model)}`:''}`;
   const fields=ws.form.fields.length?`<h3 class="sub-head">Study characteristics</h3><div class="grid-fields">${ws.form.fields.map(f=>{const c=s.fields[f.id];return `<label class="fl"><span>${esc(f.label)}</span>${inp(c,`data-field="${f.id}"${dis}`)}${c&&c.src==='ai'&&!c.ok&&val(c)?`<button class="ok-btn" type="button" data-okf="${f.id}" title="Checked against the quotation">✓</button>`:''}</label>`}).join('')}</div>`:'';
-  const arms=`<h3 class="sub-head">Arms <span class="hint">· the treatment label is mapped to a network node in Network dataset</span></h3><table class="grid"><thead><tr><th>Treatment (as reported)</th><th>Dose / regimen</th><th>Randomised</th><th></th></tr></thead><tbody>${s.arms.map(a=>`<tr><td>${inp(a.label,`data-arm="${a.id}" data-k="label"${dis}`,'e.g. Drug X')}</td><td>${inp(a.dose,`data-arm="${a.id}" data-k="dose"${dis}`,'e.g. 10 mg daily')}</td><td>${inp(a.n,`data-arm="${a.id}" data-k="n"${dis}`,'n','num')}</td><td class="act">${rowCheck([a.label,a.dose,a.n],`data-okarm="${a.id}"`,locked)}${locked?'':`<button class="chip-x" type="button" data-del-arm="${a.id}" aria-label="Remove arm">×</button>`}</td></tr>`).join('')}</tbody></table>${locked?'':'<button class="btn small" type="button" id="add-arm">Add arm</button>'}`;
+  const arms=`<h3 class="sub-head">Arms </h3><table class="grid"><thead><tr><th>Treatment (as reported)</th><th>Dose / regimen</th><th>Randomised</th><th></th></tr></thead><tbody>${s.arms.map(a=>`<tr><td>${inp(a.label,`data-arm="${a.id}" data-k="label"${dis}`,'e.g. Drug X')}</td><td>${inp(a.dose,`data-arm="${a.id}" data-k="dose"${dis}`,'e.g. 10 mg daily')}</td><td>${inp(a.n,`data-arm="${a.id}" data-k="n"${dis}`,'n','num')}</td><td class="act">${rowCheck([a.label,a.dose,a.n],`data-okarm="${a.id}"`,locked)}${locked?'':`<button class="chip-x" type="button" data-del-arm="${a.id}" aria-label="Remove arm">×</button>`}</td></tr>`).join('')}</tbody></table>${locked?'':'<button class="btn small" type="button" id="add-arm">Add arm</button>'}`;
   const outs=ws.form.outcomes.map(o=>{const nr=!!s.nr[o.id],tp=s.tp[o.id],cols=o.type==='binary'?['Events','Total analysed']:['Mean','SD','N analysed'],keys=o.type==='binary'?['events','total']:['mean','sd','n'];
     return `<div class="outcome-block${nr?' nr':''}"><div class="ob-head"><b>${esc(o.name)}</b><span class="hint">${o.type==='binary'?'Binary':'Continuous'} · wanted: ${esc(o.timepoint||'time point not set')}${o.window?` (accept ${esc(o.window)})`:''}</span><label class="tp">Time point used ${inp(tp,`data-tp="${o.id}"${dis||(nr?' disabled':'')}`,'e.g. 12 weeks')}${tp&&tp.src==='ai'&&!tp.ok?`<button class="ok-btn" type="button" data-oktp="${o.id}" title="Checked">✓</button>`:''}</label><label class="nr-l"><input type="checkbox" data-nr="${o.id}"${nr?' checked':''}${dis}> Not reported</label></div>
 ${nr?'':`<table class="grid"><thead><tr><th>Arm</th>${cols.map(c=>`<th>${c}</th>`).join('')}<th></th></tr></thead><tbody>${s.arms.map(a=>{const row=s.res[o.id]?.[a.id]||{};return `<tr><td>${esc(val(a.label)||'Arm')}</td>${keys.map(k=>`<td>${inp(row[k],`data-res="${o.id}" data-arm="${a.id}" data-k="${k}"${dis}`,'','num')}</td>`).join('')}<td class="act">${rowCheck(keys.map(k=>row[k]),`data-okres="${o.id}" data-arm="${a.id}"`,locked)}</td></tr>`}).join('')||`<tr><td colspan="${cols.length+2}" class="empty">Add the arms first.</td></tr>`}</tbody></table>`}</div>`}).join('');
@@ -762,7 +758,7 @@ ${nr?'':`<table class="grid"><thead><tr><th>Arm</th>${cols.map(c=>`<th>${c}</th>
 function rowCheck(cells,attrs,locked){return !locked&&cells.some(c=>c&&c.src==='ai'&&!c.ok&&val(c))?`<button class="ok-btn" type="button" ${attrs} title="Checked against the quotation">✓</button>`:''}
 /* Network dataset: arm labels map to nodes (several labels may share a node,
    e.g. doses pooled); one long-format table per outcome. */
-function armLabels(){const set=new Map();for(const r of ws.records){const s=st(r.uid);if(!s.done)continue;for(const a of s.arms){const l=val(a.label).trim();if(l)set.set(l,(set.get(l)||0)+1)}}return [...set].sort((a,b)=>a[0].localeCompare(b[0]))}
+
 const nodeOf=l=>(ws.nodes[l]||l).trim();
 function dataset(o){
   const rows=[];
@@ -770,26 +766,7 @@ function dataset(o){
     for(const a of s.arms){const x=s.res[o.id]?.[a.id]||{};rows.push(o.type==='binary'?{study:studyLabel(r),uid:r.uid,treat:nodeOf(val(a.label)),label:val(a.label),event:num(x.events),n:num(x.total),timepoint:val(s.tp[o.id])}:{study:studyLabel(r),uid:r.uid,treat:nodeOf(val(a.label)),label:val(a.label),mean:num(x.mean),sd:num(x.sd),n:num(x.n),timepoint:val(s.tp[o.id])})}}
   return rows;
 }
-function renderDataset(){
-  const labels=armLabels();
-  $('node-map').innerHTML=labels.length?`<table class="grid nodes"><thead><tr><th>Treatment label (from studies)</th><th>Arms</th><th>Network node</th></tr></thead><tbody>${labels.map(([l,n])=>`<tr><td>${esc(l)}</td><td>${n}</td><td><input class="input compact w-full" data-node="${esc(l)}" value="${esc(ws.nodes[l]||'')}" placeholder="${esc(l)}"></td></tr>`).join('')}</tbody></table>`:'<p class="hint">Confirmed extractions appear here. Give labels that mean the same treatment the same node name.</p>';
-  $('datasets').innerHTML=ws.form.outcomes.map(o=>{const rows=dataset(o),studies=new Set(rows.map(r=>r.uid)).size,nodes=new Set(rows.map(r=>r.treat)).size;
-    return `<div class="ds"><b>${esc(o.name)}</b> <span class="hint">${esc(o.timepoint)} · ${studies} stud${studies===1?'y':'ies'}, ${nodes} node${nodes===1?'':'s'}, ${rows.length} arms</span>${rows.length?`<div class="table-wrap"><table class="grid ds-t"><thead><tr><th>Study</th><th>Node</th>${o.type==='binary'?'<th>Events</th><th>N</th>':'<th>Mean</th><th>SD</th><th>N</th>'}<th>Time point</th></tr></thead><tbody>${rows.slice(0,200).map(x=>`<tr><td>${esc(x.study)}</td><td>${esc(x.treat)}</td>${o.type==='binary'?`<td>${x.event}</td><td>${x.n}</td>`:`<td>${x.mean}</td><td>${x.sd}</td><td>${x.n}</td>`}<td>${esc(x.timepoint)}</td></tr>`).join('')}</tbody></table></div>`:''}</div>`}).join('')||'<p class="hint">No outcomes defined.</p>';
-}
-
-/* ---------------- Export and hand-off ---------------- */
-function exportCSV(){
-  const parts=[];
-  for(const o of ws.form.outcomes){const rows=dataset(o);if(!rows.length)continue;
-    const head=o.type==='binary'?['outcome','timepoint_wanted','studlab','treat','event','n','timepoint_used','label_reported']:['outcome','timepoint_wanted','studlab','treat','mean','sd','n','timepoint_used','label_reported'];
-    parts.push([head,...rows.map(x=>o.type==='binary'?[o.name,o.timepoint,x.study,x.treat,x.event,x.n,x.timepoint,x.label]:[o.name,o.timepoint,x.study,x.treat,x.mean,x.sd,x.n,x.timepoint,x.label])].map(l=>l.map(csvCell).join(',')).join('\r\n'))}
-  if(!parts.length){toast('Confirm at least one extraction first.');return}
-  download(`aimstep-extraction-${stamp()}.csv`,'text/csv;charset=utf-8','﻿'+parts.join('\r\n\r\n'));
-}
-function exportJSON(){
-  download(`aimstep-extraction-${stamp()}.json`,'application/json',JSON.stringify({format:'aimstep-extraction/v1',project:projectId,exportedAt:now(),form:ws.form,nodes:ws.nodes,
-    studies:ws.records.map(r=>({uid:r.uid,label:studyLabel(r),title:r.title,doi:r.doi,pmid:r.pmid,extraction:ws.studies[r.uid]||null})),datasets:ws.form.outcomes.map(o=>({...o,rows:dataset(o)})),audit:ws.audit},null,2));
-}
+/* ---------------- Analysis hand-off ---------------- */
 let pubTimer=null;
 function publish(){
   clearTimeout(pubTimer);
@@ -819,7 +796,7 @@ function bind(){
     if(restore){restoreFormSection(ws.form,restore.dataset.restoreSection);$('form-item-picker').hidden=true;$('add-form-item').setAttribute('aria-expanded','false');save();render();return;}
     if(framework){ws.form.framework=framework.dataset.formFramework;save();renderForm();return;}
     if(e.target.closest('#add-form-item')){const picker=$('form-item-picker');picker.hidden=!picker.hidden;$('add-form-item').setAttribute('aria-expanded',String(!picker.hidden));return;}
-    if(e.target.closest('#clear-form')){if(!confirm('Clear all extraction form items? You can add them again with Add item. Saved extraction values are kept.'))return;for(const key of [...ws.form.sections])removeFormSection(ws.form,key);save();render();return;}
+    if(e.target.closest('#clear-form')){if(!confirm('Clear all extraction form sections? You can add them again with Add section. Saved extraction values are kept.'))return;for(const key of [...ws.form.sections])removeFormSection(ws.form,key);save();render();return;}
 
     const d=e.target.closest('[data-del-o]'),df=e.target.closest('[data-del-f]');
     if(d){const o=ws.form.outcomes.find(x=>x.id===d.dataset.delO);if(!confirm(`Remove "${o.name}" and its extracted data?`))return;ws.form.outcomes=ws.form.outcomes.filter(x=>x!==o);log('outcome-removed',{name:o.name});save();render()}
@@ -854,10 +831,8 @@ function bind(){
     else if(t.id==='confirm'){s.done={by:reviewer(),at:now()};log('confirmed',{uid:current,by:s.done.by});toast('Extraction confirmed.')}
     else if(t.id==='reopen'){s.done=null;log('reopened',{uid:current})}
     else return;
-    log('check',{uid:current});save();renderStudy();renderStudies();renderDataset();renderSource();
+    log('check',{uid:current});save();renderStudy();renderStudies();renderSource();
   });
-  $('node-map').addEventListener('change',e=>{const t=e.target.closest('[data-node]');if(!t)return;const v=t.value.trim();if(v)ws.nodes[t.dataset.node]=v;else delete ws.nodes[t.dataset.node];log('node',{label:t.dataset.node,node:v||null});save();renderDataset()});
-  $('export-btn').addEventListener('click',()=>$('export-format').value==='csv'?exportCSV():exportJSON());
   $('close-reader').addEventListener('click',()=>$('reader').close());
   $('reader').addEventListener('close',()=>{if(readerObjectUrl)URL.revokeObjectURL(readerObjectUrl);readerObjectUrl=null;$('reader-pdf-frame').removeAttribute('src');});
   let refreshTimer;
@@ -865,7 +840,6 @@ function bind(){
   window.addEventListener('focus',refresh);window.addEventListener('storage',refresh);document.addEventListener('visibilitychange',refresh);
   collapsible('toggle-source','source-body','Included studies','source');
   collapsible('toggle-form','form-body','Extraction form','form');
-  collapsible('toggle-ds','ds-body','Network dataset','dataset');
 }
 let readerObjectUrl=null;
 async function openReader(uid,original=false){
