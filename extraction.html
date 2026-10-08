@@ -202,6 +202,7 @@ th{background:#f4f4f4}
 .source-manage:disabled{opacity:.4;cursor:default}.source-manage svg{width:11.33px;height:12.67px;flex:none}.source-file-link:focus-visible,.source-manage:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 
 .source-record-title{margin:0}.source-record-top .toolbar{margin:0}.source-record-list{margin-bottom:16px}#reader-pdf-frame{width:100%;height:70vh;border:0}
+.extraction-form-section+.extraction-form-section{border-top:1px solid var(--soft);margin-top:18px;padding-top:14px}.extraction-form-section>.sub-head{margin:0 0 10px;font-size:15px}.extraction-form-section .field-add{margin-top:8px}.extraction-form-section .field-add .input{width:230px;max-width:100%;min-width:0}
 </style>
 </head>
 <body>
@@ -235,13 +236,13 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2>Extraction form</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-form" aria-expanded="true" aria-controls="form-body" title="Collapse Extraction form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Extraction form</span></button></div></div>
 <div class="panel-body" id="form-body">
-<h3 class="sub-head">Outcomes and time points</h3>
-<p class="hint">Pre-specify the time point (Cochrane Handbook 6.2): results nearest to it within the accepted window are extracted, and the time point actually used is recorded.</p>
+<section class="extraction-form-section" aria-labelledby="baseline-title"><h3 id="baseline-title" class="sub-head">Baseline information</h3><div id="baseline-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="baseline-field-input" placeholder="Add a field" aria-label="Add baseline information field" autocomplete="off"><button class="btn small" type="button" data-add-field="baseline">Add</button></div></section>
+<section class="extraction-form-section" aria-labelledby="participant-title"><h3 id="participant-title" class="sub-head">Participant</h3><div id="participant-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="participant-field-input" placeholder="Add a field" aria-label="Add participant field" autocomplete="off"><button class="btn small" type="button" data-add-field="participant">Add</button></div></section>
+<section class="extraction-form-section" aria-labelledby="intervention-title"><h3 id="intervention-title" class="sub-head">Intervention</h3><div id="intervention-fields" class="chips"></div><div class="toolbar field-add"><input class="input compact" id="intervention-field-input" placeholder="Add a field" aria-label="Add intervention field" autocomplete="off"><button class="btn small" type="button" data-add-field="intervention">Add</button></div></section>
+<section class="extraction-form-section" aria-labelledby="outcome-title"><h3 id="outcome-title" class="sub-head">Outcome</h3>
 <div class="table-wrap"><table class="grid form-t"><thead><tr><th>Outcome</th><th>Type</th><th>Time point</th><th>Accepted window</th><th></th></tr></thead><tbody id="outcome-rows"></tbody></table></div>
 <button class="btn small" type="button" id="add-outcome">Add outcome</button>
-<h3 class="sub-head">Study fields</h3>
-<div id="field-chips" class="chips"></div>
-<div class="toolbar field-add"><input class="input compact" id="field-input" placeholder="Add a field, e.g. Baseline DAS28" autocomplete="off"><button class="btn small" type="button" id="add-field">Add</button><button class="link-btn" type="button" id="default-fields">Restore default fields</button><button class="link-btn" type="button" id="no-fields">Remove all</button></div>
+</section>
 </div>
 </section>
 
@@ -475,10 +476,19 @@ function keywordScores(chunks,query){
    passage and an exact quotation, and the reviewer verifies each row. The
    arm-level network dataset goes to Analysis. */
 const DEFAULT_FIELDS=['Country','Setting','Number randomised','Population (key characteristics)','Mean age (years)','Female (%)','Disease duration','Background therapy','Funding'];
+const FIELD_SECTIONS={baseline:'Baseline information',participant:'Participant',intervention:'Intervention'};
+function fieldSection(field){
+  if(Object.hasOwn(FIELD_SECTIONS,field.section))return field.section;
+  const label=String(field.label||'');
+  if(/intervention|therap|treatment|dose|dosage|regimen|comparator/i.test(label))return 'intervention';
+  if(/population|participant|randomi[sz]ed|\bage\b|female|\bmale\b|\bsex\b|gender|disease duration|baseline.*(?:score|das|severity)|eligibility/i.test(label))return 'participant';
+  return 'baseline';
+}
+function groupFormFields(fields){return fields.map(field=>({...field,section:fieldSection(field)}));}
 let ws=null,store=null,docStore=null,controller=null,busy='',current=null,saveChain=Promise.resolve();
 const docCache=new Map();
 const uid8=()=>Math.random().toString(36).slice(2,10);
-const defaults=()=>({version:1,records:[],handoffAt:'',form:{outcomes:[],fields:DEFAULT_FIELDS.map(l=>({id:uid8(),label:l}))},studies:{},nodes:{},audit:[]});
+const defaults=()=>({version:1,records:[],handoffAt:'',form:{outcomes:[],fields:groupFormFields(DEFAULT_FIELDS.map(l=>({id:uid8(),label:l})))},studies:{},nodes:{},audit:[]});
 function log(action,detail={}){ws.audit.push({at:now(),action,...detail});if(ws.audit.length>5000)ws.audit.splice(0,ws.audit.length-5000)}
 function getKey(db,key){return new Promise((resolve,reject)=>{const tx=db.transaction('projects','readonly'),req=tx.objectStore('projects').get(key);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)})}
 async function loadDoc(uid){if(docCache.has(uid))return docCache.get(uid);if(!docStore)return null;const d=await getKey(docStore,scope+'|'+uid);if(d)docCache.set(uid,d);return d}
@@ -654,7 +664,7 @@ function renderSource(){
 function renderForm(){
   const O=ws.form.outcomes;
   $('outcome-rows').innerHTML=O.map(o=>`<tr><td><input class="input compact w-full" data-o="${o.id}" data-k="name" value="${esc(o.name)}" aria-label="Outcome name"></td><td><select class="select compact" data-o="${o.id}" data-k="type" aria-label="Type"><option value="binary"${o.type==='binary'?' selected':''}>Binary (events / total)</option><option value="continuous"${o.type==='continuous'?' selected':''}>Continuous (mean, SD, n)</option></select></td><td><input class="input compact w-full${o.timepoint.trim()?'':' need'}" data-o="${o.id}" data-k="timepoint" value="${esc(o.timepoint)}" placeholder="Required, e.g. 12 weeks" aria-label="Time point"></td><td><input class="input compact w-full" data-o="${o.id}" data-k="window" value="${esc(o.window||'')}" placeholder="e.g. 10–16 weeks" aria-label="Accepted window"></td><td><button class="chip-x" type="button" data-del-o="${o.id}" aria-label="Remove outcome">×</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">No outcomes yet.</td></tr>';
-  $('field-chips').innerHTML=ws.form.fields.map(f=>`<span class="chip">${esc(f.label)}<button type="button" class="chip-x" data-del-f="${f.id}" aria-label="Remove ${esc(f.label)}">×</button></span>`).join('')||'<span class="hint">No study fields; only arms and outcome data are extracted.</span>';
+  for(const section of Object.keys(FIELD_SECTIONS))$(section+'-fields').innerHTML=ws.form.fields.filter(f=>fieldSection(f)===section).map(f=>`<span class="chip">${esc(f.label)}<button type="button" class="chip-x" data-del-f="${esc(f.id)}" aria-label="Remove ${esc(f.label)}">×</button></span>`).join('');
 }
 const sourceDetailsOpen=new Set(),sourceDetailsInitialized=new Set();
 function hasOriginalPdf(id){return !!docCache.get(id)?.pdf;}
@@ -777,11 +787,11 @@ function bind(){
     const d=e.target.closest('[data-del-o]'),df=e.target.closest('[data-del-f]');
     if(d){const o=ws.form.outcomes.find(x=>x.id===d.dataset.delO);if(!confirm(`Remove "${o.name}" and its extracted data?`))return;ws.form.outcomes=ws.form.outcomes.filter(x=>x!==o);log('outcome-removed',{name:o.name});save();render()}
     if(df){ws.form.fields=ws.form.fields.filter(f=>f.id!==df.dataset.delF);save();render()}
-    if(e.target.id==='add-field'){const v=$('field-input').value.trim();if(v){ws.form.fields.push({id:uid8(),label:v});$('field-input').value='';save();render()}}
-    if(e.target.id==='default-fields'){const have=new Set(ws.form.fields.map(f=>f.label));DEFAULT_FIELDS.forEach(l=>{if(!have.has(l))ws.form.fields.push({id:uid8(),label:l})});save();render()}
-    if(e.target.id==='no-fields'){if(confirm('Remove all study fields and extract only arms and outcome data?')){ws.form.fields=[];save();render()}}
+    const add=e.target.closest('[data-add-field]');
+    if(add){const section=add.dataset.addField;if(!Object.hasOwn(FIELD_SECTIONS,section))return;const input=$(section+'-field-input'),label=input.value.trim();if(label){ws.form.fields.push({id:uid8(),label,section});input.value='';save();render()}}
+
   });
-  $('field-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('add-field').click()}});
+  $('form-body').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.field-add input')){e.preventDefault();e.target.closest('.field-add').querySelector('[data-add-field]').click();}});
   $('study-table').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(!b)return;current=b.dataset.open;render();$('study').scrollIntoView({block:'start',behavior:'smooth'})});
   $('study').addEventListener('change',e=>{
     const t=e.target,s=current&&st(current);if(!s||s.done)return;const v=t.value.trim();
@@ -836,6 +846,7 @@ async function init(){
   try{
     store=await openDB('aimstep-extraction');try{docStore=await openDB('aimstep-fulltext-docs')}catch(e){docStore=null}
     const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});ws.form=Object.assign(defaults().form,ws.form||{});
+    ws.form.fields=groupFormFields(ws.form.fields);
     bind();
     await importStudies();
     await Promise.all(ws.records.map(r=>loadDoc(r.uid)));

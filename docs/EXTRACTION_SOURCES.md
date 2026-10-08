@@ -11,3 +11,7 @@ Updated 2026-10-08.
 - Browser-local storage behavior is unchanged: refresh retains records and PDF bytes; other devices do not share this storage automatically.
 
 Validation: synthetic source merge tests; inline script parsing; full-text stage-save regression; isolated browser upload of a valid one-page synthetic PDF; bibliography/number display; original PDF opens; duplicate upload skipped; refresh persists; an empty upstream selection leaves the local PDF intact; Extract opens the extraction form. Mobile layout screenshot reviewed.
+
+## Extraction form sections
+
+The form is organized as Baseline information, Participant, Intervention and Outcome. Existing fields keep their IDs and saved extraction values; legacy labels are categorized without deleting fields. The first three sections support adding/removing fields independently, and Outcome retains typed outcome and time-point configuration. Tests cover legacy classification and custom section preservation; the browser add-field flow and compact mobile layout were checked.
