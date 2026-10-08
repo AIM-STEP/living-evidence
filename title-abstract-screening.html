@@ -344,12 +344,14 @@ th{background:#f4f4f4}
 <div class="panel-body">
 <p class="hint" id="stages-help-text" hidden data-developer-notes>Only explicitly unmet criteria selected for title and abstract screening can justify exclusion. Missing information is retained for full-text assessment. All criteria still apply at full text. Compound alternatives stay grouped to preserve their original logic.</p>
 <p class="hint" id="stages-status" role="status" hidden></p>
+<div class="toolbar" id="stages-generation"><button class="btn small" type="button" id="generate-stages">Generate</button><button class="btn small" type="button" id="stop-stages" hidden>Stop</button><span class="hint" id="stages-generating" role="status" hidden>Generating…</span></div>
 <div class="stage-framework"><span class="label">Question framework</span><div id="stage-framework-options" class="toolbar" role="group" aria-label="Question framework"></div></div><div id="stage-add-picker" class="toolbar" hidden></div><div id="stages-items"></div>
 <p class="notice error" id="stages-error" role="alert" hidden></p>
 <div class="toolbar stages-footer"><button type="button" class="btn small clear-action" id="reset-stages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button type="button" class="btn small clear-action" id="save-stages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button></div>
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app/screening-stages.js?v=framework-editor-v3"></script>
+<script src="app/screening-criteria-suggestions.js?v=1"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js"></script><script>
 'use strict';
@@ -1070,7 +1072,7 @@ $('calibration-pending').addEventListener('click',e=>{const b=e.target.closest('
 function pilotPrompt(record,round,variant=1,calibration=null){
   const c=activeScreeningCriteria(),rows=variant===2?c.rows.slice().reverse():c.rows,rec={title:record.title,abstract:record.abstract||'(no abstract available)'};
   const feedback=calibrationEngine.select(calibration,record);
-  return JSON.stringify({...(variant===2?{record:rec,task:'Read this record, then judge it against each criterion. Return JSON only.'}:{task:'Screen this record against each criterion. Return JSON only.'}),question:c.question||'',stagePolicy:'Use only the supplied edited screening criteria. Disabled and deleted elements must not cause exclusion, even if mentioned in the question or reviewer feedback. Missing information is not an exclusion. For an exclusion-only rule, not met means the stated exclusion applies; met means the text explicitly rules it out; otherwise unclear.',
+  return JSON.stringify({...(variant===2?{record:rec,task:'Read this record, then judge it against each criterion. Return JSON only.'}:{task:'Screen this record against each criterion. Return JSON only.'}),question:c.question||'',stagePolicy:'Use only the supplied edited screening criteria. Disabled and deleted elements must not cause exclusion, even if mentioned in the question or reviewer feedback. Interpret screening phrases semantically, not as literal keyword requirements. Synonyms joined by OR are alternatives, not cumulative requirements. Respect AND, negation, thresholds and exceptions. Missing keywords are not exclusion evidence. Missing information is not an exclusion. For an exclusion-only rule, not met means the stated exclusion applies; met means the text explicitly rules it out; otherwise unclear.',
     criteria:rows.map(r=>({dimension:r.title,inclusionRule:[r.condition,r.definition].filter(Boolean).join('\n'),exclusionRule:r.uncertain})),
     reviewerCalibration:feedback,reviewerExamples:feedback.examples,...(variant===2?{}:{record:rec}),
     answerFormat:{criteria:rows.map(r=>({dimension:r.title,judgment:'met | not met | unclear',quote:'exact words copied from the title or abstract, or empty',reason:'one short sentence'})),decision:'include | maybe | exclude',reason:'one short sentence'}});
@@ -2206,6 +2208,7 @@ $('run-pilot').addEventListener('click',()=>startPilotRound().catch(e=>showNotic
 $('approve-pilot').addEventListener('click',()=>approvePilotRound().catch(e=>showNotice('pilot-message','Could not save approval: '+e.message,'error')));
 $('stop-pilot').addEventListener('click',()=>controller?.abort());
 let stagesDraft=null,stagesFramework='PICO',stagesBase='',stagesInitial='',stagesSaving=false;
+let stagesController=null;
 const stagesDialog=$('screening-stages-dialog');
 function renderStageButton(){
   const button=$('open-screening-criteria');
@@ -2224,20 +2227,63 @@ function renderStageFramework(){
   $('stage-add-picker').innerHTML=AimstepScreeningStages.candidates(source.criteria,stagesFramework,stagesDraft).map(e=>'<button class="btn small" type="button" data-stage-add="'+esc(e.id)+'">'+esc(e.title)+'</button>').join('')||'<span class="hint">All available criteria have been added.</span>';
 }
 function closeStageDialog(){
+  if(stagesController){stagesController.abort();return;}
   if(stagesSaving)return;
   if(stagesDirty()&&!confirm('Discard unsaved screening criteria settings?'))return;
   stagesDialog.close();
 }
+function reusableStageSuggestion(){
+  const draft=workspace.screeningStagesSuggestion;
+  return draft?.sourceSig===source.criteriaSig&&draft.version===AimstepScreeningSuggestions.version&&draft.elements?.length&&AimstepScreeningStages.draftValid(draft.elements)?draft:null;
+}
+async function generateStageSuggestions(){
+  if(stagesSaving||clearActionsBlocked()||!stagesDraft)return;
+  if(stagesDirty()&&!confirm('Replace unsaved edits with newly generated screening criteria?'))return;
+  const snapshot=structuredClone(source.criteria),sig=source.criteriaSig,seeds=AimstepScreeningStages.seed(snapshot);
+  if(!seeds.length||seeds.length>100){$('stages-error').textContent='Supply 1 to 100 eligibility elements first.';$('stages-error').hidden=false;return;}
+  const ctl=new AbortController();stagesController=ctl;stagesSaving=true;busy='stage-generation';
+  const timer=setTimeout(()=>ctl.abort(new DOMException('Generation timed out. Try again.','TimeoutError')),600000);
+  $('stages-error').hidden=true;$('stages-items').inert=true;
+  $('generate-stages').disabled=true;$('save-stages').disabled=true;$('stop-stages').hidden=false;$('stages-generating').hidden=false;
+  renderClearActions();renderStageButton();
+  const method=AimstepScreeningSuggestions,messages=method.messages(snapshot,seeds);
+  try{
+    const base=window.AIMSTEPOnlineModel?.online?window.AIMSTEPOnlineModel.base:LOCAL_SERVER+'/api/eligibility';
+    const response=await localFetch(base+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'local',messages,format:method.schema(seeds.map(e=>e.id))}),signal:ctl.signal});
+    const data=await response.json();if(!response.ok)throw Error(data.error||'The local model request failed. Try Generate again.');
+    const raw=data.message?.content;if(typeof raw!=='string')throw Error('The local model returned no screening criteria.');
+    let value;try{value=JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''));}catch(e){throw Error('The local model returned incomplete JSON. Try Generate again.');}
+    const elements=method.validate(value,seeds);
+    if(ctl.signal.aborted)throw ctl.signal.reason;
+    if(source.criteriaSig!==sig||!stagesDialog.open)throw Error('Eligibility criteria changed. Reopen Screening criteria and generate again.');
+    const suggestion={version:method.version,sourceSig:sig,criteriaSnapshot:snapshot,elements,framework:snapshot.framework||'PICO',model:data.model||'local',promptHash:fingerprint(messages),generatedAt:now()};
+    const previous=workspace.screeningStagesSuggestion;workspace.screeningStagesSuggestion=suggestion;
+    try{await save()}catch(e){workspace.screeningStagesSuggestion=previous;throw e;}
+    stagesDraft=structuredClone(elements);stagesFramework=suggestion.framework;
+    if(!AimstepScreeningStages.frameworks[stagesFramework])stagesFramework='Other';
+    renderStageRows();toast('Review the suggested phrases, then Save to use them.');
+  }catch(e){
+    $('stages-error').textContent=ctl.signal.aborted?(ctl.signal.reason?.name==='TimeoutError'?'Generation timed out. Try Generate again.':'Generation stopped. Click Generate to try again.'):isUnreachable(e)?await explainUnreachable():e.message;
+    $('stages-error').hidden=false;
+  }finally{
+    clearTimeout(timer);stagesController=null;stagesSaving=false;busy='';$('stages-items').inert=false;
+    $('generate-stages').disabled=false;$('save-stages').disabled=false;$('stop-stages').hidden=true;$('stages-generating').hidden=true;render();
+  }
+}
+$('generate-stages').addEventListener('click',generateStageSuggestions);
+$('stop-stages').addEventListener('click',()=>stagesController?.abort());
 $('open-screening-criteria').addEventListener('click',()=>{
   if(clearActionsBlocked())return;
   stagesBase=source.criteriaSig;
-  stagesDraft=AimstepScreeningStages.editable(source.criteria,workspace.screeningStages).filter(e=>e.enabled);
-  stagesFramework=workspace.screeningStages?.framework||source.criteria?.framework||'PICO';
+  const saved=workspace.screeningStages,cached=reusableStageSuggestion();
+  stagesDraft=saved?AimstepScreeningStages.editable(source.criteria,saved).filter(e=>e.enabled):cached?structuredClone(cached.elements):[];
+  stagesFramework=saved?.framework||cached?.framework||source.criteria?.framework||'PICO';
   if(!AimstepScreeningStages.frameworks[stagesFramework])stagesFramework='Other';
   $('stage-add-picker').hidden=true;$('add-stage-element').setAttribute('aria-expanded','false');
   stagesInitial=stageDraftSignature();
-  $('stages-error').hidden=true;$('stages-help-text').hidden=true;
+  $('stages-error').hidden=true;$('stages-help-text').hidden=true;$('stages-generation').hidden=!!saved;
   renderStageRows();stagesDialog.showModal();
+  if(!saved&&!cached)generateStageSuggestions();
 });
 $('stages-items').addEventListener('input',event=>{
   if(stagesSaving||!stagesDraft)return;
