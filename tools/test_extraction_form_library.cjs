@@ -20,3 +20,5 @@ assert.throws(()=>L.update(local,'local',draft,{}),/saved form changed/);
 L.create(local,{id:'other',name:'Other',source:'Manual generate',form,createdAt:'date'});assert.equal(local.formCreation.hidden,false);
 const stored=local.formLibrary.find(f=>f.id==='local');L.update(local,'local',{base:JSON.stringify(stored.form),name:'Inactive edited',form:structuredClone(stored.form)},{status:'complete'});assert.equal(local.activeFormId,'other');assert.equal(local.form.fields[0].definition,'Extract recruitment country');
 console.log('PASS inline edit identity, blank definitions, stale drafts, retained data and inactive form isolation');
+
+const exportsheets=L.exportSheets({name:'Synthetic',createdAt:'date',form},{baseline:'Baseline information'},f=>f.definition);assert.deepEqual(exportsheets.map(s=>s.name),['Extraction form','Items definition']);assert.equal(exportsheets[0].rows[3][2],'');assert.equal(exportsheets[1].rows[3][2],'Extract recruitment country');assert.equal(form.fields[0].definition,'Extract recruitment country');console.log('PASS separate template/definition sheets, blank data cells, unchanged source');

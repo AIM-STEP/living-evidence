@@ -297,8 +297,8 @@ th{background:#f4f4f4}
 <script src="app/extraction-outcomes.js?v=2"></script>
 <script src="app/extraction-results.js?v=1"></script>
 <script src="app/extraction-form-import.js?v=4"></script>
-<script src="app/extraction-form-library.js?v=4"></script>
-<script src="app/extraction-form-review.js?v=1"></script>
+<script src="app/extraction-form-library.js?v=5"></script>
+<script src="app/extraction-form-review.js?v=2"></script>
 <script src="app/extraction-workflow.js?v=5"></script>
 <script src="app/extraction-definition-word.js?v=1"></script>
 <script>
@@ -845,8 +845,9 @@ function publish(){
 const importReviewJobs=new Map();
 function checkImportedForm(id){
   if(importReviewJobs.has(id))return importReviewJobs.get(id);
+  const checkingEntry=ws.formLibrary.find(f=>f.id===id);if(checkingEntry){checkingEntry.importReview={...checkingEntry.importReview,status:'checking'};formLibrary?.render();}
   const task=AimstepExtractionFormReview.run(id,{find:key=>ws.formLibrary.find(f=>f.id===key),model:pilotModelJSON,id:uid8,importer:AimstepExtractionFormImport,
-    update:(key,review,parsed)=>{const job=saveChain.catch(()=>{}).then(async()=>{const entry=ws.formLibrary.find(f=>f.id===key);if(!entry)return;const previous={review:entry.importReview,form:entry.form,active:ws.form};entry.importReview=review;if(parsed&&!entry.form.fields.length){entry.form=parsed;if(ws.activeFormId===key)ws.form=structuredClone(parsed);}try{await putProject(store,{id:scope,state:ws,updatedAt:now()});}catch(e){entry.importReview=previous.review;entry.form=previous.form;ws.form=previous.active;throw e;}formLibrary?.render();extractionWorkflow?.render();});saveChain=job;return job;}
+    update:(key,review,parsed)=>{const job=saveChain.catch(()=>{}).then(async()=>{const entry=ws.formLibrary.find(f=>f.id===key);if(!entry)return;const previous=structuredClone(ws);try{if(parsed){AimstepExtractionFormLibrary.sync(ws);AimstepExtractionFormLibrary.update(ws,key,{base:JSON.stringify(entry.form),name:entry.name,form:parsed},review);}else entry.importReview=review;await putProject(store,{id:scope,state:ws,updatedAt:now()});}catch(e){ws=previous;throw e;}formLibrary?.render();extractionWorkflow?.render();});saveChain=job;return job;}
   }).catch(e=>showNotice('form-import-status','The form is saved, but its AI check could not be saved: '+e.message,'error')).finally(()=>importReviewJobs.delete(id));
   importReviewJobs.set(id,task);return task;
 }
@@ -987,8 +988,8 @@ async function init(){
     ws.manualFormDraft??=structuredClone(ws.form);
     await putProject(store,{id:scope,state:ws,updatedAt:now()});
     bind();
-    formLibrary=AimstepExtractionFormLibrary.mount({state:()=>ws,id:uid8,sections:FORM_ITEMS,definition:itemDefinition,save,change:changeFormLibrary,busy:()=>!!busy,model:pilotModelJSON,importer:AimstepExtractionFormImport,baseline:AimstepExtractionBaseline,pdf:AimstepExtractionSources,checkImported:checkImportedForm,localIssues:AimstepExtractionFormReview.localIssues,
-      reviewDraft:(id,form,onReview)=>AimstepExtractionFormReview.run(id,{find:key=>{const entry=ws.formLibrary.find(f=>f.id===key);return entry?{...entry,form,provenance:{}}:null;},model:pilotModelJSON,id:uid8,importer:AimstepExtractionFormImport,update:async(key,review)=>onReview(review)}),
+    formLibrary=AimstepExtractionFormLibrary.mount({state:()=>ws,id:uid8,sections:FORM_ITEMS,definition:itemDefinition,save,change:changeFormLibrary,busy:()=>!!busy,model:pilotModelJSON,importer:AimstepExtractionFormImport,baseline:AimstepExtractionBaseline,pdf:AimstepExtractionSources,exportForm:(entry)=>download('AIM-STEP-extraction-form-'+Date.now()+'-'+uid8()+'.xlsx',AimstepExtractionResults.mime,AimstepExtractionResults.workbook(AimstepExtractionFormLibrary.exportSheets(entry,FORM_ITEMS,itemDefinition))),checkImported:checkImportedForm,localIssues:AimstepExtractionFormReview.localIssues,
+      reviewDraft:(id,form,onReview)=>AimstepExtractionFormReview.run(id,{find:key=>{const entry=ws.formLibrary.find(f=>f.id===key);return entry?{...entry,form,provenance:{}}:null;},model:pilotModelJSON,id:uid8,importer:AimstepExtractionFormImport,update:async(key,review,form)=>onReview(review,form)}),
       lock:on=>{busy=on?'form-generation':'';$('study').inert=on;renderSource();}});
     extractionWorkflow=AimstepExtractionWorkflow.mount({state:()=>ws,busy:()=>!!busy,extract:aiExtract,apply:applyDraft,study:st,definition:itemDefinition,record:recBy,exportResults,
       persist:async()=>{await saveChain.catch(()=>{});await putProject(store,{id:scope,state:ws,updatedAt:now()});publish();},
