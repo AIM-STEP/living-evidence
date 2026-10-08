@@ -486,12 +486,12 @@ function fieldSection(field){
 }
 function groupFormFields(fields){return fields.map(field=>({...field,section:fieldSection(field)}));}
 const FORM_ITEMS={baseline:'Baseline information',participant:'Participant',intervention:'Intervention',outcome:'Outcome',other:'Other information'};
-const FORM_FRAMEWORKS=['PICO','PECO','PCC','PICo','Other'];
+const FORM_FRAMEWORKS=['PIOO'];
 function prepareFormSections(form){
   form.fields=groupFormFields(form.fields||[]);
   if(!Array.isArray(form.sections))form.sections=Object.keys(FORM_ITEMS);
   form.sections=[...new Set(form.sections.filter(key=>Object.hasOwn(FORM_ITEMS,key)))];
-  if(!FORM_FRAMEWORKS.includes(form.framework))form.framework='PICO';
+  if(!FORM_FRAMEWORKS.includes(form.framework))form.framework='PIOO';
   form.sectionArchives??={};
 }
 function removeFormSection(form,key){
