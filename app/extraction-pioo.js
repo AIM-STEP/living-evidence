@@ -75,6 +75,12 @@ function migrateTidier(form){
  else if(Array.isArray(form.sectionArchives.intervention))form.sectionArchives.intervention=clean(form.sectionArchives.intervention);
  form.tidierVersion=2;
 }
+function clearOtherDefaults(form){
+ const automatic=f=>f.section==='other'&&(/^(other|outcome)\./.test(f.piooKey||'')||/^pioo-other-/.test(f.id||''));
+ const clean=list=>{const removed=list.filter(automatic);form.removedOtherFields??=[];for(const f of removed)if(!form.removedOtherFields.some(x=>x.id===f.id))form.removedOtherFields.push(f);return list.filter(f=>!automatic(f));};
+ form.fields=clean(form.fields);if(Array.isArray(form.sectionArchives.other))form.sectionArchives.other=clean(form.sectionArchives.other);
+ if(form.legacyOutcomeArchive?.fields)form.legacyOutcomeArchive.fields=form.legacyOutcomeArchive.fields.filter(f=>!/^outcome\./.test(f.piooKey||''));
+}
 function isArmItem(f){return f.section==='intervention'&&f.piooKey!=='intervention.armCount';}
 function validateArmItems(value,fields){
  const expected=fields.filter(isArmItem).map(f=>f.id);if(!expected.length)return;
@@ -88,5 +94,5 @@ function validateArmItems(value,fields){
 }
 function definition(field){if(typeof field.definition==='string')return field.definition;const [section,key]=String(field.piooKey||'').split('.'),entry=groups[section]?.find(e=>e[0]===key);return entry?entry[2]+(section==='intervention'&&key!=='armCount'?' In the arms array, return this item once for each arm in report order, including control arms and unreported items with empty values. Apply this item separately to every intervention and comparator, including usual care and background care. Record explicit non-applicability only when supported; absent or insufficient reporting stays blank. Retain source locations and distinguish protocol plans from completed-study observations.':'')+common:null;}
 function roundRobin(lists,limit=40){const result=[],seen=new Set();for(let i=0;i<Math.max(0,...lists.map(l=>l.length))&&result.length<limit;i++)for(const list of lists){const id=list[i];if(id&&!seen.has(id)){seen.add(id);result.push(id);if(result.length===limit)break;}}return result;}
-const api={groups,common,seed,upgrade,migrate,definition,roundRobin,isArmItem,validateArmItems};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepExtractionPioo=api;
+const api={groups,common,seed,upgrade,migrate,definition,roundRobin,isArmItem,validateArmItems,clearOtherDefaults};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepExtractionPioo=api;
 })(globalThis);
