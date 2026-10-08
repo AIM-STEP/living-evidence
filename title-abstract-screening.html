@@ -280,7 +280,7 @@ th{background:#f4f4f4}
 </div>
 </section>
 <section class="panel">
-<div class="panel-head pilot-panel-head"><div class="pilot-title-actions"><h2>All records screening</h2><button class="pilot-help-button" id="full-help-button" type="button" aria-label="How all records screening works" aria-describedby="full-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-screening" type="button" disabled title="Approve the pilot first.">Start</button><button class="btn small clear-action" id="clear-full" type="button" aria-label="Clear all records screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse All records screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse All records screening</span></button></div></div>
+<div class="panel-head pilot-panel-head"><div class="pilot-title-actions"><h2>Main screening</h2><button class="pilot-help-button" id="full-help-button" type="button" aria-label="How main screening works" aria-describedby="full-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar"><button class="btn small" id="stop-full" type="button" hidden>Stop</button><button class="btn small primary" id="start-screening" type="button" disabled title="Approve the pilot first.">Start</button><button class="btn small clear-action" id="clear-full" type="button" aria-label="Clear main screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-full" aria-expanded="true" aria-controls="full-body" title="Collapse Main screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Main screening</span></button></div></div>
 <div class="panel-body" id="full-body">
 
 <div class="source-summary pilot-summary full-summary" id="full-categories"><div><strong id="full-screened">0 / 0</strong><span>Completed</span></div><div><button class="full-category" type="button" data-full-category="yes" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-yes">0</strong><span>Yes</span></button></div><div><button class="full-category" type="button" data-full-category="maybe" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-maybe">0</strong><span>Maybe</span></button></div><div><button class="full-category" type="button" data-full-category="no" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-no">0</strong><span>No</span></button></div><div><button class="full-category" type="button" data-full-category="conflicts" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-conflicts">0</strong><span>Conflicts</span></button></div><div><button class="full-category" type="button" data-full-category="check" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-check">0</strong><span>Check</span></button></div></div>
@@ -1067,7 +1067,7 @@ $('calibration-stop').addEventListener('click',()=>controller?.abort());
 $('calibration-download').addEventListener('click',()=>download('screening-calibration-'+stamp()+'.json','application/json',JSON.stringify({project:projectId,calibration:currentCalibration(),check:workspace.pilot.calibrationCheck||null},null,2)));
 $('calibration-pending').addEventListener('click',e=>{const b=e.target.closest('[data-calibration-record]');if(!b)return;pilotView=Number(b.dataset.calibrationRound);pilotFilter='differ';renderPilot();document.getElementById('pilot-record-'+b.dataset.calibrationRecord)?.scrollIntoView({block:'center',behavior:'smooth'});});
 
-// Variant 2 is the second reading in All records screening: the record comes
+// Variant 2 is the second reading in Main screening: the record comes
 // first and the criteria in reverse order; criteria, examples and rule are the same.
 function pilotPrompt(record,round,variant=1,calibration=null){
   const c=activeScreeningCriteria(),rows=variant===2?c.rows.slice().reverse():c.rows,rec={title:record.title,abstract:record.abstract||'(no abstract available)'};
@@ -1319,7 +1319,7 @@ function renderPilot(){
   else if(!busy&&msg.dataset.status){showNotice('pilot-message','');delete msg.dataset.status}
 }
 // Formal screening is unlocked by the reviewer's pilot approval.
-/* ---------------- All records screening ----------------
+/* ---------------- Main screening ----------------
    One supported unmet criterion is sufficient. Another reading that is merely
    unclear does not overturn explicit evidence. A direct met/not-met disagreement
    on the same criterion remains a human conflict. Audit of clear exclusions is
@@ -2168,7 +2168,7 @@ function bindScreeningHelp(prefix){
 bindScreeningHelp('pilot');
 bindScreeningHelp('full');
 collapsible('toggle-pilot','pilot-body','Pilot screening','pilot');
-collapsible('toggle-full','full-body','All records screening','full');
+collapsible('toggle-full','full-body','Main screening','full');
 $('open-import').addEventListener('click',()=>{
   if(busy){toast('Stop screening before importing additional results.');return}
   $('import-database').value=workspace.imports.at(-1)?.db||'';
