@@ -38,9 +38,9 @@ async function unzip(file){
 function xml(s){if(!s)throw Error('A required Office document part is missing.');const d=new DOMParser().parseFromString(s,'application/xml');if(d.getElementsByTagName('parsererror').length)throw Error('Invalid Office XML.');return d;}
 const elements=(node,name)=>Array.from(node.getElementsByTagNameNS('*',name));
 const text=node=>elements(node,'t').map(x=>x.textContent).join('');
-function spreadsheet(files){
+function spreadsheet(files,raw=false){
  const book=xml(files['xl/workbook.xml']),rels=elements(xml(files['xl/_rels/workbook.xml.rels']),'Relationship'),shared=files['xl/sharedStrings.xml']?elements(xml(files['xl/sharedStrings.xml']),'si').map(text):[];let items=[];
- for(const sh of elements(book,'sheet')){const id=sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id'),rel=rels.find(r=>r.getAttribute('Id')===id);if(!rel||rel.getAttribute('TargetMode')==='External')throw Error('Invalid worksheet reference.');const path=rel.getAttribute('Target'),file=path.startsWith('/')?path.slice(1):'xl/'+path.replace(/^\.\//,'');if(!/^xl\/worksheets\/[^/]+\.xml$/.test(file))throw Error('Unsupported worksheet path.');const rows=elements(xml(files[file]),'row').map(row=>{const a=[];for(const c of elements(row,'c')){let col=0;for(const char of (c.getAttribute('r')||'A').replace(/\d/g,''))col=col*26+char.charCodeAt(0)-64;const type=c.getAttribute('t'),v=elements(c,'v')[0]?.textContent||'';a[Math.max(0,col-1)]=type==='s'?shared[Number(v)]||'':type==='inlineStr'?text(c):v;}return Array.from(a,x=>x||'');});items.push(...table(rows,sh.getAttribute('name')));}
+ for(const sh of elements(book,'sheet')){const id=sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id'),rel=rels.find(r=>r.getAttribute('Id')===id);if(!rel||rel.getAttribute('TargetMode')==='External')throw Error('Invalid worksheet reference.');const path=rel.getAttribute('Target'),file=path.startsWith('/')?path.slice(1):'xl/'+path.replace(/^\.\//,'');if(!/^xl\/worksheets\/[^/]+\.xml$/.test(file))throw Error('Unsupported worksheet path.');const rows=elements(xml(files[file]),'row').map(row=>{const a=[];for(const c of elements(row,'c')){let col=0;for(const char of (c.getAttribute('r')||'A').replace(/\d/g,''))col=col*26+char.charCodeAt(0)-64;const type=c.getAttribute('t'),v=elements(c,'v')[0]?.textContent||'';a[Math.max(0,col-1)]=type==='s'?shared[Number(v)]||'':type==='inlineStr'?text(c):v;}return Array.from(a,x=>x||'');});if(raw)items.push({sheet:sh.getAttribute('name'),rows});else items.push(...table(rows,sh.getAttribute('name')));}
  return items;
 }
 function word(files){
@@ -69,12 +69,19 @@ function build(form,items,mode,id){
  if(mode==='replace')next.outcomes=[];
  next.baselineVersion=3;next.piooVersion=1;next.tidierVersion=2;next.picdoVersion=1;return next;
 }
+async function sourceText(file){
+ const ext=file.name.split('.').pop().toLowerCase();
+ if(['txt','md','csv','tsv','json'].includes(ext))return file.text();
+ if(ext==='docx'){const files=await unzip(file);return elements(xml(files['word/document.xml']),'p').map(text).join('\n');}
+ if(ext==='xlsx')return JSON.stringify(spreadsheet(await unzip(file),true));
+ throw Error('Upload PDF, Word (.docx), Excel (.xlsx), text, Markdown, CSV, TSV or JSON source materials.');
+}
 function mount(api){
  const $=id=>document.getElementById(id),dialog=$('form-import-dialog');let items=[],reading=false,saving=false,files=[];
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const error=message=>{$('form-import-error').textContent=message;$('form-import-error').hidden=!message;};
  function render(){const rows=items.map((f,i)=>`<tr data-import-row="${i}"><td><select class="select compact" data-import-key="section" aria-label="Section">${Object.entries(sections).map(([k,v])=>`<option value="${k}" ${f.section===k?'selected':''}>${v}</option>`).join('')}</select></td><td><input class="input compact" data-import-key="label" aria-label="Item" value="${esc(f.label)}"></td><td><textarea class="input" data-import-key="definition" aria-label="Item definition" rows="3">${esc(f.definition)}</textarea></td><td><button class="source-delete" type="button" data-import-delete="${i}" aria-label="Remove ${esc(f.label)}">×</button></td></tr>`).join('');$('form-import-preview').innerHTML=rows?`<table class="grid"><thead><tr><th>Section</th><th>Item</th><th>Definition</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'';$('apply-form-import').disabled=!items.length||reading||saving;}
- $('import-local-form').addEventListener('click',()=>{if(api.busy())return;items=[];files=[];$('form-import-files').value='';$('form-import-mode').value='merge';error('');render();dialog.showModal();});
+ $('import-local-form').addEventListener('click',()=>{if(api.busy())return;items=[];files=[];if($('form-import-name'))$('form-import-name').value='';$('form-import-files').value='';$('form-import-mode').value='merge';error('');render();dialog.showModal();});
  $('close-form-import').addEventListener('click',()=>{if(!reading&&!saving)dialog.close();});dialog.addEventListener('cancel',e=>{if(reading||saving)e.preventDefault();});
  $('form-import-files').addEventListener('change',async e=>{reading=true;items=[];error('');render();$('form-import-files').disabled=true;try{const selected=[...e.target.files];if(selected.length>12)throw Error('Upload at most 12 files at once.');files=selected.map(f=>f.name);const all=[];for(const file of selected)all.push(...await read(file));
    // A standalone definition file may omit its section; resolve only unique item-name matches.
@@ -83,7 +90,7 @@ function mount(api){
   }catch(e){error(e.message||'Could not read the selected files.');}finally{reading=false;$('form-import-files').disabled=false;render();}});
  $('form-import-preview').addEventListener('input',e=>{const row=e.target.closest('[data-import-row]'),k=e.target.dataset.importKey;if(row&&k){const f=items[Number(row.dataset.importRow)];f[k]=e.target.value;if(k==='definition')f.hasDefinition=true;}});
  $('form-import-preview').addEventListener('click',e=>{const b=e.target.closest('[data-import-delete]');if(b&&!saving){items.splice(Number(b.dataset.importDelete),1);render();}});
- $('apply-form-import').addEventListener('click',async()=>{if(reading||saving||!items.length)return;saving=true;error('');$('form-import-preview').inert=true;$('form-import-files').disabled=true;$('form-import-mode').disabled=true;$('apply-form-import').disabled=true;try{if(items.some(f=>!f.label.trim()))throw Error('Every item needs a name.');await api.apply(items,$('form-import-mode').value,files);dialog.close();}catch(e){error(e.message||'Could not save the imported form.');}finally{saving=false;$('form-import-preview').inert=false;$('form-import-files').disabled=false;$('form-import-mode').disabled=false;render();}});
+ $('apply-form-import').addEventListener('click',async()=>{if(reading||saving||!items.length)return;saving=true;error('');$('form-import-preview').inert=true;$('form-import-files').disabled=true;$('form-import-mode').disabled=true;$('apply-form-import').disabled=true;try{if(items.some(f=>!f.label.trim()))throw Error('Every item needs a name.');await api.apply(items,$('form-import-mode').value,files,$('form-import-name')?.value||'');dialog.close();}catch(e){error(e.message||'Could not save the imported form.');}finally{saving=false;$('form-import-preview').inert=false;$('form-import-files').disabled=false;$('form-import-mode').disabled=false;render();}});
 }
-const api={sections,table,csv,dedupe,read,build,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepExtractionFormImport=api;
+const api={sections,table,csv,dedupe,read,build,sourceText,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepExtractionFormImport=api;
 })(globalThis);

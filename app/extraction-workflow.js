@@ -82,7 +82,7 @@ function mount(api){
  host.addEventListener('click',async e=>{const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action,id=b.dataset.id;try{
   if(action==='stop'){abort?.abort();return;}if(action==='pdf'){await api.pdf(id);return;}
   if(action==='toggle'){collapsed[b.dataset.part]=!collapsed[b.dataset.part];render();return;}
-  if(running)return;
+  if(running||api.busy?.())return;
   error='';
   if(action==='export'){api.exportResults(b.dataset.part,selected());return;}
   if(action==='round'||action==='main'){await run(action==='round'?'pilot':'main');return;}
