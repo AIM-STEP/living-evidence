@@ -274,7 +274,7 @@ th{background:#f4f4f4}
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app/extraction-sources.js?v=1"></script>
 <script src="app/extraction-baseline.js?v=4"></script>
-<script src="app/extraction-pioo.js?v=1"></script>
+<script src="app/extraction-pioo.js?v=2"></script>
 <script>
 'use strict';
 (() => {
@@ -482,7 +482,7 @@ function keywordScores(chunks,query){
    and the study fields); the local model can pre-fill every value with the
    passage and an exact quotation, and the reviewer verifies each row. The
    arm-level network dataset goes to Analysis. */
-const DEFAULT_FIELDS=['Country','Setting','Number randomised','Population (key characteristics)','Mean age (years)','Female (%)','Disease duration','Background therapy','Funding'];
+const DEFAULT_FIELDS=['Country','Setting','Number randomised','Population (key characteristics)','Mean age (years)','Female (%)','Disease duration','Funding'];
 const FIELD_SECTIONS={baseline:'Baseline information',participant:'Participant',intervention:'Intervention',other:'Other information',outcome:'Outcome'};
 function fieldSection(field){
   if(Object.hasOwn(FIELD_SECTIONS,field.section))return field.section;
