@@ -241,7 +241,7 @@ th{background:#f4f4f4}
 </section>
 
 <section class="panel">
-<div class="panel-head"><h2>Extraction form</h2><div class="toolbar"><button class="btn small" type="button" id="import-local-form" aria-haspopup="dialog" aria-controls="form-import-dialog">Import form in local</button><button class="collapse-toggle" type="button" id="toggle-form" aria-expanded="true" aria-controls="form-body" title="Collapse Extraction form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Extraction form</span></button></div></div>
+<div class="panel-head"><h2>Extraction form</h2><div class="toolbar"><button class="btn small" type="button" id="import-local-form" aria-haspopup="dialog" aria-controls="form-import-dialog">Import from local</button><button class="collapse-toggle" type="button" id="toggle-form" aria-expanded="true" aria-controls="form-body" title="Collapse Extraction form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Extraction form</span></button></div></div>
 <div class="panel-body" id="form-body">
 <div class="form-creation-controls"><label class="label" for="form-generation-method">Generation Method</label><select class="select" id="form-generation-method"><option value="machine">Machine generate</option><option value="manual" selected>Manual generate</option></select><label class="label" for="form-create-name">Form name</label><input class="input compact" id="form-create-name" maxlength="200" placeholder="Name this extraction form"></div>
 <div id="machine-form-panel" hidden><h3 class="sub-head">Machine generate</h3><label class="label" for="form-materials">Review requirements and source materials</label><textarea class="input" id="form-materials" rows="5" maxlength="100000" placeholder="Describe the review, the data you need, and any extraction rules. You can also upload a protocol, eligibility criteria, or other source materials."></textarea><input class="input" type="file" id="form-material-files" accept=".pdf,.docx,.xlsx,.txt,.md,.csv,.tsv,.json" multiple><div class="toolbar"><button class="btn small" type="button" id="generate-machine-form">Generate</button><button class="btn small" type="button" id="stop-machine-form" hidden>Stop</button><span id="form-generation-progress" role="status" hidden>Generating…</span></div></div>
@@ -294,7 +294,7 @@ th{background:#f4f4f4}
 <script src="app/extraction-pioo.js?v=6"></script>
 <script src="app/extraction-outcomes.js?v=2"></script>
 <script src="app/extraction-results.js?v=1"></script>
-<script src="app/extraction-form-import.js?v=2"></script>
+<script src="app/extraction-form-import.js?v=3"></script>
 <script src="app/extraction-form-library.js?v=1"></script>
 <script src="app/extraction-workflow.js?v=5"></script>
 <script src="app/extraction-definition-word.js?v=1"></script>
