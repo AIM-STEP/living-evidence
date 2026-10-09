@@ -238,7 +238,7 @@ th{background:#f4f4f4}
 </div>
 </section>
 
-<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2></div><div class="panel-body"><div class="tool-choice" id="tool-choice"></div><div class="outcome-row"><span class="label">Outcome results to assess</span><span id="outcomes"></span><input class="input compact" id="outcome-input" placeholder="Add an outcome, e.g. ACR20 at 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
+<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="outcome-row"><span class="label">Outcome results to assess</span><span id="outcomes"></span><input class="input compact" id="outcome-input" placeholder="Add an outcome, e.g. ACR20 at 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
 <div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
 <div class="team-track full-track" id="ai-progress" hidden><span style="width:0%"></span></div><div class="hint" id="ai-now"></div>
 <div class="table-wrap"><table class="study-table" id="assessment-study-table"></table></div>
@@ -253,12 +253,6 @@ th{background:#f4f4f4}
 <div class="overall" id="overall"></div>
 <div class="toolbar assess-step" id="assess-step"></div>
 </div>
-</section>
-
-<section class="panel">
-<div class="panel-head"><h2>Summary</h2><div class="toolbar"><span class="export-results"><label class="label" for="export-format">Export</label><select class="select compact" id="export-format"><option value="csv">Traffic-light table (CSV, robvis layout)</option><option value="json">Full assessments with quotations and audit (JSON)</option></select><button class="btn small primary" type="button" id="export-btn">Export</button></span><button class="collapse-toggle" type="button" id="toggle-summary" aria-expanded="true" aria-controls="summary-body-wrap" title="Collapse Summary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Summary</span></button></div></div>
-<div class="panel-body" id="summary-body-wrap"><div id="summary-body"></div><p class="hint" id="agree"></p></div>
-<div class="panel-footer toolbar between"><span class="hint">Steps run in order, from Eligibility criteria (step 1) to Certainty of evidence (step 8).</span></div>
 </section>
 
 <details class="references" hidden data-developer-references><summary>Method and research references</summary><ul>
@@ -601,7 +595,6 @@ const direction=a=>['Y','PY','SY','WY','DY'].includes(a)?'yes':['N','PN','SN','W
    aimstep-rob holds the assessments; the full texts stay in
    aimstep-fulltext-docs (read only). One assessment = one study x one
    outcome result (Cochrane Handbook 8.2.2: risk of bias is result-specific). */
-const summaryKey='aimstep-rob-summary:'+scope;
 let ws=null,store=null,docStore=null,handoff=null,controller=null,busy='',current=null,saveChain=Promise.resolve();
 const docCache=new Map();let assessmentWorkflow=null;
 const defaults=()=>({version:1,toolChoice:{},records:[],criteriaSig:'',handoffAt:'',outcomes:[],studies:{},assess:{},audit:[]});
@@ -609,7 +602,7 @@ function log(action,detail={}){ws.audit.push({at:now(),action,...detail});if(ws.
 function getKey(db,key){return new Promise((resolve,reject)=>{const tx=db.transaction('projects','readonly'),req=tx.objectStore('projects').get(key);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)})}
 async function loadDoc(uid){if(docCache.has(uid))return docCache.get(uid);if(!docStore)return null;const d=await getKey(docStore,scope+'|'+uid);if(d)docCache.set(uid,d);return d}
 function save(){
-  publishSummary();
+
   saveChain=saveChain.catch(()=>{}).then(()=>putProject(store,{id:scope,state:ws,updatedAt:now()}));
   return saveChain.catch(e=>{showNotice('source-notice','Local save failed: '+e.message,'error')});
 }
@@ -698,7 +691,7 @@ async function deleteIncludedStudy(uid){
     ws.deletedStudyIds=[...new Set([...(ws.deletedStudyIds||[]),uid])];
     if(current?.split('|')[0]===uid)current=null;
     await putProject(store,{id:scope,state:ws,updatedAt:now()});
-    publishSummary();
+
   }catch(e){
     ws.records=previousRecords;ws.deletedStudyIds=previousDeleted;current=previousCurrent;
     showNotice('source-notice','Could not delete the record: '+e.message,'error');
@@ -726,7 +719,7 @@ async function importLocalPdfs(files){
         docCache.set(record.uid,doc);if(!ws.outcomes.length)ws.outcomes=['Primary outcome'];guessDesign(record);await save();added++;
       }catch(e){failed.push(file.name+': '+e.message);}
     }
-    publishSummary();renderStudies();
+    renderStudies();
     showNotice('source-notice',failed.length?failed.join('\n'):'','error');
     toast(added+' PDF'+(added===1?'':'s')+' imported.'+(duplicates?' '+duplicates+' duplicate'+(duplicates===1?'':'s')+' skipped.':''));
   }catch(e){showNotice('source-notice',e.message,'error');}
@@ -819,13 +812,13 @@ function mountAssessmentWorkflow(){assessmentWorkflow=AimstepRobWorkflow.mount({
  prerequisite:()=>{if(!ws.records.length)throw Error('Include a study first.');if(!ws.outcomes.length)throw Error('Add an outcome first.');if(ws.records.some(r=>!toolFor(studyOf(r.uid).design)))throw Error('Choose the study design for each report in Assessment tools first.');},
  ready:key=>loadDoc(unitFromKey(key).uid),extract:async(key,signal,corrections)=>{const tool=toolFor(studyOf(unitFromKey(key).uid).design);const learned=corrections.filter(c=>c.tool===tool.id);const value=await aiAssess(unitFromKey(key),signal,learned);validateAssessment(value);return {value,model:value.model,prompt:value.prompt,at:value.at};},
  apply:(key,draft)=>{const x=assessOf(key);if(x.confirmed)return;const previous=finalAnswers(x);x.ai=draft.value;x.mine=Object.fromEntries(Object.entries(draft.value.answers).map(([id,a])=>[id,x.reviewedManually?previous[id]||a.answer:a.answer]));x.revealed=true;x.resolved={};x.confirmed=null;},
- persist:async()=>{await saveChain.catch(()=>{});await putProject(store,{id:scope,state:ws,updatedAt:now()});publishSummary();},
+ persist:async()=>{await saveChain.catch(()=>{});await putProject(store,{id:scope,state:ws,updatedAt:now()});},
  lock:value=>{busy=value;$('assessment-setup').inert=!!value;$('assess').inert=!!value;renderSource();renderStudies();},busy:()=>!!busy,changed:render,
  pdf:key=>openReader(unitFromKey(key).uid,true),review:key=>{current=key;renderAssess();$('assess').scrollIntoView({block:'start',behavior:'smooth'});},exportResults:exportAssessmentFlow});}
 
 /* ---------------- Rendering ---------------- */
 const badge=(l,tool,d)=>l?`<span class="lvl ${lvlClass(l,tool,d)}">${esc(l)}</span>`:'<span class="lvl none">—</span>';
-function render(){safely(renderSource);safely(renderStudies);safely(renderAssess);safely(renderSummary);if(assessmentWorkflow)safely(()=>assessmentWorkflow.render())}
+function render(){safely(renderSource);safely(renderStudies);safely(renderAssess);if(assessmentWorkflow)safely(()=>assessmentWorkflow.render())}
 function renderSource(){
   const n=ws.records.length,u=units(),done=u.filter(x=>statusOf(x)==='done').length,withText=ws.records.filter(r=>r.fullText).length;
   $('src-stats').innerHTML=[[n,'Included studies'],[withText,'With full text'],[u.length,'Results to assess'],[done,'Confirmed']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');
@@ -924,57 +917,6 @@ function renderAssess(){
   else step=`<button class="btn small primary" type="button" id="confirm"${!all||open||(!j.overall&&!j.none)?' disabled':''}>Confirm assessment</button><span class="hint">${open?`${open} conflict${open===1?'':'s'} with the AI to resolve.`:x.ai?`${conf.length} conflict${conf.length===1?'':'s'}, all resolved.`:''}</span>`;
   $('assess-step').innerHTML=step;
 }
-function renderSummary(){
-  const groups={};
-  for(const u of units()){const s=ws.studies[u.uid],tool=toolFor(s?.design),x=ws.assess[u.key];if(!tool||!x?.confirmed)continue;(groups[tool.id]=groups[tool.id]||[]).push({u,tool,j:judgements(tool,x)})}
-  const ids=Object.keys(groups);
-  if(!ids.length){$('summary-body').innerHTML='<p class="hint">Confirmed assessments appear here as a traffic-light table and a summary chart, by tool.</p>';$('agree').textContent='';return}
-  $('summary-body').innerHTML=ids.map(id=>{
-    const tool=TOOLS[id],rows=groups[id];
-    const tl=`<div class="table-wrap"><table class="tl"><thead><tr><th>Study · outcome</th>${tool.domains.map(d=>`<th title="${esc(d.name)}">${d.id}</th>`).join('')}${tool.noOverall?'':'<th>Overall</th>'}</tr></thead><tbody>${rows.map(({u,j})=>{const r=recBy(u.uid);return `<tr><td>${esc(firstAuthor(r))} ${esc(r.year||'')}${ws.outcomes.length>1?' · '+esc(ws.outcomes[u.o]):''}</td>${j.domains.map((d,i)=>`<td><span class="dot ${lvlClass(d.level,tool,tool.domains[i])}" title="${esc(d.level)}"></span></td>`).join('')}${tool.noOverall?'':`<td><span class="dot ${lvlClass(j.overall,tool)} big" title="${esc(j.overall)}"></span></td>`}</tr>`}).join('')}</tbody></table></div>`;
-    const bars=[...tool.domains.map((d,i)=>[d.id+' '+d.name,rows.map(x=>x.j.domains[i].level),levelsOf(tool,d),d]),...(tool.noOverall?[]:[['Overall',rows.map(x=>x.j.overall),overallLevels(tool),null]])].map(([name,ls,lv,d])=>`<div class="bar-row"><span class="bar-name" title="${esc(name)}">${esc(name)}</span><span class="bar">${lv.map(l=>{const n=ls.filter(x=>x===l).length;return n?`<span class="seg ${lvlClass(l,tool,d)}" style="width:${n/ls.length*100}%" title="${esc(l)}: ${n}">${Math.round(n/ls.length*100)}%</span>`:''}).join('')}</span></div>`).join('');
-    return `<h3 class="sum-h">${esc(tool.name)} · ${rows.length} result${rows.length===1?'':'s'}</h3>${tl}<div class="bars">${bars}</div><p class="legend">${[...new Set([...tool.domains.flatMap(d=>levelsOf(tool,d)),...(tool.noOverall?[]:overallLevels(tool))])].map(l=>`<span><span class="dot ${lvlClass(l,tool)}"></span> ${esc(l)}</span>`).join('')}</p>`;
-  }).join('');
-  // AI vs reviewer agreement on signalling answers (before resolution)
-  let n=0,agree=0;
-  for(const u of units()){const x=ws.assess[u.key],tool=toolFor(ws.studies[u.uid]?.design);if(!x?.confirmed||!x.ai?.answers||!tool)continue;for(const d of tool.domains)for(const q of [...d.questions,...(guided(d)?[{id:d.id}]:[])]){const ai=x.ai.answers[q.id]?.answer,m=x.mine[q.id];if(ai&&m){n++;if(direction(ai)===direction(m)||ai===m)agree++}}}
-  $('agree').textContent=n?`AI and reviewer agreed on ${agree} of ${n} answers (${Math.round(agree/n*100)}%), before conflicts were resolved.`:'';
-}
-
-/* ---------------- Export ----------------
-   CSV: one row per result in the robvis layout (Study, domains, Overall,
-   Weight), one file section per tool. JSON: everything, with every answer,
-   quotation, AI draft and the audit trail. */
-function exportRows(){
-  const out=[];
-  for(const u of units()){const s=ws.studies[u.uid],tool=toolFor(s?.design),x=ws.assess[u.key],r=recBy(u.uid);if(!tool||!x?.confirmed)continue;out.push({u,r,s,tool,x,j:judgements(tool,x)})}
-  return out;
-}
-function exportResults(){
-  const rows=exportRows(),fmt=$('export-format').value;
-  if(!rows.length){toast('Confirm at least one assessment first.');return}
-  const name=`aimstep-risk-of-bias-${stamp()}`;
-  if(fmt==='csv'){
-    const parts=[];
-    for(const id of [...new Set(rows.map(x=>x.tool.id))]){const tool=TOOLS[id],rs=rows.filter(x=>x.tool.id===id);parts.push([['Tool: '+tool.name],['Study','Outcome',...tool.domains.map(d=>d.id+' '+d.name),'Overall','Weight'],...rs.map(x=>[firstAuthor(x.r)+' '+(x.r.year||''),ws.outcomes[x.u.o],...x.j.domains.map(d=>d.level),x.j.overall,1])].map(l=>l.map(csvCell).join(',')).join('\r\n'))}
-    download(name+'.csv','text/csv;charset=utf-8','﻿'+parts.join('\r\n\r\n'));
-  }else{
-    download(name+'.json','application/json',JSON.stringify({format:'aimstep-risk-of-bias/v1',project:projectId,exportedAt:now(),outcomes:ws.outcomes,
-      results:rows.map(({u,r,s,tool,x,j})=>({study:{uid:r.uid,title:r.title,authors:r.authors,year:r.year,doi:r.doi,pmid:r.pmid},outcome:ws.outcomes[u.o],design:s.design,designSource:s.designBy,tool:tool.name,toolReference:tool.ref,
-        answers:tool.domains.flatMap(d=>[...d.questions.map(q=>({domain:d.id,question:q.id,text:q.text,applicable:applicable(q,finalAnswers(x)),reviewer:x.mine[q.id]||null,ai:x.ai?.answers?.[q.id]||null,final:applicable(q,finalAnswers(x))?finalAnswers(x)[q.id]||null:'NA',support:x.notes[q.id]||''})),...(guided(d)?[{domain:d.id,question:'domain judgement',reviewer:x.mine[d.id]||null,ai:x.ai?.answers?.[d.id]||null,final:finalAnswers(x)[d.id]||null,support:x.notes[d.id]||''}]:[])]),
-        domains:j.domains.map((d,i)=>({id:d.id,name:tool.domains[i].name,algorithm:d.auto||null,judgement:d.level,changedReason:d.reason||null})),overall:{algorithm:j.overallAuto,judgement:j.overall,changedReason:j.overallReason||null},
-        ai:x.ai?{model:x.ai.model,prompt:x.ai.prompt,promptHash:x.ai.promptHash,evidence:x.ai.evidence,at:x.ai.at}:null,confirmed:x.confirmed})),audit:ws.audit},null,2));
-  }
-}
-function publishSummary(){
-  try{
-    const u=units(),done=exportRows();
-    localStorage.setItem(summaryKey,JSON.stringify({version:1,studies:ws.records.length,results:u.length,confirmed:done.length,
-      overall:done.reduce((m,x)=>(m[x.j.overall]=(m[x.j.overall]||0)+1,m),{}),
-      byStudy:done.map(x=>({uid:x.r.uid,outcome:ws.outcomes[x.u.o],tool:x.tool.name,overall:x.j.overall,domains:x.j.domains.map(d=>d.level)})),updatedAt:now()}));
-  }catch(e){}
-}
-
 /* ---------------- Events ---------------- */
 function reviewer(){return ($('reviewer-name').value||'').trim()}
 function bind(){
@@ -1019,14 +961,13 @@ function bind(){
     else if(e.target.id==='reopen'){x.confirmed=null;log('reopened',{key:current});save();render()}
   });
   $('assess').addEventListener('change',e=>{const n=e.target.closest('[data-note]');if(!n||!current)return;const x=assessOf(current);x.notes[n.dataset.note]=n.value.trim();save()});
-  $('export-btn').addEventListener('click',exportResults);
   $('close-reader').addEventListener('click',()=>$('reader').close());
   $('reader').addEventListener('close',()=>{if(readerObjectUrl)URL.revokeObjectURL(readerObjectUrl);readerObjectUrl=null;$('reader-pdf-frame').removeAttribute('src');});
   let refreshTimer;
   const refresh=()=>{clearTimeout(refreshTimer);if(!document.hidden)refreshTimer=setTimeout(()=>importStudies().catch(e=>showNotice('source-notice','Could not refresh included studies: '+e.message,'error')),1200);};
   window.addEventListener('focus',refresh);window.addEventListener('storage',refresh);document.addEventListener('visibilitychange',refresh);
   collapsible('toggle-source','source-body','Included studies','source');
-  collapsible('toggle-summary','summary-body-wrap','Summary','summary');
+  collapsible('toggle-tools','tools-body','Assessment tools','tools');
 }
 let readerObjectUrl=null;
 async function openReader(uid,original=false){
