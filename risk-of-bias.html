@@ -239,8 +239,10 @@ th{background:#f4f4f4}
 </div>
 </section>
 
-<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="btn small" type="button" id="clear-assessment-tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="outcome-row"><span class="label">Outcome and time point</span><input class="input compact" id="outcome-input" aria-label="Outcome" placeholder="Outcome, e.g. ACR20" autocomplete="off"><input class="input compact" id="timepoint-input" aria-label="Time point" placeholder="Time point, e.g. 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
-<div id="outcomes"></div><div class="toolbar"><button class="btn small" type="button" id="save-assessment-setup">Save</button><span class="hint" id="setup-status" role="status"></span></div><div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
+<section class="panel" id="outcome-setup"><div class="panel-head"><h2>Outcome and time point</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-outcome-setup" aria-expanded="true" aria-controls="outcome-setup-body" title="Collapse Outcome and time point"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Outcome and time point</span></button></div></div><div class="panel-body" id="outcome-setup-body"><div class="outcome-row"><input class="input compact" id="outcome-input" aria-label="Outcome" placeholder="Outcome, e.g. ACR20" autocomplete="off"><input class="input compact" id="timepoint-input" aria-label="Time point" placeholder="Time point, e.g. 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
+<div id="outcomes"></div></div></section>
+
+<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="btn small" type="button" id="clear-assessment-tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="toolbar"><button class="btn small" type="button" id="save-assessment-setup">Save</button><span class="hint" id="setup-status" role="status"></span></div><div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
 <div class="team-track full-track" id="ai-progress" hidden><span style="width:0%"></span></div><div class="hint" id="ai-now"></div>
 
 </div></section>
@@ -817,7 +819,7 @@ function mountAssessmentWorkflow(){assessmentWorkflow=AimstepRobWorkflow.mount({
  ready:key=>loadDoc(unitFromKey(key).uid),extract:async(key,signal,corrections)=>{const tool=toolFor(studyOf(unitFromKey(key).uid).design);const learned=corrections.filter(c=>c.tool===tool.id);const value=await aiAssess(unitFromKey(key),signal,learned);validateAssessment(value);return {value,model:value.model,prompt:value.prompt,at:value.at};},
  apply:(key,draft)=>{const x=assessOf(key);if(x.confirmed)return;const previous=finalAnswers(x);x.ai=draft.value;x.mine=Object.fromEntries(Object.entries(draft.value.answers).map(([id,a])=>[id,x.reviewedManually?previous[id]||a.answer:a.answer]));x.revealed=true;x.resolved={};x.confirmed=null;},
  persist:async()=>{await saveChain.catch(()=>{});await putProject(store,{id:scope,state:ws,updatedAt:now()});},
- lock:value=>{busy=value;$('assessment-setup').inert=!!value;$('assess').inert=!!value;renderSource();renderStudies();},busy:()=>!!busy,changed:render,
+ lock:value=>{busy=value;$('assessment-setup').inert=!!value;$('outcome-setup').inert=!!value;$('assess').inert=!!value;renderSource();renderStudies();},busy:()=>!!busy,changed:render,
  pdf:key=>openReader(unitFromKey(key).uid,true),review:key=>{current=key;renderAssess();$('assess').scrollIntoView({block:'start',behavior:'smooth'});},exportResults:exportAssessmentFlow});}
 
 /* ---------------- Rendering ---------------- */
@@ -915,13 +917,13 @@ function renderAssess(){
 /* ---------------- Events ---------------- */
 async function clearAssessmentSetup(){
  if(busy||syncingStudies||!confirm('Clear Assessment tools, outcomes and time points, and reset Pilot/Main assess? Included studies and PDFs will be kept.'))return;
- busy='clear-tools';$('assessment-setup').inert=true;await saveChain.catch(()=>{});const previous=structuredClone(ws),previousCurrent=current;
+ busy='clear-tools';$('assessment-setup').inert=true;$('outcome-setup').inert=true;await saveChain.catch(()=>{});const previous=structuredClone(ws),previousCurrent=current;
  try{
   log('assessment-tools-cleared',{previous:{selectedToolId:ws.selectedToolId,toolChoice:ws.toolChoice,outcomes:ws.outcomes,outcomeTimepoints:ws.outcomeTimepoints,studies:ws.studies,assess:ws.assess,robFlow:ws.robFlow}});
   ws.toolChoice={};ws.selectedToolId=null;ws.outcomes=[];ws.outcomeTimepoints=[];ws.studies={};ws.assess={};ws.robFlow={rounds:[],selected:0,approved:null,main:{done:{},errors:{}}};ws.assessmentSetupSignature=null;current=null;
   await putProject(store,{id:scope,state:ws,updatedAt:now()});$('outcome-input').value='';$('timepoint-input').value='';
  }catch(e){ws=previous;current=previousCurrent;showNotice('source-notice','Could not clear Assessment tools: '+e.message,'error');}
- finally{busy='';$('assessment-setup').inert=false;render();}
+ finally{busy='';$('assessment-setup').inert=false;$('outcome-setup').inert=false;render();}
 }
 function reviewer(){return ($('reviewer-name').value||'').trim()}
 function bind(){
@@ -966,6 +968,7 @@ function bind(){
   const refresh=()=>{clearTimeout(refreshTimer);if(!document.hidden)refreshTimer=setTimeout(()=>importStudies().catch(e=>showNotice('source-notice','Could not refresh included studies: '+e.message,'error')),1200);};
   window.addEventListener('focus',refresh);window.addEventListener('storage',refresh);document.addEventListener('visibilitychange',refresh);
   collapsible('toggle-source','source-body','Included studies','source');
+  collapsible('toggle-outcome-setup','outcome-setup-body','Outcome and time point','outcomes');
   collapsible('toggle-tools','tools-body','Assessment tools','tools');
 }
 let readerObjectUrl=null;
