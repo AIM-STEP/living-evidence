@@ -549,7 +549,7 @@ function evaluate(rec,kind){
 function applyCalc(rec){
   const calc=derive(rec,data(),ws.rules);
   for(const no of Object.keys(calc).filter(k=>/^\d+$/.test(k))){
-    const c=calc[no];if(c.state!=='auto'){if(['waiting','blocked'].includes(c.state)&&[63,64,65,66,68].includes(+no)){const key=fieldKey(rec,+no);if(rec[key]!=null){audit(rec,+no,rec[key],null,'invalidated');rec[key]=null;}}continue;}
+    const c=calc[no];if(c.state!=='auto'){if(['waiting','blocked'].includes(c.state)){const key=fieldKey(rec,+no);if(rec[key]!=null){audit(rec,+no,rec[key],null,'invalidated');rec[key]=null;}}continue;}
     const key=fieldKey(rec,+no),before=rec[key];
     if(JSON.stringify(before??null)!==JSON.stringify(c.value??null)){rec[key]=c.value;audit(rec,+no,before,c.value,'auto')}
   }
@@ -614,7 +614,7 @@ function renderRules(){
 
 function renderList(){
   const d=data(),rows=d.records.map(r=>{
-    const e=evaluate(r),c=e.calc,lvl=no=>c[no]&&c[no].state==='auto'?c[no].value:r[fieldKey(r,no)];
+    const e=evaluate(r),c=e.calc,lvl=no=>c[no]&&['waiting','blocked'].includes(c[no].state)?null:c[no]&&c[no].state==='auto'?c[no].value:r[fieldKey(r,no)];
     const st=no=>c[no]?.state;
     return `<tr class="${current===r.id?'current':''}"><td>${esc(r.id)}</td><td class="cmp"><button class="link-btn" type="button" data-open="${esc(r.id)}">${esc(r.intervention||'?')} vs ${esc(r.control||'?')}</button></td><td>${coeBadge(lvl(50),st(50))}</td><td>${coeBadge(lvl(51),st(51))}</td><td>${coeBadge(lvl(60),st(60))}</td><td>${esc({'1':'Direct','2':'Indirect','3':'NMA'}[r.final_source]||'—')}</td><td class="num">${esc(fmtRDfull(c[65]?.state==='auto'?c[65].value:null))} ${esc(U.continuous(r)?U.unit(r).scale:'per 1000')}</td><td>${coeBadge(e.status==='complete'?lvl(68):null,e.status==='blocked'?'blocked':'waiting')}</td><td>${statusBadge(e.status)}</td></tr>`;
   }).join('');
@@ -645,7 +645,7 @@ function renderEditor(){
   renderHistory(rec);
 }
 function renderPath(rec,e){
-  const c=e.calc,lvl=no=>c[no]&&(c[no].state==='auto')?c[no].value:rec[fieldKey(rec,no)],st=no=>c[no]?.state;
+  const c=e.calc,lvl=no=>c[no]&&['waiting','blocked'].includes(c[no].state)?null:c[no]&&(c[no].state==='auto')?c[no].value:rec[fieldKey(rec,no)],st=no=>c[no]?.state;
   const steps=[[50,'Direct COE','before imprecision'],[51,'Indirect COE','before imprecision'],[56,'Preliminary NMA COE','after integration'],[60,'NMA COE','after incoherence'],[68,'Final COE','after imprecision']];
   $('coe-path').innerHTML=steps.map(([no,l,sub],i)=>`${i?'<span class="path-arrow" aria-hidden="true">→</span>':''}<div class="path-step${no===68?' final':''}"><span class="flow-label">#${no} ${l}</span>${coeBadge(no===68&&e.status!=='complete'?null:lvl(no),st(no))}<small>${sub}</small></div>`).join('');
 }
