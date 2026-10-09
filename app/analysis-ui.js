@@ -28,7 +28,7 @@ function renderControls(){if(!ws)return;const dataOK=C.confirmedData(ws),planOK=
  $('review-requirements').disabled=blocked||!dataOK||!ws.requirements.trim();
  $('confirm-requirements').disabled=blocked||!dataOK||!ws.planReview||ws.planReview.input!==C.inputSignature(ws)||ws.planReview.signature!==C.signature(ws.plan)||C.planErrors(ws.plan,ws.rows,ws.requirements).length>0;
  $('start-analysis').disabled=blocked||!C.canRun(ws);
- $('export-analysis').disabled=blocked||!currentRun();
+ $('export-analysis').disabled=blocked||!currentRun();$('clear-results').disabled=blocked||(!ws.runs.length&&!progress);
  $('stop-analysis').hidden=busy!=='analysis';$('stop-data').hidden=busy!=='data';$('stop-requirements').hidden=busy!=='requirements';
  $('data-confirmed').textContent=dataOK?'Confirmed':'';$('requirements-confirmed').textContent=planOK?'Confirmed':'';
  $('data-confirmed').classList.toggle('confirmed',dataOK);$('requirements-confirmed').classList.toggle('confirmed',planOK);
@@ -53,7 +53,7 @@ function renderPlan(){
 }
 function renderPlanErrors(){const el=$('plan-errors');if(!el)return;const errors=C.planErrors(ws.plan,ws.rows,ws.requirements);el.innerHTML=errors.length?'<ul>'+errors.map(e=>'<li class="error">'+esc(e)+'</li>').join('')+'</ul>':'';}
 function currentRun(){return ws.runs.find(r=>r.id===ws.selectedRun)||ws.runs.at(-1);}
-function renderResults(){const run=currentRun();$('run-picker').hidden=!run;$('result-tabs').hidden=!run;$('stale-note').hidden=!run||run.signature===C.planSignature(ws);if(!run){$('result-view').innerHTML='';return;}
+function renderResults(){const run=currentRun();$('run-picker').hidden=!run;$('result-tabs').hidden=!run;$('stale-note').hidden=!run||run.signature===C.planSignature(ws);if(!run){$('result-view').innerHTML='';$('saved-runs').innerHTML='';return;}
  $('saved-runs').innerHTML=ws.runs.map(r=>`<option value="${r.id}" ${r.id===run.id?'selected':''}>${esc(r.at.replace('T',' ').slice(0,19))} · ${r.results.length} analyses</option>`).join('');
  document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));
  $('result-view').innerHTML=view==='results'?O.body(run):'<div class="document">'+esc(view==='methods'?run.methods:run.interpretation)+'</div>';
@@ -99,6 +99,7 @@ function bind(){
  $('plan-editor').addEventListener('change',e=>{if(['method','prior'].includes(e.target.dataset.setting))renderPlan();});
  for(const id of ['stop-data','stop-requirements','stop-analysis'])$(id).onclick=()=>controller?.abort();
  $('start-analysis').onclick=()=>task('analysis',start);$('export-analysis').onclick=exportRun;
+ $('clear-results').onclick=()=>{if(busy||!confirm('Clear all saved analysis results, figures, interpretation and methods in this project? Confirmed data and analysis requirements will be kept.'))return;task('results-clear',async()=>{await atomic(()=>{log('analysis-results-cleared',{runIds:ws.runs.map(r=>r.id)});ws.runs=[];ws.selectedRun='';});view='results';setProgress(0,'');});};
  $('saved-runs').onchange=e=>{ws.selectedRun=e.target.value;persist().catch(()=>{});renderResults();};
  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;renderResults();});
 }

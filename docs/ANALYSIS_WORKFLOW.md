@@ -26,7 +26,7 @@ The user confirms the plan. Data/requirements signatures and plan settings are b
 
 ## Results and export
 
-Each completed run contains its own confirmed input and plan snapshots. Online tabs show results/figures, interpretation and methods. Network and forest plots, league tables and ranking tables are included as applicable. Interpretation is generated deterministically from computed values so the model cannot invent numerical results. Previous runs remain viewable and are labelled stale after changes.
+Each completed run contains its own confirmed input and plan snapshots. Online tabs show results/figures, interpretation and methods. Network and forest plots, league tables and ranking tables are included as applicable. Interpretation is generated deterministically from computed values so the model cannot invent numerical results. Previous runs remain viewable and are labelled stale after changes. The matching Clear button beside Export asks for confirmation, then deletes all saved runs and their results/figures/documents in this project and resets progress. Working data, requirements and their confirmations are preserved. Clear is disabled during active work; a failed save leaves results intact.
 
 Export downloads a new ZIP with:
 - `results.html` (offline report and figures), `results.json`, `results.xlsx`;
