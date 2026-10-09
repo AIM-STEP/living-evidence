@@ -1600,14 +1600,14 @@
       .tool-order { margin: 0 0 18px; text-align: center; font-size: 14px; color: var(--ink-3); }
       .tool-step { position: absolute; top: 10px; left: 10px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--plum); color: #fff; font-size: 12px; font-weight: 700; }
       /* Wider tool cards with balanced spacing across the workflow. */
-      .tool-grid { grid-template-columns: repeat(4, minmax(0, 206.4px)); justify-content: center; gap: 20px; }
+      .tool-grid { grid-template-columns: repeat(4, minmax(0, 206.4px)); justify-content: center; gap: 32px; }
       .tool { aspect-ratio: 6 / 5; min-height: 172px; justify-content: center; padding: 18px 16px; }
       .tool .tool-icon { width: 64px; height: 64px; margin-bottom: 14px; border-radius: 16px; }
       .tool .tool-icon svg { width: 36px; height: 36px; }
       .tool .tool-title { margin: 0; font-size: 0.95rem; }
       .tool .tool-arrow { top: 10px; right: 10px; width: 24px; height: 24px; }
-      @media (max-width: 960px) { .tool-grid { grid-template-columns: repeat(2, minmax(0, 206.4px)); } }
-      @media (max-width: 600px) { .tool-grid { gap: 12px; } .tool { padding: 18px 12px; } }
+      @media (max-width: 1000px) { .tool-grid { grid-template-columns: repeat(2, minmax(0, 206.4px)); } }
+      @media (max-width: 600px) { .tool-grid { gap: 20px; } .tool { padding: 18px 12px; } }
 
 /* Match the compact neutral controls used throughout the screening workflow. */
 .login,.login-card .btn-google,.pw-sort-trigger{height:auto;min-height:26px;padding:4px 8px;border:1px solid #e4e4e8;border-radius:6px;background:#fafafb;color:#5f6069;font-size:12px;font-weight:500;line-height:1.25}
@@ -1656,27 +1656,6 @@
   #toolset .icon-front { animation: none; }
 }
 
-/* Two soft water rings, clipped inside the card and below its content. */
-#toolset .tool { isolation: isolate; }
-#toolset .tool > .tool-title { position: relative; }
-#toolset .tool > :not(.tool-ripple) { z-index: 1; }
-#toolset .tool-ripple { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; z-index: 0; }
-#toolset .tool-ripple::before, #toolset .tool-ripple::after {
-  content: ""; position: absolute; left: var(--ripple-x, 50%); top: var(--ripple-y, 50%);
-  width: var(--ripple-size, 440px); height: var(--ripple-size, 440px);
-  border-radius: 50%; opacity: 0; transform: translate(-50%, -50%) scale(.02);
-  background: radial-gradient(circle, transparent 64%, rgba(154,111,179,.04) 66%, rgba(154,111,179,.22) 68%, rgba(255,255,255,.75) 69%, transparent 70.5%);
-}
-@media (prefers-reduced-motion: no-preference) {
-  #toolset .tool.is-rippling .tool-ripple::before { animation: tool-water-ripple 2.8s cubic-bezier(.22,.45,.35,1) both; }
-  #toolset .tool.is-rippling .tool-ripple::after { animation: tool-water-ripple 2.8s cubic-bezier(.22,.45,.35,1) .32s both; }
-}
-@keyframes tool-water-ripple {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(.02); }
-  12% { opacity: 1; }
-  65% { opacity: .65; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
-}
 </style>
   </head>
   <body>
@@ -3533,29 +3512,6 @@
           }, 60);
         }
         window.addEventListener("load", function () { if (location.hash) revealSection(location.hash); });
-        var rippleMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-        toolset.querySelectorAll(".tool").forEach(function (card) {
-          var ripple = document.createElement("span");
-          ripple.className = "tool-ripple";
-          ripple.setAttribute("aria-hidden", "true");
-          card.appendChild(ripple);
-          function startRipple(event) {
-            if (rippleMotion.matches || (event.type === "pointerenter" && event.pointerType === "touch")) return;
-            if (event.type === "pointerdown" && event.button !== 0) return;
-            var bounds = card.getBoundingClientRect();
-            var x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
-            var y = Math.max(0, Math.min(bounds.height, event.clientY - bounds.top));
-            var radius = Math.hypot(Math.max(x, bounds.width - x), Math.max(y, bounds.height - y));
-            card.style.setProperty("--ripple-x", x + "px");
-            card.style.setProperty("--ripple-y", y + "px");
-            card.style.setProperty("--ripple-size", (radius * 2.9) + "px");
-            card.classList.remove("is-rippling");
-            void ripple.offsetWidth;
-            card.classList.add("is-rippling");
-          }
-          card.addEventListener("pointerenter", startRipple);
-          card.addEventListener("pointerdown", startRipple);
-        });
         toolset.addEventListener("click", function (event) {
           var tool = event.target.closest("[data-tool-status]");
           if (!tool) return;
