@@ -1614,6 +1614,7 @@
 .login:hover:not(:disabled),.login-card .btn-google:hover:not(:disabled),.pw-sort-trigger:hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
 .login:focus-visible,.login-card .btn-google:focus-visible,.pw-sort-trigger:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .login:disabled,.login-card .btn-google:disabled,.pw-sort-trigger:disabled{opacity:.48;cursor:not-allowed}
+#toolset .tool.tool-wide{grid-column:1 / -1;aspect-ratio:auto;height:calc(172px / 3);min-height:calc(172px / 3);padding:8px 48px;flex-direction:row;justify-content:center;background:#faf5fa}#toolset .tool-wide .tool-step{top:50%;transform:translateY(-50%)}#toolset .tool-wide .tool-arrow{top:50%;transform:translateY(-50%)}
 </style>
   </head>
   <body>
@@ -1975,8 +1976,8 @@
       <section class="toolkit" id="toolset" aria-label="Toolset" hidden>
         <div class="container">
 
-          <p class="tool-order">Eight steps, in order from left to right and top to bottom.</p>
           <div class="tool-grid">
+<a class="tool tool-wide" href="build-protocol.html" data-tool="protocol"><span class="tool-step" aria-label="Step 0">0</span><span class="tool-title">Build a protocol</span><span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
             <a class="tool" href="eligibility.html" data-tool="criteria">
               <span class="tool-step" aria-label="Step 1">1</span>
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
@@ -2053,6 +2054,7 @@
               <span class="tool-icon tool-icon-empty" aria-hidden="true"></span>
               <span class="tool-title">Pending scheduling ...</span>
             </button>
+<a class="tool tool-wide" href="drafting-manuscript.html" data-tool="manuscript"><span class="tool-step" aria-label="Step 9">9</span><span class="tool-title">Drafting the manuscript</span><span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
           </div>
         </div>
       </section>
@@ -3228,7 +3230,7 @@
           if (activeProject) fulltext.searchParams.set("projectId", activeProject.id);
           var toolsetFulltext = toolset.querySelector('[data-tool="fulltext"]');
           if (toolsetFulltext) toolsetFulltext.href = routeUrl("page", fulltext).href;
-          [["extract", "extraction.html"], ["rob", "risk-of-bias.html"], ["nma", "analysis.html"], ["grade", "certainty-of-evidence.html"]].forEach(function (pair) {
+          [["protocol", "build-protocol.html"], ["manuscript", "drafting-manuscript.html"], ["extract", "extraction.html"], ["rob", "risk-of-bias.html"], ["nma", "analysis.html"], ["grade", "certainty-of-evidence.html"]].forEach(function (pair) {
             var target = new URL(pair[1], home);
             if (activeProject) target.searchParams.set("projectId", activeProject.id);
             var tile = toolset.querySelector('[data-tool="' + pair[0] + '"]');
@@ -3381,7 +3383,7 @@
           // The Toolset view lives in index so a single-file update also
           // updates the tools reached through older workflow.html links.
           if (view === "page" && target && isToolsetPage(target)) { view = "toolset"; target = null; }
-          if (view === "page" && target && activeProject && /\/(?:eligibility|search-strategy|title-abstract-screening|full-text-screening|extraction|risk-of-bias|analysis|certainty-of-evidence)\.html$/i.test(target.pathname) && !target.searchParams.has("projectId") && !target.searchParams.has("project")) {
+          if (view === "page" && target && activeProject && /\/(?:eligibility|search-strategy|title-abstract-screening|full-text-screening|extraction|risk-of-bias|analysis|certainty-of-evidence|build-protocol|drafting-manuscript)\.html$/i.test(target.pathname) && !target.searchParams.has("projectId") && !target.searchParams.has("project")) {
             target = new URL(target);
             target.searchParams.set("projectId", activeProject.id);
           }

@@ -10,7 +10,7 @@ document.querySelectorAll('[data-home]').forEach(a=>a.href=pageLink('index.html'
 document.querySelectorAll('[data-workflow]').forEach(a=>a.href=pageLink('index.html','project'));
 document.querySelectorAll('[data-toolset]').forEach(a=>a.href=pageLink('index.html','toolset'));
 document.querySelectorAll('[data-prev]').forEach(a=>a.href=pageLink('analysis.html'));
-document.querySelectorAll('[data-next]').forEach(a=>a.href=pageLink('index.html','project'));
+document.querySelectorAll('[data-next]').forEach(a=>a.href=pageLink('drafting-manuscript.html'));
 if(project?.id===projectId&&project.name){$('project-name').textContent=project.name;$('project-name').title=project.name;$('project-name').href=pageLink('index.html','project');$('project-name').hidden=false}
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

@@ -1,0 +1,8 @@
+/* Project-scoped, editable protocol/manuscript drafts. No automatic generation. */
+(()=>{'use strict';const $=id=>document.getElementById(id),query=new URLSearchParams(location.search),project=query.get('projectId')||query.get('project')||'default',kind=document.body.dataset.writingKind,key='aimstep-writing:'+kind+':'+project;
+for(const link of document.querySelectorAll('[data-project-link]')){const target=new URL(link.getAttribute('href'),location.href);if(project!=='default')target.searchParams.set('projectId',project);link.href=target.href;}
+try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved){$('draft-title').value=saved.title||'';$('draft-text').value=saved.text||'';}}catch(e){$('draft-status').textContent='The saved draft could not be read.';}
+function save(){try{localStorage.setItem(key,JSON.stringify({title:$('draft-title').value,text:$('draft-text').value,updatedAt:new Date().toISOString()}));$('draft-status').textContent='Saved.';return true;}catch(e){$('draft-status').textContent='Could not save this draft. Export a copy before leaving.';return false;}}
+$('save-draft').addEventListener('click',save);for(const id of ['draft-title','draft-text'])$(id).addEventListener('input',save);
+$('export-draft').addEventListener('click',()=>{const text=[$('draft-title').value,$('draft-text').value].filter(Boolean).join('\n\n');if(!text.trim()){$('draft-status').textContent='Enter a draft before exporting.';return;}save();const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='aimstep-'+kind+'-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);});
+})();
