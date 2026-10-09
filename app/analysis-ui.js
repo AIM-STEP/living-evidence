@@ -41,7 +41,7 @@ function renderData(){
  $('data-editor').innerHTML=ws.rows.length?`<table><thead><tr><th>#</th>${C.fields.map(f=>`<th>${labels[f]}</th>`).join('')}<th></th></tr></thead><tbody>${ws.rows.map((r,i)=>`<tr><td>${i+1}</td>${C.fields.map(f=>`<td><input aria-label="Row ${i+1} ${labels[f]}" data-row="${i}" data-field="${f}" value="${esc(r[f])}" ${C.numeric.includes(f)?'inputmode="decimal"':''}></td>`).join('')}<td><button class="btn small" type="button" data-remove-row="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join('')}</tbody></table>`:'';
  renderDataFeedback();
 }
-function renderDataFeedback(){const current=ws.dataReview?.signature===C.dataSignature(ws),list=issues();$('data-feedback').innerHTML=(current?ws.dataReview.feedback.map(t=>'<p>'+esc(t)+'</p>').join(''):'')+(list.length?'<ul>'+list.map(i=>`<li class="${i.severity==='error'?'error':''}">${i.row?'Row '+i.row+': ':''}${esc(i.message)}</li>`).join('')+'</ul>':'')+(ws.sources.flatMap(s=>s.notes||[]).map(n=>'<p>'+esc(n)+'</p>').join(''));
+function renderDataFeedback(){const current=ws.dataReview?.signature===C.dataSignature(ws),list=issues().filter(i=>i.code!=='empty-data');$('data-feedback').innerHTML=(current?ws.dataReview.feedback.map(t=>'<p>'+esc(t)+'</p>').join(''):'')+(list.length?'<ul>'+list.map(i=>`<li class="${i.severity==='error'?'error':''}">${i.row?'Row '+i.row+': ':''}${esc(i.message)}</li>`).join('')+'</ul>':'')+(ws.sources.flatMap(s=>s.notes||[]).map(n=>'<p>'+esc(n)+'</p>').join(''));
 }
 function options(values,selected){return values.map(v=>`<option value="${esc(v)}" ${String(selected)===String(v)?'selected':''}>${esc(v)}</option>`).join('');}
 function renderPlan(){

@@ -1,5 +1,5 @@
 'use strict';
-importScripts('analysis-core.js?v=1','analysis-engine.js?v=1');
+importScripts('analysis-core.js?v=2','analysis-engine.js?v=1');
 onmessage=({data})=>{
  try{
   const C=AimstepAnalysisCore,ws=data.state;if(!C.canRun(ws))throw Error('Confirm the current data and analysis requirements before starting.');

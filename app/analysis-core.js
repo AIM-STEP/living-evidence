@@ -50,7 +50,7 @@ function extraction(state,Results){
  }return {rows,notes:[...new Set(notes)]};
 }
 function datasets(rows){const groups=new Map();for(const row of rows){const g=signature([row.outcome,row.timepoint,row.type,row.unit,row.valueType]);if(!groups.has(g))groups.set(g,{id:'d'+(groups.size+1),name:row.outcome,timepoint:row.timepoint,type:row.type,unit:row.unit,valueType:row.valueType,rows:[]});groups.get(g).rows.push({...row,...Object.fromEntries(numeric.map(f=>[f,number(row[f])]))});}return [...groups.values()];}
-function validate(rows){const issues=[];const add=(row,message,severity='error')=>issues.push({row:row+1,severity,message});if(!rows.length)return [{row:0,severity:'error',message:'Import data before checking.'}];
+function validate(rows){const issues=[];const add=(row,message,severity='error')=>issues.push({row:row+1,severity,message});if(!rows.length)return [{row:0,severity:'error',code:'empty-data',message:'Import data before checking.'}];
  const seen=new Set();for(const [i,r] of rows.entries()){
   for(const f of ['study','outcome','timepoint','treat','type'])if(missing(r[f]))add(i,'Add '+f+'.');
   if(!['binary','continuous'].includes(r.type))add(i,'Outcome type must be binary or continuous.');
