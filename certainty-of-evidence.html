@@ -201,6 +201,7 @@ th{background:#f4f4f4}
 .unit-card{padding:12px 0;border-bottom:1px solid #eee8f3}.unit-card h3{margin:0 0 8px;font-size:14px}.unit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 14px}.unit-grid .label{margin:0}.unit-grid textarea{min-height:58px}.unit-feedback{color:#765299;font-size:12px;margin:8px 0}.unit-card .toolbar{justify-content:space-between}.source-metadata{margin:8px 0 12px}.source-metadata summary{color:#765299;cursor:pointer}.sof-group{margin:0 0 24px}.sof-group h3{margin:8px 0;font-size:15px}.sof-group table{min-width:1040px}.sof-group th,.sof-group td{white-space:normal;min-width:110px;vertical-align:top}.unit-parameters{padding:12px;background:#fcfaff;border-radius:10px;margin:12px 0}.btn.small,.select.compact{min-height:32px;height:32px;width:auto}.source-metadata .kind-switch{display:inline-flex;margin:8px 0}.source-foot{justify-content:flex-start;gap:8px}#ed-br{max-width:260px}#sof-format{max-width:230px}.source-actions{flex-wrap:wrap}
 @media(max-width:760px){.unit-grid{grid-template-columns:1fr}.panel-head{flex-wrap:wrap}}
 .outcome-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 8px}.outcome-row .input.compact{width:150px;min-height:32px;padding:4px 8px;font-size:12px}.outcome-row .select.compact{max-width:110px}.unit-card{padding:0;border:0}.unit-card .unit-grid{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.unit-card .label{font-size:0}.unit-card .input,.unit-card .select{width:150px;min-height:32px;height:32px;padding:4px 8px;font-size:12px}.unit-card .select{width:100px}.unit-card .unit-feedback{flex-basis:100%;margin:0}.chip-x{border:0;background:none;color:#765299;font-size:18px;cursor:pointer}.source-actions svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6}.unit-card .label:focus-within{font-size:11px}#unit-parameters .unit-grid .label{font-size:12px}
+[data-goto-rule]{display:none!important}.parameter-option-row{display:grid;grid-template-columns:minmax(180px,1.4fr) repeat(2,minmax(180px,1fr));gap:12px;align-items:start;padding:12px 0;border-bottom:1px solid #eee8f3}.parameter-option-row .label{margin:0}.parameter-option-row .input{margin-top:4px}.parameter-option-row small{display:block;color:#686a70}.parameter-option-row .parameter-source{font-size:12px;min-height:30px}.parameter-option-row strong{font-size:13px}#parameter-options{margin-bottom:14px}@media(max-width:700px){.parameter-option-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -238,7 +239,7 @@ th{background:#f4f4f4}
 
 <section class="panel">
 <div class="panel-head"><h2>Parameter Settings</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-list" aria-expanded="true" aria-controls="list-body" title="Collapse Comparisons"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Comparisons</span></button></div></div>
-<div class="panel-body" id="list-body"><div class="method-settings">
+<div class="panel-body" id="list-body"><div class="method-settings" hidden>
 <div class="panel-head"><h2>Method rules</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-rules" aria-expanded="true" aria-controls="rules-body" title="Collapse Method rules"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Method rules</span></button></div></div>
 <div class="panel-body" id="rules-body">
 <p class="hint rules-intro">Existing approved decisions are retained. Open rules require a reviewer decision when the assessment depends on them.</p>
@@ -248,7 +249,7 @@ th{background:#f4f4f4}
 </div>
 
 
-<p class="hint">Select an assessment unit to enter its MID, baseline risk and four-stage assessment.</p>
+<div id="parameter-options"></div>
 <div class="table-wrap"><table class="cmp-table" id="cmp-table"></table></div>
 <div id="editor" class="editor" hidden>
 <div class="editor-head"><div><h3 id="editor-title"></h3><div id="editor-tag"></div></div><button class="btn small" type="button" id="delete-btn">Delete comparison</button></div>
@@ -298,7 +299,7 @@ th{background:#f4f4f4}
 <script src="app/extraction-form-import.js?v=4"></script>
 <script src="app/extraction-sources.js?v=1"></script>
 <script src="app/analysis-ai.js?v=1"></script>
-<script src="app/coe-units.js?v=1"></script>
-<script src="app/coe-workspace.js?v=2"></script>
+<script src="app/coe-units.js?v=2"></script>
+<script src="app/coe-workspace.js?v=3"></script>
 </body>
 </html>

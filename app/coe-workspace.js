@@ -334,7 +334,7 @@ function derive(rec,meta,rules){
   const covered=U.zones(r65,u);out.zones=covered;
   if(parameterIssues.length)set(66,'waiting',null,'Complete the unit-specific MID, scale, direction and baseline risk before assessing imprecision.');
   else if(!d003)set(66,'blocked',null,'Needs the imprecision rule (D-003).','D-003');
-  else if(!covered)set(66,'waiting',null,'Needs the final absolute effect.');
+  else if(!covered)set(66,'waiting',null,'MID is not entered, or the final absolute effect / direction is unavailable; imprecision has not been assessed.');
   else if(d003==='manual')set(66,'manual',null,'Reviewers judge imprecision (D-003, manual).','D-003');
   else set(66,'auto',['ns','serious','very serious'][covered.length-1],`95% CI covers ${covered.length} zone(s) against MID ${u.mid} ${U.continuous(rec)?u.scale:'per 1000'}: ${covered.join('; ')}. Boundaries belong to the middle zone.`,'D-003');
   // #68 Final COE (D-012 picks the certainty the imprecision is applied to)
@@ -607,6 +607,7 @@ function renderRules(){
 }
 
 function renderList(){
+  renderParameterOptions();
   const d=data(),rows=d.records.map(r=>{
     const e=evaluate(r),c=e.calc,lvl=no=>c[no]&&['waiting','blocked'].includes(c[no].state)?null:c[no]&&c[no].state==='auto'?c[no].value:r[fieldKey(r,no)];
     const st=no=>c[no]?.state;
@@ -626,7 +627,7 @@ function renderEditor(){
   $('editor-title').textContent=`Comparison ${rec.id}: ${rec.intervention||'?'} vs ${rec.control||'?'}`;
   $('editor-tag').innerHTML=(synthetic()?'<span class="badge maybe">SYNTHETIC</span> ':'')+statusBadge(e.status);
   $('ed-int').value=rec.intervention||'';$('ed-ctl').value=rec.control||'';$('ed-br').value=isNum(rec.x_baseline_risk_per_1000)?rec.x_baseline_risk_per_1000:'';
-  $('ed-br-row').hidden=U.continuous(rec);
+  $('ed-br-row').hidden=true;
   renderParameters(rec);
   renderPath(rec,e);
   $('stage-tabs').innerHTML=STAGES.map(s=>{const m=e.miss[s.n-1].length,iss=e.issues.filter(i=>i.sev!=='warning'&&i.fields.some(n=>s.nos.includes(n))).length;return `<button type="button" class="stage-tab${stage===s.n?' current':''}" data-stage="${s.n}" aria-pressed="${stage===s.n}"><b>${s.n}. ${esc(s.title)}</b><span>${m?m+' to fill':iss?iss+' to check':'Done'}</span></button>`}).join('');
@@ -975,12 +976,16 @@ function renderUnits(){
  return `<article class="unit-card outcome-row" data-unit-id="${esc(r.id)}"><div class="unit-grid">${selectInput('framework','Question framework',u.framework,Object.keys(U.frameworks).map(f=>[f,f]))}${textInput('population','Population',u.population)}${textInput('intervention',u.framework==='PECO'?'Exposure':'Intervention',r.intervention)}${textInput('control','Comparator',r.control)}${textInput('outcome','Outcome',u.outcome)}${textInput('timepoint','Time point',u.timepoint)}${labels.filter(l=>!['Population','Intervention','Exposure','Comparator','Outcome'].includes(l)).map(l=>textInput('extra:'+l,l,u.extra?.[l])).join('')}<button class="chip-x" type="button" data-remove-unit="${esc(r.id)}" aria-label="Remove assessment unit ${esc(r.id)}">×</button></div>${u.feedback?`<p class="unit-feedback">${esc(u.feedback)}</p>`:''}</article>`;
  }).join('');
 }
+function renderParameterOptions(){
+ $('parameter-options').innerHTML=data().records.map(r=>{const u=U.unit(r,data()),unit=u.type==='binary'?'per 1000':u.type==='continuous'?u.scale||'original scale':'select outcome type';return `<div class="parameter-option-row" data-unit-id="${esc(r.id)}"><div><strong>${esc(u.framework)} · ${esc(u.population||'Population not entered')}</strong><small>${esc(r.intervention||'Intervention')} vs ${esc(r.control||'Comparator')}</small><small>${esc(u.outcome||'Outcome')} · ${esc(u.timepoint||'Time point')}</small></div><div>${textInput('mid',`MID — optional (${unit})`,u.mid,'number')}${textInput('midSource','MID source / justification — optional',u.midSource)}</div><div>${u.type==='binary'?textInput('baselineRisk','Control baseline risk — optional (per 1000)',r.x_baseline_risk_per_1000,'number')+textInput('baselineSource','Baseline risk source — optional',u.baselineSource):`<span class="hint">Baseline risk: ${u.type==='continuous'?'not applicable to continuous outcomes':'select a dichotomous outcome type to enter a risk'}.</span>`}</div></div>`;}).join('');
+}
 function renderParameters(rec){const u=U.unit(rec,data());
- $('unit-parameters').innerHTML=`<div class="unit-parameters" data-unit-id="${esc(rec.id)}"><div class="unit-grid">${selectInput('type','Outcome type',u.type,[['','Select'],['binary','Dichotomous (RR)'],['continuous','Continuous (MD)']])}${selectInput('design','Study design',u.design,[['','Select'],['RCT','Randomized controlled trials'],['Other','Other design — method review required']])}${textInput('mid',`MID (${U.continuous(rec)?u.scale||'original scale':'per 1000'})`,u.mid,'number')}${textInput('midSource','MID source / justification',u.midSource)}${selectInput('direction','Outcome direction',u.direction,[['','Select'],['higher','Higher is better'],['lower','Lower is better']])}${U.continuous(rec)?textInput('scale','Original outcome scale / unit',u.scale):textInput('baselineSource','Control baseline risk source',u.baselineSource)}${textInput('ois','OIS, if prespecified',u.ois,'number')}${textInput('oisSource','OIS assumptions / source',u.oisSource)}${textInput('participants','Participants in the final estimate',u.participants,'number')}${textInput('studies','Studies in the final estimate',u.studies,'number')}${U.continuous(rec)?textInput('controlMean','Control mean / range (optional)',u.controlMean):''}</div></div>`;
+ $('unit-parameters').innerHTML=`<div class="unit-parameters" data-unit-id="${esc(rec.id)}"><div class="unit-grid">${selectInput('type','Outcome type',u.type,[['','Select'],['binary','Dichotomous (RR)'],['continuous','Continuous (MD)']])}${selectInput('design','Study design',u.design,[['','Select'],['RCT','Randomized controlled trials'],['Other','Other design — method review required']])}${selectInput('direction','Outcome direction',u.direction,[['','Select'],['higher','Higher is better'],['lower','Lower is better']])}${U.continuous(rec)?textInput('scale','Original outcome scale / unit',u.scale):''}${textInput('ois','OIS, if prespecified',u.ois,'number')}${textInput('oisSource','OIS assumptions / source',u.oisSource)}${textInput('participants','Participants in the final estimate',u.participants,'number')}${textInput('studies','Studies in the final estimate',u.studies,'number')}${U.continuous(rec)?textInput('controlMean','Control mean / range (optional)',u.controlMean):''}</div></div>`;
 }
 function updateUnit(event){const t=event.target;if(!t.dataset.unit)return;const card=t.closest('[data-unit-id]'),rec=card&&recById(card.dataset.unitId);if(!rec)return;const key=t.dataset.unit,old=structuredClone(rec.x_unit||{}),u=U.unit(rec,data());let value=t.value.trim();
- if(['mid','ois','participants','studies'].includes(key))value=value===''?null:Number(value);
- if(key==='intervention'||key==='control')rec[key]=value;
+ if(['mid','baselineRisk','ois','participants','studies'].includes(key))value=value===''?null:Number(value);
+ if(key==='baselineRisk'){const before=rec.x_baseline_risk_per_1000;rec.x_baseline_risk_per_1000=value;audit(rec,'baselineRisk',before,value,reviewerName());}
+ else if(key==='intervention'||key==='control')rec[key]=value;
  else if(key.startsWith('extra:'))u.extra={...u.extra,[key.slice(6)]:value};else u[key]=value;
  if(['type','outcome','timepoint','population','intervention','control','design','scale','framework'].includes(key)){const before={...rec};for(const f of FIELDS)if(f.no>=4)rec[f.key]=null;for(const k of Object.values(U.mdKeys))delete rec[k];u.participants=null;u.studies=null;u.mid=null;u.midSource='';u.ois=null;u.oisSource='';rec.x_baseline_risk_per_1000=null;u.baselineSource='';audit(rec,'unit-definition',before,{...rec,x_unit:u},reviewerName());}
  rec.x_unit={...u,updatedAt:now()};audit(rec,'parameters',old,rec.x_unit,reviewerName());applyCalc(rec);save();renderUnits();renderList();renderEditor();renderSof();
@@ -1001,7 +1006,7 @@ async function identifyUnits(sources,signal){const records=[];for(const [i,sourc
  if(signal.aborted)throw new DOMException('Stopped','AbortError');
  const signature=r=>JSON.stringify([r.x_unit?.framework,r.x_unit?.population,r.intervention,r.control,r.x_unit?.outcome,r.x_unit?.timepoint,r.x_unit?.type,r.x_unit?.scale]).toLowerCase(),seen=new Set(data().records.map(signature));let count=0;const ids=[];
  for(const r of records){const key=signature(r);if(seen.has(key)){const existing=data().records.find(x=>signature(x)===key);if(existing)ids.push(existing.id);continue;}seen.add(key);r.id=nextId();ids.push(r.id);data().records.push(r);audit(r,'source',null,r.x_unit,'AI intake; pending human review');count++;}
- save();render();setNotice($('src-notice'),count?`${count} assessment unit(s) added. Review their components and enter the MID and baseline risk in Parameter Settings.`:'No new supported assessment units were identified. Add or edit a unit manually.',count?'success':'warning');return ids;
+ save();render();setNotice($('src-notice'),count?`${count} assessment unit(s) added. Review their components. Optional MID and baseline risk fields are available in Parameter Settings.`:'No new supported assessment units were identified. Add or edit a unit manually.',count?'success':'warning');return ids;
 }
 async function readExtraction(){return new Promise((resolve,reject)=>{const q=indexedDB.open('aimstep-extraction',1);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains('projects'))q.result.createObjectStore('projects',{keyPath:'id'});};q.onerror=()=>reject(q.error);q.onsuccess=()=>{const db=q.result;if(!db.objectStoreNames.contains('projects')){db.close();resolve(null);return;}const r=db.transaction('projects').objectStore('projects').get(scope);r.onsuccess=()=>{db.close();resolve(r.result?.state||null);};r.onerror=()=>{db.close();reject(r.error);};};});}
 async function fromExtraction(){await withSource(async signal=>{const state=await readExtraction();if(!state)throw Error('No extraction results are saved in this project.');const sources=[];
@@ -1073,6 +1078,7 @@ function bindUnits(){
  const actions=document.querySelector('.source-actions');for(const id of ['from-extraction','import-btn','stop-source','clear-btn'])actions.insertBefore($(id),$('toggle-source'));
  document.querySelector('#toggle-list').before($('recompute-btn'));
  $('source-foot').hidden=true;
+ $('parameter-options').addEventListener('change',updateUnit);
  $('unit-sources').addEventListener('change',updateUnit);$('unit-parameters').addEventListener('change',updateUnit);
  $('unit-sources').addEventListener('click',e=>{const a=e.target.closest('[data-assess-unit]'),d=e.target.closest('[data-remove-unit]');if(a){current=a.dataset.assessUnit;renderEditor();if($('list-body').hidden)$('toggle-list').click();$('editor').scrollIntoView({block:'start',behavior:'smooth'});}else if(d){const r=recById(d.dataset.removeUnit);if(r&&confirm('Delete this assessment unit and its assessment?')){audit(r,'delete',r,null,reviewerName());data().records=data().records.filter(x=>x!==r);if(String(current)===String(r.id))current=null;save();render();}}});
  $('from-extraction').addEventListener('click',fromExtraction);$('stop-source').addEventListener('click',()=>sourceController?.abort());

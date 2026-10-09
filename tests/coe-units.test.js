@@ -18,7 +18,7 @@ assert.equal(U.absolute({point:2,ci_lower:1,ci_upper:3},500),null);
 ({r,state}=setup('continuous'));r.x_direct_md={point:-3,ci_lower:-5,ci_upper:-1};r.direct_rr=null;r.x_unit.mid=2;r.x_unit.direction='lower';r.x_baseline_risk_per_1000=null;r.x_unit.baselineSource='';
 c=T.derive(r,state.real,rules);assert.equal(c[65].value.point,-3);assert.equal(c[66].value,'serious');assert.equal(U.issues(r).length,0);assert.equal(T.parseVal(U.spec(r,T.FIELDS.find(f=>f.no===8)),'-3 (-5, -1)').value.point,-3);
 T.applyCalc(r);assert.equal(r.final_rr,null);assert.equal(r.x_final_md.point,-3);assert.equal(r.final_rd_per_1000,null);
-r.x_unit.mid=null;T.applyCalc(r);assert.equal(r.x_absolute_md,null);assert.equal(r.final_coe,null);
+r.x_unit.mid=null;T.applyCalc(r);assert.equal(r.x_absolute_md.point,-3);assert.equal(r.final_coe,null);
 assert.equal(T.FIELDS.length,68);const sheets=T.workbookSheets();assert(sheets.some(x=>x.name==='MD extensions'));assert.equal(sheets.filter(x=>/^[1-4]\. /.test(x.name)).length,4);assert(sheets.some(x=>x.name==='Codebook 68'&&x.rows.length===71));
 console.log('PASS: per-unit MID, boundary zones, effect direction, baseline risk, continuous MD isolation, invalidation, workflow workbook.');
 // A direct-only RCT route must finish without an invented NMA estimate.
@@ -30,3 +30,5 @@ assert.equal(c[68].value,'high');assert(T.checks(r,c,state.real,state.rules,'rea
 console.log('PASS: direct-only completed route does not require invented NMA data.');
 
 ({r,state}=setup());state.real.records=[];const intake=T.unitTable([['Population','Intervention','Comparator','Outcome','Time point'],['Adults','A','B','Pain','12 weeks']]);assert.equal(intake[0].control,'B');assert.equal(intake[0].timepoint,'12 weeks');T.appendUnitRows(intake,'synthetic.csv');T.appendUnitRows(intake,'synthetic.csv');assert.equal(state.real.records.length,1);assert.equal(state.real.records[0].x_unit.mid,null);assert.equal(state.real.records[0].x_unit.timepoint,'12 weeks');console.log('PASS: table intake preserves components, prevents duplicates and leaves clinical parameters blank.');
+
+({r,state}=setup());r.x_unit.mid=null;r.x_unit.midSource='';r.x_baseline_risk_per_1000=null;r.x_unit.baselineSource='';assert.equal(U.issues(r).length,0);c=T.derive(r,state.real,rules);assert.equal(c[66].state,'waiting');assert.equal(c[68].state,'waiting');r.x_unit.mid=-1;assert(U.issues(r).some(x=>x.includes('positive MID')));r.x_unit.mid=50;r.x_baseline_risk_per_1000=1001;assert(U.issues(r).some(x=>x.includes('baseline risk')));r.x_baseline_risk_per_1000=0;assert.equal(U.issues(r).length,0);console.log('PASS: optional blank MID/baseline save without validation errors; invalid entered values rejected; missing inputs never yield final certainty.');

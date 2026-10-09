@@ -10,10 +10,8 @@ function unit(r,meta={}){return {framework:'PICO',population:'',outcome:meta.out
 function issues(r,meta){const u=unit(r,meta),out=[];for(const [k,label] of [['population','Population'],['outcome','Outcome'],['timepoint','Time point'],['design','Study design']])if(!clean(u[k]))out.push(label+' is required.');if(!clean(r.intervention)||!clean(r.control))out.push('A directed intervention/exposure and comparator are required.');
  if(!['binary','continuous'].includes(u.type))out.push('Select an outcome type.');
  if(!['higher','lower'].includes(u.direction))out.push('Select whether a higher or lower outcome is better.');
- if(!num(u.mid)||u.mid<=0||(u.type==='binary'&&u.mid>1000))out.push('Enter a positive MID'+(u.type==='binary'?' no greater than 1000 per 1000.':' in the original scale.'));
- if(!clean(u.midSource))out.push('Record the source or justification of the MID.');
- if(u.type==='binary'&&(!num(r.x_baseline_risk_per_1000)||r.x_baseline_risk_per_1000<0||r.x_baseline_risk_per_1000>1000))out.push('Enter the control-group baseline risk (0–1000 per 1000).');
- if(u.type==='binary'&&!clean(u.baselineSource))out.push('Record the source of the control-group baseline risk.');
+ if(u.mid!==null&&u.mid!==''&&(!num(u.mid)||u.mid<=0||(u.type==='binary'&&u.mid>1000)))out.push('Enter a positive MID'+(u.type==='binary'?' no greater than 1000 per 1000.':' in the original scale.'));
+ if(u.type==='binary'&&r.x_baseline_risk_per_1000!=null&&r.x_baseline_risk_per_1000!==''&&(!num(r.x_baseline_risk_per_1000)||r.x_baseline_risk_per_1000<0||r.x_baseline_risk_per_1000>1000))out.push('Enter the control-group baseline risk (0–1000 per 1000).');
  if(u.type==='continuous'&&!clean(u.scale))out.push('Enter the outcome scale/unit for the MD and MID.');
  if(u.ois!==null&&(!Number.isInteger(u.ois)||u.ois<=0||!clean(u.oisSource)))out.push('OIS must be a positive whole number with its assumptions/source.');
  for(const k of ['participants','studies'])if(u[k]!==null&&(!Number.isInteger(u[k])||u[k]<1))out.push('Number of '+k+' must be a positive whole number.');
