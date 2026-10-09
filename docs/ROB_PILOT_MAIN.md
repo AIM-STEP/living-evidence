@@ -1,6 +1,6 @@
 # Risk of bias assessment workflow
 
-Below Included studies, Assessment tools lists study designs with tool selectors and brief applicability/version descriptions. Each design defaults to its first available tool; saved choices remain. Study designs can be set separately for each report. Unknown designs must be resolved before AI assessment rather than silently treated as randomised trials.
+Below Included studies, Assessment tools lists study designs with tool selectors and brief applicability/version descriptions. Each design defaults to its first available tool; saved choices remain. Study designs can be set separately for each report. Each target requires an outcome and a separate time point. Save commits the selected tools and result configuration before Pilot is enabled. Legacy outcomes retain their names but require the user to supply missing time points; no time point is inferred. The target outcome and time point are included explicitly in AI prompts, result titles and stage exports. Changing either invalidates prior pilot approval; affected main assessments are archived in the audit and removed from current results. Unknown designs must be resolved before AI assessment rather than silently treated as randomised trials.
 
 Applicability references checked during implementation:
 - https://www.riskofbias.info/welcome/rob-2-0-tool

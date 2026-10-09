@@ -238,10 +238,10 @@ th{background:#f4f4f4}
 </div>
 </section>
 
-<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="outcome-row"><span class="label">Outcome results to assess</span><span id="outcomes"></span><input class="input compact" id="outcome-input" placeholder="Add an outcome, e.g. ACR20 at 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
-<div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
+<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="table-wrap"><table class="study-table" id="assessment-study-table"></table></div><div class="outcome-row"><span class="label">Outcome and time point</span><input class="input compact" id="outcome-input" aria-label="Outcome" placeholder="Outcome, e.g. ACR20" autocomplete="off"><input class="input compact" id="timepoint-input" aria-label="Time point" placeholder="Time point, e.g. 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
+<div id="outcomes"></div><div class="toolbar"><button class="btn small" type="button" id="save-assessment-setup">Save</button><span class="hint" id="setup-status" role="status"></span></div><div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
 <div class="team-track full-track" id="ai-progress" hidden><span style="width:0%"></span></div><div class="hint" id="ai-now"></div>
-<div class="table-wrap"><table class="study-table" id="assessment-study-table"></table></div>
+
 </div></section>
 
 <div id="rob-workflow"></div>
@@ -273,7 +273,7 @@ th{background:#f4f4f4}
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app/extraction-sources.js?v=1"></script>
 <script src="app/extraction-results.js?v=1"></script>
-<script src="app/rob-workflow.js?v=1"></script>
+<script src="app/rob-workflow.js?v=2"></script>
 <script>
 'use strict';
 (() => {
@@ -597,7 +597,7 @@ const direction=a=>['Y','PY','SY','WY','DY'].includes(a)?'yes':['N','PN','SN','W
    outcome result (Cochrane Handbook 8.2.2: risk of bias is result-specific). */
 let ws=null,store=null,docStore=null,handoff=null,controller=null,busy='',current=null,saveChain=Promise.resolve();
 const docCache=new Map();let assessmentWorkflow=null;
-const defaults=()=>({version:1,toolChoice:{},records:[],criteriaSig:'',handoffAt:'',outcomes:[],studies:{},assess:{},audit:[]});
+const defaults=()=>({version:1,toolChoice:{},records:[],criteriaSig:'',handoffAt:'',outcomes:[],outcomeTimepoints:[],studies:{},assess:{},audit:[]});
 function log(action,detail={}){ws.audit.push({at:now(),action,...detail});if(ws.audit.length>5000)ws.audit.splice(0,ws.audit.length-5000)}
 function getKey(db,key){return new Promise((resolve,reject)=>{const tx=db.transaction('projects','readonly'),req=tx.objectStore('projects').get(key);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)})}
 async function loadDoc(uid){if(docCache.has(uid))return docCache.get(uid);if(!docStore)return null;const d=await getKey(docStore,scope+'|'+uid);if(d)docCache.set(uid,d);return d}
@@ -675,7 +675,7 @@ async function importStudies(){
     const merged=AimstepExtractionSources.merge(ws.records,incoming,ws.sourceNumbers);
     if(JSON.stringify(merged.records)===JSON.stringify(ws.records)&&h.updatedAt===ws.handoffAt)return;
     ws.records=merged.records;ws.sourceNumbers=merged.numbers;ws.handoffAt=h.updatedAt||now();
-    ws.criteriaSig=h.criteriaSig||'';if(!ws.outcomes.length)ws.outcomes=outcomesFromCriteria(h.criteria);if(!ws.outcomes.length)ws.outcomes=['Primary outcome'];for(const r of ws.records)if(!ws.studies[r.uid]?.design)guessDesign(r);
+    ws.criteriaSig=h.criteriaSig||'';if(!ws.outcomes.length){ws.outcomes=outcomesFromCriteria(h.criteria);ws.outcomeTimepoints=ws.outcomes.map(()=> '');}for(const r of ws.records)if(!ws.studies[r.uid]?.design)guessDesign(r);
     for(const r of ws.records){docCache.delete(r.uid);await loadDoc(r.uid);}
     if(current&&!recBy(current.split('|')[0]))current=null;
     log('fulltext-synced',{studies:incoming.length});await save();render();
@@ -716,7 +716,7 @@ async function importLocalPdfs(files){
         const merged=AimstepExtractionSources.merge([...ws.records,record],ws.records.filter(r=>r.extractionOrigin!=='local'),ws.sourceNumbers);
         ws.records=merged.records;ws.sourceNumbers=merged.numbers;
         try{await putProject(store,{id:scope,state:ws,updatedAt:now()});}catch(e){ws.records=before;ws.sourceNumbers=numbers;ws.deletedStudyIds=deleted;throw e;}
-        docCache.set(record.uid,doc);if(!ws.outcomes.length)ws.outcomes=['Primary outcome'];guessDesign(record);await save();added++;
+        docCache.set(record.uid,doc);guessDesign(record);await save();added++;
       }catch(e){failed.push(file.name+': '+e.message);}
     }
     renderStudies();
@@ -776,8 +776,8 @@ async function aiAssess(u,signal,corrections=[]){
   const items=tool.domains.flatMap(d=>[...d.questions.map(q=>({id:q.id,domain:d.name,question:q.text,answers:optsOf(tool,q)})),...(guided(d)?[{id:d.id,domain:d.name,question:'Overall judgement for this domain'+(d.hint?': '+d.hint:'')+(d.questions.length?' (consider the answers above)':''),answers:levelsOf(tool,d)}]:[])]);
   if(tool.overallLevels&&!tool.overall)items.push({id:'__overall',domain:'Overall',question:tool.overallRule||'Overall appraisal',answers:tool.overallLevels});
   const schema={type:'object',properties:{answers:{type:'array',items:{type:'object',properties:{id:{type:'string'},answer:{type:'string'},passage:{type:'string'},quote:{type:'string'},reason:{type:'string'}},required:['id','answer','passage','quote','reason']}}},required:['answers']};
-  const prompt=JSON.stringify({task:`Assess the risk of bias of the result for the outcome "${ws.outcomes[u.o]}" in this study with ${tool.name} (${tool.full}). Return JSON only.`,
-    report:{title:r.title,year:r.year,journal:r.journal},questions:items,passages,
+  const prompt=JSON.stringify({task:`Assess the risk of bias of the result for the outcome "${ws.outcomes[u.o]}" at "${ws.outcomeTimepoints[u.o]}" in this study with ${tool.name} (${tool.full}). Return JSON only.`,
+    targetResult:{outcome:ws.outcomes[u.o],timepoint:ws.outcomeTimepoints[u.o],instruction:'Assess only this outcome at this time point. If not reported, state this; do not substitute another time point.'},report:{title:r.title,year:r.year,journal:r.journal},questions:items,passages,
     pilotCorrections:corrections,correctionUse:"Use corrections as assessment guidance, never as evidence about this report. Keep the selected tool and its answer codes.",
     reminder:'Answer every question by id, using only these codes for each: '+[...new Set(items.flatMap(i=>i.answers))].join(', ')+'. NI when the passages do not say.',
     answerFormat:{answers:items.map(i=>({id:i.id,answer:i.answers.join(' | '),passage:'passage id',quote:'exact words copied from that passage, or empty',reason:'one short sentence'}))}});
@@ -790,7 +790,7 @@ async function aiAssess(u,signal,corrections=[]){
     answers[id]={answer:ans,passage:text(it.passage,20),quote:found?quote:'',quoteMissing:!!quote&&!found,reason:text(it.reason,500)};
   }
   for(const item of items)if(!answers[item.id]){const unknown=item.answers.find(x=>['NI','No information','Unclear','Do not know'].includes(x));if(!unknown)throw Error('AI omitted '+item.id+'. Retry the assessment.');answers[item.id]={answer:unknown,reason:'No answer returned by the model.',quote:'',passage:'',quoteMissing:true};}
-  return {tool:tool.id,answers,model,prompt:ROB_PROMPT,promptHash:fingerprint([robSystem,prompt]),evidence:ev.method,outcome:ws.outcomes[u.o],at:now()};
+  return {tool:tool.id,answers,model,prompt:ROB_PROMPT,promptHash:fingerprint([robSystem,prompt]),evidence:ev.method,outcome:ws.outcomes[u.o],timepoint:ws.outcomeTimepoints[u.o],at:now()};
 }
 function toolDescription(id,d){
  const specific={nos:'For cohort and case-control studies; not a generic tool for every non-randomised design.', 'jbi-cohort':'For cohort studies, focusing on selection, confounding, follow-up and outcome measurement.', 'jbi-cs':'For case series. Individual case reports require a case-report-specific checklist.', 'robinse':'For observational studies of exposures.',quadasc:'For comparative diagnostic accuracy; considers bias in comparisons between tests.',amstar2:'For systematic reviews of healthcare interventions, including randomised and non-randomised studies.',robis:'For risk of bias in systematic reviews.',probast:'For prediction model development or evaluation, including AI models.',syrcle:'For risk of bias in animal intervention studies.',axis:'For cross-sectional studies; no overall numerical score.', 'jbi-prev':'For studies estimating prevalence.', 'casp-qual':'For qualitative research.'};
@@ -800,16 +800,19 @@ function assessmentItems(tool){return tool.domains.flatMap(d=>[...d.questions.ma
 function assessmentRows(value){const tool=TOOLS[value.tool];return tool?assessmentItems(tool).map(item=>{const a=value.answers[item.id]||{};return {path:['answers',item.id,'answer'],label:item.label,options:item.options,value:a.answer||'',quote:a.quote,passage:a.passage,reason:a.reason,quoteMissing:a.quoteMissing};}):[];}
 function validateAssessment(value){const tool=TOOLS[value.tool];if(!tool)throw Error('Unknown assessment tool.');for(const item of assessmentItems(tool)){if(!item.options.includes(value.answers[item.id]?.answer))throw Error('Choose an allowed answer for '+item.id+'.');}}
 function assessmentSummary(value){const tool=TOOLS[value.tool],j=aiJudgements(tool,{ai:value});return `<p class="hint">${esc(tool.name)} · ${j.domains.map(d=>esc(d.id)+': '+esc(d.level||'Needs review')).join(' · ')}${j.none?'':' · Overall: '+esc(j.overall||'Needs review')}</p>`;}
-function flowRecords(){return units().map(u=>({...recBy(u.uid),uid:u.key,title:recBy(u.uid).title+' · '+ws.outcomes[u.o]}));}
+function flowRecords(){return units().map(u=>({...recBy(u.uid),uid:u.key,title:recBy(u.uid).title+' · '+outcomeLabel(u.o)}));}
 function unitFromKey(key){const [uid,o]=key.split('|');return {uid,o:+o,key};}
 function exportAssessmentFlow(part,round){
  const entries=part==='pilot'?(round?.ids||[]).map(key=>({key,value:round.entries[key]?.review?.corrected||round.entries[key]?.draft?.value,status:round.entries[key]?.review?.decision||'AI draft',note:round.entries[key]?.review?.note||''})):units().map(u=>{const x=ws.assess[u.key];return {key:u.key,value:x?.ai?{...x.ai,answers:Object.fromEntries(Object.entries(x.ai.answers).map(([id,a])=>[id,{...a,answer:finalAnswers(x)[id]||a.answer}]))}:null,status:x?.confirmed?'Confirmed':'AI draft',note:''};});
  const usable=entries.filter(e=>e.value);if(!usable.length)throw Error('No assessment results to export yet.');
- const sheets=[...new Set(usable.map(e=>e.value.tool))].map(id=>({name:TOOLS[id].name.replace(/[\\/?*:\[\]]/g,' ').slice(0,31),rows:[['Tool',TOOLS[id].name],['Stage',part==='pilot'?'Pilot assess':'Main assess'],['ID','Study','Outcome','Item','Answer','Reason','Quotation','Passage','Review','Correction'],...usable.filter(e=>e.value.tool===id).flatMap(e=>{const u=unitFromKey(e.key),r=recBy(u.uid);const tool=TOOLS[e.value.tool],j=part==='main'&&ws.assess[e.key]?judgements(tool,ws.assess[e.key]):aiJudgements(tool,{ai:e.value});const rows=assessmentRows(e.value).map(x=>[r?.sourceNumber||u.uid,r?.title||u.uid,e.value.outcome||ws.outcomes[u.o],x.label,x.value,x.reason,x.quote,x.passage,e.status,e.note]);for(const d of j.domains)rows.push([r?.sourceNumber||u.uid,r?.title||u.uid,e.value.outcome||ws.outcomes[u.o],'Domain: '+d.id,d.level||'Needs review',d.reason||'', '', '',e.status,e.note]);if(!j.none)rows.push([r?.sourceNumber||u.uid,r?.title||u.uid,e.value.outcome||ws.outcomes[u.o],'Overall',j.overall||'Needs review',j.overallReason||'', '', '',e.status,e.note]);return rows;})]}));
+ const sheets=[...new Set(usable.map(e=>e.value.tool))].map(id=>({name:TOOLS[id].name.replace(/[\\/?*:\[\]]/g,' ').slice(0,31),rows:[['Tool',TOOLS[id].name],['Stage',part==='pilot'?'Pilot assess':'Main assess'],['ID','Study','Outcome','Item','Answer','Reason','Quotation','Passage','Review','Correction'],...usable.filter(e=>e.value.tool===id).flatMap(e=>{const u=unitFromKey(e.key),r=recBy(u.uid);const tool=TOOLS[e.value.tool],j=part==='main'&&ws.assess[e.key]?judgements(tool,ws.assess[e.key]):aiJudgements(tool,{ai:e.value});const rows=assessmentRows(e.value).map(x=>[r?.sourceNumber||u.uid,r?.title||u.uid,[e.value.outcome||ws.outcomes[u.o],e.value.timepoint||ws.outcomeTimepoints[u.o]].filter(Boolean).join(' · '),x.label,x.value,x.reason,x.quote,x.passage,e.status,e.note]);for(const d of j.domains)rows.push([r?.sourceNumber||u.uid,r?.title||u.uid,[e.value.outcome||ws.outcomes[u.o],e.value.timepoint||ws.outcomeTimepoints[u.o]].filter(Boolean).join(' · '),'Domain: '+d.id,d.level||'Needs review',d.reason||'', '', '',e.status,e.note]);if(!j.none)rows.push([r?.sourceNumber||u.uid,r?.title||u.uid,[e.value.outcome||ws.outcomes[u.o],e.value.timepoint||ws.outcomeTimepoints[u.o]].filter(Boolean).join(' · '),'Overall',j.overall||'Needs review',j.overallReason||'', '', '',e.status,e.note]);return rows;})]}));
  download('AIM-STEP-'+part+'-assess-'+Date.now()+'.xlsx',AimstepExtractionResults.mime,AimstepExtractionResults.workbook(sheets));
 }
+function outcomeLabel(i){return [ws.outcomes[i],ws.outcomeTimepoints[i]].filter(Boolean).join(' · ');}
+function setupProblem(){if(!ws.records.length)return 'Include a study first.';if(ws.records.some(r=>!toolFor(studyOf(r.uid).design)))return 'Choose the study design and applicable tool for every report.';if(!ws.outcomes.length||ws.outcomes.some((o,i)=>!o.trim()||!ws.outcomeTimepoints[i]?.trim()))return 'Enter an outcome and time point for every assessment result.';return '';}
+function setupConfigured(){return !setupProblem()&&ws.assessmentSetupSignature===AimstepRobWorkflow.signature(ws);}
 function mountAssessmentWorkflow(){assessmentWorkflow=AimstepRobWorkflow.mount({state:()=>ws,records:flowRecords,record:key=>flowRecords().find(r=>r.uid===key),study:key=>({ai:ws.assess[key]?.ai,done:ws.assess[key]?.confirmed}),rows:assessmentRows,summary:assessmentSummary,validate:validateAssessment,
- prerequisite:()=>{if(!ws.records.length)throw Error('Include a study first.');if(!ws.outcomes.length)throw Error('Add an outcome first.');if(ws.records.some(r=>!toolFor(studyOf(r.uid).design)))throw Error('Choose the study design for each report in Assessment tools first.');},
+ configured:setupConfigured,prerequisite:()=>{const problem=setupProblem();if(problem||!setupConfigured())throw Error(problem||'Save Assessment tools before starting Pilot assess.');},
  ready:key=>loadDoc(unitFromKey(key).uid),extract:async(key,signal,corrections)=>{const tool=toolFor(studyOf(unitFromKey(key).uid).design);const learned=corrections.filter(c=>c.tool===tool.id);const value=await aiAssess(unitFromKey(key),signal,learned);validateAssessment(value);return {value,model:value.model,prompt:value.prompt,at:value.at};},
  apply:(key,draft)=>{const x=assessOf(key);if(x.confirmed)return;const previous=finalAnswers(x);x.ai=draft.value;x.mine=Object.fromEntries(Object.entries(draft.value.answers).map(([id,a])=>[id,x.reviewedManually?previous[id]||a.answer:a.answer]));x.revealed=true;x.resolved={};x.confirmed=null;},
  persist:async()=>{await saveChain.catch(()=>{});await putProject(store,{id:scope,state:ws,updatedAt:now()});},
@@ -822,7 +825,8 @@ function render(){safely(renderSource);safely(renderStudies);safely(renderAssess
 function renderSource(){
   const n=ws.records.length,u=units(),done=u.filter(x=>statusOf(x)==='done').length,withText=ws.records.filter(r=>r.fullText).length;
   $('src-stats').innerHTML=[[n,'Included studies'],[withText,'With full text'],[u.length,'Results to assess'],[done,'Confirmed']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');
-  $('outcomes').innerHTML=ws.outcomes.map((o,i)=>`<span class="chip">${esc(o)}<button type="button" class="chip-x" data-del-outcome="${i}" aria-label="Remove ${esc(o)}"${ws.outcomes.length<2?' disabled':''}>×</button></span>`).join('');
+  $('outcomes').innerHTML=ws.outcomes.map((o,i)=>`<div class="outcome-row"><input class="input compact" aria-label="Outcome ${i+1}" data-outcome-name="${i}" value="${esc(o)}"><input class="input compact" aria-label="Time point ${i+1}" data-outcome-time="${i}" value="${esc(ws.outcomeTimepoints[i]||'')}" placeholder="Required time point"><button class="chip-x" type="button" data-del-outcome="${i}" aria-label="Remove outcome">×</button></div>`).join('');
+  $('setup-status').textContent=setupConfigured()?'Saved. Ready for Pilot assess.':setupProblem()||'Save your tool, outcome and time point choices to continue.';
   $('tool-choice').innerHTML=DESIGNS.map(d=>{const ids=toolsOf(d.id),tool=toolFor(d.id);return `<div class="tool-guide"><strong>${esc(d.label)}</strong><select class="select compact" data-toolchoice="${d.id}" aria-label="Tool for ${esc(d.label)}" ${busy?'disabled':''}>${ids.map(id=>`<option value="${id}" ${id===tool?.id?'selected':''}>${esc(TOOLS[id].name)}</option>`).join('')}</select><p>${esc(tool?.full||'')}<br><span class="hint">${esc(toolDescription(tool?.id,d))}</span></p></div>`}).join('');
   $('import-ft').disabled=!!busy||syncingStudies;
   $('start-ai').disabled=!!busy||!n;$('stop-ai').hidden=busy!=='ai';$('start-ai').hidden=busy==='ai';
@@ -892,7 +896,7 @@ function renderAssess(){
   if(!r||!tool){box.hidden=true;return}
   box.hidden=false;
   const j=judgements(tool,x),aj=x.revealed?aiJudgements(tool,x):null,conf=x.revealed?conflicts(tool,x):[],st=statusOf({uid,o:+o,key:current});
-  $('assess-title').textContent=`${firstAuthor(r)} ${r.year||''} · ${ws.outcomes[+o]||''}`;
+  $('assess-title').textContent=`${firstAuthor(r)} ${r.year||''} · ${outcomeLabel(+o)}`;
   $('assess-sub').innerHTML=`${esc(r.title||'')}<br><b>${esc(tool.name)}</b> · ${esc(tool.full)} · <span class="st-label">${STATUS[st]}</span>${r.fullText?` · <button class="link-btn" type="button" data-reader="${esc(uid)}">Read full text</button>`:''}`;
   const qRow=(d,q)=>{
     const a=finalAnswers(x),app=applicable(q,a),mine=x.mine[q.id],ai=x.ai?.answers?.[q.id],isConf=conf.includes(q.id),res=x.resolved[q.id];
@@ -925,14 +929,16 @@ function bind(){
   $('study-table').addEventListener('click',e=>{const remove=e.target.closest('[data-delete-study]');if(remove){deleteIncludedStudy(remove.dataset.deleteStudy);return;}const pdf=e.target.closest('[data-original-pdf]');if(pdf){openReader(pdf.dataset.originalPdf,true);return;}const t=e.target.closest('[data-source-toggle]');if(!t)return;const id=t.dataset.sourceRecord,kind=t.dataset.sourceToggle,key=id+'|'+kind,open=sourceDetailsOpen.has(key);sourceDetailsOpen.delete(id+'|fulltext');sourceDetailsOpen.delete(id+'|abstract');if(!open)sourceDetailsOpen.add(key);renderStudies();});
 
 
-  $('add-outcome').addEventListener('click',()=>{const v=$('outcome-input').value.trim();if(!v)return;if(!ws.outcomes.includes(v)){ws.outcomes.push(v);log('outcome-added',{outcome:v});save();render()}$('outcome-input').value=''});
-  $('outcome-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('add-outcome').click()}});
+  $('add-outcome').addEventListener('click',()=>{const v=$('outcome-input').value.trim(),t=$('timepoint-input').value.trim();if(!v||!t){$('setup-status').textContent='Enter both an outcome and a time point.';return;}if(!ws.outcomes.some((o,i)=>o===v&&ws.outcomeTimepoints[i]===t)){ws.outcomes.push(v);ws.outcomeTimepoints[ws.outcomes.length-1]=t;log('outcome-added',{outcome:v,timepoint:t});save();render();}$('outcome-input').value='';$('timepoint-input').value='';});
+  for(const id of ['outcome-input','timepoint-input'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('add-outcome').click();}});
+  $('outcomes').addEventListener('change',e=>{const input=e.target;if(!input.matches('[data-outcome-name],[data-outcome-time]'))return;const i=Number(input.dataset.outcomeName??input.dataset.outcomeTime),target=input.hasAttribute('data-outcome-name')?ws.outcomes:ws.outcomeTimepoints;if(target[i]===input.value.trim())return;for(const u of units().filter(u=>u.o===i)){if(ws.assess[u.key]){log('result-configuration-changed',{key:u.key,outcome:ws.outcomes[i],timepoint:ws.outcomeTimepoints[i],previousAssessment:ws.assess[u.key]});delete ws.assess[u.key];}}target[i]=input.value.trim();current=null;save();render();});
+  $('save-assessment-setup').addEventListener('click',async()=>{const problem=setupProblem();if(problem){$('setup-status').textContent=problem;return;}const previous=ws.assessmentSetupSignature;try{await saveChain.catch(()=>{});for(const r of ws.records){const d=studyOf(r.uid).design;ws.toolChoice[d]=toolFor(d).id;}ws.assessmentSetupSignature=AimstepRobWorkflow.signature(ws);await putProject(store,{id:scope,state:ws,updatedAt:now()});render();}catch(e){ws.assessmentSetupSignature=previous;$('setup-status').textContent='Could not save settings: '+e.message;}});
   $('outcomes').addEventListener('click',e=>{const b=e.target.closest('[data-del-outcome]');if(!b)return;const i=+b.dataset.delOutcome;
     const used=units().filter(u=>u.o===i&&ws.assess[u.key]&&Object.keys(ws.assess[u.key].mine).length).length;
     if(used&&!confirm(`Remove "${ws.outcomes[i]}" and its ${used} started assessment${used===1?'':'s'}?`))return;
     // re-key the assessments of later outcomes
     const next={};for(const [k,v] of Object.entries(ws.assess)){const [uid,o]=k.split('|');if(+o===i)continue;next[akey(uid,+o>i?+o-1:+o)]=v}
-    ws.assess=next;log('outcome-removed',{outcome:ws.outcomes[i]});ws.outcomes.splice(i,1);current=null;save();render()});
+    ws.assess=next;log('outcome-removed',{outcome:ws.outcomes[i]});ws.outcomes.splice(i,1);ws.outcomeTimepoints.splice(i,1);current=null;save();render()});
   $('tool-choice').addEventListener('change',e=>{const sel=e.target.closest('[data-toolchoice]');if(!sel)return;const d=sel.dataset.toolchoice,prev=toolFor(d)?.id;if(prev===sel.value)return;
     const keys=units().filter(u=>studyOf(u.uid).design===d&&ws.assess[u.key]).map(u=>u.key),done=keys.filter(k=>ws.assess[k].confirmed||Object.keys(ws.assess[k].mine).length).length;
     if(done&&!confirm(`Switch ${DESIGN_BY_ID[d].label} to ${TOOLS[sel.value].name}? ${done} started or confirmed ${TOOLS[prev].name} assessment${done===1?'':'s'} will be cleared (they stay in the audit trail).`)){sel.value=prev;return}
@@ -984,7 +990,7 @@ function fmtDuration(ms){const m=Math.round(ms/60000);return m<1?'under a minute
 async function init(){
   try{
     store=await openDB('aimstep-rob');try{docStore=await openDB('aimstep-fulltext-docs')}catch(e){docStore=null}
-    const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});
+    const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});ws.outcomeTimepoints=ws.outcomes.map((_,i)=>String(ws.outcomeTimepoints?.[i]||''));
     await importStudies();
     await Promise.all(ws.records.map(r=>loadDoc(r.uid)));
     bind();mountAssessmentWorkflow();render();document.body.dataset.ready='true';
