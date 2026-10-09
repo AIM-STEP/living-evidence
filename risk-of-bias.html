@@ -211,7 +211,7 @@ th{background:#f4f4f4}
 .source-record-title{margin:0}.source-record-top .toolbar{margin:0}.source-record-list{margin-bottom:16px}#reader-pdf-frame{width:100%;height:70vh;border:0}
 
 .extract-heading{display:flex;align-items:center;gap:8px}.extract-help{position:relative;color:#79548e;cursor:help;font-size:14px}.extract-help [role=tooltip]{display:none;position:absolute;z-index:20;top:100%;left:0;width:min(340px,75vw);padding:12px;background:white;border:1px solid #ded2e5;border-radius:8px;box-shadow:0 6px 20px #0002;font-size:12px;line-height:1.6;color:#403747}.extract-help:hover [role=tooltip],.extract-help:focus [role=tooltip]{display:block}.extract-rounds{display:flex;flex-wrap:wrap;gap:6px}.extract-rounds button{display:block}.extract-rounds [aria-pressed=true]{background:#e2cfe9;color:#5c004d;border-color:#9873aa}.extract-filters .btn{border:0;background:none;border-radius:0}.extract-filters [aria-pressed=true]{border-bottom:2px solid #79548e}.extract-progress{position:relative;flex:1 1 120px;min-width:80px;height:18px;margin:0;align-self:center}.extract-progress-track{height:18px;border-radius:8px;background:#eee5f1;overflow:hidden}.extract-progress-track>span{display:block;background:#79548e;height:100%;border-radius:8px;animation:extract-fill 1.2s ease both}.extract-progress>b{position:absolute;z-index:1;top:50%;left:clamp(18px,var(--extract-progress,0%),calc(100% - 18px));transform:translate(-50%,-50%);font-size:10px;font-weight:600;line-height:14px;color:#fff;text-shadow:0 0 2px #4d2e62;font-variant-numeric:tabular-nums;animation:extract-percent 1.2s ease both}.extract-heading{flex:0 0 auto;min-width:0}#rob-workflow .panel-head>.toolbar{flex:0 0 auto}#rob-workflow .pilot-controls{flex-wrap:nowrap}#rob-workflow .pilot-controls>label,#rob-workflow .pilot-controls>button{flex-shrink:0}.extract-rounds:not(:empty){margin-bottom:10px}@media(max-width:600px){#rob-workflow .panel-head{flex-wrap:wrap}#rob-workflow .panel-head>.toolbar{margin-left:auto}#rob-workflow .pilot-controls{flex-wrap:wrap}#rob-workflow .pilot-controls>label{flex-basis:100%}}.extract-heading h2{white-space:nowrap}@keyframes extract-fill{from{width:var(--extract-previous)}to{width:var(--extract-progress)}}@keyframes extract-percent{from{left:clamp(18px,var(--extract-previous),calc(100% - 18px))}to{left:clamp(18px,var(--extract-progress),calc(100% - 18px))}}@media(prefers-reduced-motion:reduce){.extract-progress-track>span,.extract-progress>b{animation:none}}#rob-workflow{display:grid;gap:18px}#rob-workflow .record{margin-top:12px}#rob-workflow [data-correction] textarea{display:block;width:100%;min-height:70px;margin:8px 0}#rob-workflow .toolbar svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7}
-.tool-guide{display:grid;grid-template-columns:minmax(190px,1fr) minmax(180px,1fr) minmax(240px,2fr);gap:12px;align-items:start;padding:10px 0;border-bottom:1px solid var(--soft);font-size:12px}.tool-guide p{margin:0;line-height:1.5}.tool-guide .select{width:100%}@media(max-width:650px){.tool-guide{grid-template-columns:1fr}}
+#tool-choice{display:grid;align-items:stretch;grid-auto-rows:1fr;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 16px}.tool-card{margin:0;display:flex;align-items:flex-start;gap:9px;padding:12px;border:1px solid #e7dfea;border-radius:7px;background:#fff;cursor:pointer;min-width:0}.tool-card:has(input:checked){border-color:#9873aa;background:#f6f0f8}.tool-card input{margin:3px 0 0;accent-color:#79548e;flex:none}.tool-card strong{display:block;font-size:13px;color:var(--plum);margin-bottom:5px}.tool-card p{margin:0;font-size:12px;line-height:1.5;color:var(--ink2);overflow-wrap:anywhere}.tool-card:focus-within{outline:2px solid #9873aa;outline-offset:2px}@media(max-width:900px){#tool-choice{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){#tool-choice{grid-template-columns:1fr}}
 #clear-assessment-tools{display:inline-flex;align-items:center;gap:5px}#clear-assessment-tools svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7}
 </style>
 </head>
@@ -239,7 +239,7 @@ th{background:#f4f4f4}
 </div>
 </section>
 
-<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="btn small" type="button" id="clear-assessment-tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="table-wrap"><table class="study-table" id="assessment-study-table"></table></div><div class="outcome-row"><span class="label">Outcome and time point</span><input class="input compact" id="outcome-input" aria-label="Outcome" placeholder="Outcome, e.g. ACR20" autocomplete="off"><input class="input compact" id="timepoint-input" aria-label="Time point" placeholder="Time point, e.g. 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
+<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="btn small" type="button" id="clear-assessment-tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="outcome-row"><span class="label">Outcome and time point</span><input class="input compact" id="outcome-input" aria-label="Outcome" placeholder="Outcome, e.g. ACR20" autocomplete="off"><input class="input compact" id="timepoint-input" aria-label="Time point" placeholder="Time point, e.g. 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
 <div id="outcomes"></div><div class="toolbar"><button class="btn small" type="button" id="save-assessment-setup">Save</button><span class="hint" id="setup-status" role="status"></span></div><div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
 <div class="team-track full-track" id="ai-progress" hidden><span style="width:0%"></span></div><div class="hint" id="ai-now"></div>
 
@@ -274,7 +274,7 @@ th{background:#f4f4f4}
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app/extraction-sources.js?v=1"></script>
 <script src="app/extraction-results.js?v=1"></script>
-<script src="app/rob-workflow.js?v=2"></script>
+<script src="app/rob-workflow.js?v=3"></script>
 <script>
 'use strict';
 (() => {
@@ -583,7 +583,7 @@ const DESIGNS=[
 const DESIGN_BY_ID=Object.fromEntries(DESIGNS.map(d=>[d.id,d]));
 // The review uses one tool per design (chosen once, for every study of that design).
 const toolsOf=design=>(DESIGN_BY_ID[design]?.tools||[]).filter(id=>TOOLS[id]);
-const toolFor=design=>{const ids=toolsOf(design);if(!ids.length)return null;const pick=ws?.toolChoice?.[design];return TOOLS[ids.includes(pick)?pick:ids[0]]};
+const toolFor=design=>TOOLS[ws?.selectedToolId]||null;
 const LEVEL_CLASS={'Low':'low','Some concerns':'some','Moderate':'some','Unclear':'some','High':'high','Serious':'high','Critical':'critical','No information':'ni'};
 const lvlClass=(l,tool,d)=>d?.colors?.[l]||tool?.colors?.[l]||LEVEL_CLASS[l]||'none';
 const levelsOf=(tool,d)=>d?.levels||tool.levels;
@@ -810,7 +810,7 @@ function exportAssessmentFlow(part,round){
  download('AIM-STEP-'+part+'-assess-'+Date.now()+'.xlsx',AimstepExtractionResults.mime,AimstepExtractionResults.workbook(sheets));
 }
 function outcomeLabel(i){return [ws.outcomes[i],ws.outcomeTimepoints[i]].filter(Boolean).join(' · ');}
-function setupProblem(){if(!ws.records.length)return 'Include a study first.';if(ws.records.some(r=>!toolFor(studyOf(r.uid).design)))return 'Choose the study design and applicable tool for every report.';if(!ws.outcomes.length||ws.outcomes.some((o,i)=>!o.trim()||!ws.outcomeTimepoints[i]?.trim()))return 'Enter an outcome and time point for every assessment result.';return '';}
+function setupProblem(){if(!ws.records.length)return 'Include a study first.';if(!TOOLS[ws.selectedToolId])return 'Select an assessment tool.';if(!ws.outcomes.length||ws.outcomes.some((o,i)=>!o.trim()||!ws.outcomeTimepoints[i]?.trim()))return 'Enter an outcome and time point for every assessment result.';return '';}
 function setupConfigured(){return !setupProblem()&&ws.assessmentSetupSignature===AimstepRobWorkflow.signature(ws);}
 function mountAssessmentWorkflow(){assessmentWorkflow=AimstepRobWorkflow.mount({state:()=>ws,records:flowRecords,record:key=>flowRecords().find(r=>r.uid===key),study:key=>({ai:ws.assess[key]?.ai,done:ws.assess[key]?.confirmed}),rows:assessmentRows,summary:assessmentSummary,validate:validateAssessment,
  configured:setupConfigured,prerequisite:()=>{const problem=setupProblem();if(problem||!setupConfigured())throw Error(problem||'Save Assessment tools before starting Pilot assess.');},
@@ -828,20 +828,10 @@ function renderSource(){
   $('src-stats').innerHTML=[[n,'Included studies'],[withText,'With full text'],[u.length,'Results to assess'],[done,'Confirmed']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');
   $('outcomes').innerHTML=ws.outcomes.map((o,i)=>`<div class="outcome-row"><input class="input compact" aria-label="Outcome ${i+1}" data-outcome-name="${i}" value="${esc(o)}"><input class="input compact" aria-label="Time point ${i+1}" data-outcome-time="${i}" value="${esc(ws.outcomeTimepoints[i]||'')}" placeholder="Required time point"><button class="chip-x" type="button" data-del-outcome="${i}" aria-label="Remove outcome">×</button></div>`).join('');
   $('setup-status').textContent=setupConfigured()?'Saved. Ready for Pilot assess.':setupProblem()||'Save your tool, outcome and time point choices to continue.';
-  $('tool-choice').innerHTML=DESIGNS.map(d=>{const ids=toolsOf(d.id),tool=toolFor(d.id);return `<div class="tool-guide"><strong>${esc(d.label)}</strong><select class="select compact" data-toolchoice="${d.id}" aria-label="Tool for ${esc(d.label)}" ${busy?'disabled':''}>${ids.map(id=>`<option value="${id}" ${id===tool?.id?'selected':''}>${esc(TOOLS[id].name)}</option>`).join('')}</select><p>${esc(tool?.full||'')}<br><span class="hint">${esc(toolDescription(tool?.id,d))}</span></p></div>`}).join('');
+  const ids=[...new Set(DESIGNS.flatMap(d=>toolsOf(d.id)))];
+  $('tool-choice').innerHTML=ids.map(id=>{const tool=TOOLS[id],designs=DESIGNS.filter(d=>d.tools.includes(id)),intro=toolDescription(id,designs[0]);return `<label class="tool-card" title="${esc(tool.full)}"><input type="radio" name="assessment-tool" data-tool-id="${esc(id)}" value="${esc(id)}" ${ws.selectedToolId===id?'checked':''} ${busy?'disabled':''}><span><strong>${esc(tool.name)}</strong><p>${esc(intro)}</p></span></label>`;}).join('');
   $('import-ft').disabled=!!busy||syncingStudies;
   $('start-ai').disabled=!!busy||!n;$('stop-ai').hidden=busy!=='ai';$('start-ai').hidden=busy==='ai';
-}
-function renderAssessmentStudies(){
-  const rows=ws.records.map(r=>{
-    const s=studyOf(r.uid),tool=toolFor(s.design);
-    const outs=ws.outcomes.map((o,i)=>{const u={uid:r.uid,o:i,key:akey(r.uid,i)},st=statusOf(u),x=ws.assess[u.key],j=tool&&x?judgements(tool,x):null;
-      return `<button type="button" class="unit st-${st}${current===u.key?' current':''}" data-open="${esc(u.key)}" title="${esc(o)}">${ws.outcomes.length>1?`<span class="unit-o">${esc(o)}</span>`:''}${st==='done'?badge(j?.overall):`<span class="unit-st">${STATUS[st]}</span>`}</button>`}).join('');
-    return `<tr><td class="study"><b>${esc(firstAuthor(r))} ${esc(r.year||'')}</b><span>${esc(r.title||'')}</span></td>
-<td><select class="select compact" data-design="${esc(r.uid)}" aria-label="Design of ${esc(r.title||'')}"><option value="">Choose design</option>${DESIGNS.map(d=>`<option value="${d.id}"${s.design===d.id?' selected':''}>${esc(d.label)}</option>`).join('')}</select><span class="design-by">${s.designBy?esc({keywords:'Guessed from title/abstract',ai:'AI, from the methods',reviewer:'Set by reviewer'}[s.designBy]):''}</span></td>
-<td>${tool?`<b>${esc(tool.name)}</b>`:DESIGN_BY_ID[s.design]?.ext?`<span class="design-by">${esc(DESIGN_BY_ID[s.design].ext)}</span>`:'—'}${r.fullText?'':'<span class="design-by warn">No full text</span>'}</td></tr>`;
-  }).join('');
-  $('assessment-study-table').innerHTML=`<thead><tr><th>Study</th><th>Design</th><th>Tool</th></tr></thead><tbody>${rows||'<tr><td colspan="3" class="empty">No studies yet. Included reports sync from Full-text assess, or use Import from local above.</td></tr>'}</tbody>`;
 }
 const sourceDetailsOpen=new Set(),sourceDetailsInitialized=new Set();
 function hasOriginalPdf(id){return !!docCache.get(id)?.pdf;}
@@ -887,7 +877,7 @@ function sourceRecordCard(r,index){
   return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-heading"><div class="source-record-top"><div class="source-record-number">'+esc(headingMeta)+'</div>'+actions+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3></div><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+doiLink(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full)+disclosurePanel('abstract','Abstract',(r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint">No abstract is available for this report.</p>')+'<div class="source-abstract-fulltext">'+full+'</div>')+'</article>';
 }
 function renderStudies(){
-  $('study-table').innerHTML=ws.records.map(sourceRecordCard).join('');renderAssessmentStudies();
+  $('study-table').innerHTML=ws.records.map(sourceRecordCard).join('');
 }
 function firstAuthor(r){const a=(r.authors||[])[0]||'';return String(a).split(/[ ,]/)[0]||'Study'}
 function renderAssess(){
@@ -927,8 +917,8 @@ async function clearAssessmentSetup(){
  if(busy||syncingStudies||!confirm('Clear Assessment tools, outcomes and time points, and reset Pilot/Main assess? Included studies and PDFs will be kept.'))return;
  busy='clear-tools';$('assessment-setup').inert=true;await saveChain.catch(()=>{});const previous=structuredClone(ws),previousCurrent=current;
  try{
-  log('assessment-tools-cleared',{previous:{toolChoice:ws.toolChoice,outcomes:ws.outcomes,outcomeTimepoints:ws.outcomeTimepoints,studies:ws.studies,assess:ws.assess,robFlow:ws.robFlow}});
-  ws.toolChoice={};ws.outcomes=[];ws.outcomeTimepoints=[];ws.studies={};ws.assess={};ws.robFlow={rounds:[],selected:0,approved:null,main:{done:{},errors:{}}};ws.assessmentSetupSignature=null;current=null;
+  log('assessment-tools-cleared',{previous:{selectedToolId:ws.selectedToolId,toolChoice:ws.toolChoice,outcomes:ws.outcomes,outcomeTimepoints:ws.outcomeTimepoints,studies:ws.studies,assess:ws.assess,robFlow:ws.robFlow}});
+  ws.toolChoice={};ws.selectedToolId=null;ws.outcomes=[];ws.outcomeTimepoints=[];ws.studies={};ws.assess={};ws.robFlow={rounds:[],selected:0,approved:null,main:{done:{},errors:{}}};ws.assessmentSetupSignature=null;current=null;
   await putProject(store,{id:scope,state:ws,updatedAt:now()});$('outcome-input').value='';$('timepoint-input').value='';
  }catch(e){ws=previous;current=previousCurrent;showNotice('source-notice','Could not clear Assessment tools: '+e.message,'error');}
  finally{busy='';$('assessment-setup').inert=false;render();}
@@ -944,23 +934,14 @@ function bind(){
   $('add-outcome').addEventListener('click',()=>{const v=$('outcome-input').value.trim(),t=$('timepoint-input').value.trim();if(!v||!t){$('setup-status').textContent='Enter both an outcome and a time point.';return;}if(!ws.outcomes.some((o,i)=>o===v&&ws.outcomeTimepoints[i]===t)){ws.outcomes.push(v);ws.outcomeTimepoints[ws.outcomes.length-1]=t;log('outcome-added',{outcome:v,timepoint:t});save();render();}$('outcome-input').value='';$('timepoint-input').value='';});
   for(const id of ['outcome-input','timepoint-input'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('add-outcome').click();}});
   $('outcomes').addEventListener('change',e=>{const input=e.target;if(!input.matches('[data-outcome-name],[data-outcome-time]'))return;const i=Number(input.dataset.outcomeName??input.dataset.outcomeTime),target=input.hasAttribute('data-outcome-name')?ws.outcomes:ws.outcomeTimepoints;if(target[i]===input.value.trim())return;for(const u of units().filter(u=>u.o===i)){if(ws.assess[u.key]){log('result-configuration-changed',{key:u.key,outcome:ws.outcomes[i],timepoint:ws.outcomeTimepoints[i],previousAssessment:ws.assess[u.key]});delete ws.assess[u.key];}}target[i]=input.value.trim();current=null;save();render();});
-  $('save-assessment-setup').addEventListener('click',async()=>{const problem=setupProblem();if(problem){$('setup-status').textContent=problem;return;}const previous=ws.assessmentSetupSignature;try{await saveChain.catch(()=>{});for(const r of ws.records){const d=studyOf(r.uid).design;ws.toolChoice[d]=toolFor(d).id;}ws.assessmentSetupSignature=AimstepRobWorkflow.signature(ws);await putProject(store,{id:scope,state:ws,updatedAt:now()});render();}catch(e){ws.assessmentSetupSignature=previous;$('setup-status').textContent='Could not save settings: '+e.message;}});
+  $('save-assessment-setup').addEventListener('click',async()=>{const problem=setupProblem();if(problem){$('setup-status').textContent=problem;return;}const previous=ws.assessmentSetupSignature;try{await saveChain.catch(()=>{});ws.assessmentSetupSignature=AimstepRobWorkflow.signature(ws);await putProject(store,{id:scope,state:ws,updatedAt:now()});render();}catch(e){ws.assessmentSetupSignature=previous;$('setup-status').textContent='Could not save settings: '+e.message;}});
   $('outcomes').addEventListener('click',e=>{const b=e.target.closest('[data-del-outcome]');if(!b)return;const i=+b.dataset.delOutcome;
     const used=units().filter(u=>u.o===i&&ws.assess[u.key]&&Object.keys(ws.assess[u.key].mine).length).length;
     if(used&&!confirm(`Remove "${ws.outcomes[i]}" and its ${used} started assessment${used===1?'':'s'}?`))return;
     // re-key the assessments of later outcomes
     const next={};for(const [k,v] of Object.entries(ws.assess)){const [uid,o]=k.split('|');if(+o===i)continue;next[akey(uid,+o>i?+o-1:+o)]=v}
     ws.assess=next;log('outcome-removed',{outcome:ws.outcomes[i]});ws.outcomes.splice(i,1);ws.outcomeTimepoints.splice(i,1);current=null;save();render()});
-  $('tool-choice').addEventListener('change',e=>{const sel=e.target.closest('[data-toolchoice]');if(!sel)return;const d=sel.dataset.toolchoice,prev=toolFor(d)?.id;if(prev===sel.value)return;
-    const keys=units().filter(u=>studyOf(u.uid).design===d&&ws.assess[u.key]).map(u=>u.key),done=keys.filter(k=>ws.assess[k].confirmed||Object.keys(ws.assess[k].mine).length).length;
-    if(done&&!confirm(`Switch ${DESIGN_BY_ID[d].label} to ${TOOLS[sel.value].name}? ${done} started or confirmed ${TOOLS[prev].name} assessment${done===1?'':'s'} will be cleared (they stay in the audit trail).`)){sel.value=prev;return}
-    keys.forEach(k=>delete ws.assess[k]);ws.toolChoice[d]=sel.value;log('tool-chosen',{design:d,from:prev,to:sel.value,cleared:keys.length});save();render();
-    toast(`${DESIGN_BY_ID[d].label}: ${TOOLS[sel.value].name}. Run a new Pilot assess round for this selection.`)});
-  $('assessment-study-table').addEventListener('change',e=>{const sel=e.target.closest('[data-design]');if(!sel)return;const s=studyOf(sel.dataset.design),prev=s.design;s.design=sel.value;s.designBy='reviewer';s.designWhy='';
-    // a different tool means different questions: drop drafts made for the old tool
-    if(toolFor(prev)?.id!==toolFor(s.design)?.id)ws.outcomes.forEach((o,i)=>{delete ws.assess[akey(sel.dataset.design,i)]});
-    log('design-set',{uid:sel.dataset.design,from:prev,to:s.design});save();render()});
-  $('assessment-study-table').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(!b)return;const [uid]=b.dataset.open.split('|');if(!toolFor(studyOf(uid).design)){toast(DESIGN_BY_ID[studyOf(uid).design]?.ext||'Choose the study design first; it decides the tool.');return}current=b.dataset.open;render();$('assess').scrollIntoView({block:'start',behavior:'smooth'})});
+  $('tool-choice').addEventListener('change',async e=>{const input=e.target.closest('[data-tool-id]');if(!input||busy||!TOOLS[input.value]||ws.selectedToolId===input.value)return;const previous=structuredClone(ws);try{await saveChain.catch(()=>{});log('assessment-tool-selected',{from:ws.selectedToolId,to:input.value,previousAssessments:ws.assess});ws.selectedToolId=input.value;ws.assess={};ws.assessmentSetupSignature=null;ws.robFlow??={rounds:[],selected:0,approved:null,main:{done:{},errors:{}}};ws.robFlow.approved=null;ws.robFlow.main={done:{},errors:{}};current=null;await putProject(store,{id:scope,state:ws,updatedAt:now()});render();}catch(e){ws=previous;render();$('setup-status').textContent='Could not save tool selection: '+e.message;}});
   $('assess').addEventListener('click',async e=>{
     const x=current&&assessOf(current);if(!x)return;
     const ans=e.target.closest('[data-ans]'),res=e.target.closest('[data-res]'),ov=e.target.closest('[data-override]'),rd=e.target.closest('[data-reader]');
@@ -1002,7 +983,7 @@ function fmtDuration(ms){const m=Math.round(ms/60000);return m<1?'under a minute
 async function init(){
   try{
     store=await openDB('aimstep-rob');try{docStore=await openDB('aimstep-fulltext-docs')}catch(e){docStore=null}
-    const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});ws.outcomeTimepoints=ws.outcomes.map((_,i)=>String(ws.outcomeTimepoints?.[i]||''));
+    const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});if(!Object.hasOwn(ws,'selectedToolId')){ws.selectedToolId=Object.values(ws.toolChoice||{}).find(id=>TOOLS[id])||'rob2';for(const [key,x] of Object.entries(ws.assess||{})){if(x.ai?.tool&&x.ai.tool!==ws.selectedToolId){log('tool-selection-migration',{key,previousAssessment:x});delete ws.assess[key];}}ws.assessmentSetupSignature=null;}ws.outcomeTimepoints=ws.outcomes.map((_,i)=>String(ws.outcomeTimepoints?.[i]||''));
     await importStudies();
     await Promise.all(ws.records.map(r=>loadDoc(r.uid)));
     bind();mountAssessmentWorkflow();render();document.body.dataset.ready='true';

@@ -5,7 +5,7 @@
 const clone=x=>JSON.parse(JSON.stringify(x));
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function state(ws){return ws.robFlow??={rounds:[],selected:0,approved:null,main:{done:{},errors:{}}};}
-function signature(ws){return JSON.stringify({version:'rob-assess-v1',outcomes:ws.outcomes,timepoints:ws.outcomeTimepoints||[],records:ws.records.map(r=>[r.uid,r.fullText,ws.studies[r.uid]?.design]),tools:ws.toolChoice});}
+function signature(ws){return JSON.stringify({version:'rob-assess-v1',outcomes:ws.outcomes,timepoints:ws.outcomeTimepoints||[],records:ws.records.map(r=>[r.uid,r.fullText,ws.studies[r.uid]?.design]),tools:ws.toolChoice,selectedTool:ws.selectedToolId});}
 function complete(round){return !!round?.ids.length&&round.ids.every(id=>round.entries[id]?.draft&&['agree','mistake'].includes(round.entries[id].review?.decision));}
 function accuracy(round){return complete(round)?Math.round(round.ids.filter(id=>round.entries[id].review.decision==='agree').length/round.ids.length*100):null;}
 function differences(before,after,path=[]){if(before===after)return [];if(after&&typeof after==='object')return Object.keys(after).flatMap(k=>differences(before?.[k],after[k],[...path,k]));return [{path:path.join('.'),before:before??'',after:after??''}];}
