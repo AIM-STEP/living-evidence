@@ -212,7 +212,7 @@ th{background:#f4f4f4}
 
 .extract-heading{display:flex;align-items:center;gap:8px}.extract-help{position:relative;color:#79548e;cursor:help;font-size:14px}.extract-help [role=tooltip]{display:none;position:absolute;z-index:20;top:100%;left:0;width:min(340px,75vw);padding:12px;background:white;border:1px solid #ded2e5;border-radius:8px;box-shadow:0 6px 20px #0002;font-size:12px;line-height:1.6;color:#403747}.extract-help:hover [role=tooltip],.extract-help:focus [role=tooltip]{display:block}.extract-rounds{display:flex;flex-wrap:wrap;gap:6px}.extract-rounds button{display:block}.extract-rounds [aria-pressed=true]{background:#e2cfe9;color:#5c004d;border-color:#9873aa}.extract-filters .btn{border:0;background:none;border-radius:0}.extract-filters [aria-pressed=true]{border-bottom:2px solid #79548e}.extract-progress{position:relative;flex:1 1 120px;min-width:80px;height:18px;margin:0;align-self:center}.extract-progress-track{height:18px;border-radius:8px;background:#eee5f1;overflow:hidden}.extract-progress-track>span{display:block;background:#79548e;height:100%;border-radius:8px;animation:extract-fill 1.2s ease both}.extract-progress>b{position:absolute;z-index:1;top:50%;left:clamp(18px,var(--extract-progress,0%),calc(100% - 18px));transform:translate(-50%,-50%);font-size:10px;font-weight:600;line-height:14px;color:#fff;text-shadow:0 0 2px #4d2e62;font-variant-numeric:tabular-nums;animation:extract-percent 1.2s ease both}.extract-heading{flex:0 0 auto;min-width:0}#rob-workflow .panel-head>.toolbar{flex:0 0 auto}#rob-workflow .pilot-controls{flex-wrap:nowrap}#rob-workflow .pilot-controls>label,#rob-workflow .pilot-controls>button{flex-shrink:0}.extract-rounds:not(:empty){margin-bottom:10px}@media(max-width:600px){#rob-workflow .panel-head{flex-wrap:wrap}#rob-workflow .panel-head>.toolbar{margin-left:auto}#rob-workflow .pilot-controls{flex-wrap:wrap}#rob-workflow .pilot-controls>label{flex-basis:100%}}.extract-heading h2{white-space:nowrap}@keyframes extract-fill{from{width:var(--extract-previous)}to{width:var(--extract-progress)}}@keyframes extract-percent{from{left:clamp(18px,var(--extract-previous),calc(100% - 18px))}to{left:clamp(18px,var(--extract-progress),calc(100% - 18px))}}@media(prefers-reduced-motion:reduce){.extract-progress-track>span,.extract-progress>b{animation:none}}#rob-workflow{display:grid;gap:18px}#rob-workflow .record{margin-top:12px}#rob-workflow [data-correction] textarea{display:block;width:100%;min-height:70px;margin:8px 0}#rob-workflow .toolbar svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7}
 #tool-choice{display:grid;align-items:stretch;grid-auto-rows:1fr;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 16px}.tool-card{margin:0;display:flex;align-items:flex-start;gap:9px;padding:12px;border:1px solid #e7dfea;border-radius:7px;background:#fff;cursor:pointer;min-width:0}.tool-card:has(input:checked){border-color:#9873aa;background:#f6f0f8}.tool-card input{margin:3px 0 0;accent-color:#79548e;flex:none}.tool-card strong{display:block;font-size:13px;color:var(--plum);margin-bottom:5px}.tool-card p{margin:0;font-size:12px;line-height:1.5;color:var(--ink2);overflow-wrap:anywhere}.tool-card:focus-within{outline:2px solid #9873aa;outline-offset:2px}@media(max-width:900px){#tool-choice{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){#tool-choice{grid-template-columns:1fr}}
-#clear-assessment-tools{display:inline-flex;align-items:center;gap:5px}#clear-assessment-tools svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7}
+
 </style>
 </head>
 <body>
@@ -239,10 +239,10 @@ th{background:#f4f4f4}
 </div>
 </section>
 
-<section class="panel" id="outcome-setup"><div class="panel-head"><h2>Outcome and time point</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-outcome-setup" aria-expanded="true" aria-controls="outcome-setup-body" title="Collapse Outcome and time point"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Outcome and time point</span></button></div></div><div class="panel-body" id="outcome-setup-body"><div class="outcome-row"><input class="input compact" id="outcome-input" aria-label="Outcome" placeholder="Outcome, e.g. ACR20" autocomplete="off"><input class="input compact" id="timepoint-input" aria-label="Time point" placeholder="Time point, e.g. 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
+<section class="panel" id="outcome-setup"><div class="panel-head"><h2>Outcome and time point</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-outcome-setup" aria-expanded="true" aria-controls="outcome-setup-body" title="Collapse Outcome and time point"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Outcome and time point</span></button></div></div><div class="panel-body" id="outcome-setup-body"><div class="toolbar"><button class="btn small" type="button" id="outcomes-from-extraction">AI from Extraction</button><button class="btn small" type="button" id="outcomes-from-local">Import from local</button><input type="file" id="outcomes-files" accept=".xlsx,.csv,.tsv,.json,.docx,.txt,.md,.pdf" multiple hidden><button class="btn small" type="button" id="check-outcomes">Check again</button><button class="btn small" type="button" id="stop-outcomes" hidden>Stop</button></div><p class="hint" id="outcome-intake-status" role="status" hidden></p><div class="outcome-row"><input class="input compact" id="outcome-input" aria-label="Outcome" placeholder="Outcome, e.g. ACR20" autocomplete="off"><input class="input compact" id="timepoint-input" aria-label="Time point" placeholder="Time point, e.g. 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
 <div id="outcomes"></div></div></section>
 
-<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="btn small" type="button" id="clear-assessment-tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
+<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
 <div class="team-track full-track" id="ai-progress" hidden><span style="width:0%"></span></div><div class="hint" id="ai-now"></div>
 
 </div></section>
@@ -277,6 +277,8 @@ th{background:#f4f4f4}
 <script src="app/extraction-sources.js?v=1"></script>
 <script src="app/extraction-results.js?v=1"></script>
 <script src="app/rob-workflow.js?v=3"></script>
+<script src="app/extraction-form-import.js?v=4"></script>
+<script src="app/rob-outcome-sources.js?v=1"></script>
 <script>
 'use strict';
 (() => {
@@ -599,8 +601,8 @@ const direction=a=>['Y','PY','SY','WY','DY'].includes(a)?'yes':['N','PN','SN','W
    aimstep-fulltext-docs (read only). One assessment = one study x one
    outcome result (Cochrane Handbook 8.2.2: risk of bias is result-specific). */
 let ws=null,store=null,docStore=null,handoff=null,controller=null,busy='',current=null,saveChain=Promise.resolve();
-const docCache=new Map();let assessmentWorkflow=null;
-const defaults=()=>({version:1,toolChoice:{},records:[],criteriaSig:'',handoffAt:'',outcomes:[],outcomeTimepoints:[],studies:{},assess:{},audit:[]});
+const docCache=new Map();let assessmentWorkflow=null,outcomeAbort=null;
+const defaults=()=>({version:1,toolChoice:{},records:[],criteriaSig:'',handoffAt:'',outcomes:[],outcomeTimepoints:[],outcomeMeta:[],outcomeImports:[],studies:{},assess:{},audit:[]});
 function log(action,detail={}){ws.audit.push({at:now(),action,...detail});if(ws.audit.length>5000)ws.audit.splice(0,ws.audit.length-5000)}
 function getKey(db,key){return new Promise((resolve,reject)=>{const tx=db.transaction('projects','readonly'),req=tx.objectStore('projects').get(key);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)})}
 async function loadDoc(uid){if(docCache.has(uid))return docCache.get(uid);if(!docStore)return null;const d=await getKey(docStore,scope+'|'+uid);if(d)docCache.set(uid,d);return d}
@@ -678,7 +680,7 @@ async function importStudies(){
     const merged=AimstepExtractionSources.merge(ws.records,incoming,ws.sourceNumbers);
     if(JSON.stringify(merged.records)===JSON.stringify(ws.records)&&h.updatedAt===ws.handoffAt)return;
     ws.records=merged.records;ws.sourceNumbers=merged.numbers;ws.handoffAt=h.updatedAt||now();
-    ws.criteriaSig=h.criteriaSig||'';if(!ws.outcomes.length){ws.outcomes=outcomesFromCriteria(h.criteria);ws.outcomeTimepoints=ws.outcomes.map(()=> '');}for(const r of ws.records)if(!ws.studies[r.uid]?.design)guessDesign(r);
+    ws.criteriaSig=h.criteriaSig||'';for(const r of ws.records)if(!ws.studies[r.uid]?.design)guessDesign(r);
     for(const r of ws.records){docCache.delete(r.uid);await loadDoc(r.uid);}
     if(current&&!recBy(current.split('|')[0]))current=null;
     log('fulltext-synced',{studies:incoming.length});await save();render();
@@ -828,10 +830,10 @@ function render(){safely(renderSource);safely(renderStudies);safely(renderAssess
 function renderSource(){
   const n=ws.records.length,u=units(),done=u.filter(x=>statusOf(x)==='done').length,withText=ws.records.filter(r=>r.fullText).length;
   $('src-stats').innerHTML=[[n,'Included studies'],[withText,'With full text'],[u.length,'Results to assess'],[done,'Confirmed']].map(([v,l])=>`<div><strong>${v}</strong><span>${l}</span></div>`).join('');
-  $('outcomes').innerHTML=ws.outcomes.map((o,i)=>`<div class="outcome-row"><input class="input compact" aria-label="Outcome ${i+1}" data-outcome-name="${i}" value="${esc(o)}"><input class="input compact" aria-label="Time point ${i+1}" data-outcome-time="${i}" value="${esc(ws.outcomeTimepoints[i]||'')}" placeholder="Required time point"><button class="chip-x" type="button" data-del-outcome="${i}" aria-label="Remove outcome">×</button></div>`).join('');
+  $('outcomes').innerHTML=ws.outcomes.map((o,i)=>`<div class="outcome-row" data-outcome-row="${i}"><input class="input compact" aria-label="Outcome ${i+1}" data-outcome-name="${i}" value="${esc(o)}"><input class="input compact" aria-label="Time point ${i+1}" data-outcome-time="${i}" value="${esc(ws.outcomeTimepoints[i]||'')}" placeholder="Required time point"><button class="chip-x" type="button" data-del-outcome="${i}" aria-label="Remove outcome">×</button>${ws.outcomeMeta?.[i]?.issue?`<span class="hint outcome-feedback" style="flex-basis:100%">${esc(ws.outcomeMeta[i].issue)}</span>`:""}</div>`).join('');
   const ids=[...new Set(DESIGNS.flatMap(d=>toolsOf(d.id)))];
   $('tool-choice').innerHTML=ids.map(id=>{const tool=TOOLS[id],designs=DESIGNS.filter(d=>d.tools.includes(id)),intro=toolDescription(id,designs[0]);return `<label class="tool-card" title="${esc(tool.full)}"><input type="radio" name="assessment-tool" data-tool-id="${esc(id)}" value="${esc(id)}" ${ws.selectedToolId===id?'checked':''} ${busy?'disabled':''}><span><strong>${esc(tool.name)}</strong><p>${esc(intro)}</p></span></label>`;}).join('');
-  $('import-ft').disabled=!!busy||syncingStudies;
+  $('import-ft').disabled=!!busy||syncingStudies;for(const id of ['outcomes-from-extraction','outcomes-from-local','check-outcomes','add-outcome'])$(id).disabled=!!busy;for(const el of $('outcomes').querySelectorAll('input,button'))el.disabled=!!busy;$('stop-outcomes').hidden=busy!=='outcome-intake';
   $('start-ai').disabled=!!busy||!n;$('stop-ai').hidden=busy!=='ai';$('start-ai').hidden=busy==='ai';
 }
 const sourceDetailsOpen=new Set(),sourceDetailsInitialized=new Set();
@@ -914,33 +916,52 @@ function renderAssess(){
   $('assess-step').innerHTML=step;
 }
 /* ---------------- Events ---------------- */
-async function clearAssessmentSetup(){
- if(busy||syncingStudies||!confirm('Clear Assessment tools, outcomes and time points, and reset Pilot/Main assess? Included studies and PDFs will be kept.'))return;
- busy='clear-tools';$('assessment-setup').inert=true;$('outcome-setup').inert=true;await saveChain.catch(()=>{});const previous=structuredClone(ws),previousCurrent=current;
+function outcomeStatus(message){$('outcome-intake-status').textContent=message;$('outcome-intake-status').hidden=!message;}
+async function persistOutcomeChange(change){await saveChain.catch(()=>{});const previous=structuredClone(ws);try{change();await putProject(store,{id:scope,state:ws,updatedAt:now()});}catch(e){ws=previous;throw e;}render();}
+async function appendOutcomes(rows,source){const indices=[];await persistOutcomeChange(()=>{for(const row of AimstepRobOutcomeSources.normalize(rows)){const existing=ws.outcomes.findIndex((o,i)=>o.toLowerCase().trim()===row.outcome.toLowerCase().trim()&&(ws.outcomeTimepoints[i]||'').toLowerCase().trim()===row.timepoint.toLowerCase().trim());if(existing>=0){indices.push(existing);continue;}const i=ws.outcomes.length;ws.outcomes.push(row.outcome);ws.outcomeTimepoints[i]=row.timepoint;ws.outcomeMeta[i]={source:row.source||source,issue:row.issue||AimstepRobOutcomeSources.issues(row),addedAt:now(),model:row.model||''};indices.push(i);}});return indices;}
+async function intakeOutcomes(kind,files=[]){
+ if(busy||syncingStudies)return;busy='outcome-intake';outcomeAbort=new AbortController();const signal=outcomeAbort.signal;renderSource();$('assessment-setup').inert=true;$('assess').inert=true;
+ const model=pilotModelJSON,progress=(i,total)=>outcomeStatus('AI checking '+Math.min(i+1,total)+' of '+total+'…');let indices=[],readingIssues=[];
  try{
-  log('assessment-tools-cleared',{previous:{selectedToolId:ws.selectedToolId,toolChoice:ws.toolChoice,outcomes:ws.outcomes,outcomeTimepoints:ws.outcomeTimepoints,studies:ws.studies,assess:ws.assess,robFlow:ws.robFlow}});
-  ws.toolChoice={};ws.selectedToolId=null;ws.outcomes=[];ws.outcomeTimepoints=[];ws.studies={};ws.assess={};ws.robFlow={rounds:[],selected:0,approved:null,main:{done:{},errors:{}}};ws.assessmentSetupSignature=null;current=null;
-  await putProject(store,{id:scope,state:ws,updatedAt:now()});$('outcome-input').value='';$('timepoint-input').value='';
- }catch(e){ws=previous;current=previousCurrent;showNotice('source-notice','Could not clear Assessment tools: '+e.message,'error');}
- finally{busy='';$('assessment-setup').inert=false;$('outcome-setup').inert=false;render();}
+  if(kind==='extraction'){
+   outcomeStatus('Reading Extraction results…');const db=await openDB('aimstep-extraction');let previous;try{previous=(await getProject(db))?.state;}finally{db.close();}
+   const sources=AimstepRobOutcomeSources.extractionSources(previous);if(!sources.length)throw Error('No extracted outcome results are available in this project. Complete data extraction first, or import/add outcomes.');
+   const rows=await AimstepRobOutcomeSources.extract(sources,model,signal,progress);if(signal.aborted)return;if(!rows.length)throw Error('No supported outcome/time-point pairs were identified. Review Extraction results or add them manually.');indices=await appendOutcomes(rows,'Extraction');
+  }else if(kind==='local'){
+   const raw=[];for(const file of files){if(signal.aborted)break;outcomeStatus('Reading '+file.name+'…');try{const ext=file.name.split('.').pop().toLowerCase(),sourceText=ext==='pdf'?(await AimstepExtractionSources.readPdf(file)).doc.fullText:await AimstepExtractionFormImport.sourceText(file);if(!sourceText.trim())throw Error('No readable text found.');let rows=[];try{rows=AimstepRobOutcomeSources.parse(sourceText,ext,AimstepExtractionFormImport.csv);}catch(e){readingIssues.push(file.name+': '+e.message);}
+     await persistOutcomeChange(()=>ws.outcomeImports.push({name:file.name,text:sourceText,at:now()}));if(rows.length)indices.push(...await appendOutcomes(rows,file.name));else raw.push({name:file.name,text:sourceText});
+    }catch(e){readingIssues.push(file.name+': '+e.message);}}
+   if(signal.aborted)return;if(raw.length){const rows=await AimstepRobOutcomeSources.extract(raw,model,signal,progress);if(signal.aborted)return;indices.push(...await appendOutcomes(rows,'Local import'));}
+   if(!indices.length)throw Error(readingIssues.join(' ')||'No outcomes were identified. Edit the source file or add outcomes manually.');
+  }else indices=ws.outcomes.map((_,i)=>i);
+  indices=[...new Set(indices)];if(!indices.length)throw Error('Add an outcome before checking.');
+  const rows=indices.map(i=>({outcome:ws.outcomes[i],timepoint:ws.outcomeTimepoints[i]}));const notes=await AimstepRobOutcomeSources.check(rows,model,signal,progress);if(signal.aborted)return;
+  await persistOutcomeChange(()=>indices.forEach((index,j)=>{ws.outcomeMeta[index]={...ws.outcomeMeta[index],issue:notes[j],checkedAt:now()};}));outcomeStatus((notes.some(Boolean)?'AI check complete. Edit the highlighted outcome or time point below.':'AI check complete. Outcomes and time points are editable below.')+(readingIssues.length?' '+readingIssues.join(' '):''));
+ }catch(e){if(!signal.aborted)outcomeStatus('AI check incomplete: '+e.message+' Any imported rows are kept and can be edited.');}
+ finally{if(signal.aborted)outcomeStatus('Stopped. Imported outcomes are kept.');outcomeAbort=null;busy='';$('assessment-setup').inert=false;$('assess').inert=false;$('outcomes-files').value='';render();}
 }
 function reviewer(){return ($('reviewer-name').value||'').trim()}
 function bind(){
-  $('clear-assessment-tools').addEventListener('click',clearAssessmentSetup);
+  $('outcomes-from-extraction').addEventListener('click',()=>intakeOutcomes('extraction'));
+  $('outcomes-from-local').addEventListener('click',()=>{if(!busy)$('outcomes-files').click();});
+  $('outcomes-files').addEventListener('change',()=>{const files=[...$('outcomes-files').files];if(files.length)intakeOutcomes('local',files);});
+  $('check-outcomes').addEventListener('click',()=>intakeOutcomes('check'));
+  $('stop-outcomes').addEventListener('click',()=>outcomeAbort?.abort());
+
   $('import-ft').addEventListener('click',()=>$('import-pdfs').click());
   $('import-pdfs').addEventListener('change',()=>importLocalPdfs([...$('import-pdfs').files]));
   $('study-table').addEventListener('click',e=>{const remove=e.target.closest('[data-delete-study]');if(remove){deleteIncludedStudy(remove.dataset.deleteStudy);return;}const pdf=e.target.closest('[data-original-pdf]');if(pdf){openReader(pdf.dataset.originalPdf,true);return;}const t=e.target.closest('[data-source-toggle]');if(!t)return;const id=t.dataset.sourceRecord,kind=t.dataset.sourceToggle,key=id+'|'+kind,open=sourceDetailsOpen.has(key);sourceDetailsOpen.delete(id+'|fulltext');sourceDetailsOpen.delete(id+'|abstract');if(!open)sourceDetailsOpen.add(key);renderStudies();});
 
 
-  $('add-outcome').addEventListener('click',()=>{const v=$('outcome-input').value.trim(),t=$('timepoint-input').value.trim();if(!v||!t){toast('Enter both an outcome and a time point.');return;}if(!ws.outcomes.some((o,i)=>o===v&&ws.outcomeTimepoints[i]===t)){ws.outcomes.push(v);ws.outcomeTimepoints[ws.outcomes.length-1]=t;log('outcome-added',{outcome:v,timepoint:t});save();render();}$('outcome-input').value='';$('timepoint-input').value='';});
+  $('add-outcome').addEventListener('click',()=>{const v=$('outcome-input').value.trim(),t=$('timepoint-input').value.trim();if(!v||!t){toast('Enter both an outcome and a time point.');return;}if(!ws.outcomes.some((o,i)=>o===v&&ws.outcomeTimepoints[i]===t)){ws.outcomes.push(v);ws.outcomeTimepoints[ws.outcomes.length-1]=t;ws.outcomeMeta[ws.outcomes.length-1]={source:'Manual',issue:''};log('outcome-added',{outcome:v,timepoint:t});save();render();}$('outcome-input').value='';$('timepoint-input').value='';});
   for(const id of ['outcome-input','timepoint-input'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('add-outcome').click();}});
-  $('outcomes').addEventListener('change',e=>{const input=e.target;if(!input.matches('[data-outcome-name],[data-outcome-time]'))return;const i=Number(input.dataset.outcomeName??input.dataset.outcomeTime),target=input.hasAttribute('data-outcome-name')?ws.outcomes:ws.outcomeTimepoints;if(target[i]===input.value.trim())return;for(const u of units().filter(u=>u.o===i)){if(ws.assess[u.key]){log('result-configuration-changed',{key:u.key,outcome:ws.outcomes[i],timepoint:ws.outcomeTimepoints[i],previousAssessment:ws.assess[u.key]});delete ws.assess[u.key];}}target[i]=input.value.trim();current=null;save();render();});
+  $('outcomes').addEventListener('change',e=>{const input=e.target;if(!input.matches('[data-outcome-name],[data-outcome-time]'))return;const i=Number(input.dataset.outcomeName??input.dataset.outcomeTime),target=input.hasAttribute('data-outcome-name')?ws.outcomes:ws.outcomeTimepoints;if(target[i]===input.value.trim())return;for(const u of units().filter(u=>u.o===i)){if(ws.assess[u.key]){log('result-configuration-changed',{key:u.key,outcome:ws.outcomes[i],timepoint:ws.outcomeTimepoints[i],previousAssessment:ws.assess[u.key]});delete ws.assess[u.key];}}target[i]=input.value.trim();ws.outcomeMeta[i]={...ws.outcomeMeta[i],issue:AimstepRobOutcomeSources.issues({timepoint:ws.outcomeTimepoints[i]})};current=null;save();render();});
   $('outcomes').addEventListener('click',e=>{const b=e.target.closest('[data-del-outcome]');if(!b)return;const i=+b.dataset.delOutcome;
     const used=units().filter(u=>u.o===i&&ws.assess[u.key]&&Object.keys(ws.assess[u.key].mine).length).length;
     if(used&&!confirm(`Remove "${ws.outcomes[i]}" and its ${used} started assessment${used===1?'':'s'}?`))return;
     // re-key the assessments of later outcomes
     const next={};for(const [k,v] of Object.entries(ws.assess)){const [uid,o]=k.split('|');if(+o===i)continue;next[akey(uid,+o>i?+o-1:+o)]=v}
-    ws.assess=next;log('outcome-removed',{outcome:ws.outcomes[i]});ws.outcomes.splice(i,1);ws.outcomeTimepoints.splice(i,1);current=null;save();render()});
+    ws.assess=next;log('outcome-removed',{outcome:ws.outcomes[i]});ws.outcomes.splice(i,1);ws.outcomeTimepoints.splice(i,1);ws.outcomeMeta.splice(i,1);current=null;save();render()});
   $('tool-choice').addEventListener('change',async e=>{const input=e.target.closest('[data-tool-id]');if(!input||busy||!TOOLS[input.value]||ws.selectedToolId===input.value)return;const previous=structuredClone(ws);try{await saveChain.catch(()=>{});log('assessment-tool-selected',{from:ws.selectedToolId,to:input.value,previousAssessments:ws.assess});ws.selectedToolId=input.value;ws.assess={};ws.assessmentSetupSignature=null;ws.robFlow??={rounds:[],selected:0,approved:null,main:{done:{},errors:{}}};ws.robFlow.approved=null;ws.robFlow.main={done:{},errors:{}};current=null;await putProject(store,{id:scope,state:ws,updatedAt:now()});render();}catch(e){ws=previous;render();showNotice('source-notice','Could not save tool selection: '+e.message,'error');}});
   $('assess').addEventListener('click',async e=>{
     const x=current&&assessOf(current);if(!x)return;
@@ -984,7 +1005,7 @@ function fmtDuration(ms){const m=Math.round(ms/60000);return m<1?'under a minute
 async function init(){
   try{
     store=await openDB('aimstep-rob');try{docStore=await openDB('aimstep-fulltext-docs')}catch(e){docStore=null}
-    const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});if(!Object.hasOwn(ws,'selectedToolId')){ws.selectedToolId=Object.values(ws.toolChoice||{}).find(id=>TOOLS[id])||'rob2';for(const [key,x] of Object.entries(ws.assess||{})){if(x.ai?.tool&&x.ai.tool!==ws.selectedToolId){log('tool-selection-migration',{key,previousAssessment:x});delete ws.assess[key];}}ws.assessmentSetupSignature=null;}ws.outcomeTimepoints=ws.outcomes.map((_,i)=>String(ws.outcomeTimepoints?.[i]||''));
+    const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});if(!Object.hasOwn(ws,'selectedToolId')){ws.selectedToolId=Object.values(ws.toolChoice||{}).find(id=>TOOLS[id])||'rob2';for(const [key,x] of Object.entries(ws.assess||{})){if(x.ai?.tool&&x.ai.tool!==ws.selectedToolId){log('tool-selection-migration',{key,previousAssessment:x});delete ws.assess[key];}}ws.assessmentSetupSignature=null;}ws.outcomeTimepoints=ws.outcomes.map((_,i)=>String(ws.outcomeTimepoints?.[i]||''));ws.outcomeMeta=ws.outcomes.map((_,i)=>ws.outcomeMeta?.[i]||{});ws.outcomeImports??=[];
     await importStudies();
     await Promise.all(ws.records.map(r=>loadDoc(r.uid)));
     bind();mountAssessmentWorkflow();render();document.body.dataset.ready='true';
