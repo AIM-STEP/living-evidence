@@ -238,7 +238,7 @@ th{background:#f4f4f4}
 </section>
 
 <section class="panel">
-<div class="panel-head"><h2>Parameter Settings</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-list" aria-expanded="true" aria-controls="list-body" title="Collapse Comparisons"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Comparisons</span></button></div></div>
+<div class="panel-head"><h2>Parameter Settings</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-list" aria-expanded="true" aria-controls="list-body" title="Collapse Parameter Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Parameter Settings</span></button></div></div>
 <div class="panel-body" id="list-body"><div class="method-settings" hidden>
 <div class="panel-head"><h2>Method rules</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-rules" aria-expanded="true" aria-controls="rules-body" title="Collapse Method rules"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Method rules</span></button></div></div>
 <div class="panel-body" id="rules-body">
@@ -250,7 +250,7 @@ th{background:#f4f4f4}
 
 
 <div id="parameter-options"></div>
-<div class="table-wrap"><table class="cmp-table" id="cmp-table"></table></div>
+<div hidden data-internal-assessment><div class="table-wrap"><table class="cmp-table" id="cmp-table"></table></div>
 <div id="editor" class="editor" hidden>
 <div class="editor-head"><div><h3 id="editor-title"></h3><div id="editor-tag"></div></div><button class="btn small" type="button" id="delete-btn">Delete comparison</button></div>
 <div id="unit-parameters"></div><div class="two ed-ids"><label class="label">#2 Intervention<input class="input" id="ed-int" autocomplete="off"></label><label class="label">#3 Control<input class="input" id="ed-ctl" autocomplete="off"></label></div>
@@ -262,6 +262,7 @@ th{background:#f4f4f4}
 <h4 class="sub-head">Checks</h4>
 <div id="issues"></div>
 <details class="history"><summary>Change history</summary><ul id="history"></ul></details>
+</div>
 </div>
 </div>
 </section>
@@ -300,6 +301,6 @@ th{background:#f4f4f4}
 <script src="app/extraction-sources.js?v=1"></script>
 <script src="app/analysis-ai.js?v=1"></script>
 <script src="app/coe-units.js?v=2"></script>
-<script src="app/coe-workspace.js?v=3"></script>
+<script src="app/coe-workspace.js?v=4"></script>
 </body>
 </html>

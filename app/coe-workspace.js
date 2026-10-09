@@ -973,7 +973,7 @@ const textInput=(key,label,value,type='text')=>`<label class="label">${esc(label
 const selectInput=(key,label,value,options)=>`<label class="label">${esc(label)}<select class="select" data-unit="${key}" aria-label="${esc(label)}" title="${esc(label)}">${options.map(([v,l])=>`<option value="${esc(v)}"${value===v?' selected':''}>${esc(l)}</option>`).join('')}</select></label>`;
 function renderUnits(){
  $('unit-sources').innerHTML=data().records.map(r=>{const u=U.unit(r,data()),labels=U.frameworks[u.framework]||U.frameworks.Other;
- return `<article class="unit-card outcome-row" data-unit-id="${esc(r.id)}"><div class="unit-grid">${selectInput('framework','Question framework',u.framework,Object.keys(U.frameworks).map(f=>[f,f]))}${textInput('population','Population',u.population)}${textInput('intervention',u.framework==='PECO'?'Exposure':'Intervention',r.intervention)}${textInput('control','Comparator',r.control)}${textInput('outcome','Outcome',u.outcome)}${textInput('timepoint','Time point',u.timepoint)}${labels.filter(l=>!['Population','Intervention','Exposure','Comparator','Outcome'].includes(l)).map(l=>textInput('extra:'+l,l,u.extra?.[l])).join('')}<button class="chip-x" type="button" data-remove-unit="${esc(r.id)}" aria-label="Remove assessment unit ${esc(r.id)}">×</button></div>${u.feedback?`<p class="unit-feedback">${esc(u.feedback)}</p>`:''}</article>`;
+ return `<article class="unit-card outcome-row" data-unit-id="${esc(r.id)}"><div class="unit-grid">${selectInput('framework','Question framework',u.framework,Object.keys(U.frameworks).map(f=>[f,f]))}${textInput('population','Population',u.population)}${textInput('intervention',u.framework==='PECO'?'Exposure':'Intervention',r.intervention)}${textInput('control','Comparator',r.control)}${textInput('outcome','Outcome',u.outcome)}${textInput('timepoint','Time point',u.timepoint)}${selectInput('type','Outcome type',u.type,[['','Outcome type'],['binary','Dichotomous (RR)'],['continuous','Continuous (MD)']])}${U.continuous(r)?textInput('scale','Outcome scale / unit',u.scale):''}${labels.filter(l=>!['Population','Intervention','Exposure','Comparator','Outcome'].includes(l)).map(l=>textInput('extra:'+l,l,u.extra?.[l])).join('')}<button class="chip-x" type="button" data-remove-unit="${esc(r.id)}" aria-label="Remove assessment unit ${esc(r.id)}">×</button></div><details class="unit-outcome-details"><summary>Outcome details</summary><div class="unit-grid">${selectInput('direction','Outcome direction',u.direction,[['','Outcome direction'],['higher','Higher is better'],['lower','Lower is better']])}${selectInput('design','Study design',u.design,[['','Study design'],['RCT','Randomized controlled trials'],['Other','Other design']])}</div></details>${u.feedback?`<p class="unit-feedback">${esc(u.feedback)}</p>`:''}</article>`;
  }).join('');
 }
 function renderParameterOptions(){
@@ -1076,7 +1076,7 @@ async function checkUnits(ids,signal){const records=ids.map(recById).filter(Bool
 
 function bindUnits(){
  const actions=document.querySelector('.source-actions');for(const id of ['from-extraction','import-btn','stop-source','clear-btn'])actions.insertBefore($(id),$('toggle-source'));
- document.querySelector('#toggle-list').before($('recompute-btn'));
+ $('recompute-btn').hidden=true;
  $('source-foot').hidden=true;
  $('parameter-options').addEventListener('change',updateUnit);
  $('unit-sources').addEventListener('change',updateUnit);$('unit-parameters').addEventListener('change',updateUnit);
