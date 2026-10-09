@@ -1665,11 +1665,11 @@
   content: ""; position: absolute; left: var(--ripple-x, 50%); top: var(--ripple-y, 50%);
   width: var(--ripple-size, 440px); height: var(--ripple-size, 440px);
   border-radius: 50%; opacity: 0; transform: translate(-50%, -50%) scale(.02);
-  background: radial-gradient(circle, transparent 58%, rgba(154,111,179,.035) 63%, rgba(154,111,179,.18) 68%, rgba(255,255,255,.65) 69%, transparent 72%);
+  background: radial-gradient(circle, transparent 64%, rgba(154,111,179,.04) 66%, rgba(154,111,179,.22) 68%, rgba(255,255,255,.75) 69%, transparent 70.5%);
 }
 @media (prefers-reduced-motion: no-preference) {
-  #toolset .tool.is-rippling .tool-ripple::before { animation: tool-water-ripple 1.4s cubic-bezier(.16,.55,.35,1) both; }
-  #toolset .tool.is-rippling .tool-ripple::after { animation: tool-water-ripple 1.4s cubic-bezier(.16,.55,.35,1) .18s both; }
+  #toolset .tool.is-rippling .tool-ripple::before { animation: tool-water-ripple 2.8s cubic-bezier(.22,.45,.35,1) both; }
+  #toolset .tool.is-rippling .tool-ripple::after { animation: tool-water-ripple 2.8s cubic-bezier(.22,.45,.35,1) .32s both; }
 }
 @keyframes tool-water-ripple {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(.02); }
@@ -3539,8 +3539,9 @@
           ripple.className = "tool-ripple";
           ripple.setAttribute("aria-hidden", "true");
           card.appendChild(ripple);
-          card.addEventListener("pointerenter", function (event) {
-            if (event.pointerType === "touch" || rippleMotion.matches) return;
+          function startRipple(event) {
+            if (rippleMotion.matches || (event.type === "pointerenter" && event.pointerType === "touch")) return;
+            if (event.type === "pointerdown" && event.button !== 0) return;
             var bounds = card.getBoundingClientRect();
             var x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
             var y = Math.max(0, Math.min(bounds.height, event.clientY - bounds.top));
@@ -3551,8 +3552,9 @@
             card.classList.remove("is-rippling");
             void ripple.offsetWidth;
             card.classList.add("is-rippling");
-          });
-          card.addEventListener("pointerleave", function () { card.classList.remove("is-rippling"); });
+          }
+          card.addEventListener("pointerenter", startRipple);
+          card.addEventListener("pointerdown", startRipple);
         });
         toolset.addEventListener("click", function (event) {
           var tool = event.target.closest("[data-tool-status]");
