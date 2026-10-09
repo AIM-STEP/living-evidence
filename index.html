@@ -1655,6 +1655,28 @@
   #toolset .tool:focus-visible .tool-icon { transform: perspective(240px) rotateX(7deg) rotateY(-9deg); }
   #toolset .icon-front { animation: none; }
 }
+
+/* Two soft water rings, clipped inside the card and below its content. */
+#toolset .tool { isolation: isolate; }
+#toolset .tool > .tool-title { position: relative; }
+#toolset .tool > :not(.tool-ripple) { z-index: 1; }
+#toolset .tool-ripple { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; z-index: 0; }
+#toolset .tool-ripple::before, #toolset .tool-ripple::after {
+  content: ""; position: absolute; left: var(--ripple-x, 50%); top: var(--ripple-y, 50%);
+  width: var(--ripple-size, 440px); height: var(--ripple-size, 440px);
+  border-radius: 50%; opacity: 0; transform: translate(-50%, -50%) scale(.02);
+  background: radial-gradient(circle, transparent 58%, rgba(154,111,179,.035) 63%, rgba(154,111,179,.18) 68%, rgba(255,255,255,.65) 69%, transparent 72%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  #toolset .tool.is-rippling .tool-ripple::before { animation: tool-water-ripple 1.4s cubic-bezier(.16,.55,.35,1) both; }
+  #toolset .tool.is-rippling .tool-ripple::after { animation: tool-water-ripple 1.4s cubic-bezier(.16,.55,.35,1) .18s both; }
+}
+@keyframes tool-water-ripple {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.02); }
+  12% { opacity: 1; }
+  65% { opacity: .65; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
 </style>
   </head>
   <body>
@@ -3511,6 +3533,27 @@
           }, 60);
         }
         window.addEventListener("load", function () { if (location.hash) revealSection(location.hash); });
+        var rippleMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        toolset.querySelectorAll(".tool").forEach(function (card) {
+          var ripple = document.createElement("span");
+          ripple.className = "tool-ripple";
+          ripple.setAttribute("aria-hidden", "true");
+          card.appendChild(ripple);
+          card.addEventListener("pointerenter", function (event) {
+            if (event.pointerType === "touch" || rippleMotion.matches) return;
+            var bounds = card.getBoundingClientRect();
+            var x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
+            var y = Math.max(0, Math.min(bounds.height, event.clientY - bounds.top));
+            var radius = Math.hypot(Math.max(x, bounds.width - x), Math.max(y, bounds.height - y));
+            card.style.setProperty("--ripple-x", x + "px");
+            card.style.setProperty("--ripple-y", y + "px");
+            card.style.setProperty("--ripple-size", (radius * 2.9) + "px");
+            card.classList.remove("is-rippling");
+            void ripple.offsetWidth;
+            card.classList.add("is-rippling");
+          });
+          card.addEventListener("pointerleave", function () { card.classList.remove("is-rippling"); });
+        });
         toolset.addEventListener("click", function (event) {
           var tool = event.target.closest("[data-tool-status]");
           if (!tool) return;
