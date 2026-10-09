@@ -11,8 +11,8 @@ function paragraph(text,kind){
  const runs=String(text??'').split(/\r\n|\r|\n/).map((line,i)=>'<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'+(heading?'<w:b/>':'')+'<w:sz w:val="'+(kind==='title'?32:22)+'"/></w:rPr>'+(i?'<w:br/>':'')+'<w:t xml:space="preserve">'+xmlEscape(line)+'</w:t></w:r>').join('');
  return '<w:p><w:pPr>'+(heading?'<w:keepNext/>':'')+'<w:spacing w:before="'+(kind==='item'?160:0)+'" w:after="80" w:line="264" w:lineRule="auto"/></w:pPr>'+runs+'</w:p>';
 }
-function create(section,items){
- const body=paragraph(section,'title')+paragraph('Items definition')+items.map(item=>paragraph(item.label,'item')+paragraph(item.definition)).join('');
+function create(section,items,subtitle='Items definition'){
+ const body=paragraph(section,'title')+paragraph(subtitle)+items.map(item=>paragraph(item.label,'item')+paragraph(item.definition)).join('');
  const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+body+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>';
  return makeStoredZip([
  {name:'[Content_Types].xml',content:'<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'},
