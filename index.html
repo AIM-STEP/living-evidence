@@ -1615,6 +1615,46 @@
 .login:focus-visible,.login-card .btn-google:focus-visible,.pw-sort-trigger:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .login:disabled,.login-card .btn-google:disabled,.pw-sort-trigger:disabled{opacity:.48;cursor:not-allowed}
 #toolset .tool.tool-wide{grid-column:1 / -1;aspect-ratio:auto;height:calc(172px / 3);min-height:calc(172px / 3);padding:8px 48px;flex-direction:row;justify-content:center;background:#faf5fa}#toolset .tool-wide .tool-step{top:50%;transform:translateY(-50%)}#toolset .tool-wide .tool-arrow{top:50%;transform:translateY(-50%)}
+
+/* Quiet dimensional icons: bevelled bases, raised vector faces and short hover motion. */
+#toolset .tool {
+  background: linear-gradient(145deg, #fff 0%, #fdfbfd 70%, #f7f3f9 100%);
+  border: 1px solid rgba(255,255,255,.95);
+  box-shadow: inset 0 1px 0 #fff, 0 2px 3px rgba(64,38,77,.035), 0 12px 28px rgba(64,38,77,.065);
+}
+#toolset .tool .tool-icon {
+  position: relative; width: 58px; height: 58px; flex-shrink: 0;
+  margin-bottom: 12px; border-radius: 16px;
+  background: linear-gradient(140deg, #fff 0%, #f0e8f6 48%, #dfd0eb 100%);
+  border: 1px solid #fdfaff;
+  box-shadow: inset 1px 1px 2px #fff, inset -1px -2px 3px rgba(121,83,149,.13), 0 3px 0 #d7c6e2, 0 8px 12px rgba(89,52,113,.12);
+  transform: perspective(240px) rotateX(7deg) rotateY(-9deg);
+  transition: transform .3s ease, box-shadow .3s ease;
+}
+#toolset .tool .tool-icon svg {
+  width: 35px; height: 35px; stroke: #76528a; stroke-width: 1.8;
+  filter: drop-shadow(0 2px 1px rgba(89,52,113,.1));
+}
+#toolset .icon-depth { opacity: .25; }
+#toolset .icon-depth * { stroke: #89679d; fill: none; }
+#toolset .icon-front .icon-face { fill: #fcf9ff; }
+#toolset .icon-front .accent { stroke: #844f9a; }
+#toolset .tool.tool-wide { background: linear-gradient(120deg, #fcf9fd, #f4edf8); gap: 12px; }
+#toolset .tool.tool-wide .tool-icon { width: 34px; height: 34px; border-radius: 10px; margin: 0; }
+#toolset .tool.tool-wide .tool-icon svg { width: 25px; height: 25px; }
+#toolset .tool:focus-visible .tool-icon { transform: perspective(240px) rotateX(0) rotateY(0) translateY(-3px); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  #toolset .tool:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 #fff, 0 5px 10px rgba(64,38,77,.035), 0 18px 32px rgba(64,38,77,.1); }
+  #toolset .tool:hover .tool-icon { transform: perspective(240px) rotateX(0) rotateY(0) translateY(-3px); }
+  #toolset .tool:hover .icon-front { animation: tool-icon-settle .5s ease both; transform-origin: 24px 24px; }
+}
+@keyframes tool-icon-settle { 0% { transform: translateY(0); } 45% { transform: translateY(-2px); } 100% { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  #toolset .tool, #toolset .tool .tool-icon { transition: none; }
+  #toolset .tool:hover { transform: none; }
+  #toolset .tool:focus-visible .tool-icon { transform: perspective(240px) rotateX(7deg) rotateY(-9deg); }
+  #toolset .icon-front { animation: none; }
+}
 </style>
   </head>
   <body>
@@ -1977,64 +2017,64 @@
         <div class="container">
 
           <div class="tool-grid">
-<a class="tool tool-wide" href="build-protocol.html" data-tool="protocol"><span class="tool-step" aria-label="Step 0">0</span><span class="tool-title">Build a protocol</span><span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+<a class="tool tool-wide" href="build-protocol.html" data-tool="protocol"><span class="tool-step" aria-label="Step 0">0</span><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><rect x="10" y="7" width="27" height="34" rx="4"/><path d="M17 16h13M17 22h8M17 28h13"/><path class="accent" d="M28 33l3 3 7-8"/></g><g class="icon-front"><rect class="icon-face" x="10" y="7" width="27" height="34" rx="4"/><path d="M17 16h13M17 22h8M17 28h13"/><path class="accent" d="M28 33l3 3 7-8"/></g></svg></span><span class="tool-title">Build a protocol</span><span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
             <a class="tool" href="eligibility.html" data-tool="criteria">
               <span class="tool-step" aria-label="Step 1">1</span>
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 6h18a2 2 0 0 1 2 2v30a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M18 4h6v4h-6z"/><path d="M22 20h10M22 28h10"/><path class="accent" d="M14 20l2 2 3-4M14 28l2 2 3-4"/></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><path d="M12 6h18a2 2 0 0 1 2 2v30a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M18 4h6v4h-6z"/><path d="M22 20h10M22 28h10"/><path class="accent" d="M14 20l2 2 3-4M14 28l2 2 3-4"/></g><g class="icon-front"><path class="icon-face" d="M12 6h18a2 2 0 0 1 2 2v30a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M18 4h6v4h-6z"/><path d="M22 20h10M22 28h10"/><path class="accent" d="M14 20l2 2 3-4M14 28l2 2 3-4"/></g></svg></span>
               <span class="tool-title" data-i18n="t1_t">Eligibility criteria</span>
 
             </a>
             <a class="tool" href="search-strategy.html" data-tool="search">
               <span class="tool-step" aria-label="Step 2">2</span>
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="20" cy="20" r="11"/><path d="M28.5 28.5L40 40"/><path class="accent" d="M17 20h6M20 17v6"/><path class="accent" d="M36 8v4M34 10h4"/></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><circle cx="20" cy="20" r="11"/><path d="M28.5 28.5L40 40"/><path class="accent" d="M17 20h6M20 17v6"/><path class="accent" d="M36 8v4M34 10h4"/></g><g class="icon-front"><circle class="icon-face" cx="20" cy="20" r="11"/><path d="M28.5 28.5L40 40"/><path class="accent" d="M17 20h6M20 17v6"/><path class="accent" d="M36 8v4M34 10h4"/></g></svg></span>
               <span class="tool-title" data-i18n="t2_t">Search strategy</span>
 
             </a>
             <a class="tool" href="title-abstract-screening.html" data-tool="screen">
               <span class="tool-step" aria-label="Step 3">3</span>
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="8" y="8" width="32" height="8" rx="2"/><rect x="8" y="20" width="32" height="8" rx="2"/><rect x="8" y="32" width="32" height="8" rx="2"/><path class="accent" d="M12 24l2 2 4-4"/><path class="accent" d="M13 34l4 4M17 34l-4 4"/></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><rect x="8" y="8" width="32" height="8" rx="2"/><rect x="8" y="20" width="32" height="8" rx="2"/><rect x="8" y="32" width="32" height="8" rx="2"/><path class="accent" d="M12 24l2 2 4-4"/><path class="accent" d="M13 34l4 4M17 34l-4 4"/></g><g class="icon-front"><rect class="icon-face" x="8" y="8" width="32" height="8" rx="2"/><rect x="8" y="20" width="32" height="8" rx="2"/><rect x="8" y="32" width="32" height="8" rx="2"/><path class="accent" d="M12 24l2 2 4-4"/><path class="accent" d="M13 34l4 4M17 34l-4 4"/></g></svg></span>
               <span class="tool-title" data-i18n="t3_t">Title and abstract screening</span>
 
             </a>
             <a class="tool" href="full-text-screening.html" data-tool="fulltext">
               <span class="tool-step" aria-label="Step 4">4</span>
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 6h13l9 9v25a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M27 6v9h9"/><path d="M17 22h14M17 28h14M17 34h8"/><path class="accent" d="M30 36l3 3 6-7"/></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><path d="M14 6h13l9 9v25a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M27 6v9h9"/><path d="M17 22h14M17 28h14M17 34h8"/><path class="accent" d="M30 36l3 3 6-7"/></g><g class="icon-front"><path class="icon-face" d="M14 6h13l9 9v25a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M27 6v9h9"/><path d="M17 22h14M17 28h14M17 34h8"/><path class="accent" d="M30 36l3 3 6-7"/></g></svg></span>
               <span class="tool-title" data-i18n="t4_t">Full-text assess</span>
 
             </a>
             <a class="tool" href="extraction.html" data-tool="extract">
               <span class="tool-step" aria-label="Step 5">5</span>
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="6" y="8" width="28" height="26" rx="2"/><path d="M6 16h28M6 24h28M15 16v18M25 16v18"/><path class="accent" d="M34 30h8M38 26l4 4-4 4"/></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><rect x="6" y="8" width="28" height="26" rx="2"/><path d="M6 16h28M6 24h28M15 16v18M25 16v18"/><path class="accent" d="M34 30h8M38 26l4 4-4 4"/></g><g class="icon-front"><rect class="icon-face" x="6" y="8" width="28" height="26" rx="2"/><path d="M6 16h28M6 24h28M15 16v18M25 16v18"/><path class="accent" d="M34 30h8M38 26l4 4-4 4"/></g></svg></span>
               <span class="tool-title" data-i18n="t5_t">Extraction</span>
 
             </a>
             <a class="tool" href="risk-of-bias.html" data-tool="rob">
               <span class="tool-step" aria-label="Step 6">6</span>
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 5l14 5v11c0 9-6 15-14 19-8-4-14-10-14-19V10z"/><path class="accent" d="M24 16v9"/><circle class="accent-fill" cx="24" cy="30" r="1.8"/></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><path d="M24 5l14 5v11c0 9-6 15-14 19-8-4-14-10-14-19V10z"/><path class="accent" d="M24 16v9"/><circle class="accent-fill" cx="24" cy="30" r="1.8"/></g><g class="icon-front"><path class="icon-face" d="M24 5l14 5v11c0 9-6 15-14 19-8-4-14-10-14-19V10z"/><path class="accent" d="M24 16v9"/><circle class="accent-fill" cx="24" cy="30" r="1.8"/></g></svg></span>
               <span class="tool-title" data-i18n="t6_t">Risk of bias assessment</span>
 
             </a>
             <a class="tool" href="analysis.html" data-tool="nma">
               <span class="tool-step" aria-label="Step 7">7</span>
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="12" cy="14" r="4"/><circle cx="36" cy="12" r="4"/><circle cx="24" cy="36" r="4"/><circle class="accent" cx="30" cy="24" r="4"/><path d="M15.5 16l11.2 5.5M32.8 15.4l-1.6 4.9M26 33l2.5-5.5M15 17l8 15"/></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><circle cx="12" cy="14" r="4"/><circle cx="36" cy="12" r="4"/><circle cx="24" cy="36" r="4"/><circle class="accent" cx="30" cy="24" r="4"/><path d="M15.5 16l11.2 5.5M32.8 15.4l-1.6 4.9M26 33l2.5-5.5M15 17l8 15"/></g><g class="icon-front"><circle class="icon-face" cx="12" cy="14" r="4"/><circle cx="36" cy="12" r="4"/><circle cx="24" cy="36" r="4"/><circle class="accent" cx="30" cy="24" r="4"/><path d="M15.5 16l11.2 5.5M32.8 15.4l-1.6 4.9M26 33l2.5-5.5M15 17l8 15"/></g></svg></span>
               <span class="tool-title" data-i18n="t7_t">Analysis</span>
 
             </a>
             <a class="tool" href="certainty-of-evidence.html" data-tool="grade">
               <span class="tool-step" aria-label="Step 8">8</span>
               <span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg></span>
-              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="24" cy="19" r="11"/><path d="M17 28l-4 14 11-5 11 5-4-14"/><path class="accent" d="M24 12l2.2 4.5 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z"/></svg></span>
+              <span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><circle cx="24" cy="19" r="11"/><path d="M17 28l-4 14 11-5 11 5-4-14"/><path class="accent" d="M24 12l2.2 4.5 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z"/></g><g class="icon-front"><circle class="icon-face" cx="24" cy="19" r="11"/><path d="M17 28l-4 14 11-5 11 5-4-14"/><path class="accent" d="M24 12l2.2 4.5 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z"/></g></svg></span>
               <span class="tool-title" data-i18n="t8_t">Certainty of evidence</span>
 
             </a>
-<a class="tool tool-wide" href="drafting-manuscript.html" data-tool="manuscript"><span class="tool-step" aria-label="Step 9">9</span><span class="tool-title">Drafting the manuscript</span><span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
+<a class="tool tool-wide" href="drafting-manuscript.html" data-tool="manuscript"><span class="tool-step" aria-label="Step 9">9</span><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-depth" transform="translate(1.2 2.4)"><path d="M12 7h19l6 6v28H12z"/><path d="M29 7v8h8M18 22h10M18 28h7"/><path class="accent" d="M27 34l3-8 10-10 4 4-10 10zM30 26l4 4"/></g><g class="icon-front"><path class="icon-face" d="M12 7h19l6 6v28H12z"/><path d="M29 7v8h8M18 22h10M18 28h7"/><path class="accent" d="M27 34l3-8 10-10 4 4-10 10zM30 26l4 4"/></g></svg></span><span class="tool-title">Drafting the manuscript</span><span class="tool-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span></a>
           </div>
         </div>
       </section>
