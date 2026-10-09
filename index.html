@@ -1614,7 +1614,7 @@
 .login:hover:not(:disabled),.login-card .btn-google:hover:not(:disabled),.pw-sort-trigger:hover:not(:disabled){border-color:#d4cdd4;background:#f5f2f5;color:var(--plum)}
 .login:focus-visible,.login-card .btn-google:focus-visible,.pw-sort-trigger:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .login:disabled,.login-card .btn-google:disabled,.pw-sort-trigger:disabled{opacity:.48;cursor:not-allowed}
-#toolset .tool.tool-wide{grid-column:1 / -1;aspect-ratio:auto;height:calc(172px / 3);min-height:calc(172px / 3);padding:8px 48px;flex-direction:row;justify-content:center;background:#faf5fa}#toolset .tool-wide .tool-step{top:50%;transform:translateY(-50%)}#toolset .tool-wide .tool-arrow{top:50%;transform:translateY(-50%)}
+#toolset .tool.tool-wide{grid-column:1 / -1;aspect-ratio:auto;height:calc(172px / 3);min-height:calc(172px / 3);padding:8px 20px;flex-direction:row;justify-content:flex-start;background:#faf5fa}#toolset .tool-wide .tool-step{top:50%;transform:translateY(-50%)}#toolset .tool-wide .tool-arrow{top:50%;transform:translateY(-50%)}
 
 /* Quiet dimensional icons: bevelled bases, raised vector faces and short hover motion. */
 #toolset .tool {
@@ -1640,6 +1640,7 @@
 #toolset .icon-front .icon-face { fill: #fcf9ff; }
 #toolset .icon-front .accent { stroke: #844f9a; }
 #toolset .tool.tool-wide { background: linear-gradient(120deg, #fcf9fd, #f4edf8); gap: 12px; }
+#toolset .tool.tool-wide .tool-title { text-align: left; }
 #toolset .tool.tool-wide .tool-icon { width: 34px; height: 34px; border-radius: 10px; margin: 0; }
 #toolset .tool.tool-wide .tool-icon svg { width: 25px; height: 25px; }
 #toolset .tool:focus-visible .tool-icon { transform: perspective(240px) rotateX(0) rotateY(0) translateY(-3px); }
