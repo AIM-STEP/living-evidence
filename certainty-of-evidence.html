@@ -200,6 +200,7 @@ th{background:#f4f4f4}
 .method-settings{border-bottom:1px solid #eee8f3;margin-bottom:14px}.method-settings .panel-head{padding:0 0 10px}.method-settings .panel-head h2{font-size:15px}.method-settings .panel-body{padding:0 0 12px}
 .unit-card{padding:12px 0;border-bottom:1px solid #eee8f3}.unit-card h3{margin:0 0 8px;font-size:14px}.unit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 14px}.unit-grid .label{margin:0}.unit-grid textarea{min-height:58px}.unit-feedback{color:#765299;font-size:12px;margin:8px 0}.unit-card .toolbar{justify-content:space-between}.source-metadata{margin:8px 0 12px}.source-metadata summary{color:#765299;cursor:pointer}.sof-group{margin:0 0 24px}.sof-group h3{margin:8px 0;font-size:15px}.sof-group table{min-width:1040px}.sof-group th,.sof-group td{white-space:normal;min-width:110px;vertical-align:top}.unit-parameters{padding:12px;background:#fcfaff;border-radius:10px;margin:12px 0}.btn.small,.select.compact{min-height:32px;height:32px;width:auto}.source-metadata .kind-switch{display:inline-flex;margin:8px 0}.source-foot{justify-content:flex-start;gap:8px}#ed-br{max-width:260px}#sof-format{max-width:230px}.source-actions{flex-wrap:wrap}
 @media(max-width:760px){.unit-grid{grid-template-columns:1fr}.panel-head{flex-wrap:wrap}}
+.outcome-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 8px}.outcome-row .input.compact{width:150px;min-height:32px;padding:4px 8px;font-size:12px}.outcome-row .select.compact{max-width:110px}.unit-card{padding:0;border:0}.unit-card .unit-grid{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.unit-card .label{font-size:0}.unit-card .input,.unit-card .select{width:150px;min-height:32px;height:32px;padding:4px 8px;font-size:12px}.unit-card .select{width:100px}.unit-card .unit-feedback{flex-basis:100%;margin:0}.chip-x{border:0;background:none;color:#765299;font-size:18px;cursor:pointer}.source-actions svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6}.unit-card .label:focus-within{font-size:11px}#unit-parameters .unit-grid .label{font-size:12px}
 </style>
 </head>
 <body>
@@ -220,7 +221,7 @@ th{background:#f4f4f4}
 <div class="notice warning" id="synthetic-banner" hidden><b>SYNTHETIC EXAMPLE.</b> All values are invented to show how the tool works. Kept apart from real data and never to be used for a real rating.</div>
 <div class="source-summary" id="src-stats" hidden></div>
 <div class="notice" id="src-notice" hidden></div>
-<details class="source-metadata"><summary>Dataset notes</summary><div class="kind-switch" role="group" aria-label="Dataset"><button type="button" class="kind-btn" data-kind="real" aria-pressed="true">Real data</button><button type="button" class="kind-btn" data-kind="synthetic" aria-pressed="false">Synthetic example</button></div><div class="two meta-grid">
+<details class="source-metadata" hidden><summary>Dataset notes</summary><div class="kind-switch" role="group" aria-label="Dataset"><button type="button" class="kind-btn" data-kind="real" aria-pressed="true">Real data</button><button type="button" class="kind-btn" data-kind="synthetic" aria-pressed="false">Synthetic example</button></div><div class="two meta-grid">
 <label class="label">Dataset ID<input class="input" id="meta-id" autocomplete="off" placeholder="e.g. ACR20-NMA-2026-10"></label>
 <label class="label">Outcome and time point<input class="input" id="meta-outcome" autocomplete="off" placeholder="e.g. ACR20 at 12–24 weeks"></label>
 </div>
@@ -229,9 +230,9 @@ th{background:#f4f4f4}
 <div class="two meta-grid" id="baseline-row" hidden>
 <label class="label">Baseline risk per 1000 (D-004)<input class="input" id="meta-br" inputmode="decimal" autocomplete="off" placeholder="0–1000"></label>
 <label class="label">Where the baseline risk comes from<input class="input" id="meta-br-source" autocomplete="off" placeholder="e.g. median placebo-arm ACR20 risk across included RCTs"></label>
-</div></details><div id="unit-sources"></div>
+</div></details><div id="unit-add-row" class="outcome-row"><select class="select compact" id="add-framework" aria-label="Question framework"><option>PICO</option><option>PECO</option><option>PCC</option><option>PICo</option><option>Other</option></select><input class="input compact" id="add-population" placeholder="Population" aria-label="Population"><input class="input compact" id="add-int" placeholder="Intervention / exposure" aria-label="Intervention / exposure"><input class="input compact" id="add-ctl" placeholder="Comparator" aria-label="Comparator"><input class="input compact" id="add-outcome" placeholder="Outcome" aria-label="Outcome"><input class="input compact" id="add-timepoint" placeholder="Time point" aria-label="Time point"><button class="btn small" id="add-btn" type="button">Add</button></div><div id="unit-sources"></div>
 </div>
-<div class="panel-footer toolbar source-foot" id="source-foot"><button class="btn small" type="button" id="from-extraction">From Extraction</button><button class="btn small" type="button" id="stop-source" hidden>Stop</button><button class="btn small" type="button" id="import-btn">Import from local</button><input type="file" id="import-input" accept=".csv,.tsv,.xlsx,.json,.docx,.txt,.md,.pdf" hidden aria-label="Import comparisons"><button hidden class="btn small" type="button" id="template-btn">Download blank template</button><button class="btn small" type="button" id="add-btn">Add unit</button><button class="btn small" type="button" id="synth-btn" hidden>Load synthetic example</button><button class="btn small" type="button" id="recompute-btn">Recompute all</button><button class="btn small" type="button" id="clear-btn">Clear</button>
+<div class="panel-footer toolbar source-foot" id="source-foot"><button class="btn small" type="button" id="from-extraction">From Extraction</button><button class="btn small" type="button" id="stop-source" hidden>Stop</button><button class="btn small" type="button" id="import-btn">Import from local</button><input type="file" id="import-input" accept=".csv,.tsv,.xlsx,.json,.docx,.txt,.md,.pdf" multiple hidden aria-label="Import assessment units"><button hidden class="btn small" type="button" id="template-btn">Download blank template</button><button class="btn small" type="button" id="synth-btn" hidden>Load synthetic example</button><button class="btn small" type="button" id="recompute-btn">Recompute all</button><button class="btn small" type="button" id="clear-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button>
 <span class="export-results" hidden><label class="label" for="export-format">Export</label><select class="select compact" id="export-format"><option value="csv">68-field CSV (template format)</option><option value="json">JSON dataset, rules and audit trail</option><option value="sof">Summary of findings (CSV)</option></select><button class="btn small primary" type="button" id="export-btn">Export</button></span></div>
 </section>
 
@@ -289,11 +290,7 @@ th{background:#f4f4f4}
 </div>
 </div>
 </main>
-<dialog id="add-dialog" class="dialog small-dialog" aria-labelledby="add-title">
-<form method="dialog"><div class="panel-head"><h2 id="add-title">Add assessment unit</h2></div>
-<div class="panel-body"><p class="hint">Keep the direction the same as in the analysis: the effect is intervention versus control.</p><label class="label">#2 Intervention<input class="input" id="add-int" required autocomplete="off"></label><label class="label">#3 Control<input class="input" id="add-ctl" required autocomplete="off"></label></div>
-<div class="panel-footer toolbar crit-actions"><button class="btn small" value="cancel" type="submit" formnovalidate>Cancel</button><button class="btn small primary" value="add" type="submit" id="add-ok">Add</button></div></form>
-</dialog>
+
 <datalist id="null-cats"><option value="Above the null (RR > 1)"><option value="Below the null (RR < 1)"><option value="At the null (RR = 1)"></datalist>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app/online-model.js?v=online-auth-v2"></script>
@@ -302,6 +299,6 @@ th{background:#f4f4f4}
 <script src="app/extraction-sources.js?v=1"></script>
 <script src="app/analysis-ai.js?v=1"></script>
 <script src="app/coe-units.js?v=1"></script>
-<script src="app/coe-workspace.js?v=1"></script>
+<script src="app/coe-workspace.js?v=2"></script>
 </body>
 </html>

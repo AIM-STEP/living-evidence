@@ -46,3 +46,9 @@ External sources support SoF presentation and outcome-specific absolute units; t
 Run `node tests/coe-units.test.js`, `node --check app/coe-workspace.js`, `node --check app/coe-units.js`, and `python3 ../scripts/check_inline_scripts.py --repo .`.
 
 Synthetic tests cover MID boundaries, benefit direction, missing MID/baseline, impossible binary conversion, continuous MD isolation, stale derived-rating invalidation, original 68-field preservation, four-stage export and direct-only completion without a fabricated NMA estimate. Relevant unresolved source-selection rules still block before explicit reviewer approval. Browser QA uses isolated synthetic projects; no real clinical assessment is produced.
+
+## Assessment source interaction alignment (2026-10-09)
+
+Matches Risk of bias / Outcome and time point intake: From Extraction and Import from local in the header; Stop only while processing; Clear with confirmation; manual inline framework/component fields followed by Add (Enter also adds). No Add dialog or automatic jump to Parameter Settings. Added units appear immediately as compact editable rows with × removal. Duplicate identities are ignored, and manual inputs are cleared after adding. Dataset notes and counts are retained internally rather than displayed in this intake area.
+
+Local import accepts multiple files. Recognized tables are appended before the AI check; unstructured material uses model identification first. Every imported batch and From Extraction batch receives a separate AI check with editable feedback. Stopping or a model failure preserves already imported units. Original source text and check responses remain in project storage/export. Manual Add does not call AI, matching the reference tool.
