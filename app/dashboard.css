@@ -35,10 +35,10 @@ button, input, select, textarea { font-family: inherit; }
 }
 .header-brand { gap: 24px; flex-wrap: wrap; }
 .header-brand .brand { flex: 0 1 auto; min-width: 0; max-width: 100%; }
-.brand { gap: 10px; }
-.brand svg.brand-mark { height: 40px !important; }
-.brand-main { font-family: var(--dashboard-font); font-size: 24px; letter-spacing: -.025em; font-weight: 700; }
-.brand-sub { font-size: 11px; line-height: 1.4; margin-top: 5px; letter-spacing: .015em; color: var(--dashboard-muted); }
+.brand { gap: 0; }
+.brand .brand-main { font-family: var(--dashboard-font); font-size: 26px; }
+.brand .brand-product { font-size: 18px; }
+.brand .brand-sub { font-size: 13px; color: var(--dashboard-muted); }
 .header-project-link {
   max-width: 44ch; padding: 8px 12px;
   background: var(--brand-soft); color: var(--brand-text);
