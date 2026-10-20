@@ -73,10 +73,10 @@
     next.title = index < steps.length - 1 ? (chinese ? '下一步：' : 'Next: ') + steps[index + 1][titleIndex] : home.textContent;
     label.textContent = chinese ? '选择研究步骤' : 'Choose a research step';
     position.textContent = (index + 1) + ' / ' + steps.length;
-    picker.replaceChildren(...steps.map((step, n) => {
+    picker.replaceChildren(...steps.map(step => {
       const option = document.createElement('option');
       option.value = step[0];
-      option.textContent = (n + 1) + '. ' + step[titleIndex];
+      option.textContent = step[titleIndex];
       return option;
     }));
     picker.value = steps[index][0];
