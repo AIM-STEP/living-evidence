@@ -215,21 +215,25 @@ th{background:#f4f4f4}
 
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261020-5">
+
+<link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
+<script defer src="app/tool-i18n-catalog.js?v=20261020-1"></script>
+<script defer src="app/tool-i18n.js?v=20261020-1"></script>
 </head>
 <body>
 <header class="header">
 <a class="brand" data-home href="index.html"><span class="brand-text"><span class="brand-name-line"><span class="brand-main">ACHIEVE</span><span class="brand-product">EvidenceBank</span></span><span class="brand-sub">@An AI-Enabled, Traceable, Graded, Living Bank of Evidence</span></span></a>
-<nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a class="active" data-toolset href="index.html?view=toolset">Toolset</a></nav>
+<nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project" data-ui-localize>Workflow</a><a class="active" data-toolset href="index.html?view=toolset" data-ui-localize>Toolset</a></nav>
 <a class="project-pill" id="project-name" hidden></a>
 </header>
 <main class="wrap">
-<div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Risk of bias assessment</div>
-<div class="heading tool-navigation"><a class="step-btn back" data-prev href="extraction.html"><span aria-hidden="true">←</span> Back: Extraction</a><a class="step-btn next" data-next href="analysis.html">Next: Analysis <span aria-hidden="true">→</span></a></div>
+<div class="crumb" data-ui-localize><a data-toolset href="index.html?view=toolset" data-ui-localize>Toolset</a> / Risk of bias assessment</div>
+<div class="heading tool-navigation"><a class="step-btn back" data-prev href="extraction.html" data-ui-localize><span aria-hidden="true">←</span> Back: Extraction</a><a class="step-btn next" data-next href="analysis.html" data-ui-localize>Next: Analysis <span aria-hidden="true">→</span></a></div>
 <div class="layout">
 <div class="stack">
 
 <section class="panel">
-<div class="panel-head"><h2>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft">Import from local</button><input type="file" id="import-pdfs" accept=".pdf,application/pdf" multiple hidden><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Included studies</span></button></div></div>
+<div class="panel-head"><h2 data-ui-localize>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft" data-ui-localize>Import from local</button><input type="file" id="import-pdfs" accept=".pdf,application/pdf" multiple hidden><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Included studies</span></button></div></div>
 <div class="panel-body" id="source-body">
 <div class="source-record-list" id="study-table" role="list" aria-label="Included studies"></div>
 
@@ -240,10 +244,10 @@ th{background:#f4f4f4}
 </div>
 </section>
 
-<section class="panel" id="outcome-setup"><div class="panel-head"><h2>Outcome and time point</h2><div class="toolbar"><button class="btn small" type="button" id="outcomes-from-extraction">From Extraction</button><button class="btn small" type="button" id="outcomes-from-local">Import from local</button><button class="btn small" type="button" id="stop-outcomes" hidden>Stop</button><button class="btn small" type="button" id="clear-outcomes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-outcome-setup" aria-expanded="true" aria-controls="outcome-setup-body" title="Collapse Outcome and time point"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Outcome and time point</span></button></div></div><div class="panel-body" id="outcome-setup-body"><input type="file" id="outcomes-files" accept=".xlsx,.csv,.tsv,.json,.docx,.txt,.md,.pdf" multiple hidden><p class="hint" id="outcome-intake-status" role="status" hidden></p><div class="outcome-row"><input class="input compact" id="outcome-input" aria-label="Outcome" placeholder="Outcome, e.g. ACR20" autocomplete="off"><input class="input compact" id="timepoint-input" aria-label="Time point" placeholder="Time point, e.g. 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome">Add</button></div>
+<section class="panel" id="outcome-setup"><div class="panel-head"><h2 data-ui-localize>Outcome and time point</h2><div class="toolbar"><button class="btn small" type="button" id="outcomes-from-extraction" data-ui-localize>From Extraction</button><button class="btn small" type="button" id="outcomes-from-local" data-ui-localize>Import from local</button><button class="btn small" type="button" id="stop-outcomes" hidden data-ui-localize>Stop</button><button class="btn small" type="button" id="clear-outcomes" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-outcome-setup" aria-expanded="true" aria-controls="outcome-setup-body" title="Collapse Outcome and time point"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Outcome and time point</span></button></div></div><div class="panel-body" id="outcome-setup-body"><input type="file" id="outcomes-files" accept=".xlsx,.csv,.tsv,.json,.docx,.txt,.md,.pdf" multiple hidden><p class="hint" id="outcome-intake-status" role="status" hidden></p><div class="outcome-row"><input class="input compact" id="outcome-input" aria-label="Outcome" placeholder="Outcome, e.g. ACR20" autocomplete="off"><input class="input compact" id="timepoint-input" aria-label="Time point" placeholder="Time point, e.g. 12 weeks" autocomplete="off"><button class="btn small" type="button" id="add-outcome" data-ui-localize>Add</button></div>
 <div id="outcomes"></div></div></section>
 
-<section class="panel" id="assessment-setup"><div class="panel-head"><h2>Assessment tools</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai">Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden>Stop</button><label class="label" for="reviewer-name">Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
+<section class="panel" id="assessment-setup"><div class="panel-head"><h2 data-ui-localize>Assessment tools</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-tools" aria-expanded="true" aria-controls="tools-body" title="Collapse Assessment tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Assessment tools</span></button></div></div><div class="panel-body" id="tools-body"><div class="tool-choice" id="tool-choice"></div><div class="toolbar ai-row" hidden><button class="btn small primary" type="button" id="start-ai" data-ui-localize>Start AI pre-fill</button><button class="btn small" type="button" id="stop-ai" hidden data-ui-localize>Stop</button><label class="label" for="reviewer-name" data-ui-localize>Reviewer</label><input class="input compact" id="reviewer-name" autocomplete="name" placeholder="Your name"></div>
 <div class="team-track full-track" id="ai-progress" hidden><span style="width:0%"></span></div><div class="hint" id="ai-now"></div>
 
 </div></section>
@@ -252,14 +256,14 @@ th{background:#f4f4f4}
 <section class="panel" id="assess" hidden>
 <div class="panel-head"><div><h2 id="assess-title"></h2><p class="hint assess-sub" id="assess-sub"></p></div></div>
 <div class="panel-body">
-<p class="hint legend-ans">Y yes · PY probably yes · PN probably no · N no · NI no information. Questions whose condition is not met are NA. Domain judgements follow the tool's algorithm where it has one; you can change a judgement with a reason.</p>
+<p class="hint legend-ans" data-ui-localize>Y yes · PY probably yes · PN probably no · N no · NI no information. Questions whose condition is not met are NA. Domain judgements follow the tool's algorithm where it has one; you can change a judgement with a reason.</p>
 <div id="domains"></div>
 <div class="overall" id="overall"></div>
 <div class="toolbar assess-step" id="assess-step"></div>
 </div>
 </section>
 
-<details class="references" hidden data-developer-references><summary>Method and research references</summary><ul>
+<details class="references" hidden data-developer-references><summary data-ui-localize>Method and research references</summary><ul>
 <li>Sterne JAC, et al. RoB 2: a revised tool for assessing risk of bias in randomised trials. BMJ 2019;366:l4898. Cluster and crossover variants, 18 March 2021 (riskofbias.info).</li>
 <li>ROBINS-I V2, draft of 20 November 2025 (riskofbias.info); Sterne JAC, et al. BMJ 2016;355:i4919.</li>
 <li>Higgins JPT, et al. ROBINS-E. Environ Int 2024;186:108602.</li>
@@ -267,17 +271,17 @@ th{background:#f4f4f4}
 <li>Moons KGM, et al. PROBAST+AI. BMJ 2025;388:e082505. Whiting P, et al. ROBIS. J Clin Epidemiol 2016;69:225-34.</li>
 <li>Cochrane Handbook v6.5, chapters 7, 8 and 25 (result-level assessment; two independent assessments; justification with supporting quotations).</li>
 <li>Flemyng E, et al. Position statement on AI use in evidence synthesis (Cochrane, Campbell, JBI, CEE), 2025: human oversight, transparent reporting of AI that suggests judgements.</li>
-<li>LLM accuracy on RoB 2 is moderate (κ 0.06–0.40): Nyrhi 2026 EBioMedicine; Gandhi 2026 PLoS One; Nagao 2026 Am J Perinatol; Huang 2025 JMIR. AI drafts require human checking and documented corrections.</li>
+<li data-ui-localize>LLM accuracy on RoB 2 is moderate (κ 0.06–0.40): Nyrhi 2026 EBioMedicine; Gandhi 2026 PLoS One; Nagao 2026 Am J Perinatol; Huang 2025 JMIR. AI drafts require human checking and documented corrections.</li>
 <li>McGuinness LA, Higgins JPT. robvis. Res Synth Methods 2021;12:55-61 (traffic-light and summary plots).</li>
 </ul></details>
 </div>
 </div>
 </main>
-<dialog id="reader" class="dialog reader-dialog" aria-labelledby="reader-title"><div class="panel-head"><h2 id="reader-title">Full text</h2><button class="btn small" type="button" id="close-reader">Close</button></div><div class="panel-body reader-body" id="reader-body"></div><iframe id="reader-pdf-frame" title="Original PDF" hidden></iframe></dialog>
+<dialog id="reader" class="dialog reader-dialog" aria-labelledby="reader-title"><div class="panel-head"><h2 id="reader-title" data-ui-localize>Full text</h2><button class="btn small" type="button" id="close-reader" data-ui-localize>Close</button></div><div class="panel-body reader-body" id="reader-body"></div><iframe id="reader-pdf-frame" title="Original PDF" hidden></iframe></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app/extraction-sources.js?v=1"></script>
 <script src="app/extraction-results.js?v=1"></script>
-<script src="app/rob-workflow.js?v=3"></script>
+<script src="app/rob-workflow.js?v=20261020-i18n"></script>
 <script src="app/extraction-form-import.js?v=4"></script>
 <script src="app/rob-outcome-sources.js?v=1"></script>
 <script>
@@ -877,8 +881,8 @@ function sourceRecordCard(r,index){
   const label=filename||'Saved PDF';
   const fileLink='<button class="source-file-link" type="button" data-original-pdf="'+esc(r.uid)+'" aria-haspopup="dialog" aria-controls="reader">'+esc(label)+'</button>';
   const file=has?'<div class="source-file-row">'+fileLink+''+'</div><p class="source-file-origin">'+esc(d?.source==='Uploaded locally'?'Full text uploaded locally':d?.source?'Full text retrieved from '+d.source:'Full text saved in this browser')+'</p>':'<p class="hint">'+(!!r.fullText&&!docCache.has(r.uid)?'Loading saved file…':'No PDF saved yet.')+'</p>';
-  const full=file+(r.fullText?.readable===false?'<p class="hint">No readable text detected. The original PDF is available for manual extraction.</p>':'');
-  return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-heading"><div class="source-record-top"><div class="source-record-number">'+esc(headingMeta)+'</div>'+actions+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3></div><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+doiLink(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full)+disclosurePanel('abstract','Abstract',(r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint">No abstract is available for this report.</p>')+'<div class="source-abstract-fulltext">'+full+'</div>')+'</article>';
+  const full=file+(r.fullText?.readable===false?'<p class="hint" data-ui-localize>No readable text detected. The original PDF is available for manual extraction.</p>':'');
+  return '<article class="source-record" role="listitem" aria-labelledby="source-record-title-'+index+'"><div class="source-record-heading"><div class="source-record-top"><div class="source-record-number">'+esc(headingMeta)+'</div>'+actions+'</div><h3 id="source-record-title-'+index+'" class="source-record-title">'+esc(r.title||'(Untitled report)')+'</h3></div><div class="source-record-meta"><p>'+esc(authors||'[Unknown authors]')+'</p>'+(bibliography?'<p>'+esc(bibliography)+'</p>':'')+(r.doi?'<p class="source-record-id">DOI: '+doiLink(r.doi)+'</p>':r.pmid?'<p class="source-record-id">PMID: '+esc(r.pmid)+'</p>':'')+'</div><div class="source-record-actions">'+disclosureButton('fulltext','Full text')+disclosureButton('abstract','Abstract')+'</div>'+disclosurePanel('fulltext','Full text',full)+disclosurePanel('abstract','Abstract',(r.abstract?'<p class="source-abstract">'+esc(r.abstract)+'</p>':'<p class="hint" data-ui-localize>No abstract is available for this report.</p>')+'<div class="source-abstract-fulltext">'+full+'</div>')+'</article>';
 }
 function renderStudies(){
   $('study-table').innerHTML=ws.records.map(sourceRecordCard).join('');
@@ -896,18 +900,18 @@ function renderAssess(){
   const qRow=(d,q)=>{
     const a=finalAnswers(x),app=applicable(q,a),mine=x.mine[q.id],ai=x.ai?.answers?.[q.id],isConf=conf.includes(q.id),res=x.resolved[q.id];
     const btns=optsOf(tool,q).map(op=>`<button type="button" class="ans${mine===op?' on':''}" data-ans="${q.id}" data-v="${op}" title="${ANSWER_LABEL[op]||op}"${!app||x.confirmed?' disabled':''}>${op}</button>`).join('');
-    const aiLine=x.revealed&&ai&&app?`<div class="ai-line${isConf?' conflict':''}"><span class="ai-tag">AI</span> <b>${esc(ai.answer)}</b> ${esc(ai.reason)}${ai.quote?` <q>${esc(ai.quote)}</q> <span class="muted">${esc(ai.passage)}</span>`:ai.quoteMissing?' <span class="muted">(quotation not found in the full text)</span>':''}${isConf&&!x.confirmed?`<span class="resolve">Final: <button type="button" class="btn small${res===mine?' sel':''}" data-res="${q.id}" data-v="${mine}">Keep ${esc(mine)}</button><button type="button" class="btn small${res===ai.answer?' sel':''}" data-res="${q.id}" data-v="${ai.answer}">Use AI ${esc(ai.answer)}</button></span>`:''}</div>`:'';
-    return `<div class="q${app?'':' na'}${isConf?' is-conf':''}"><div class="q-text"><span class="qid">${q.id}</span> ${esc(q.text)}${app?'':' <span class="muted">— NA (condition not met)</span>'}</div>${app?`<div class="q-ans">${btns}</div>`:''}${app?`<input class="input q-note" data-note="${q.id}" value="${esc(x.notes[q.id]||'')}" placeholder="Support: quotation or note"${x.confirmed?' disabled':''}>`:''}${aiLine}</div>`;
+    const aiLine=x.revealed&&ai&&app?`<div class="ai-line${isConf?' conflict':''}"><span class="ai-tag">AI</span> <b>${esc(ai.answer)}</b> ${esc(ai.reason)}${ai.quote?` <q>${esc(ai.quote)}</q> <span class="muted">${esc(ai.passage)}</span>`:ai.quoteMissing?' <span class="muted">(quotation not found in the full text)</span>':''}${isConf&&!x.confirmed?`<span class="resolve" data-ui-localize>Final: <button type="button" class="btn small${res===mine?' sel':''}" data-res="${q.id}" data-v="${mine}">Keep ${esc(mine)}</button><button type="button" class="btn small${res===ai.answer?' sel':''}" data-res="${q.id}" data-v="${ai.answer}">Use AI ${esc(ai.answer)}</button></span>`:''}</div>`:'';
+    return `<div class="q${app?'':' na'}${isConf?' is-conf':''}"><div class="q-text"><span class="qid">${q.id}</span> ${esc(q.text)}${app?'':' <span class="muted" data-ui-localize>— NA (condition not met)</span>'}</div>${app?`<div class="q-ans">${btns}</div>`:''}${app?`<input class="input q-note" data-note="${q.id}" value="${esc(x.notes[q.id]||'')}" placeholder="Support: quotation or note"${x.confirmed?' disabled':''}>`:''}${aiLine}</div>`;
   };
   $('domains').innerHTML=tool.domains.map((d,i)=>{
     const dj=j.domains[i],ad=aj?.domains[i];
     const lv=x.mine[d.id],aiL=x.ai?.answers?.[d.id],cf=conf.includes(d.id);
-    const body=d.questions.map(q=>qRow(d,q)).join('')+(guided(d)?`<div class="q dom-judge"><div class="q-text"><b>Domain judgement</b>${d.hint&&!d.questions.length?' — '+esc(d.hint):''}</div><div class="q-ans">${levelsOf(tool,d).map(l=>`<button type="button" class="ans lvl-btn${lv===l?' on':''}" data-ans="${d.id}" data-v="${esc(l)}"${x.confirmed?' disabled':''}>${esc(l)}</button>`).join('')}</div><input class="input q-note" data-note="${d.id}" value="${esc(x.notes[d.id]||'')}" placeholder="Reason for the judgement"${x.confirmed?' disabled':''}>${x.revealed&&aiL?`<div class="ai-line${cf?' conflict':''}"><span class="ai-tag">AI</span> <b>${esc(aiL.answer)}</b> ${esc(aiL.reason)}${aiL.quote?` <q>${esc(aiL.quote)}</q>`:''}${cf&&!x.confirmed?`<span class="resolve">Final: <button type="button" class="btn small${x.resolved[d.id]===lv?' sel':''}" data-res="${d.id}" data-v="${esc(lv)}">Keep ${esc(lv)}</button><button type="button" class="btn small${x.resolved[d.id]===aiL.answer?' sel':''}" data-res="${d.id}" data-v="${esc(aiL.answer)}">Use AI ${esc(aiL.answer)}</button></span>`:''}</div>`:''}</div>`:'');
+    const body=d.questions.map(q=>qRow(d,q)).join('')+(guided(d)?`<div class="q dom-judge"><div class="q-text"><b data-ui-localize>Domain judgement</b>${d.hint&&!d.questions.length?' — '+esc(d.hint):''}</div><div class="q-ans">${levelsOf(tool,d).map(l=>`<button type="button" class="ans lvl-btn${lv===l?' on':''}" data-ans="${d.id}" data-v="${esc(l)}"${x.confirmed?' disabled':''}>${esc(l)}</button>`).join('')}</div><input class="input q-note" data-note="${d.id}" value="${esc(x.notes[d.id]||'')}" placeholder="Reason for the judgement"${x.confirmed?' disabled':''}>${x.revealed&&aiL?`<div class="ai-line${cf?' conflict':''}"><span class="ai-tag">AI</span> <b>${esc(aiL.answer)}</b> ${esc(aiL.reason)}${aiL.quote?` <q>${esc(aiL.quote)}</q>`:''}${cf&&!x.confirmed?`<span class="resolve" data-ui-localize>Final: <button type="button" class="btn small${x.resolved[d.id]===lv?' sel':''}" data-res="${d.id}" data-v="${esc(lv)}">Keep ${esc(lv)}</button><button type="button" class="btn small${x.resolved[d.id]===aiL.answer?' sel':''}" data-res="${d.id}" data-v="${esc(aiL.answer)}">Use AI ${esc(aiL.answer)}</button></span>`:''}</div>`:''}</div>`:'');
     return `<details class="domain"${x.confirmed?'':' open'}><summary><span class="dom-id">${d.id}</span> ${esc(d.name)}<span class="dom-lvl">${ad?`<span class="muted">AI ${ad.level?esc(ad.level):'—'}</span> `:''}${badge(dj.level,tool,d)}${dj.overridden?'<span class="muted"> (changed)</span>':''}</span></summary>${body}
 <div class="dom-foot">${!guided(d)?`Algorithm: ${dj.auto?badge(dj.auto,tool,d):'answer every applicable question'} <button type="button" class="link-btn" data-override="${d.id}"${x.confirmed?' hidden':''}>Change judgement</button>`:''}${dj.overridden?`<span class="muted"> · Reason: ${esc(dj.reason)}</span>`:''}</div></details>`;
   }).join('');
-  if(j.none)$('overall').innerHTML=`<span>Overall</span><span class="muted">${esc(tool.overallRule||'This tool defines no overall judgement.')}</span>`;
-  else if(j.chosen)$('overall').innerHTML=`<span>Overall appraisal</span>${tool.overallLevels.map(l=>`<button type="button" class="ans lvl-btn${j.overall===l?' on':''}" data-ans="__overall" data-v="${esc(l)}"${x.confirmed?' disabled':''}>${esc(l)}</button>`).join('')}<span class="muted">${esc(tool.overallRule||'')}</span>`;
+  if(j.none)$('overall').innerHTML=`<span data-ui-localize>Overall</span><span class="muted">${esc(tool.overallRule||'This tool defines no overall judgement.')}</span>`;
+  else if(j.chosen)$('overall').innerHTML=`<span data-ui-localize>Overall appraisal</span>${tool.overallLevels.map(l=>`<button type="button" class="ans lvl-btn${j.overall===l?' on':''}" data-ans="__overall" data-v="${esc(l)}"${x.confirmed?' disabled':''}>${esc(l)}</button>`).join('')}<span class="muted">${esc(tool.overallRule||'')}</span>`;
   else $('overall').innerHTML=`<span>${esc(tool.overallLabel||'Overall risk of bias')}</span>${badge(j.overall,tool)}${j.overallOverridden?`<span class="muted"> changed from ${esc(j.overallAuto||'—')}: ${esc(j.overallReason)}</span>`:j.overall?`<span class="muted">${esc(tool.overallRule||'')}</span>`:''}${j.overall&&!x.confirmed?` <button type="button" class="link-btn" data-override="overall">Change</button>`:''}`;
   const fa=finalAnswers(x),all=j.domains.every(d=>d.level)&&tool.domains.every(d=>d.questions.every(q=>!applicable(q,fa)||fa[q.id])),open=conf.filter(q=>!x.resolved[q]).length;
   let step='';

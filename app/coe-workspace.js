@@ -588,11 +588,11 @@ function setNotice(el,message,kind){el.textContent=message;el.className='notice'
 function renderRules(){
   $('reviewer').value=ws.reviewer||'';
   const decided=RULES.filter(r=>ruleChoice(ws.rules,r.id)),open=RULES.filter(r=>!ruleChoice(ws.rules,r.id));
-  $('rules-status').innerHTML=`<span class="ok">${decided.length} decided</span> · ${open.length} still open. An open rule only matters when a comparison needs it; those results show <b>Blocked</b> until it is decided.`;
+  $('rules-status').innerHTML=`<span class="ok">${decided.length} decided</span> · ${open.length} still open. An open rule only matters when a comparison needs it; those results show <b data-ui-localize>Blocked</b> until it is decided.`;
   const card=r=>{
     const st=ws.rules[r.id]||{},done=!!st.approved,choice=st.choice||'',chosen=r.options.find(o=>o.v===choice);
     const isOpen=ruleOpen.get(r.id)||false;
-    const head=`<summary class="rule-head"><div><span class="rule-id">${r.id}</span> <b>${esc(r.title)}</b>${r.conflict?' <span class="badge differ">Source conflict</span>':''}</div>${done&&chosen?`<span class="rule-state">✓ ${esc(chosen.label)}</span>`:''}</summary>`;
+    const head=`<summary class="rule-head"><div><span class="rule-id">${r.id}</span> <b>${esc(r.title)}</b>${r.conflict?' <span class="badge differ" data-ui-localize>Source conflict</span>':''}</div>${done&&chosen?`<span class="rule-state">✓ ${esc(chosen.label)}</span>`:''}</summary>`;
     const meta=`<p class="rule-q">${esc(r.question)}</p><p class="hint">Sources: ${esc(r.sources)} · Affects ${r.fields.map(n=>'#'+n).join(', ')}</p>`;
     const refs=r.refs?`<details class="rule-refs"><summary>What GRADE guidance says</summary><ul>${r.refs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`:'';
     if(done){
@@ -603,7 +603,7 @@ function renderRules(){
     const params=(r.params||[]).filter(p=>!p.when||p.when.includes(choice)).map(p=>`<label class="rule-param">${esc(p.label)} ${p.options?`<select class="select compact" data-param="${p.key}" data-rule="${r.id}">${p.options.map(([v,l])=>`<option value="${v}"${(st.params?.[p.key]??p.default)===v?' selected':''}>${esc(l)}</option>`).join('')}</select>`:`<input class="input compact" data-param="${p.key}" data-rule="${r.id}" value="${esc(st.params?.[p.key]??p.default??'')}">`}</label>`).join('');
     return `<details class="rule" id="rule-${r.id}" data-rule-id="${r.id}"${isOpen?' open':''}>${head}${meta}<div class="rule-opts">${opts}</div>${params?`<div class="rule-params">${params}</div>`:''}<label class="rule-note-label">Reason for the choice<textarea class="textarea rule-note" data-note="${r.id}" rows="2" placeholder="Why the team chose this option">${esc(st.note||'')}</textarea></label><div class="toolbar rule-actions"><button class="btn small primary" type="button" data-approve="${r.id}"${choice?'':' disabled'}>Save decision</button>${refs}</div></details>`;
   };
-  $('rules-list').innerHTML=(decided.length?`<h4 class="rules-group">Decided</h4>${decided.map(card).join('')}`:'')+(open.length?`<h4 class="rules-group">Still open <span class="muted">· decide when a comparison needs it</span></h4>${open.map(card).join('')}`:'');
+  $('rules-list').innerHTML=(decided.length?`<h4 class="rules-group" data-ui-localize>Decided</h4>${decided.map(card).join('')}`:'')+(open.length?`<h4 class="rules-group" data-ui-localize>Still open <span class="muted">· decide when a comparison needs it</span></h4>${open.map(card).join('')}`:'');
 }
 
 function renderList(){
@@ -613,7 +613,7 @@ function renderList(){
     const st=no=>c[no]?.state;
     return `<tr class="${current===r.id?'current':''}"><td>${esc(r.id)}</td><td class="cmp"><button class="link-btn" type="button" data-open="${esc(r.id)}">${esc(r.intervention||'?')} vs ${esc(r.control||'?')}</button></td><td>${coeBadge(lvl(50),st(50))}</td><td>${coeBadge(lvl(51),st(51))}</td><td>${coeBadge(lvl(60),st(60))}</td><td>${esc({'1':'Direct','2':'Indirect','3':'NMA'}[r.final_source]||'—')}</td><td class="num">${esc(fmtRDfull(c[65]?.state==='auto'?c[65].value:null))} ${esc(U.continuous(r)?U.unit(r).scale:'per 1000')}</td><td>${coeBadge(e.status==='complete'?lvl(68):null,e.status==='blocked'?'blocked':'waiting')}</td><td>${statusBadge(e.status)}</td></tr>`;
   }).join('');
-  $('cmp-table').innerHTML=`<thead><tr><th>#</th><th>Comparison (intervention vs control)</th><th>Direct COE</th><th>Indirect COE</th><th>NMA COE</th><th>Final source</th><th class="num">Absolute effect (95% CI)</th><th>Final COE</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="empty">No comparisons yet.</td></tr>'}</tbody>`;
+  $('cmp-table').innerHTML=`<thead><tr><th>#</th><th>Comparison (intervention vs control)</th><th>Direct COE</th><th>Indirect COE</th><th>NMA COE</th><th>Final source</th><th class="num">Absolute effect (95% CI)</th><th>Final COE</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="empty" data-ui-localize>No comparisons yet.</td></tr>'}</tbody>`;
 }
 function fmtRD(v){return isCI(v)?`${fmtNum(trim(v.point,0))} (${fmtNum(trim(v.ci_lower,0))} to ${fmtNum(trim(v.ci_upper,0))})`:'—'}
 
@@ -625,14 +625,14 @@ function renderEditor(){
   if(!rec)return;
   const e=evaluate(rec);
   $('editor-title').textContent=`Comparison ${rec.id}: ${rec.intervention||'?'} vs ${rec.control||'?'}`;
-  $('editor-tag').innerHTML=(synthetic()?'<span class="badge maybe">SYNTHETIC</span> ':'')+statusBadge(e.status);
+  $('editor-tag').innerHTML=(synthetic()?'<span class="badge maybe" data-ui-localize>SYNTHETIC</span> ':'')+statusBadge(e.status);
   $('ed-int').value=rec.intervention||'';$('ed-ctl').value=rec.control||'';$('ed-br').value=isNum(rec.x_baseline_risk_per_1000)?rec.x_baseline_risk_per_1000:'';
   $('ed-br-row').hidden=true;
   renderParameters(rec);
   renderPath(rec,e);
   $('stage-tabs').innerHTML=STAGES.map(s=>{const m=e.miss[s.n-1].length,iss=e.issues.filter(i=>i.sev!=='warning'&&i.fields.some(n=>s.nos.includes(n))).length;return `<button type="button" class="stage-tab${stage===s.n?' current':''}" data-stage="${s.n}" aria-pressed="${stage===s.n}"><b>${s.n}. ${esc(s.title)}</b><span>${m?m+' to fill':iss?iss+' to check':'Done'}</span></button>`}).join('');
   const s=STAGES[stage-1];
-  $('stage-body').innerHTML=stageHelp(rec,e)+s.groups.map(([title,nos])=>`<fieldset class="fgroup"><legend>${esc(title)}</legend>${nos.map(no=>fieldRow(rec,BYNO[no],e)).join('')}</fieldset>`).join('');
+  $('stage-body').innerHTML=stageHelp(rec,e)+s.groups.map(([title,nos])=>`<fieldset class="fgroup"><legend data-ui-localize>${esc(title)}</legend>${nos.map(no=>fieldRow(rec,BYNO[no],e)).join('')}</fieldset>`).join('');
   $('stage-prev').hidden=stage===1;$('stage-next').hidden=stage===4;
   if(stage>1)$('stage-prev').textContent='← '+STAGES[stage-2].title;
   if(stage<4)$('stage-next').textContent=STAGES[stage].title+' →';
@@ -642,7 +642,7 @@ function renderEditor(){
 function renderPath(rec,e){
   const c=e.calc,lvl=no=>c[no]&&['waiting','blocked'].includes(c[no].state)?null:c[no]&&(c[no].state==='auto')?c[no].value:rec[fieldKey(rec,no)],st=no=>c[no]?.state;
   const steps=[[50,'Direct COE','before imprecision'],[51,'Indirect COE','before imprecision'],[56,'Preliminary NMA COE','after integration'],[60,'NMA COE','after incoherence'],[68,'Final COE','after imprecision']];
-  $('coe-path').innerHTML=steps.map(([no,l,sub],i)=>`${i?'<span class="path-arrow" aria-hidden="true">→</span>':''}<div class="path-step${no===68?' final':''}"><span class="flow-label">#${no} ${l}</span>${coeBadge(no===68&&e.status!=='complete'?null:lvl(no),st(no))}<small>${sub}</small></div>`).join('');
+  $('coe-path').innerHTML=steps.map(([no,l,sub],i)=>`${i?'<span class="path-arrow" aria-hidden="true">→</span>':''}<div class="path-step${no===68?' final':''}"><span class="flow-label" data-ui-localize>#${no} ${l}</span>${coeBadge(no===68&&e.status!=='complete'?null:lvl(no),st(no))}<small data-ui-localize>${sub}</small></div>`).join('');
 }
 function fieldRow(rec,f,e){
   if(U.continuous(rec)&&f.no===65)return '';
@@ -683,33 +683,33 @@ function stageHelp(rec,e){
     const rows=[['> 65%','High-RoB evidence dominates','Assess expected direction of bias (#23)','Bias could explain the effect or lack of effect (1–2)','All studies','Yes'],['> 65%','High-RoB evidence dominates','Assess expected direction of bias (#23)','Bias would reinforce the observed result (3–4)','All studies','No'],['≤ 65%','Appreciable Low-RoB evidence','Compare Low- vs High-RoB estimates (#20–#22)','Substantially different','Low-RoB studies only','No'],['≤ 65%','Appreciable Low-RoB evidence','Compare Low- vs High-RoB estimates (#20–#22)','Not importantly different','All studies','No']];
     const hit=!isNum(w)?-1:w>ROB_DOMINANCE?(['1','2'].includes(g(23))?0:['3','4'].includes(g(23))?1:-2):g(22)==='Important'?2:g(22)==='Not important'?3:-3;
     const ratio=U.continuous(rec)?null:isCI(g(20))&&isCI(g(21))?g(20).point/g(21).point:(isNum(g(20))&&isNum(g(21))?g(20)/g(21):null);
-    return `<div class="help-card"><div class="toolbar between"><h3>Risk of bias branch · Workflow 2.1, Table 1</h3>${hasD?'':`<button class="btn small" type="button" data-fill-na="1">No direct evidence: set stage 1 to NA</button>`}</div>
+    return `<div class="help-card"><div class="toolbar between"><h3 data-ui-localize>Risk of bias branch · Workflow 2.1, Table 1</h3>${hasD?'':`<button class="btn small" type="button" data-fill-na="1">No direct evidence: set stage 1 to NA</button>`}</div>
 <div class="table-wrap"><table class="branch"><thead><tr><th>High-RoB weight (#19)</th><th>Branch</th><th>Next assessment</th><th>Condition</th><th>Estimate (#24)</th><th>RoB downgrade</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${hit===i||(hit===-2&&i<2&&isNum(w)&&w>ROB_DOMINANCE)||(hit===-3&&i>=2&&isNum(w)&&w<=ROB_DOMINANCE)?'hit':''}">${r.map(x=>`<td>${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
 <p class="hint">${isNum(w)?`#19 = ${fmtNum(w)}%: ${w>ROB_DOMINANCE?'High-RoB evidence dominates.':'Low-RoB weight is at least 35%.'}`:'Enter #19 to see the branch.'}${ratio?` Ratio of Low- to High-RoB estimates: ${fmtNum(trim(ratio,3))} (shown to inform #22; no cut-off is applied${ruleChoice(ws.rules,'D-006')==='threshold'?'':' — D-006'}).`:''} Inconsistency: judge whether study estimates lead to different clinical interpretations; I² (#9) is descriptive only and a single study is Not assessable.</p></div>`;
   }
   if(stage===2){
     const hasI=isVal(g(35));
-    return `<div class="help-card"><div class="toolbar between"><h3>Indirect pathway · Workflow 3–5</h3>${hasI?'':`<button class="btn small" type="button" data-fill-na="2">No indirect evidence: set stage 2 to NA</button>`}</div><p class="hint">Pick the first-order loop that contributes most to the indirect estimate (#38, #39: share of the indirect evidence, not of the whole NMA). With no first-order loop, record the lowest available order (#41) and its dominant pathway (#42, #43). Loop COE (#45) is the lowest of the constituent direct COEs (#44). Rate intransitivity (#46) on differences in population, severity, prior treatment, implementation, follow-up and outcome measurement.</p></div>`;
+    return `<div class="help-card"><div class="toolbar between"><h3 data-ui-localize>Indirect pathway · Workflow 3–5</h3>${hasI?'':`<button class="btn small" type="button" data-fill-na="2">No indirect evidence: set stage 2 to NA</button>`}</div><p class="hint">Pick the first-order loop that contributes most to the indirect estimate (#38, #39: share of the indirect evidence, not of the whole NMA). With no first-order loop, record the lowest available order (#41) and its dominant pathway (#42, #43). Loop COE (#45) is the lowest of the constituent direct COEs (#44). Rate intransitivity (#46) on differences in population, severity, prior treatment, implementation, follow-up and outcome measurement.</p></div>`;
   }
   if(stage===3){
     const hasD=isVal(g(8)),hasI=isVal(g(35)),cd=c[50].value,ci=c[51].value;
     const sc=!hasD&&!hasI?'No estimate yet.':hasD&&!hasI?'Only direct evidence: carried forward; incoherence is Not assessable.':!hasD?'Only indirect evidence: the indirect COE is used; incoherence is Not assessable.':!isVal(cd)||!isVal(ci)?'Both sources: waiting for #50 and #51.':cd===ci?`Both sources at ${cd}: the common level is used.`:`Direct ${cd} vs indirect ${ci}: judge whether the higher-certainty ${rank(cd)<rank(ci)?'direct':'indirect'} evidence is adequate (#52, using this unit’s documented OIS assumptions), then apply the integration rule (D-001).`;
     const sum=isNum(g(54))&&isNum(g(55))?` #54 + #55 = ${fmtNum(trim(g(54)+g(55),4))}%.`:'';
     const nodes=!U.continuous(rec)&&isCI(g(8))&&isCI(g(35))?` Direct ${fmtCI(g(8))} vs indirect ${fmtCI(g(35))}; ratio ${fmtNum(trim(g(8).point/g(35).point,3))}. Use estimates from the same node-splitting model; weigh direction, size, CI overlap and clinical importance, not the P value alone.`:'';
-    return `<div class="help-card"><h3>Integration and incoherence · Workflow 6–7</h3><p class="hint">${esc(sc)}${esc(sum)}${esc(nodes)}</p></div>`;
+    return `<div class="help-card"><h3 data-ui-localize>Integration and incoherence · Workflow 6–7</h3><p class="hint">${esc(sc)}${esc(sum)}${esc(nodes)}</p></div>`;
   }
   const r65=c[65]?.state==='auto'?c[65].value:g(65);
   const u=U.unit(rec,data());
-  return `<div class="help-card"><h3>Absolute effect against the MID · Workflow 8–9</h3><p class="hint">${u.mid>0?`MID ${esc(u.mid)} ${esc(U.continuous(rec)?u.scale:'per 1000')}; ${esc(u.direction||'select direction')} is better. Boundaries −MID and +MID belong to the little/no important effect zone.`:'Enter the MID and effect direction above.'} ${c.zones?'The CI covers: '+esc(c.zones.join('; '))+'.':''} Imprecision is assessed once on the final absolute effect. Document information-size considerations in #67.</p></div>`;
+  return `<div class="help-card"><h3 data-ui-localize>Absolute effect against the MID · Workflow 8–9</h3><p class="hint">${u.mid>0?`MID ${esc(u.mid)} ${esc(U.continuous(rec)?u.scale:'per 1000')}; ${esc(u.direction||'select direction')} is better. Boundaries −MID and +MID belong to the little/no important effect zone.`:'Enter the MID and effect direction above.'} ${c.zones?'The CI covers: '+esc(c.zones.join('; '))+'.':''} Imprecision is assessed once on the final absolute effect. Document information-size considerations in #67.</p></div>`;
 }
 function renderIssues(rec,e){
   const order={error:0,blocked:1,warning:2},list=[...e.issues].sort((a,b)=>order[a.sev]-order[b.sev]);
   const miss=e.miss.map((m,i)=>m.length?`<li class="missing">Stage ${i+1}: still to fill ${m.map(n=>`<button class="link-btn" type="button" data-jump="${n}">#${n}</button>`).join(' ')}</li>`:'').join('');
-  $('issues').innerHTML=(miss||list.length)?`<ul class="issue-list">${miss}${list.map(i=>`<li class="${i.sev}"><span class="badge ${i.sev==='error'?'no':i.sev==='blocked'?'differ':'maybe'}">${i.sev}</span> <b>${esc(i.rule)}</b> ${esc(i.msg)} ${i.fields.map(n=>`<button class="link-btn" type="button" data-jump="${n}">#${n}</button>`).join(' ')}</li>`).join('')}</ul>`:'<p class="hint ok">No missing fields, errors or blocked rules.</p>';
+  $('issues').innerHTML=(miss||list.length)?`<ul class="issue-list">${miss}${list.map(i=>`<li class="${i.sev}"><span class="badge ${i.sev==='error'?'no':i.sev==='blocked'?'differ':'maybe'}">${i.sev}</span> <b>${esc(i.rule)}</b> ${esc(i.msg)} ${i.fields.map(n=>`<button class="link-btn" type="button" data-jump="${n}">#${n}</button>`).join(' ')}</li>`).join('')}</ul>`:'<p class="hint ok" data-ui-localize>No missing fields, errors or blocked rules.</p>';
 }
 function renderHistory(rec){
   const items=data().audit.filter(a=>String(a.id)===String(rec.id)).slice(-60).reverse();
-  $('history').innerHTML=items.length?items.map(a=>`<li><span class="muted">${esc(a.t.replace('T',' ').slice(0,19))}</span> ${a.by==='auto'?'<span class="badge">computed</span>':esc(a.by||'reviewer')} · #${a.no} ${esc(BYNO[a.no]?shortName(BYNO[a.no]):a.no)}: <s>${esc(fmtVal(BYNO[a.no]||{},a.from)||'—')}</s> → ${esc(fmtVal(BYNO[a.no]||{},a.to)||'—')}</li>`).join(''):'<li class="muted">No changes yet.</li>';
+  $('history').innerHTML=items.length?items.map(a=>`<li><span class="muted">${esc(a.t.replace('T',' ').slice(0,19))}</span> ${a.by==='auto'?'<span class="badge" data-ui-localize>computed</span>':esc(a.by||'reviewer')} · #${a.no} ${esc(BYNO[a.no]?shortName(BYNO[a.no]):a.no)}: <s>${esc(fmtVal(BYNO[a.no]||{},a.from)||'—')}</s> → ${esc(fmtVal(BYNO[a.no]||{},a.to)||'—')}</li>`).join(''):'<li class="muted" data-ui-localize>No changes yet.</li>';
 }
 function renderSof(){renderCoreSof();}
 function downgradeSummary(r,v){

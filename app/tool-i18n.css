@@ -1,0 +1,6 @@
+.tool-language-toggle{flex:none;white-space:nowrap;min-height:36px;padding:7px 13px;border:1px solid #d8dff2;border-radius:8px;background:#fff;color:#3b55db;font:500 14px/1.4 Inter,"PingFang SC","Microsoft YaHei",sans-serif;cursor:pointer;margin-left:12px}
+.tool-language-toggle:hover{background:#eef2ff;border-color:#4d6bfe}
+.tool-language-toggle:focus-visible{outline:2px solid #4d6bfe;outline-offset:3px}
+html[lang="zh-CN"] body{font-family:Inter,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;line-height:1.65}
+html[lang="zh-CN"] button,html[lang="zh-CN"] input,html[lang="zh-CN"] textarea,html[lang="zh-CN"] select{font-family:inherit}
+html[lang="zh-CN"] .label,html[lang="zh-CN"] h1,html[lang="zh-CN"] h2,html[lang="zh-CN"] h3{letter-spacing:0}

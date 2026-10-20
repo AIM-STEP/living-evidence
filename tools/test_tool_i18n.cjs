@@ -1,0 +1,78 @@
+/* Run with jsdom installed: NODE_PATH=/path/to/node_modules node tools/test_tool_i18n.cjs */
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const {JSDOM} = require('jsdom');
+const root = path.resolve(__dirname, '..');
+const pages = ['eligibility','search-strategy','build-protocol','title-abstract-screening','full-text-screening','extraction','risk-of-bias','analysis','certainty-of-evidence','drafting-manuscript'];
+const read = name => fs.readFileSync(path.join(root, name), 'utf8');
+const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+async function boot(html, lang = 'en') {
+  const dom = new JSDOM(html, {url:'https://aimsetp.com/tool.html?projectId=test',runScripts:'outside-only'});
+  const w = dom.window;
+  w.localStorage.setItem('aimstep-lang', lang);
+  w.confirm = message => { w.lastConfirmation = message; return true; };
+  w.alert = message => { w.lastAlert = message; };
+  w.eval(read('app/tool-i18n-catalog.js'));
+  w.eval(read('app/tool-i18n.js'));
+  await tick();
+  return dom;
+}
+(async () => {
+  for (const page of pages) {
+    const html = read(page+'.html');
+    assert.equal((html.match(/src="app\/tool-i18n.js\?/g)||[]).length, 1, page);
+    const dom = await boot(html, 'zh');
+    const {document:d,AIMSTEP:api} = dom.window;
+    assert.equal(d.documentElement.lang,'zh-CN',page);
+    assert.match(d.title,/[\u4e00-\u9fff]/,page+' title');
+    assert.equal(d.querySelectorAll('#lang-toggle').length,1,page+' toggle');
+    const options = [...d.querySelectorAll('option')].map(el => el.value);
+    const markers = [...d.querySelectorAll('[data-ui-localize]')].filter(el => !el.closest('.brand'));
+    assert.ok(markers.some(el=>/[\u4e00-\u9fff]/.test(el.textContent)),page+' translated');
+    d.getElementById('lang-toggle').click();
+    assert.equal(api.lang(),'en');
+    assert.equal(dom.window.localStorage.getItem('aimstep-lang'),'en');
+    assert.deepEqual([...d.querySelectorAll('option')].map(el=>el.value),options,page+' values preserved');
+    assert.equal(d.title,new JSDOM(html).window.document.title,page+' title restored');
+    d.getElementById('lang-toggle').click();
+    assert.equal(api.lang(),'zh');
+    console.log('PASS:',page,'saved language, toggle, title, labels and option values');
+    dom.window.close();
+  }
+  const dom = await boot('<!doctype html><title>AIM-STEP | Analysis</title><header></header><main><button id="save"><svg></svg>Save</button><select><option>Systematic Review</option></select><textarea placeholder="Describe your review question and objective.">Save</textarea><input value="Save"><div contenteditable="true">Save</div><table><tr><td>Save</td></tr></table><article>Analysis</article><div data-ui-preserve><button>Save</button></div><p role="status"></p></main>','zh');
+  const w=dom.window,d=w.document;
+  assert.equal(d.querySelector('option').value,'Systematic Review');
+  assert.equal(d.querySelector('option').textContent,'系统综述');
+  assert.equal(d.querySelector('textarea').value,'Save');
+  assert.equal(d.querySelector('textarea').placeholder,'描述您的综述问题与研究目标。');
+  assert.equal(d.querySelector('input').value,'Save');
+  assert.equal(d.querySelector('[contenteditable]').textContent,'Save');
+  assert.equal(d.querySelector('td').textContent,'Save');
+  assert.equal(d.querySelector('article').textContent,'Analysis');
+  assert.equal(d.querySelector('[data-ui-preserve] button').textContent,'Save');
+  assert.ok(d.querySelector('#save svg'),'icons preserved');
+  let clicks=0;d.querySelector('#save').addEventListener('click',()=>clicks++);
+  d.querySelector('#save').textContent='Generating…';
+  d.querySelector('[role=status]').textContent='Saved.';
+  d.querySelector('main').insertAdjacentHTML('beforeend','<button id="dynamic">Export</button><select id="dynamic-select"><option>Scoping Review</option></select>');
+  await tick();
+  assert.equal(d.querySelector('#save').textContent,'正在生成…');
+  assert.equal(d.querySelector('[role=status]').textContent,'已保存。');
+  assert.equal(d.querySelector('#dynamic').textContent,'导出');
+  assert.equal(d.querySelector('#dynamic-select').value,'Scoping Review');
+  w.AIMSTEP.setLanguage('en');
+  assert.equal(d.querySelector('#save').textContent,'Generating…','latest dynamic English restored');
+  d.querySelector('#save').click();assert.equal(clicks,1,'listener retained');
+  w.dispatchEvent(new w.StorageEvent('storage',{key:'aimstep-lang',newValue:'zh'}));
+  assert.equal(w.AIMSTEP.lang(),'zh','other tab synchronization');
+  assert.equal(w.confirm('Discard unsaved criteria edits?'),true);
+  assert.equal(w.lastConfirmation,'是否放弃未保存的标准修改？');
+  const frame=d.createElement('iframe');d.body.append(frame);await tick();
+  let childLanguage;frame.contentWindow.AIMSTEP={setLanguage:lang=>childLanguage=lang};
+  w.AIMSTEP.setLanguage('en');assert.equal(childLanguage,'en');
+  assert.equal(w.AIMSTEP.t('Round 12'),'Round 12');
+  w.AIMSTEP.setLanguage('zh');assert.equal(w.AIMSTEP.t('Round 12'),'第 12 轮');
+  console.log('PASS: dynamic updates, English restoration, user data, placeholders, listeners, confirmations, cross-tab and iframe synchronization');
+  w.close();
+})().catch(error=>{console.error(error);process.exitCode=1;});

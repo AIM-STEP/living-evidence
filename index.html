@@ -2084,7 +2084,7 @@ body.project-page-mode .toolset-layout { display: none; }
               <span class="tool-title" data-i18n="t2_t">Search strategy</span>
 
             </a>
-<a class="tool tool-wide" href="build-protocol.html" data-tool="protocol"><span class="tool-step" aria-label="Step 3">3</span><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-front"><rect class="icon-face" x="10" y="7" width="27" height="34" rx="4"/><path d="M17 16h13M17 22h8M17 28h13"/><path class="accent" d="M28 33l3 3 7-8"/></g></svg></span><span class="tool-title">Build the protocol</span></a>
+<a class="tool tool-wide" href="build-protocol.html" data-tool="protocol"><span class="tool-step" aria-label="Step 3">3</span><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-front"><rect class="icon-face" x="10" y="7" width="27" height="34" rx="4"/><path d="M17 16h13M17 22h8M17 28h13"/><path class="accent" d="M28 33l3 3 7-8"/></g></svg></span><span class="tool-title" data-i18n="t_protocol">Build the protocol</span></a>
 <a class="tool" href="title-abstract-screening.html" data-tool="screen">
               <span class="tool-step" aria-label="Step 4">4</span>
 
@@ -2127,7 +2127,7 @@ body.project-page-mode .toolset-layout { display: none; }
               <span class="tool-title" data-i18n="t8_t">Certainty of evidence</span>
 
             </a>
-<a class="tool tool-wide" href="drafting-manuscript.html" data-tool="manuscript"><span class="tool-step" aria-label="Step 10">10</span><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-front"><path class="icon-face" d="M12 7h19l6 6v28H12z"/><path d="M29 7v8h8M18 22h10M18 28h7"/><path class="accent" d="M27 34l3-8 10-10 4 4-10 10zM30 26l4 4"/></g></svg></span><span class="tool-title">Drafting the manuscript</span></a>
+<a class="tool tool-wide" href="drafting-manuscript.html" data-tool="manuscript"><span class="tool-step" aria-label="Step 10">10</span><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-front"><path class="icon-face" d="M12 7h19l6 6v28H12z"/><path d="M29 7v8h8M18 22h10M18 28h7"/><path class="accent" d="M27 34l3-8 10-10 4 4-10 10zM30 26l4 4"/></g></svg></span><span class="tool-title" data-i18n="t_manuscript">Drafting the manuscript</span></a>
           </div>
         </div>
 </section>
@@ -2242,6 +2242,8 @@ body.project-page-mode .toolset-layout { display: none; }
             opt_ar_med: "Medical and health sciences",
             opt_ar_psy: "Psychology",
             opt_ar_other: "Other",
+            t_protocol: "Build the protocol",
+            t_manuscript: "Drafting the manuscript",
             t1_t: "Eligibility criteria",
             t1_d: "AI-assisted, structured inclusion and exclusion criteria, with PICO, PEO, SPIDER and other frameworks",
             t2_t: "Search strategy",
@@ -2392,6 +2394,8 @@ body.project-page-mode .toolset-layout { display: none; }
             opt_ar_med: "医学与健康科学",
             opt_ar_psy: "心理学",
             opt_ar_other: "其他",
+            t_protocol: "制定研究方案",
+            t_manuscript: "撰写论文",
             t1_t: "纳入与排除标准",
             t1_d: "AI 辅助生成结构化纳排标准，支持 PICO/PEO/SPIDER 等多种框架",
             t2_t: "检索策略",
@@ -2553,13 +2557,15 @@ body.project-page-mode .toolset-layout { display: none; }
         var current = "en";
         window.AIMSTEP = {
           t: function (key) { return (I18N[current] || I18N.en)[key]; },
-          lang: function () { return current; }
+          lang: function () { return current; },
+          setLanguage: apply
         };
 
         var KEY = "aimstep-lang";
         var btn = document.getElementById("lang-toggle");
 
         function apply(lang) {
+          lang = lang === "zh" ? "zh" : "en";
           var dict = I18N[lang] || I18N.en;
           current = lang;
           document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
@@ -2580,6 +2586,9 @@ body.project-page-mode .toolset-layout { display: none; }
         var saved = null;
         try { saved = localStorage.getItem(KEY); } catch (e) {}
         if (saved === "zh") apply("zh");
+        window.addEventListener("storage", function (event) {
+          if (event.key === KEY && event.newValue !== current) apply(event.newValue);
+        });
 
         btn.addEventListener("click", function () {
           apply(document.documentElement.getAttribute("data-lang") === "zh" ? "en" : "zh");
@@ -3595,7 +3604,7 @@ body.project-page-mode .toolset-layout { display: none; }
           try {
             var doc = frame.contentDocument;
             var child = frame.contentWindow.AIMSTEP;
-            if (child && child.lang() !== window.AIMSTEP.lang()) doc.getElementById("lang-toggle").click();
+            if (child && child.setLanguage && child.lang() !== window.AIMSTEP.lang()) child.setLanguage(window.AIMSTEP.lang());
           } catch (e) {}
         }
         function currentProjectId(link, card) {

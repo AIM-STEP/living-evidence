@@ -204,47 +204,51 @@ th{background:#f4f4f4}
 [data-goto-rule]{display:none!important}.parameter-option-row{display:grid;grid-template-columns:minmax(180px,1.4fr) repeat(2,minmax(180px,1fr));gap:12px;align-items:start;padding:12px 0;border-bottom:1px solid #e8eaf3}.parameter-option-row .label{margin:0}.parameter-option-row .input{margin-top:4px}.parameter-option-row small{display:block;color:#686970}.parameter-option-row .parameter-source{font-size:12px;min-height:30px}.parameter-option-row strong{font-size:13px}#parameter-options{margin-bottom:14px}@media(max-width:700px){.parameter-option-row{grid-template-columns:1fr}}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261020-5">
+
+<link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
+<script defer src="app/tool-i18n-catalog.js?v=20261020-1"></script>
+<script defer src="app/tool-i18n.js?v=20261020-1"></script>
 </head>
 <body>
 <header class="header">
 <a class="brand" data-home href="index.html"><span class="brand-text"><span class="brand-name-line"><span class="brand-main">ACHIEVE</span><span class="brand-product">EvidenceBank</span></span><span class="brand-sub">@An AI-Enabled, Traceable, Graded, Living Bank of Evidence</span></span></a>
-<nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project">Workflow</a><a class="active" data-toolset href="index.html?view=toolset">Toolset</a></nav>
+<nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project" data-ui-localize>Workflow</a><a class="active" data-toolset href="index.html?view=toolset" data-ui-localize>Toolset</a></nav>
 <a class="project-pill" id="project-name" hidden></a>
 </header>
 <main class="wrap">
-<div class="crumb"><a data-toolset href="index.html?view=toolset">Toolset</a> / Certainty of evidence</div>
-<div class="heading tool-navigation"><a class="step-btn back" data-prev href="analysis.html"><span aria-hidden="true">←</span> Back: Analysis</a><a class="step-btn next" data-next href="drafting-manuscript.html">Drafting the manuscript <span aria-hidden="true">→</span></a></div>
+<div class="crumb" data-ui-localize><a data-toolset href="index.html?view=toolset" data-ui-localize>Toolset</a> / Certainty of evidence</div>
+<div class="heading tool-navigation"><a class="step-btn back" data-prev href="analysis.html" data-ui-localize><span aria-hidden="true">←</span> Back: Analysis</a><a class="step-btn next" data-next href="drafting-manuscript.html" data-ui-localize>Drafting the manuscript <span aria-hidden="true">→</span></a></div>
 <div class="layout">
 <div class="stack">
 
 <section class="panel">
-<div class="panel-head"><h2>Assessment source</h2><div class="toolbar source-actions"><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Assessment source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Assessment source</span></button></div></div>
+<div class="panel-head"><h2 data-ui-localize>Assessment source</h2><div class="toolbar source-actions"><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Assessment source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Assessment source</span></button></div></div>
 <div class="panel-body" id="source-body">
-<div class="notice warning" id="synthetic-banner" hidden><b>SYNTHETIC EXAMPLE.</b> All values are invented to show how the tool works. Kept apart from real data and never to be used for a real rating.</div>
+<div class="notice warning" id="synthetic-banner" hidden data-ui-localize><b data-ui-localize>SYNTHETIC EXAMPLE.</b> All values are invented to show how the tool works. Kept apart from real data and never to be used for a real rating.</div>
 <div class="source-summary" id="src-stats" hidden></div>
 <div class="notice" id="src-notice" hidden></div>
-<details class="source-metadata" hidden><summary>Dataset notes</summary><div class="kind-switch" role="group" aria-label="Dataset"><button type="button" class="kind-btn" data-kind="real" aria-pressed="true">Real data</button><button type="button" class="kind-btn" data-kind="synthetic" aria-pressed="false">Synthetic example</button></div><div class="two meta-grid">
-<label class="label">Dataset ID<input class="input" id="meta-id" autocomplete="off" placeholder="e.g. ACR20-NMA-2026-10"></label>
-<label class="label">Outcome and time point<input class="input" id="meta-outcome" autocomplete="off" placeholder="e.g. ACR20 at 12–24 weeks"></label>
+<details class="source-metadata" hidden><summary data-ui-localize>Dataset notes</summary><div class="kind-switch" role="group" aria-label="Dataset"><button type="button" class="kind-btn" data-kind="real" aria-pressed="true" data-ui-localize>Real data</button><button type="button" class="kind-btn" data-kind="synthetic" aria-pressed="false" data-ui-localize>Synthetic example</button></div><div class="two meta-grid">
+<label class="label" data-ui-localize>Dataset ID<input class="input" id="meta-id" autocomplete="off" placeholder="e.g. ACR20-NMA-2026-10"></label>
+<label class="label" data-ui-localize>Outcome and time point<input class="input" id="meta-outcome" autocomplete="off" placeholder="e.g. ACR20 at 12–24 weeks"></label>
 </div>
-<label class="label">PICO, treatment nodes, included studies and duplicate-report handling (D-008)<textarea class="textarea" id="meta-pico" rows="3" placeholder="Population; nodes and how they were merged; included RCTs; how multiple reports of one trial were handled"></textarea></label>
-<label class="label">Source of the input data<input class="input" id="meta-note" autocomplete="off" placeholder="e.g. netmeta 2.9 output, random-effects model, file name and date"></label>
+<label class="label" data-ui-localize>PICO, treatment nodes, included studies and duplicate-report handling (D-008)<textarea class="textarea" id="meta-pico" rows="3" placeholder="Population; nodes and how they were merged; included RCTs; how multiple reports of one trial were handled"></textarea></label>
+<label class="label" data-ui-localize>Source of the input data<input class="input" id="meta-note" autocomplete="off" placeholder="e.g. netmeta 2.9 output, random-effects model, file name and date"></label>
 <div class="two meta-grid" id="baseline-row" hidden>
-<label class="label">Baseline risk per 1000 (D-004)<input class="input" id="meta-br" inputmode="decimal" autocomplete="off" placeholder="0–1000"></label>
-<label class="label">Where the baseline risk comes from<input class="input" id="meta-br-source" autocomplete="off" placeholder="e.g. median placebo-arm ACR20 risk across included RCTs"></label>
-</div></details><div id="unit-add-row" class="outcome-row"><select class="select compact" id="add-framework" aria-label="Question framework"><option>PICO</option><option>PECO</option><option>PCC</option><option>PICo</option><option>Other</option></select><input class="input compact" id="add-population" placeholder="Population" aria-label="Population"><input class="input compact" id="add-int" placeholder="Intervention / exposure" aria-label="Intervention / exposure"><input class="input compact" id="add-ctl" placeholder="Comparator" aria-label="Comparator"><input class="input compact" id="add-outcome" placeholder="Outcome" aria-label="Outcome"><input class="input compact" id="add-timepoint" placeholder="Time point" aria-label="Time point"><button class="btn small" id="add-btn" type="button">Add</button></div><div id="unit-sources"></div>
+<label class="label" data-ui-localize>Baseline risk per 1000 (D-004)<input class="input" id="meta-br" inputmode="decimal" autocomplete="off" placeholder="0–1000"></label>
+<label class="label" data-ui-localize>Where the baseline risk comes from<input class="input" id="meta-br-source" autocomplete="off" placeholder="e.g. median placebo-arm ACR20 risk across included RCTs"></label>
+</div></details><div id="unit-add-row" class="outcome-row"><select class="select compact" id="add-framework" aria-label="Question framework"><option>PICO</option><option>PECO</option><option>PCC</option><option>PICo</option><option data-ui-localize>Other</option></select><input class="input compact" id="add-population" placeholder="Population" aria-label="Population"><input class="input compact" id="add-int" placeholder="Intervention / exposure" aria-label="Intervention / exposure"><input class="input compact" id="add-ctl" placeholder="Comparator" aria-label="Comparator"><input class="input compact" id="add-outcome" placeholder="Outcome" aria-label="Outcome"><input class="input compact" id="add-timepoint" placeholder="Time point" aria-label="Time point"><button class="btn small" id="add-btn" type="button" data-ui-localize>Add</button></div><div id="unit-sources"></div>
 </div>
-<div class="panel-footer toolbar source-foot" id="source-foot"><button class="btn small" type="button" id="from-extraction">From Extraction</button><button class="btn small" type="button" id="stop-source" hidden>Stop</button><button class="btn small" type="button" id="import-btn">Import from local</button><input type="file" id="import-input" accept=".csv,.tsv,.xlsx,.json,.docx,.txt,.md,.pdf" multiple hidden aria-label="Import assessment units"><button hidden class="btn small" type="button" id="template-btn">Download blank template</button><button class="btn small" type="button" id="synth-btn" hidden>Load synthetic example</button><button class="btn small" type="button" id="recompute-btn">Recompute all</button><button class="btn small" type="button" id="clear-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button>
-<span class="export-results" hidden><label class="label" for="export-format">Export</label><select class="select compact" id="export-format"><option value="csv">68-field CSV (template format)</option><option value="json">JSON dataset, rules and audit trail</option><option value="sof">Summary of findings (CSV)</option></select><button class="btn small primary" type="button" id="export-btn">Export</button></span></div>
+<div class="panel-footer toolbar source-foot" id="source-foot"><button class="btn small" type="button" id="from-extraction" data-ui-localize>From Extraction</button><button class="btn small" type="button" id="stop-source" hidden data-ui-localize>Stop</button><button class="btn small" type="button" id="import-btn" data-ui-localize>Import from local</button><input type="file" id="import-input" accept=".csv,.tsv,.xlsx,.json,.docx,.txt,.md,.pdf" multiple hidden aria-label="Import assessment units"><button hidden class="btn small" type="button" id="template-btn" data-ui-localize>Download blank template</button><button class="btn small" type="button" id="synth-btn" hidden data-ui-localize>Load synthetic example</button><button class="btn small" type="button" id="recompute-btn" data-ui-localize>Recompute all</button><button class="btn small" type="button" id="clear-btn" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button>
+<span class="export-results" hidden><label class="label" for="export-format" data-ui-localize>Export</label><select class="select compact" id="export-format"><option value="csv" data-ui-localize>68-field CSV (template format)</option><option value="json" data-ui-localize>JSON dataset, rules and audit trail</option><option value="sof" data-ui-localize>Summary of findings (CSV)</option></select><button class="btn small primary" type="button" id="export-btn" data-ui-localize>Export</button></span></div>
 </section>
 
 <section class="panel">
-<div class="panel-head"><h2>Parameter Settings</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-list" aria-expanded="true" aria-controls="list-body" title="Collapse Parameter Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Parameter Settings</span></button></div></div>
+<div class="panel-head"><h2 data-ui-localize>Parameter Settings</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-list" aria-expanded="true" aria-controls="list-body" title="Collapse Parameter Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Parameter Settings</span></button></div></div>
 <div class="panel-body" id="list-body"><div class="method-settings" hidden>
-<div class="panel-head"><h2>Method rules</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-rules" aria-expanded="true" aria-controls="rules-body" title="Collapse Method rules"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Method rules</span></button></div></div>
+<div class="panel-head"><h2 data-ui-localize>Method rules</h2><div class="toolbar"><button class="collapse-toggle" type="button" id="toggle-rules" aria-expanded="true" aria-controls="rules-body" title="Collapse Method rules"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Method rules</span></button></div></div>
 <div class="panel-body" id="rules-body">
-<p class="hint rules-intro">Existing approved decisions are retained. Open rules require a reviewer decision when the assessment depends on them.</p>
-<div class="rules-top"><label class="label" for="reviewer">Decided by</label><input class="input compact" id="reviewer" autocomplete="name" placeholder="Name of the person deciding"><span class="hint" id="rules-status"></span></div>
+<p class="hint rules-intro" data-ui-localize>Existing approved decisions are retained. Open rules require a reviewer decision when the assessment depends on them.</p>
+<div class="rules-top"><label class="label" for="reviewer" data-ui-localize>Decided by</label><input class="input compact" id="reviewer" autocomplete="name" placeholder="Name of the person deciding"><span class="hint" id="rules-status"></span></div>
 <div id="rules-list" class="rules-list"></div>
 </div>
 </div>
@@ -253,23 +257,23 @@ th{background:#f4f4f4}
 <div id="parameter-options"></div>
 <div hidden data-internal-assessment><div class="table-wrap"><table class="cmp-table" id="cmp-table"></table></div>
 <div id="editor" class="editor" hidden>
-<div class="editor-head"><div><h3 id="editor-title"></h3><div id="editor-tag"></div></div><button class="btn small" type="button" id="delete-btn">Delete comparison</button></div>
-<div id="unit-parameters"></div><div class="two ed-ids"><label class="label">#2 Intervention<input class="input" id="ed-int" autocomplete="off"></label><label class="label">#3 Control<input class="input" id="ed-ctl" autocomplete="off"></label></div>
-<label class="label" id="ed-br-row" hidden>Baseline risk per 1000 for this comparison (D-004)<input class="input" id="ed-br" inputmode="decimal" autocomplete="off" placeholder="0–1000"></label>
+<div class="editor-head"><div><h3 id="editor-title"></h3><div id="editor-tag"></div></div><button class="btn small" type="button" id="delete-btn" data-ui-localize>Delete comparison</button></div>
+<div id="unit-parameters"></div><div class="two ed-ids"><label class="label" data-ui-localize>#2 Intervention<input class="input" id="ed-int" autocomplete="off"></label><label class="label" data-ui-localize>#3 Control<input class="input" id="ed-ctl" autocomplete="off"></label></div>
+<label class="label" id="ed-br-row" hidden data-ui-localize>Baseline risk per 1000 for this comparison (D-004)<input class="input" id="ed-br" inputmode="decimal" autocomplete="off" placeholder="0–1000"></label>
 <div class="coe-path" id="coe-path" aria-label="Certainty at each stage"></div>
 <div class="stage-tabs" id="stage-tabs" role="group" aria-label="Assessment stages"></div>
 <div id="stage-body" class="stage-body"></div>
 <div class="toolbar between stage-nav"><button class="btn small" type="button" id="stage-prev">←</button><button class="btn small primary" type="button" id="stage-next">→</button></div>
-<h4 class="sub-head">Checks</h4>
+<h4 class="sub-head" data-ui-localize>Checks</h4>
 <div id="issues"></div>
-<details class="history"><summary>Change history</summary><ul id="history"></ul></details>
+<details class="history"><summary data-ui-localize>Change history</summary><ul id="history"></ul></details>
 </div>
 </div>
 </div>
 </section>
 
 <section class="panel">
-<div class="panel-head"><h2>Summary of findings</h2><div class="toolbar"><select class="select compact" id="sof-format" aria-label="Export format"><option value="workbook">Workflow + SoF (Excel)</option><option value="sof">SoF (Excel)</option><option value="json">Dataset + audit (JSON)</option></select><button class="btn small" type="button" id="sof-export">Export</button><button class="collapse-toggle" type="button" id="toggle-sof" aria-expanded="true" aria-controls="sof-body" title="Collapse Summary of findings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only">Collapse Summary of findings</span></button></div></div>
+<div class="panel-head"><h2 data-ui-localize>Summary of findings</h2><div class="toolbar"><select class="select compact" id="sof-format" aria-label="Export format"><option value="workbook" data-ui-localize>Workflow + SoF (Excel)</option><option value="sof" data-ui-localize>SoF (Excel)</option><option value="json" data-ui-localize>Dataset + audit (JSON)</option></select><button class="btn small" type="button" id="sof-export" data-ui-localize>Export</button><button class="collapse-toggle" type="button" id="toggle-sof" aria-expanded="true" aria-controls="sof-body" title="Collapse Summary of findings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Summary of findings</span></button></div></div>
 <div class="panel-body" id="sof-body">
 <div id="sof-groups"></div><table id="sof-table" hidden></table>
 <p class="hint" id="sof-note"></p>
@@ -277,8 +281,8 @@ th{background:#f4f4f4}
 
 </section>
 
-<details class="references" hidden data-developer-references><summary>Method and research references</summary><ul>
-<li>Project sources: GRADE-NMA Assessment Workflow based on Core GRADE (sections 1–10, Tables 1–2) and the GRADE-NMA Codebook (68 fields).</li>
+<details class="references" hidden data-developer-references><summary data-ui-localize>Method and research references</summary><ul>
+<li data-ui-localize>Project sources: GRADE-NMA Assessment Workflow based on Core GRADE (sections 1–10, Tables 1–2) and the GRADE-NMA Codebook (68 fields).</li>
 <li>Guyatt G, et al. Core GRADE series 1–7. BMJ 2025;389 (e081903, e081904, e081905, e083864, e083866 and others).</li>
 <li>Puhan MA, et al. A GRADE Working Group approach for rating the quality of treatment effect estimates from network meta-analysis. BMJ 2014;349:g5630.</li>
 <li>Brignardello-Petersen R, et al. Advances in the GRADE approach to rate the certainty in estimates from a network meta-analysis. J Clin Epidemiol 2018;93:36–44.</li>
@@ -302,6 +306,6 @@ th{background:#f4f4f4}
 <script src="app/extraction-sources.js?v=1"></script>
 <script src="app/analysis-ai.js?v=1"></script>
 <script src="app/coe-units.js?v=2"></script>
-<script src="app/coe-workspace.js?v=5"></script>
+<script src="app/coe-workspace.js?v=20261020-i18n"></script>
 </body>
 </html>
