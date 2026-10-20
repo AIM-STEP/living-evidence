@@ -1,0 +1,14 @@
+/* Shared blue palette. Legacy --plum names remain compatible with tool styles. */
+:root {
+  --brand: #4d6bfe;
+  --brand-text: #3b55db;
+  --brand-hover: #2d44b9;
+  --brand-soft: #eef2ff;
+  --plum: var(--brand-text);
+  --plum-dark: var(--brand-hover);
+  --pale: var(--brand-soft);
+}
+
+.brand, .brand-main { color: var(--brand); }
+input[type="checkbox"], input[type="radio"], progress { accent-color: var(--brand-text); }
+::selection { background: #dce3ff; color: #17255c; }
