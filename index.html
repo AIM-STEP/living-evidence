@@ -1712,7 +1712,7 @@ body.project-page-mode .toolset-layout { display: none; }
 
 </style>
   <link rel="stylesheet" href="app/theme.css?v=20261020-5">
-  <link rel="stylesheet" href="app/dashboard.css?v=20261020-6">
+  <link rel="stylesheet" href="app/dashboard.css?v=20261020-7">
 </head>
   <body>
     <!-- Logo artwork (from AIM-STEP_square.svg) plus shared gradients/filters for the tiles -->
@@ -2869,11 +2869,26 @@ body.project-page-mode .toolset-layout { display: none; }
         var state = document.getElementById("pw-sort");
         var current = document.getElementById("pw-sort-current");
         var radios = Array.prototype.slice.call(picker.querySelectorAll('input[name="pw-sort-choice"]'));
+        var startButton = document.getElementById("pw-start");
+
+        function syncActionSize() {
+          if (!startButton) return;
+          var bounds = startButton.getBoundingClientRect();
+          if (!bounds.width || !bounds.height) return;
+          picker.style.setProperty("--project-action-width", bounds.width + "px");
+          picker.style.setProperty("--project-action-height", bounds.height + "px");
+        }
+        if (startButton && window.ResizeObserver) {
+          new ResizeObserver(syncActionSize).observe(startButton);
+        }
+        window.addEventListener("resize", syncActionSize);
+        if (document.fonts) document.fonts.ready.then(syncActionSize);
 
         function syncSelection() {
           var option = state.options[state.selectedIndex];
           if (option) current.textContent = option.textContent;
           radios.forEach(function (radio) { radio.checked = radio.value === state.value; });
+          syncActionSize();
         }
         function close(restoreFocus) {
           panel.hidden = true;
