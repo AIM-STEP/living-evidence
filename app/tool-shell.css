@@ -1,0 +1,143 @@
+/* Tool-only visual layer, matching the project dashboard without changing data layouts. */
+@font-face { font-family: Inter; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/inter-regular.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/inter-medium.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/inter-bold.woff2") format("woff2"); }
+:root {
+  --tool-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --tool-ink: #202b3d;
+  --tool-muted: #596579;
+  --tool-border: #e1e7f0;
+  --tool-soft: #f7f9fc;
+  --ink: var(--tool-ink);
+  --ink2: #33435c;
+  --muted: var(--tool-muted);
+  --line: var(--tool-border);
+}
+body.tool-page {
+  margin: 0; background: var(--tool-soft); color: var(--tool-ink);
+  font: 15px/1.6 var(--tool-font); -webkit-font-smoothing: antialiased;
+}
+.tool-page [hidden] { display: none !important; }
+.tool-page button, .tool-page input, .tool-page select, .tool-page textarea { font-family: inherit; }
+.tool-page > .header {
+  height: auto; min-height: 80px; padding: 14px max(24px, calc((100vw - 1600px) / 2));
+  display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center;
+  border-bottom: 1px solid var(--tool-border); background: #fff;
+  position: static; box-shadow: none;
+}
+.tool-page .brand { flex: 1 1 360px; letter-spacing: 0; }
+.tool-page .brand .brand-main { font-family: var(--tool-font); font-size: 26px; }
+.tool-page .brand .brand-product { font-size: 18px; }
+.tool-page .brand .brand-sub { font-size: 13px; color: var(--tool-muted); }
+.tool-page .right-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
+.tool-page .project-pill { max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; padding: 5px 9px; border-radius: 6px; }
+.tool-page > main.wrap { box-sizing: border-box; width: min(1600px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 24px 0 56px; }
+.tool-page .layout, .tool-page .columns { gap: 24px; }
+.tool-page .layout > *, .tool-page .columns > *, .tool-page .left-column, .tool-page .right-column { min-width: 0; }
+.tool-page .left-column, .tool-page .right-column { gap: 20px; }
+.tool-page .right-column { position: static; }
+.tool-page.tool-eligibility .layout, .tool-page.tool-search-strategy .columns { grid-template-columns: minmax(0, 1fr) minmax(0, 1.618fr); }
+.tool-page .panel { border: 1px solid var(--tool-border); border-radius: 12px; background: #fff; box-shadow: none; }
+.tool-page .panel-head, .tool-page .section-head { align-items: center; gap: 12px; }
+.tool-page .panel-head { flex-wrap: wrap; padding: 18px 20px; }
+.tool-page .panel-body, .tool-page .section { padding: 20px; }
+.tool-page .panel-footer { padding: 14px 20px; }
+.tool-page.tool-eligibility .criteria-heading { padding: 18px 20px 0; }
+.tool-page .preview-body { padding: 20px; }
+.tool-page .preview-actions { padding: 0 20px 20px; }
+.tool-page h1 { font-size: 24px; line-height: 1.35; font-weight: 600; letter-spacing: -.02em; }
+.tool-page h2, .tool-page .section h2, .tool-page .criteria-heading h2 { font-size: 18px; line-height: 1.4; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+.tool-page h3 { font-size: 15px; line-height: 1.5; font-weight: 600; }
+.tool-page .label, .tool-page .field-label, .tool-page .subheading { font-size: 14px; line-height: 1.5; font-weight: 500; }
+.tool-page .hint, .tool-page .empty, .tool-page .notice, .tool-page .footnote, .tool-page .muted { font-size: 13px; line-height: 1.65; }
+.tool-page .hint, .tool-page .empty, .tool-page .footnote { color: var(--tool-muted); }
+.tool-page .select, .tool-page .text-input, .tool-page .input, .tool-page .textarea,
+.tool-page.tool-build-protocol main :is(input:not([type="checkbox"]),select,textarea),
+.tool-page.tool-drafting-manuscript main :is(input:not([type="checkbox"]),select,textarea) {
+  box-sizing: border-box; min-width: 0; border: 1px solid #cbd5e4; border-radius: 7px;
+  background: #fff; color: var(--tool-ink); font-size: 14px; line-height: 1.55; padding: 8px 10px;
+}
+.tool-page :is(input,select,textarea):focus { border-color: var(--brand); outline: 2px solid #dce3ff; outline-offset: 1px; box-shadow: none; }
+.tool-page :is(.text-input,.input,.select):not(.compact) { min-height: 38px; }
+.tool-page textarea { resize: vertical; }
+.tool-page .toolbar { flex-wrap: wrap; align-items: center; gap: 8px; }
+.tool-page .panel-head > .toolbar { padding: 0; border: 0; background: transparent; }
+.tool-page :is(.btn,.step-btn,.btn-link,.framework,.criterion-option,.pc-btn,.vote,.round,.tool-language-toggle) {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  box-sizing: border-box; min-height: 30px; height: auto; padding: 4px 8px;
+  border: 1px solid #cbd5e4; border-radius: 6px; background: #fff; color: #33435c;
+  font: 500 14px/1.4 var(--tool-font); text-align: center; text-decoration: none;
+  box-shadow: none; cursor: pointer;
+}
+.tool-page .btn svg, .tool-page .step-btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.tool-page :is(.btn,.step-btn,.btn-link,.framework,.criterion-option,.pc-btn,.vote,.round,.tool-language-toggle):hover:not(:disabled):not([aria-disabled="true"]) { background: #f0f4ff; border-color: #9dadf5; color: var(--brand-text); text-decoration: none; }
+.tool-page :is(.btn,.step-btn):is(.primary,.btn-primary), .tool-page .tool-flow-next { background: var(--brand-text); color: #fff; border-color: var(--brand-text); }
+.tool-page :is(.btn,.step-btn):is(.primary,.btn-primary):hover:not(:disabled), .tool-page .tool-flow-next:hover { background: var(--brand-hover); border-color: var(--brand-hover); color: #fff; }
+.tool-page :is(.framework.selected,.vote.selected,.round.current,.btn.activated,.btn[aria-pressed="true"]) { background: var(--brand-soft); color: var(--brand-text); border-color: #a8b7fc; }
+.tool-page :is(button,.btn,.step-btn):disabled, .tool-page [aria-disabled="true"] { opacity: .5; cursor: default; }
+.tool-page :is(button,a,select):focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.tool-page .tool-language-toggle { margin: 0; white-space: nowrap; }
+.tool-page .collapse-toggle { width: 30px; height: 30px; border-radius: 6px; }
+.tool-page .table-wrap, .tool-page .criteria-table-wrap { overflow-x: auto; max-width: 100%; }
+.tool-page table { font-size: 14px; line-height: 1.55; }
+.tool-page th { font-weight: 500; background: #f5f7fb; color: #33435c; }
+.tool-page th, .tool-page td { padding: 10px 12px; }
+.tool-page :is(.record,.criterion,.study-card,.form-card) { border-color: var(--tool-border); border-radius: 8px; box-shadow: none; }
+.tool-page .dialog { max-width: calc(100vw - 32px); border: 1px solid var(--tool-border); border-radius: 12px; }
+.tool-page .dialog::backdrop { background: #18223855; }
+.tool-page :is(.references,.research-notes,.method-references) { font-size: 13px; line-height: 1.65; }
+/* One compact navigation row; step number is location, never completion. */
+.tool-page .tool-flow {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px;
+  padding: 0 0 20px; margin: 0 0 24px; border-bottom: 1px solid var(--tool-border);
+}
+.tool-page .tool-flow-home { flex: 0 0 auto; }
+.tool-page .tool-flow-current { display: flex; align-items: center; gap: 10px; flex: 1 1 260px; min-width: 0; }
+.tool-page .tool-flow-position { flex: 0 0 auto; color: var(--tool-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.tool-page .tool-flow .tool-flow-picker {
+  width: auto; max-width: 100%; min-width: 0; min-height: 32px; margin: 0; padding: 4px 28px 4px 8px;
+  border: 1px solid transparent; border-radius: 6px; background-color: transparent;
+  color: var(--tool-ink); font: 500 15px/1.5 var(--tool-font); text-overflow: ellipsis;
+}
+.tool-page .tool-flow-picker:hover { background-color: #fff; border-color: var(--tool-border); }
+.tool-page .tool-flow-actions { display: flex; flex: 0 0 auto; gap: 8px; margin-left: auto; }
+.tool-page .tool-flow [aria-disabled="true"] { pointer-events: none; }
+.tool-flow-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (max-width: 1100px) {
+  .tool-page.tool-eligibility .layout, .tool-page.tool-search-strategy .columns { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .tool-page > .header { padding: 14px 16px; gap: 12px; }
+  .tool-page > main.wrap { width: calc(100% - 32px); padding-top: 18px; }
+  .tool-page .layout, .tool-page .columns { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .tool-page .panel-head, .tool-page .panel-body, .tool-page .section { padding: 16px; }
+  .tool-page .panel-head > .toolbar { justify-content: flex-start; }
+  .tool-page .tool-flow { gap: 10px; margin-bottom: 18px; padding-bottom: 16px; }
+  .tool-page .tool-flow-current { order: -1; flex-basis: 100%; }
+  .tool-page .tool-flow-picker { flex: 1; }
+  .tool-page :is(.btn,.step-btn,.tool-language-toggle) { min-height: 34px; }
+  .tool-page .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .tool-page .form-grid .full { grid-column: auto; }
+}
+/* The existing criteria dialogs reuse this page as a stripped-down editor. */
+:is(.embedded-preview,.embedded-manual) .tool-page > .header,
+:is(.embedded-preview,.embedded-manual) .tool-page .tool-flow { display: none !important; }
+:is(.embedded-preview,.embedded-manual) .tool-page > main.wrap { width: 100%; max-width: none; margin: 0; padding: 0; }
+:is(.embedded-preview,.embedded-manual) .tool-page { background: #fff; }
+:is(.embedded-preview,.embedded-manual) .tool-page .layout { display: block; }
+:is(.embedded-preview,.embedded-manual) .tool-page .panel { border: 0; border-radius: 0; }
+.embedded-preview .tool-page .preview-body { padding: 0; }
+.embedded-manual .tool-page .section { padding: 14px 0; }
+.embedded-manual .tool-page :is(.preview-body,.criteria-heading) { padding-inline: 0; }
+@media (prefers-reduced-motion: reduce) { .tool-page * { scroll-behavior: auto; } }
+/* Writing tools keep source material beside the draft, like the home workspace. */
+.tool-page .tool-writing-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.618fr); gap: 24px; align-items: start; }
+.tool-page .tool-writing-setup, .tool-page .tool-writing-editor { min-width: 0; }
+.tool-page .tool-writing-setup { display: grid; gap: 20px; }
+.tool-page .tool-writing-layout .panel { margin: 0; }
+.tool-page .tool-writing-layout .form-grid { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.tool-page .tool-writing-layout .form-grid .full { grid-column: auto; }
+.tool-page .tool-writing-layout label { font-size: 14px; line-height: 1.5; font-weight: 500; }
+.tool-page .tool-writing-layout :is(#protocol-text,#manuscript-text) { min-height: 560px; line-height: 1.75; }
+@media (max-width: 1100px) { .tool-page .tool-writing-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) { .tool-page .tool-writing-layout :is(#protocol-text,#manuscript-text) { min-height: 360px; } }

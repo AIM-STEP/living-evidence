@@ -216,16 +216,19 @@ th{background:#f4f4f4}
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
 <script defer src="app/tool-i18n-catalog.js?v=20261020-1"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
+
+<link rel="stylesheet" href="app/tool-shell.css?v=20261020-1">
+<script defer src="app/tool-shell.js?v=20261020-1"></script>
 </head>
-<body>
+<body class="tool-page tool-extraction">
 <header class="header">
 <a class="brand" data-home href="index.html"><span class="brand-text"><span class="brand-name-line"><span class="brand-main">ACHIEVE</span><span class="brand-product">EvidenceBank</span></span><span class="brand-sub">@An AI-Enabled, Traceable, Graded, Living Bank of Evidence</span></span></a>
-<nav class="nav" aria-label="Main navigation"><a data-workflow href="index.html?view=project" data-ui-localize>Workflow</a><a class="active" data-toolset href="index.html?view=toolset" data-ui-localize>Toolset</a></nav>
-<a class="project-pill" id="project-name" hidden></a>
+
+<div class="right-head"><a class="project-pill" id="project-name" hidden></a></div>
 </header>
 <main class="wrap">
-<div class="crumb" data-ui-localize><a data-toolset href="index.html?view=toolset" data-ui-localize>Toolset</a> / Extraction</div>
-<div class="heading tool-navigation"><a class="step-btn back" data-prev href="full-text-screening.html" data-ui-localize><span aria-hidden="true">←</span> Back: Full-text assess</a><a class="step-btn next" data-next href="risk-of-bias.html" data-ui-localize>Next: Risk of bias assessment <span aria-hidden="true">→</span></a></div>
+
+<nav class="tool-flow" aria-label="Research workflow" data-ui-preserve><a class="btn tool-flow-home" href="index.html?view=toolset" data-flow-home>Projects</a><div class="tool-flow-current"><span class="tool-flow-position" data-flow-position>6 / 10</span><label class="tool-flow-label" for="tool-flow-picker" data-flow-label>Choose a research step</label><select class="tool-flow-picker" id="tool-flow-picker" data-flow-picker><option value="eligibility.html">1. Eligibility criteria</option><option value="search-strategy.html">2. Search strategy</option><option value="build-protocol.html">3. Build the protocol</option><option value="title-abstract-screening.html">4. Title and abstract screening</option><option value="full-text-screening.html">5. Full-text assess</option><option value="extraction.html">6. Extraction</option><option value="risk-of-bias.html">7. Risk of bias assessment</option><option value="analysis.html">8. Analysis</option><option value="certainty-of-evidence.html">9. Certainty of evidence</option><option value="drafting-manuscript.html">10. Drafting the manuscript</option></select></div><div class="tool-flow-actions"><a class="btn tool-flow-previous" href="full-text-screening.html" data-prev data-flow-previous>Previous</a><a class="btn btn-primary tool-flow-next" href="risk-of-bias.html" data-next data-flow-next>Next</a></div></nav>
 <div class="layout">
 <div class="stack">
 

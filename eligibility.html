@@ -68,11 +68,14 @@
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
 <script defer src="app/tool-i18n-catalog.js?v=20261020-1"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
+
+<link rel="stylesheet" href="app/tool-shell.css?v=20261020-1">
+<script defer src="app/tool-shell.js?v=20261020-1"></script>
 </head>
-<body>
-<header class="header"><a class="brand" href="index.html" aria-label="ACHIEVE EvidenceBank @An AI-Enabled, Traceable, Graded, Living Bank of Evidence"><span class="brand-text"><span class="brand-name-line"><span class="brand-main">ACHIEVE</span><span class="brand-product">EvidenceBank</span></span><span class="brand-sub">@An AI-Enabled, Traceable, Graded, Living Bank of Evidence</span></span></a><nav class="nav" aria-label="Main navigation"><a href="index.html?view=project" data-nav="workflow" data-ui-localize>Workflow</a><a href="index.html?view=toolset" data-nav="toolset" data-ui-localize>Toolset</a></nav><div class="right-head"><span class="project-pill" id="project-pill" hidden></span><button class="tool-language-toggle" id="lang-toggle" type="button" aria-label="切换为中文" data-ui-localize>English</button></div></header>
-<main class="wrap"><div class="crumb"><a href="index.html?view=toolset" data-nav="toolset" data-ui-localize>Toolset</a> / <span data-ui-localize>Eligibility criteria</span></div>
-<div class="heading tool-navigation"><a class="step-btn next" id="next-search-strategy" href="search-strategy.html" data-ui-localize>Next: Search strategy <span aria-hidden="true">→</span></a></div>
+<body class="tool-page tool-eligibility">
+<header class="header"><a class="brand" href="index.html" aria-label="ACHIEVE EvidenceBank @An AI-Enabled, Traceable, Graded, Living Bank of Evidence"><span class="brand-text"><span class="brand-name-line"><span class="brand-main">ACHIEVE</span><span class="brand-product">EvidenceBank</span></span><span class="brand-sub">@An AI-Enabled, Traceable, Graded, Living Bank of Evidence</span></span></a><div class="right-head"><span class="project-pill" id="project-pill" hidden></span><button class="tool-language-toggle" id="lang-toggle" type="button" aria-label="切换为中文" data-ui-localize>English</button></div></header>
+<main class="wrap">
+<nav class="tool-flow" aria-label="Research workflow" data-ui-preserve><a class="btn tool-flow-home" href="index.html?view=toolset" data-flow-home>Projects</a><div class="tool-flow-current"><span class="tool-flow-position" data-flow-position>1 / 10</span><label class="tool-flow-label" for="tool-flow-picker" data-flow-label>Choose a research step</label><select class="tool-flow-picker" id="tool-flow-picker" data-flow-picker><option value="eligibility.html">1. Eligibility criteria</option><option value="search-strategy.html">2. Search strategy</option><option value="build-protocol.html">3. Build the protocol</option><option value="title-abstract-screening.html">4. Title and abstract screening</option><option value="full-text-screening.html">5. Full-text assess</option><option value="extraction.html">6. Extraction</option><option value="risk-of-bias.html">7. Risk of bias assessment</option><option value="analysis.html">8. Analysis</option><option value="certainty-of-evidence.html">9. Certainty of evidence</option><option value="drafting-manuscript.html">10. Drafting the manuscript</option></select></div><div class="tool-flow-actions"><a class="btn tool-flow-previous" href="#"  data-flow-previous>Previous</a><a class="btn btn-primary tool-flow-next" href="search-strategy.html" id="next-search-strategy" data-flow-next>Next</a></div></nav>
 <div class="layout"><section class="panel editor" aria-label="Criteria editor">
 <div class="section"><div class="section-head"><div><h2 data-ui-localize>Review type</h2></div></div><label class="field-label" for="review-type" data-ui-localize>Review type</label><select class="select" id="review-type"><option data-ui-localize>Literature Review</option><option data-ui-localize>Systematic Review</option><option data-ui-localize>Network/Meta-analysis</option><option data-ui-localize>Scoping Review</option><option data-ui-localize>Other Review</option></select></div>
 <div class="section"><label class="field-label" for="generation-method" data-ui-localize>Generation Method</label><select class="select" id="generation-method"><option value="" hidden></option><option value="machine" data-ui-localize>Machine generate</option><option value="manual" data-ui-localize>Manual generate</option></select></div>
@@ -895,14 +898,15 @@ $('question').addEventListener('input',event=>{if(!composingQuestion&&!event.isC
 $('review-type').addEventListener('input',()=>{stopMachineGeneration();state.confirmed=false;setMachineStatus('');save()});
 ['start-date','end-date','limits-other'].forEach(id=>$(id).addEventListener('input',()=>{state.confirmed=false;save()}));$('language').addEventListener('change',()=>{state.confirmed=false;save()});
 $('download').addEventListener('click',()=>{if(!savePreviewEdits(false))return;const blob=new Blob([criteriaWordFile()],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='eligibility-criteria'+(projectId?'-'+projectId:'')+'.docx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
-// Next always goes to Search strategy, whatever the state of this step. What
-// it no longer does is block: criteria can also be uploaded there. The step is
+// Next goes to Search strategy after saving; missing criteria do not block
+// navigation because they can also be uploaded there. The step is
 // still only marked complete, and the criteria only handed over, when there is
 // a current set with at least one eligibility rule.
-$('next-search-strategy').addEventListener('click',event=>{
+function saveBeforeToolNavigation(event){
   if(previewDirty&&!savePreviewEdits(false)){event.preventDefault();return;}
   if(generationController||manualRefinementController||voiceRecognition){stopMachineGeneration();stopManualRefinement();abortVoiceInput()}
   let saved=false;try{saved=save()}catch(e){}
+  if(!saved){event.preventDefault();toast('Could not save criteria on this device. Your edits are still available here.');return;}
   const mode=$('generation-method').value;
   const machineCurrent=mode!=='machine'||(state.machineRun&&state.machineRun.question===$('question').value.trim()&&state.machineRun.reviewType===$('review-type').value&&(state.machineRun.sourceRevision??0)===(Number(state.machineSourceRevision)||0));
   const rows=mode==='machine'?state.machineCriteria:state.criteria;
@@ -918,7 +922,9 @@ $('next-search-strategy').addEventListener('click',event=>{
     }catch(e){}
   }
   try{sessionStorage.setItem('aimstep-eligibility-handoff:'+(projectId||'default'),String(Date.now()))}catch(e){}
-});
+}
+$('next-search-strategy').addEventListener('click',saveBeforeToolNavigation);
+document.addEventListener('aimstep:before-tool-navigation',saveBeforeToolNavigation);
 // Language switching is provided by app/tool-i18n.js.
 
 /* ---------------- Pending clarification: the reviewer decides ----------------
