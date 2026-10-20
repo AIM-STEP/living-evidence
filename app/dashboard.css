@@ -34,6 +34,7 @@ button, input, select, textarea { font-family: inherit; }
   gap: 16px 24px;
 }
 .header-brand { gap: 24px; flex-wrap: wrap; }
+.header-brand .brand { flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .brand { gap: 10px; }
 .brand svg.brand-mark { height: 40px !important; }
 .brand-main { font-family: var(--dashboard-font); font-size: 24px; letter-spacing: -.025em; font-weight: 700; }

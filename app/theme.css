@@ -10,5 +10,8 @@
 }
 
 .brand, .brand-main { color: var(--brand); }
+.brand, .brand-text { min-width: 0; }
+.brand-sub { white-space: normal; overflow-wrap: anywhere; }
+.brand-mark { flex-shrink: 0; }
 input[type="checkbox"], input[type="radio"], progress { accent-color: var(--brand-text); }
 ::selection { background: #dce3ff; color: #17255c; }
