@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-<script src="app/secure-origin.js"></script>
+    <base href="/">
+<script src="app/secure-origin.js?v=20261020-1"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="AIM-STEP workflow: start a project and work through the evidence-based research toolkit." />
@@ -3283,7 +3284,7 @@ body.project-page-mode .toolset-layout { display: none; }
         var frame = document.getElementById("project-page-frame");
         var toolset = document.getElementById("toolset");
         var toolsetDialog = document.getElementById("toolset-status-dialog");
-        var home = new URL("index.html", window.location.href);
+        var home = new URL("index.html", document.baseURI);
         if (/\/workflow\/project\/?$/.test(window.location.pathname)) home = new URL(window.location.pathname.replace(/workflow\/project\/?$/, "") + "index.html", window.location.origin);
         var projectRoute = "/workflow/project"; // accepted only for older links
         var contextKey = "aimstep-active-project";
@@ -3314,15 +3315,18 @@ body.project-page-mode .toolset-layout { display: none; }
           return pathname.replace(/\/+$/, "") === projectRoute;
         }
         function routeUrl(view, target) {
-          var url = new URL(home);
-          if (view === "project") {
-            url.searchParams.set("view", "project");
-            if (activeProject) url.searchParams.set("projectId", activeProject.id);
-            return url;
+          var url = new URL("./", home);
+          var file = target && target.pathname.split("/").pop();
+          var slug = file && window.AIMSTEP_ROUTES[file];
+          if (view === "page" && slug) {
+            url = new URL(slug + "/", url);
+            url.search = target.search;
+            url.hash = target.hash;
+          } else {
+            if (view) url.searchParams.set("view", view);
+            if (target) url.searchParams.set("page", target.pathname.slice(home.pathname.lastIndexOf("/") + 1) + target.search + target.hash);
           }
-          if (view) url.searchParams.set("view", view);
-          if (activeProject && (view === "toolset" || view === "page")) url.searchParams.set("projectId", activeProject.id);
-          if (target) url.searchParams.set("page", target.pathname.slice(home.pathname.lastIndexOf("/") + 1) + target.search + target.hash);
+          if (activeProject && !url.searchParams.has("project") && !url.searchParams.has("projectId")) url.searchParams.set("projectId", activeProject.id);
           return url;
         }
         function isToolsetPage(url) {
@@ -3533,7 +3537,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target && frame.getAttribute("src") !== target.href) frame.src = target.href;
           if (push) {
             var url = routeUrl(view, target);
-            history.pushState({ projectId: activeProject ? activeProject.id : "", projectName: activeProject ? activeProject.name : "" }, "", url.pathname + url.search);
+            history.pushState({ projectId: activeProject ? activeProject.id : "", projectName: activeProject ? activeProject.name : "" }, "", url.pathname + url.search + url.hash);
           }
           document.querySelectorAll(".nav a").forEach(function (link) {
             var navTarget = new URL(link.dataset.pageHref || link.getAttribute("href"), home);
@@ -3555,6 +3559,11 @@ body.project-page-mode .toolset-layout { display: none; }
           try {
             var url = new URL(value, home);
             var base = home.pathname.slice(0, home.pathname.lastIndexOf("/") + 1);
+            if (url.origin !== home.origin) return null;
+            var slug = url.pathname.slice(base.length).replace(/\/$/, "");
+            var file = Object.keys(window.AIMSTEP_ROUTES).find(function (key) { return window.AIMSTEP_ROUTES[key] === slug; });
+            if (file) url.pathname = base + file;
+            else if (url.pathname === base) url.pathname = home.pathname;
             return url.origin === home.origin && url.pathname.startsWith(base) && (isProjectRoute(url.pathname) || /\.html$/.test(url.pathname)) ? url : null;
           } catch (e) { return null; }
         }
@@ -3563,8 +3572,14 @@ body.project-page-mode .toolset-layout { display: none; }
           var saved = readContext();
           var state = history.state;
           var stateProjectId = state && typeof state.projectId === "string" ? state.projectId : "";
-          var id = params.get("projectId") || stateProjectId || (saved && saved.id);
+          var id = params.get("projectId") || params.get("project") || params.get("id") || stateProjectId || (saved && saved.id);
           if (id) rememberProject(id, state && state.projectId === id ? state.projectName : saved && saved.id === id ? saved.name : "");
+          var cleanTarget = sitePage(location.href);
+          if (cleanTarget && window.AIMSTEP_ROUTES[cleanTarget.pathname.split("/").pop()]) {
+            setView("page", cleanTarget, false);
+            refreshProject();
+            return;
+          }
           var legacyProjectRoute = params.get("view") === "project" || (params.has("projectId") && !params.has("view")) || params.get("route") === "workflow-project";
           if (isProjectRoute(location.pathname) || legacyProjectRoute) {
             if (id) {
@@ -3578,7 +3593,14 @@ body.project-page-mode .toolset-layout { display: none; }
             return;
           }
           var target = params.get("view") === "page" ? sitePage(params.get("page") || "") : null;
-          if (target && target.pathname !== home.pathname) setView("page", target, false);
+          if (target && target.pathname !== home.pathname) {
+            params.forEach(function (value, key) {
+              if (key !== "view" && key !== "page" && !target.searchParams.has(key)) target.searchParams.set(key, value);
+            });
+            if (location.hash) target.hash = location.hash;
+            setView("page", target, false);
+            history.replaceState(history.state, "", routeUrl("page", target));
+          }
           else setView(params.get("view") === "project" ? "project" : params.get("view") === "toolset" ? "toolset" : params.get("view") === "new-project" ? "new-project" : "", null, false);
           refreshProject();
         }

@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
+const routeWindow={};routeWindow.top={};routeWindow.self={};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../app/secure-origin.js'),'utf8'),{window:routeWindow,URL,location:{href:'https://aimsetp.com/'}});
 const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
 function source(name, next) {
   const start = html.indexOf('        function ' + name + '(');
@@ -28,7 +30,7 @@ function setup(query = '') {
     page: element(), otherPage: element(), toolset: element(), frame: element(), projectName: element(),
     document: {title:'', body:{classList:{toggle(k,v){if(v)classes.add(k);else classes.delete(k);}}},
       getElementById(id) {return nodes[id];}, querySelectorAll() {return [];}},
-    window: {AIMSTEP:{t:k=>k}, scrollTo(){}},
+    window: {AIMSTEP_ROUTES:routeWindow.AIMSTEP_ROUTES,AIMSTEP:{t:k=>k}, scrollTo(){}},
     history: {state:null,pushState(state,_,url){this.state=state;this.url=url;},replaceState(state,_,url){this.state=state;this.url=String(url);}},
     renderSetupStatus(){},refreshProject(){},readContext(){return null;},
     rememberProject(id,name){env.activeProject={id,name};},
@@ -37,7 +39,7 @@ function setup(query = '') {
   vm.createContext(env);
   vm.runInContext(source('isProjectRoute','routeUrl') + source('routeUrl','isToolsetPage') +
     source('isToolsetPage','renderProjectLink') + source('setView','sitePage') +
-    source('restoreRoute','followLink'), env);
+    source('sitePage','restoreRoute') + source('restoreRoute','followLink'), env);
   return {env,nodes,classes,toolNav};
 }
 for (const query of ['', '?view=toolset', '?view=project&projectId=synthetic-dashboard', '?view=new-project']) {
@@ -102,3 +104,25 @@ console.log('PASS: home, Toolset, project selection, create/back/forward, full-p
   assert.equal(destination.hash,'#tool-search');
 }
 console.log('PASS: signed-out dashboard and legacy redirect preserve project, language and anchor');
+
+for (const [file,slug] of Object.entries(routeWindow.AIMSTEP_ROUTES)) {
+ const {env}=setup();
+ env.setView('page',new URL('https://aimsetp.com/'+file+'?projectId=synthetic-dashboard&lang=zh'),true);
+ assert.equal(new URL(env.history.url,'https://aimsetp.com').pathname,'/'+slug+'/');
+ assert(!env.history.url.includes('index.html'));
+ env.location=new URL('https://aimsetp.com/'+slug+'/?projectId=synthetic-dashboard&lang=zh');
+ env.restoreRoute();
+ assert.equal(new URL(env.frame.src).pathname,'/'+file);
+ assert.equal(new URL(env.frame.src).searchParams.get('projectId'),'synthetic-dashboard');
+ const entry=fs.readFileSync(path.join(__dirname,'..',slug,'index.html'),'utf8');
+ let destination;
+ vm.runInNewContext(entry.match(/<script>(.*?)<\/script>/s)[1],{URL,location:{href:env.location.href,search:env.location.search,hash:'#saved',replace(url){destination=new URL(url);}}});
+ assert.equal(destination.pathname,'/');
+ assert.equal(destination.searchParams.get('page'),file);
+ assert.equal(destination.searchParams.get('lang'),'zh');
+ assert.equal(destination.hash,'#saved');
+ const old=setup('?view=page&page='+file+'&project=legacy-project&lang=zh');old.env.restoreRoute();
+ assert.equal(new URL(old.env.history.url).pathname,'/'+slug+'/');
+ assert.equal(new URL(old.env.frame.src).searchParams.get('project'),'legacy-project');
+}
+console.log('PASS: all ten clean tool routes, static reload entries, legacy links and project/language context');
