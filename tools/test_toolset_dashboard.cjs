@@ -27,7 +27,7 @@ function setup(query = '') {
     activeProject: {id: 'synthetic-dashboard', name: 'Synthetic dashboard'},
     page: element(), otherPage: element(), toolset: element(), frame: element(), projectName: element(),
     document: {title:'', body:{classList:{toggle(k,v){if(v)classes.add(k);else classes.delete(k);}}},
-      getElementById(id) {return nodes[id];}, querySelectorAll() {return [toolNav];}},
+      getElementById(id) {return nodes[id];}, querySelectorAll() {return [];}},
     window: {AIMSTEP:{t:k=>k}, scrollTo(){}},
     history: {state:null,pushState(state,_,url){this.state=state;this.url=url;},replaceState(state,_,url){this.state=state;this.url=String(url);}},
     renderSetupStatus(){},refreshProject(){},readContext(){return null;},
@@ -48,7 +48,6 @@ for (const query of ['', '?view=toolset', '?view=project&projectId=synthetic-das
   assert.equal(env.otherPage.hidden,true,query);
   assert.equal(env.page.hidden,!query.includes('view=project'),query);
   assert.equal(nodes['pw-form'].hidden,!query.includes('new-project'),query);
-  assert.equal(toolNav.attrs['aria-current'],'page',query);
 }
 {
   const {env,nodes,classes}=setup();
@@ -86,7 +85,7 @@ console.log('PASS: home, Toolset, project selection, create/back/forward, full-p
   env.restoreRoute();
   assert(!env.toolset.hidden);
   assert(env.page.hidden);
-  env.setView('page',new URL('https://aimsetp.com/contact.html'),false);
+  env.setView('page',new URL('https://aimsetp.com/analysis.html'),false);
   assert(!env.otherPage.hidden);
   assert.equal(new URL(env.frame.src).searchParams.has('projectId'),false);
 }

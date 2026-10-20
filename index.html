@@ -1646,10 +1646,24 @@
   #toolset .tool { transition: none; }
 }
 
+/* The simplified header contains branding, project context and account controls. */
+.header-inner, body.has-active-project .header-inner {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "brand lang";
+  column-gap: 18px;
+}
+@media (max-width: 560px) {
+  .header-inner, body.has-active-project .header-inner {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "brand" "lang";
+    row-gap: 10px;
+  }
+}
+
 /* Project workflow and tools share one dashboard; tool pages retain full width. */
 .toolset-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.61803398875fr);
   align-items: start;
   gap: 40px;
   width: min(1440px, calc(100% - 48px));
@@ -1657,10 +1671,6 @@
   padding: 32px 0 64px;
 }
 .workflow-column, #toolset { min-width: 0; }
-.column-title, #toolset .column-title {
-  margin: 0 0 24px; text-align: left; color: var(--ink);
-  font-size: 24px; font-weight: 500; line-height: 1.3;
-}
 .toolset-layout .container { width: 100%; margin: 0; }
 .toolset-layout #projects { padding: 0; }
 .toolset-layout #toolset { padding: 0; background: none; }
@@ -1692,7 +1702,6 @@ body.project-page-mode .toolset-layout { display: none; }
 .workflow-column .workspace-panel { padding: 20px; overflow-x: auto; }
 @media (max-width: 900px) {
   .toolset-layout { grid-template-columns: minmax(0, 1fr); gap: 36px; }
-  .column-title, #toolset .column-title { margin-bottom: 18px; }
 }
 @media (max-width: 480px) {
   .toolset-layout { width: calc(100% - 32px); padding-top: 24px; }
@@ -1779,11 +1788,6 @@ body.project-page-mode .toolset-layout { display: none; }
         <a href="index.html?view=project" class="header-project-link" id="workspace-project-name" hidden></a>
         </div>
 
-        <nav class="nav" aria-label="Main navigation">
-          <a href="index.html?view=toolset" data-page-href="workflow.html" data-i18n="nav_toolset">Toolset</a>
-          <a href="contact.html" data-i18n="nav_contact">Contact</a>
-        </nav>
-
         <div class="header-actions">
           <button type="button" class="lang" id="lang-toggle" aria-label="切换语言 / Switch language">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false">
@@ -1805,8 +1809,7 @@ body.project-page-mode .toolset-layout { display: none; }
 
           <main>
       <div class="toolset-layout">
-        <div class="workflow-column" aria-labelledby="workflow-column-title">
-          <h1 class="column-title" id="workflow-column-title" data-i18n="nav_workflow">Workflow</h1>
+        <div class="workflow-column" aria-label="Project workflow">
 
         <section class="pw" id="projects" aria-labelledby="pw-h">
           <div class="container">
@@ -2063,9 +2066,8 @@ body.project-page-mode .toolset-layout { display: none; }
           </div>
         </section>
         </div>
-      <section class="toolkit" id="toolset" aria-labelledby="toolset-column-title" hidden>
+      <section class="toolkit" id="toolset" aria-label="Research tools" hidden>
         <div class="container">
-          <h2 class="column-title" id="toolset-column-title" data-i18n="nav_toolset">Toolset</h2>
 
           <div class="tool-grid">
 <a class="tool" href="eligibility.html" data-tool="criteria">
@@ -2627,8 +2629,8 @@ body.project-page-mode .toolset-layout { display: none; }
         var appReady = new Promise(function (res, rej) { appResolve = res; appReject = rej; });
         appReady.catch(function () {});   // a failed SDK load is reported in the UI, not on the console
 
-        // Firestore is ~300 KB and only the project form needs it. team.html and
-        // contact.html share this block but never call ready(), so they never
+        // Firestore is ~300 KB and only the project form needs it. Other
+        // static pages share this block but never call ready(), so they never
         // fetch it: the import happens on the first call, not on page load.
         var fsReady = null;
         window.AIMSTEP.auth = {
@@ -3485,11 +3487,7 @@ body.project-page-mode .toolset-layout { display: none; }
                 : navTarget.pathname === (target ? target.pathname : home.pathname);
             if (selected) link.setAttribute("aria-current", "page"); else link.removeAttribute("aria-current");
           });
-          var pageTitle = dashboard
-            ? window.AIMSTEP.t("tk_title")
-            : view === "page" && target && /(?:^|\/)contact\.html$/i.test(target.pathname)
-              ? window.AIMSTEP.t("nav_contact")
-              : window.AIMSTEP.t("title");
+          var pageTitle = dashboard ? window.AIMSTEP.t("tk_title") : window.AIMSTEP.t("title");
           document.title = "AIM-STEP | " + pageTitle;
           projectName.toggleAttribute("aria-current", view === "project");
           if (view === "project") projectName.setAttribute("aria-current", "page");

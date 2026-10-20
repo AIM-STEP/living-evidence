@@ -961,7 +961,7 @@
           <a href="index.html" data-i18n="nav_overview">Overview</a>
           <a href="workflow.html" data-i18n="nav_workflow" aria-current="page">Tool kit</a>
           <a href="team.html" data-i18n="nav_team">Team</a>
-          <a href="contact.html" data-i18n="nav_contact">Contact</a>
+
         </nav>
 
         <div class="header-actions">
@@ -1404,8 +1404,8 @@
         var appReady = new Promise(function (res, rej) { appResolve = res; appReject = rej; });
         appReady.catch(function () {});   // a failed SDK load is reported in the UI, not on the console
 
-        // Firestore is ~300 KB and only the project form needs it. team.html and
-        // contact.html share this block but never call ready(), so they never
+        // Firestore is ~300 KB and only the project form needs it. Other
+        // static pages share this block but never call ready(), so they never
         // fetch it: the import happens on the first call, not on page load.
         var fsReady = null;
         window.AIMSTEP.auth = {
