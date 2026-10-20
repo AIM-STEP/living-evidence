@@ -75,16 +75,17 @@ button, input, select, textarea { font-family: inherit; }
   font-weight: 500; line-height: 1.5; text-align: center;
 }
 .workflow-column .pw-tab[aria-selected="true"] { background: #e6edff; color: #2947b5; }
-.workflow-column .pw-toolbar { padding: 20px 0; gap: 10px; align-items: center; }
+.workflow-column .pw-toolbar { padding: 20px 0; gap: 8px; align-items: center; flex-wrap: nowrap; }
 .workflow-column .btn, .pw-sort-trigger, .pw-apply {
   min-width: 0; min-height: 40px; height: auto;
   padding: 9px 14px; border-radius: 8px;
   font-size: 14px; line-height: 1.5; font-weight: 500;
 }
-.workflow-column .pw-start { background: var(--brand-text); color: #fff; }
+.workflow-column .pw-start { flex: 0 1 auto; padding-inline: 12px; background: var(--brand-text); color: #fff; }
 .workflow-column .pw-start:hover { background: var(--brand-hover); }
-.pw-sort-trigger { gap: 8px; border-color: var(--dashboard-border); background: #fff; color: var(--dashboard-muted); }
-.pw-sort-trigger svg { width: 16px; height: 16px; }
+.workflow-column .pw-sort-picker { flex: 0 0 auto; margin-left: auto; }
+.pw-sort-trigger { width: auto; gap: 6px; padding-inline: 10px; white-space: nowrap; font-size: 13px; border-color: var(--dashboard-border); background: #fff; color: var(--dashboard-muted); }
+.pw-sort-trigger svg { width: 14px; height: 14px; }
 .pw-sort-panel {
   width: min(320px, calc(100vw - 48px)); padding: 20px;
   border: 1px solid var(--dashboard-border); border-radius: 12px;
