@@ -191,11 +191,11 @@ th{background:#f4f4f4}
 <link rel="stylesheet" href="app/theme.css?v=20261020-5">
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
-<script defer src="app/tool-i18n-catalog.js?v=20261020-2"></script>
+<script defer src="app/tool-i18n-catalog.js?v=20261020-3"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261020-1">
-<script defer src="app/tool-shell.js?v=20261020-3"></script>
+<script defer src="app/tool-shell.js?v=20261020-4"></script>
 </head>
 <body class="tool-page tool-analysis">
 <header class="header">
@@ -205,7 +205,7 @@ th{background:#f4f4f4}
 </header>
 <main class="wrap">
 
-<nav class="tool-flow" aria-label="Research workflow" data-ui-preserve><a class="btn tool-flow-home" href="index.html?view=toolset" data-flow-home>Projects</a><div class="tool-flow-current"><span class="tool-flow-position" data-flow-position>8 / 10</span><label class="tool-flow-label" for="tool-flow-picker" data-flow-label>Choose a research step</label><select class="tool-flow-picker" id="tool-flow-picker" data-flow-picker><option value="eligibility.html">Eligibility criteria</option><option value="search-strategy.html">Search strategy</option><option value="build-protocol.html">Build the protocol</option><option value="title-abstract-screening.html">Title and abstract screening</option><option value="full-text-screening.html">Full-text assess</option><option value="extraction.html">Extraction</option><option value="risk-of-bias.html">Risk of bias assessment</option><option value="analysis.html">Analysis</option><option value="certainty-of-evidence.html">Certainty of evidence</option><option value="drafting-manuscript.html">Draft the manuscript</option></select></div><div class="tool-flow-actions"><a class="btn tool-flow-previous" href="risk-of-bias.html" data-prev data-flow-previous>Previous</a><a class="btn btn-primary tool-flow-next" href="certainty-of-evidence.html" data-next data-flow-next>Next</a></div></nav>
+<nav class="tool-flow" aria-label="Research workflow" data-ui-preserve><a class="btn tool-flow-home" href="index.html?view=toolset" data-flow-home>Projects</a><div class="tool-flow-current"><span class="tool-flow-position" data-flow-position>8 / 10</span><label class="tool-flow-label" for="tool-flow-picker" data-flow-label>Choose a research step</label><select class="tool-flow-picker" id="tool-flow-picker" data-flow-picker><option value="eligibility.html">Eligibility criteria</option><option value="search-strategy.html">Search strategy</option><option value="build-protocol.html">Build the proposal</option><option value="title-abstract-screening.html">Title and abstract screening</option><option value="full-text-screening.html">Full-text assess</option><option value="extraction.html">Extraction</option><option value="risk-of-bias.html">Risk of bias assessment</option><option value="analysis.html">Analysis</option><option value="certainty-of-evidence.html">Certainty of evidence</option><option value="drafting-manuscript.html">Summary the evidence</option></select></div><div class="tool-flow-actions"><a class="btn tool-flow-previous" href="risk-of-bias.html" data-prev data-flow-previous>Previous</a><a class="btn btn-primary tool-flow-next" href="certainty-of-evidence.html" data-next data-flow-next>Next</a></div></nav>
 <div class="layout"><div class="stack">
 <section class="panel" id="data-panel"><div class="panel-head analysis-head"><h2 data-ui-localize>Data sources</h2><div class="toolbar"><button type="button" class="btn small" id="from-extraction" data-ui-localize>From Extraction</button><button type="button" class="btn small" id="import-data" data-ui-localize>Import from local</button><button type="button" class="btn small" id="clear-data" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-data" aria-expanded="true" aria-controls="data-body" aria-label="Collapse Data sources"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg></button></div></div><div class="panel-body" id="data-body">
 <input type="file" id="data-files" accept=".csv,.tsv,.xlsx,.json,.txt" multiple hidden>

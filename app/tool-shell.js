@@ -4,14 +4,14 @@
   const steps = [
     ['eligibility.html', 'Eligibility criteria', '纳入与排除标准'],
     ['search-strategy.html', 'Search strategy', '检索策略'],
-    ['build-protocol.html', 'Build the protocol', '制定研究方案'],
+    ['build-protocol.html', "Build the proposal", '制定研究提案'],
     ['title-abstract-screening.html', 'Title and abstract screening', '题目与摘要筛选'],
     ['full-text-screening.html', 'Full-text assess', '全文评估'],
     ['extraction.html', 'Extraction', '数据提取'],
     ['risk-of-bias.html', 'Risk of bias assessment', '偏倚风险评估'],
     ['analysis.html', 'Analysis', '统计分析'],
     ['certainty-of-evidence.html', 'Certainty of evidence', '证据确定性评价'],
-    ['drafting-manuscript.html', 'Draft the manuscript', '撰写论文']
+    ['drafting-manuscript.html', "Summary the evidence", '汇总证据']
   ];
   const url = new URL(location.href);
   const index = steps.findIndex(step => url.pathname.endsWith('/' + step[0]));
