@@ -1596,25 +1596,27 @@
 
 
     
-      /* Step numbers: the eight tools run left to right, top to bottom. */
+      /* Workflow tools read from top to bottom in one full-width column. */
       .tool-order { margin: 0 0 18px; text-align: center; font-size: 14px; color: var(--ink-3); }
-      .tool-step { position: absolute; top: 10px; left: 10px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--plum); color: #fff; font-size: 12px; font-weight: 700; }
-      /* Wider tool cards with balanced spacing across the workflow. */
-      .tool-grid { grid-template-columns: repeat(4, minmax(0, 206.4px)); justify-content: center; gap: 32px; }
-      .tool { aspect-ratio: 6 / 5; min-height: 172px; justify-content: center; padding: 18px 16px; }
-      .tool .tool-icon { width: 64px; height: 64px; margin-bottom: 14px; border-radius: 16px; }
-      .tool .tool-icon svg { width: 36px; height: 36px; }
-      .tool .tool-title { margin: 0; font-size: 0.95rem; }
-      .tool .tool-arrow { top: 10px; right: 10px; width: 24px; height: 24px; }
-      @media (max-width: 1000px) { .tool-grid { grid-template-columns: repeat(2, minmax(0, 206.4px)); } }
-      @media (max-width: 600px) { .tool-grid { gap: 20px; } .tool { padding: 18px 12px; } }
+      .tool-step { position: absolute; top: 50%; left: 20px; transform: translateY(-50%); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--plum); color: #fff; font-size: 12px; font-weight: 700; }
+      #toolset .tool-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: 960px; margin: 0 auto; }
+      #toolset .tool { width: 100%; min-width: 0; aspect-ratio: auto; min-height: 80px; flex-direction: row; justify-content: flex-start; gap: 18px; padding: 14px 62px 14px 62px; text-align: left; }
+      #toolset .tool .tool-title { min-width: 0; margin: 0; font-size: 15px; line-height: 1.45; text-align: left; overflow-wrap: anywhere; }
+      #toolset .tool .tool-arrow { top: 50%; right: 20px; transform: translateY(-50%); width: 24px; height: 24px; }
+      @media (max-width: 600px) {
+        #toolset .tool-grid { gap: 10px; }
+        #toolset .tool { min-height: 74px; gap: 12px; padding: 12px 40px 12px 44px; }
+        #toolset .tool-step { left: 12px; width: 22px; height: 22px; }
+        #toolset .tool .tool-arrow { right: 12px; width: 20px; height: 20px; }
+        #toolset .tool .tool-title { font-size: 14px; }
+      }
 
 /* Match the compact neutral controls used throughout the screening workflow. */
 .login,.login-card .btn-google,.pw-sort-trigger{height:auto;min-height:26px;padding:4px 8px;border:1px solid #e4e5e8;border-radius:6px;background:#fafafb;color:#5f6169;font-size:12px;font-weight:500;line-height:1.25}
 .login:hover:not(:disabled),.login-card .btn-google:hover:not(:disabled),.pw-sort-trigger:hover:not(:disabled){border-color:#cdced4;background:#f2f3f5;color:var(--plum)}
 .login:focus-visible,.login-card .btn-google:focus-visible,.pw-sort-trigger:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .login:disabled,.login-card .btn-google:disabled,.pw-sort-trigger:disabled{opacity:.48;cursor:not-allowed}
-#toolset .tool.tool-wide{grid-column:1;aspect-ratio:auto;height:auto;min-height:calc(172px / 3);padding:8px 12px;flex-direction:row;justify-content:flex-start;background:#f5f6fa}#toolset .tool-wide .tool-step{top:50%;transform:translateY(-50%)}#toolset .tool-wide .tool-arrow{top:50%;transform:translateY(-50%)}
+
 
 /* Quiet dimensional icons: bevelled bases, raised vector faces and short hover motion. */
 #toolset .tool {
@@ -1623,8 +1625,8 @@
   box-shadow: inset 0 1px 0 #fff, 0 2px 3px rgba(35,42,80,.035), 0 12px 28px rgba(35,42,80,.065);
 }
 #toolset .tool .tool-icon {
-  position: relative; width: 58px; height: 58px; flex-shrink: 0;
-  margin-bottom: 12px; border-radius: 16px;
+  position: relative; width: 44px; height: 44px; flex-shrink: 0;
+  margin: 0; border-radius: 12px;
   background: linear-gradient(140deg, #fff 0%, #e8eaf6 48%, #d0d5eb 100%);
   border: 1px solid #fafbff;
   box-shadow: inset 1px 1px 2px #fff, inset -1px -2px 3px rgba(70,85,162,.13), 0 3px 0 #c3c9e5, 0 8px 12px rgba(50,61,115,.12);
@@ -1632,18 +1634,18 @@
   transition: transform .3s ease, box-shadow .3s ease;
 }
 #toolset .tool .tool-icon svg {
-  width: 35px; height: 35px; stroke: #4d6bfe; stroke-width: 1.8;
+  width: 28px; height: 28px; stroke: #4d6bfe; stroke-width: 1.8;
   filter: drop-shadow(0 2px 1px rgba(50,61,115,.1));
 }
 #toolset .icon-depth { opacity: .25; }
 #toolset .icon-depth * { stroke: #5061b4; fill: none; }
 #toolset .icon-front .icon-face { fill: #f9faff; }
 #toolset .icon-front .accent { stroke: #4d6bfe; }
-#toolset .tool.tool-wide { background: linear-gradient(120deg, #f9fafd, #edeff8); gap: 8px; }
-#toolset .tool[data-tool="protocol"] + .tool { grid-column: 1; }
-#toolset .tool.tool-wide .tool-title { text-align: left; }
-#toolset .tool.tool-wide .tool-icon { width: 34px; height: 34px; border-radius: 10px; margin: 0; }
-#toolset .tool.tool-wide .tool-icon svg { width: 25px; height: 25px; }
+
+
+
+
+
 #toolset .tool:focus-visible .tool-icon { transform: perspective(240px) rotateX(0) rotateY(0) translateY(-3px); }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   #toolset .tool:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 #fff, 0 5px 10px rgba(35,42,80,.035), 0 18px 32px rgba(35,42,80,.1); }
