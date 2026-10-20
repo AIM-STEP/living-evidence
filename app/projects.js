@@ -358,6 +358,17 @@ export function initProjects(options) {
       });
   }
 
+  async function deleteProject(id) {
+    const user = auth.user();
+    if (!user) throw new Error("Sign in before deleting a project.");
+    const service = await ensureBackend();
+    await service.deleteProject(id, user.uid);
+    ++loadToken;
+    projects = (projects || []).filter(project => String(project.id) !== String(id));
+    hideBanner();
+    render();
+  }
+
   /* ----------------------------------------------------------------- wire */
 
   els.start.addEventListener("click", () => {
@@ -395,5 +406,5 @@ export function initProjects(options) {
   render();
 
   // Exposed for the tests, which drive the same functions the buttons do.
-  return { submit, openForm, closeForm, load, render, state: () => ({ view, saving, projects, loadError }) };
+  return { submit, openForm, closeForm, load, render, deleteProject, state: () => ({ view, saving, projects, loadError }) };
 }

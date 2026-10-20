@@ -62,6 +62,11 @@ export function firestoreBackend(api) {
       });
     },
 
+    // Remove only this user's list entry; retain the shared research records.
+    deleteProject(pid, uid) {
+      return fs.deleteDoc(fs.doc(db, "users", uid, "memberships", pid));
+    },
+
     /** The personal index entry that makes the project findable again. */
     addMembership(pid, uid) {
       return fs.setDoc(fs.doc(db, "users", uid, "memberships", pid), {

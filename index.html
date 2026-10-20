@@ -1712,7 +1712,7 @@ body.project-page-mode .toolset-layout { display: none; }
 
 </style>
   <link rel="stylesheet" href="app/theme.css?v=20261020-5">
-  <link rel="stylesheet" href="app/dashboard.css?v=20261020-8">
+  <link rel="stylesheet" href="app/dashboard.css?v=20261020-9">
 </head>
   <body>
     <!-- Logo artwork (from AIM-STEP_square.svg) plus shared gradients/filters for the tiles -->
@@ -2304,6 +2304,9 @@ body.project-page-mode .toolset-layout { display: none; }
             extraction_empty: "Studies ready for extraction will appear here.",
             pw_start: "Start a new project",
             pw_create_title: "Start a new project",
+            pw_delete_project: "Delete",
+            pw_delete_confirm: "Remove this project from your project list? Saved research data will be retained.",
+            pw_delete_error: "The project could not be deleted. Please try again.",
             pw_current: "Current projects",
             pw_archived: "Archived projects",
             pw_sort_label: "Sort:",
@@ -2456,6 +2459,9 @@ body.project-page-mode .toolset-layout { display: none; }
             extraction_empty: "符合提取条件的研究将在此显示。",
             pw_start: "新建项目",
             pw_create_title: "开始新项目",
+            pw_delete_project: "删除",
+            pw_delete_confirm: "确定从项目列表删除此项目？已保存的研究数据将保留。",
+            pw_delete_error: "无法删除项目，请重试。",
             pw_current: "当前项目",
             pw_archived: "已归档项目",
             pw_sort_label: "排序：",
@@ -3089,6 +3095,9 @@ body.project-page-mode .toolset-layout { display: none; }
             var label = t ? t(key) : (archived ? "Unarchive project" : "Archived project");
             trigger.setAttribute("aria-label", actionLabel);
             if (item.textContent !== label) item.textContent = label;
+            var remove = actions.querySelector(".pw-delete-action");
+            var removeLabel = t ? t("pw_delete_project") : "Delete";
+            if (remove && remove.textContent !== removeLabel) remove.textContent = removeLabel;
           });
         }
       
@@ -3132,6 +3141,11 @@ body.project-page-mode .toolset-layout { display: none; }
           action.className = "pw-archive-action";
           action.setAttribute("role", "menuitem");
           menu.appendChild(action);
+          var remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "pw-archive-action pw-delete-action";
+          remove.setAttribute("role", "menuitem");
+          menu.appendChild(remove);
           actions.appendChild(trigger);
           actions.appendChild(menu);
           card.appendChild(actions);
@@ -3190,7 +3204,7 @@ body.project-page-mode .toolset-layout { display: none; }
           });
         }
       
-        list.addEventListener("click", function (event) {
+        list.addEventListener("click", async function (event) {
           var target = event.target.closest(".pw-menu-trigger, .pw-archive-action");
           if (!target) return;
           event.preventDefault();
@@ -3205,6 +3219,24 @@ body.project-page-mode .toolset-layout { display: none; }
           }
           var card = target.closest(".pw-card");
           var id = projectId(card);
+          if (target.classList.contains("pw-delete-action")) {
+            var controller = window.AIMSTEP && window.AIMSTEP.projectController;
+            var t = window.AIMSTEP.t;
+            if (!window.confirm(t("pw_delete_confirm") + "\n\n" + titleOf(card))) return;
+            target.disabled = true;
+            try {
+              if (!controller || typeof controller.deleteProject !== "function") throw new Error("Project service unavailable");
+              await controller.deleteProject(id);
+              archivedIds.delete(id);
+              saveArchivedIds();
+              closeMenus(false);
+              document.dispatchEvent(new CustomEvent("aimstep:project-deleted", { detail: { projectId: id } }));
+              enhanceRows();
+            } catch (error) {
+              window.alert(t("pw_delete_error"));
+            } finally { target.disabled = false; }
+            return;
+          }
           var archived = !isArchived(card);
           if (archived) archivedIds.add(id);
           else archivedIds.delete(id);
@@ -3659,6 +3691,15 @@ body.project-page-mode .toolset-layout { display: none; }
           toggleButton.setAttribute("aria-expanded", expanded ? "false" : "true");
           toggleButton.setAttribute("aria-label", window.AIMSTEP.t(expanded ? "workspace_expand" : "workspace_collapse"));
         });
+        document.addEventListener("aimstep:project-deleted", function (event) {
+          if (!activeProject || activeProject.id !== event.detail.projectId) return;
+          activeProject = null;
+          try { sessionStorage.removeItem(contextKey); } catch (e) {}
+          frame.removeAttribute("src");
+          renderProjectLink();
+          setView("toolset", null, false);
+          history.replaceState(null, "", routeUrl("toolset"));
+        });
         document.addEventListener("aimstep:projects-ready", refreshProject);
         document.addEventListener("aimstep:lang", function () {
           refreshProject();
@@ -3686,7 +3727,7 @@ body.project-page-mode .toolset-layout { display: none; }
       // five-page package also works on its own with projects saved here.
       try {
         const [{ initProjects }, { firestoreBackend }] = await Promise.all([
-          import("./app/projects.js"), import("./app/backend.js")
+          import("./app/projects.js?v=20261020-1"), import("./app/backend.js?v=20261020-1")
         ]);
         window.AIMSTEP.projectController = initProjects({ backend: firestoreBackend });
         document.dispatchEvent(new CustomEvent("aimstep:projects-ready"));
@@ -3700,7 +3741,15 @@ body.project-page-mode .toolset-layout { display: none; }
           const saved = JSON.parse(localStorage.getItem(key) || "[]");
           if (Array.isArray(saved)) projects = saved.filter(p => p && typeof p.id === "string" && typeof p.name === "string");
         } catch (e) {}
-        window.AIMSTEP.projectController = { state: () => ({ projects }) };
+        window.AIMSTEP.projectController = {
+          state: () => ({ projects }),
+          async deleteProject(id) {
+            const remaining = projects.filter(project => project.id !== id);
+            localStorage.setItem(key, JSON.stringify(remaining));
+            projects = remaining;
+            renderProjects();
+          }
+        };
         function renderProjects() {
           const grid = document.createElement("div");
           grid.className = "pw-grid";

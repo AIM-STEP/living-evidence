@@ -67,15 +67,17 @@ button, input, select, textarea { font-family: inherit; }
   width: 100%; margin: 0; padding: 0;
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px; border: 0; border-radius: 8px;
-  background: #f1f4f9;
+  background: transparent;
 }
 .workflow-column .pw-tab {
   justify-content: center; min-height: 44px; padding: 8px;
-  border: 0; border-radius: 7px;
-  color: var(--dashboard-muted); font-size: 14px;
+  border: 1px solid #171920; border-radius: 7px;
+  background: #fff; color: #171920; font-size: 14px;
   font-weight: 500; line-height: 1.5; text-align: center;
 }
-.workflow-column .pw-tab[aria-selected="true"] { background: #e6edff; color: #2947b5; }
+.workflow-column .pw-tab[aria-selected="true"],
+.workflow-column .pw-tab:active,
+.workflow-column .pw-tab:focus-visible { border-color: var(--brand); outline: none; }
 .workflow-column .pw-toolbar {
   display: flex; flex-wrap: nowrap;
   padding: 20px 0; gap: 8px; align-items: center;
@@ -239,3 +241,5 @@ footer { padding: 20px 0; background: transparent; border-color: var(--dashboard
 @media (prefers-reduced-motion: reduce) {
   #toolset .tool, .lang, .login, .btn { transition: none; }
 }
+
+.pw-delete-action { color: #b42318; }
