@@ -11,7 +11,7 @@
     ['risk-of-bias.html', 'Risk of bias assessment', '偏倚风险评估'],
     ['analysis.html', 'Analysis', '统计分析'],
     ['certainty-of-evidence.html', 'Certainty of evidence', '证据确定性评价'],
-    ['drafting-manuscript.html', 'Drafting the manuscript', '撰写论文']
+    ['drafting-manuscript.html', 'Draft the manuscript', '撰写论文']
   ];
   const url = new URL(location.href);
   const index = steps.findIndex(step => url.pathname.endsWith('/' + step[0]));

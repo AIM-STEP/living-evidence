@@ -1,6 +1,6 @@
-# Drafting the manuscript
+# Draft the manuscript
 
-Implemented 2026-10-09. Two sections: Drafting; Review and export. Generated text is an author-review draft using Cochrane Review organization, not an official Cochrane submission or an editorially approved review.
+Implemented 2026-10-09. Two sections: Draft; Review and export. Generated text is an author-review draft using Cochrane Review organization, not an official Cochrane submission or an editorially approved review.
 
 ## Sources reviewed
 
