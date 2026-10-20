@@ -50,7 +50,7 @@
     if (translated === source && !originals.has(node)) return;
     // An option without an explicit value uses its text as its value. Freeze the
     // original before localising, so persisted data and model prompts stay stable.
-    if (el.tagName === 'OPTION' && !el.hasAttribute('value')) el.setAttribute('value', el.textContent);
+    if (el.tagName === 'OPTION' && !el.hasAttribute('value')) el.setAttribute('value', el.value);
     const rendered = language === 'zh' ? source.replace(/\S[\s\S]*\S|\S/, translated.trim()) : source;
     originals.set(node, { source, rendered });
     if (node.nodeValue !== rendered) node.nodeValue = rendered;

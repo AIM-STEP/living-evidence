@@ -22,19 +22,24 @@ async function boot(html, lang = 'en') {
   for (const page of pages) {
     const html = read(page+'.html');
     assert.equal((html.match(/src="app\/tool-i18n.js\?/g)||[]).length, 1, page);
+    const baseline = new JSDOM(html);
+    const originalOptions = [...baseline.window.document.querySelectorAll('option')].map(el => el.value);
+    const originalTitle = baseline.window.document.title;
+    baseline.window.close();
     const dom = await boot(html, 'zh');
     const {document:d,AIMSTEP:api} = dom.window;
     assert.equal(d.documentElement.lang,'zh-CN',page);
     assert.match(d.title,/[\u4e00-\u9fff]/,page+' title');
     assert.equal(d.querySelectorAll('#lang-toggle').length,1,page+' toggle');
     const options = [...d.querySelectorAll('option')].map(el => el.value);
+    assert.deepEqual(options, originalOptions, page+' original option values preserved');
     const markers = [...d.querySelectorAll('[data-ui-localize]')].filter(el => !el.closest('.brand'));
     assert.ok(markers.some(el=>/[\u4e00-\u9fff]/.test(el.textContent)),page+' translated');
     d.getElementById('lang-toggle').click();
     assert.equal(api.lang(),'en');
     assert.equal(dom.window.localStorage.getItem('aimstep-lang'),'en');
     assert.deepEqual([...d.querySelectorAll('option')].map(el=>el.value),options,page+' values preserved');
-    assert.equal(d.title,new JSDOM(html).window.document.title,page+' title restored');
+    assert.equal(d.title,originalTitle,page+' title restored');
     d.getElementById('lang-toggle').click();
     assert.equal(api.lang(),'zh');
     console.log('PASS:',page,'saved language, toggle, title, labels and option values');
