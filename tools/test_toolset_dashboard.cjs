@@ -21,13 +21,13 @@ function element() {
     toggleAttribute(k,v) { if(v) attrs[k]=''; else delete attrs[k]; }};
 }
 function setup(query = '') {
-  const nodes = Object.fromEntries(['pw-form','pw-create-title','projects'].map(id => [id, element()]));
+  const nodes = Object.fromEntries(['pw-form','pw-create-title','projects','writing-tools'].map(id => [id, element()]));
   const classes = new Set();
   const toolNav = element(); toolNav.dataset.pageHref = 'workflow.html';
   const env = {URL, URLSearchParams, console, location: new URL('https://aimsetp.com/index.html' + query),
     home: new URL('https://aimsetp.com/index.html'), projectRoute: '/workflow/project',
     activeProject: {id: 'synthetic-dashboard', name: 'Synthetic dashboard'},
-    page: element(), otherPage: element(), toolset: element(), frame: element(), projectName: element(),
+    page: element(), otherPage: element(), toolset: element(), frame: element(),
     document: {title:'', body:{classList:{toggle(k,v){if(v)classes.add(k);else classes.delete(k);}}},
       getElementById(id) {return nodes[id];}, querySelectorAll() {return [];}},
     window: {AIMSTEP_ROUTES:routeWindow.AIMSTEP_ROUTES,AIMSTEP:{t:k=>k}, scrollTo(){}},

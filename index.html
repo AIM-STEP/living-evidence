@@ -1647,7 +1647,7 @@
   :is(#toolset, #writing-tools) .tool { transition: none; }
 }
 
-/* The simplified header contains branding, project context and account controls. */
+/* The simplified header contains branding and account controls. */
 .header-inner, body.has-active-project .header-inner {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: "brand lang";
@@ -1788,7 +1788,6 @@ body.project-page-mode .toolset-layout { display: none; }
         <a href="index.html" class="brand" aria-label="ACHIEVE EvidenceBank @An AI-Enabled, Traceable, Graded, Living Bank of Evidence — home">
           <span class="brand-text" aria-hidden="true"><span class="brand-name-line"><span class="brand-main">ACHIEVE</span><span class="brand-product">EvidenceBank</span></span><span class="brand-sub">@An AI-Enabled, Traceable, Graded, Living Bank of Evidence</span></span>
         </a>
-        <a href="index.html?view=project" class="header-project-link" id="workspace-project-name" hidden></a>
         </div>
 
         <div class="header-actions">
@@ -3324,7 +3323,6 @@ body.project-page-mode .toolset-layout { display: none; }
       (function () {
         var list = document.getElementById("pw-list");
         var page = document.getElementById("project-workspace");
-        var projectName = document.getElementById("workspace-project-name");
         var steps = document.getElementById("workspace-steps");
         var setupOverview = document.getElementById("workspace-setup-overview");
         var setupButton = document.getElementById("workspace-setup-button");
@@ -3339,7 +3337,7 @@ body.project-page-mode .toolset-layout { display: none; }
         var contextKey = "aimstep-active-project";
         var activeProject = null;
         var setupLinks = Array.from(document.querySelectorAll(".workspace-setup-link[data-workspace-step]"));
-        if (!list || !page || !projectName || !steps || !setupOverview || !setupButton || !toggleButton) return;
+        if (!list || !page || !steps || !setupOverview || !setupButton || !toggleButton) return;
 
         function readContext() {
           try {
@@ -3383,12 +3381,8 @@ body.project-page-mode .toolset-layout { display: none; }
         }
         function renderProjectLink() {
           var visible = !!(activeProject && activeProject.name);
-          projectName.hidden = !visible;
-          projectName.textContent = visible ? activeProject.name : "";
-          projectName.href = routeUrl("project").href;
-          projectName.title = visible ? activeProject.name + " — " + window.AIMSTEP.t("workspace_summary") : "";
           document.body.classList.toggle("has-active-project", visible);
-          // Keep the shared project header when opening another site page,
+          // Keep the selected project when opening another site page,
           // including when a navigation link is opened in a new tab.
           document.querySelectorAll(".nav a").forEach(function (link) {
             if (!link.dataset.pageHref) link.dataset.pageHref = link.getAttribute("href");
@@ -3587,7 +3581,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh the internal proposal document without changing public links.
-            if (/\/build-protocol\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-18");
+            if (/\/build-protocol\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-19");
             if (frame.getAttribute("src") !== frameTarget.href) frame.src = frameTarget.href;
           }
           if (push) {
@@ -3605,8 +3599,6 @@ body.project-page-mode .toolset-layout { display: none; }
           });
           var pageTitle = dashboard ? window.AIMSTEP.t("tk_title") : window.AIMSTEP.t("title");
           document.title = "AIM-STEP | " + pageTitle;
-          projectName.toggleAttribute("aria-current", view === "project");
-          if (view === "project") projectName.setAttribute("aria-current", "page");
           renderSetupStatus();
           window.scrollTo({ top: 0, behavior: "instant" });
         }
