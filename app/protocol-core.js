@@ -30,19 +30,23 @@ function prepare(mapping,previous={},search={},stamp=new Date().toISOString()){
 }
 function commit(storage,scope,mapping,source){
  const ek='aimstep-eligibility:'+scope,sk='aimstep-search-strategy:'+scope,summary='aimstep-eligibility-summary:'+scope,backup='aimstep-protocol-backups:'+scope;
- const keys=[ek,sk,summary,backup],before=keys.map(k=>storage.getItem(k));
+ const library=root.AimstepEligibilityLibrary,libraryKey=library?.key(scope);
+ const keys=[ek,sk,summary,backup,...(libraryKey?[libraryKey]:[])],before=keys.map(k=>storage.getItem(k));
  const parse=s=>s?JSON.parse(s):null,stamp=new Date().toISOString();
  const result=prepare(mapping,parse(before[0])||{},parse(before[1])||{},stamp);
+ const savedSet=library?.plan(storage,scope,result.eligibility,{fresh:true,createdAt:stamp,previous:parse(before[0])});if(savedSet)result.eligibility=savedSet.state;
  const history=parse(before[3])||[];history.push({date:stamp,source,eligibility:parse(before[0]),search:parse(before[1]),summary:parse(before[2])});
- try{storage.setItem(backup,JSON.stringify(history));storage.setItem(ek,JSON.stringify(result.eligibility));storage.setItem(sk,JSON.stringify(result.search));storage.removeItem(summary);}catch(e){keys.forEach((k,i)=>{try{before[i]===null?storage.removeItem(k):storage.setItem(k,before[i]);}catch(_){}});throw Error('Could not save the handoff. Existing work was restored; export a copy before continuing.');}
+ try{storage.setItem(backup,JSON.stringify(history));storage.setItem(ek,JSON.stringify(result.eligibility));storage.setItem(sk,JSON.stringify(result.search));storage.removeItem(summary);if(savedSet)storage.setItem(libraryKey,JSON.stringify(savedSet.library));}catch(e){keys.forEach((k,i)=>{try{before[i]===null?storage.removeItem(k):storage.setItem(k,before[i]);}catch(_){}});throw Error('Could not save the handoff. Existing work was restored; export a copy before continuing.');}
  return result;
 }
 function commitEligibility(storage,scope,mapping,source){
  const ek='aimstep-eligibility:'+scope,summary='aimstep-eligibility-summary:'+scope,backup='aimstep-protocol-backups:'+scope;
- const keys=[ek,summary,backup],before=keys.map(k=>storage.getItem(k)),parse=s=>s?JSON.parse(s):null;
- const result=prepare(mapping,parse(before[0])||{}).eligibility;
+ const library=root.AimstepEligibilityLibrary,libraryKey=library?.key(scope);
+ const keys=[ek,summary,backup,...(libraryKey?[libraryKey]:[])],before=keys.map(k=>storage.getItem(k)),parse=s=>s?JSON.parse(s):null;
+ let result=prepare(mapping,parse(before[0])||{}).eligibility;
+ const savedSet=library?.plan(storage,scope,result,{fresh:true,createdAt:result.protocolSource.date,previous:parse(before[0])});if(savedSet)result=savedSet.state;
  const history=parse(before[2])||[];history.push({date:new Date().toISOString(),source,eligibility:parse(before[0]),summary:parse(before[1])});
- try{storage.setItem(backup,JSON.stringify(history));storage.setItem(ek,JSON.stringify(result));storage.removeItem(summary);}catch(error){keys.forEach((k,i)=>{try{before[i]===null?storage.removeItem(k):storage.setItem(k,before[i]);}catch(_){}});throw Error('Could not save eligibility criteria. Previous criteria were restored.');}
+ try{storage.setItem(backup,JSON.stringify(history));storage.setItem(ek,JSON.stringify(result));storage.removeItem(summary);if(savedSet)storage.setItem(libraryKey,JSON.stringify(savedSet.library));}catch(error){keys.forEach((k,i)=>{try{before[i]===null?storage.removeItem(k):storage.setItem(k,before[i]);}catch(_){}});throw Error('Could not save eligibility criteria. Previous criteria were restored.');}
  return result;
 }
 const api={sections,draftSchema,handoffSchema,validateDraft,validateHandoff,text,prepare,commit,commitEligibility};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepProtocolCore=api;

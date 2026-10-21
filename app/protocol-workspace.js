@@ -152,17 +152,18 @@ function renderGeneration(){
 }
 // Completion belongs to a saved result, rather than to the last button click.
 function projectDeleted(id){return !!id&&!!localStorage.getItem('aimstep-project-deleted:'+id);}
-function criteriaExist(id){
- try{const data=JSON.parse(localStorage.getItem('aimstep-eligibility:'+id)||'null');const rows=[...(Array.isArray(data?.criteria)?data.criteria:[]),...(Array.isArray(data?.machineCriteria)?data.machineCriteria:[])];return rows.some(row=>['condition','uncertain','definition'].some(field=>String(row[field]||'').trim()));}catch(_){return false;}
+function criteriaExist(id,entryId){
+ try{if(entryId&&window.AimstepEligibilityLibrary&&!window.AimstepEligibilityLibrary.read(localStorage,id).entries.some(entry=>entry.id===entryId))return false;const data=JSON.parse(localStorage.getItem('aimstep-eligibility:'+id)||'null');const rows=[...(Array.isArray(data?.criteria)?data.criteria:[]),...(Array.isArray(data?.machineCriteria)?data.machineCriteria:[])];return rows.some(row=>['condition','uncertain','definition'].some(field=>String(row[field]||'').trim()));}catch(_){return false;}
 }
 function reconcileFileResults(){
  const cleared=[];
  for(const file of state.imports){
   for(const field of ['projectId','criteriaProjectId']){
    const target=file[field];if(!target)continue;
-   if(!projectDeleted(target)&&(field!=='criteriaProjectId'||criteriaExist(target)))continue;
+   if(!projectDeleted(target)&&(field!=='criteriaProjectId'||criteriaExist(target,file.criteriaEntryId)))continue;
    // An unfinished request is guarded separately and must not lose its live meter.
    delete file[field];cleared.push({id:file.id,field,target});
+   if(field==='criteriaProjectId'&&file.criteriaEntryId){cleared.push({id:file.id,field:'criteriaEntryId',target:file.criteriaEntryId});delete file.criteriaEntryId;}
    const action=field==='projectId'?'project':'criteria';
    if(fileProgress.get(file.id)?.action===action&&!fileJobs.has(file.id))fileProgress.delete(file.id);
   }
@@ -172,7 +173,7 @@ function reconcileFileResults(){
  try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved){let changed=false;for(const item of cleared){const file=saved.imports?.find(file=>file.id===item.id);if(file?.[item.field]===item.target){delete file[item.field];changed=true;}}if(changed)localStorage.setItem(key,JSON.stringify(saved));}}catch(error){status('Could not update saved completion status. Please free browser storage and try again.',true);}
 }
 window.addEventListener?.('storage',event=>{
- if(!event.key||event.key.startsWith('aimstep-eligibility:')||event.key.startsWith('aimstep-eligibility-summary:')||event.key.startsWith('aimstep-project-deleted:')||event.key.startsWith('aimstep-proposal-deleted:'))renderImports();
+ if(!event.key||event.key.startsWith('aimstep-eligibility:')||event.key.startsWith('aimstep-eligibility-summary:')||event.key.startsWith('aimstep-eligibility-library:')||event.key.startsWith('aimstep-project-deleted:')||event.key.startsWith('aimstep-proposal-deleted:'))renderImports();
 });
 window.addEventListener?.('aimstep:proposals-updated',()=>renderImports());
 window.addEventListener?.('focus',()=>renderImports());
@@ -343,8 +344,8 @@ async function fileAction(file,action){
   const before=criteriaKey?priorCriteria:localStorage.getItem('aimstep-eligibility:'+target);
   const mapping=await map(file.text,job.controller.signal);check();setFileProgress(file.id,90);
   if(localStorage.getItem('aimstep-eligibility:'+target)!==before)throw Error('Eligibility criteria changed while AI was working. Run this action again to use the latest version.');
-  C.commitEligibility(localStorage,target,mapping,'proposal file: '+file.name);
-  file.criteriaProjectId=target;file.criteriaGeneratedAt=new Date().toISOString();save();setFileProgress(file.id,100);job.complete=true;
+  const savedCriteria=C.commitEligibility(localStorage,target,mapping,'proposal file: '+file.name);
+  file.criteriaEntryId=savedCriteria.criteriaLibraryId||null;file.criteriaProjectId=target;file.criteriaGeneratedAt=new Date().toISOString();save();setFileProgress(file.id,100);job.complete=true;
   activateCriteriaProject(target);
   showFileResult('Eligibility criteria generated:',file,'index.html?view=page&page=eligibility.html&projectId='+encodeURIComponent(target));
  }catch(error){if(error.name!=='AbortError')status(error.message,true);}
