@@ -1713,7 +1713,7 @@ body.project-page-mode .toolset-layout { display: none; }
 
 </style>
   <link rel="stylesheet" href="app/theme.css?v=20261020-5">
-  <link rel="stylesheet" href="app/dashboard.css?v=20261021-10">
+  <link rel="stylesheet" href="app/dashboard.css?v=20261021-11">
 </head>
   <body>
     <!-- Logo artwork (from AIM-STEP_square.svg) plus shared gradients/filters for the tiles -->
@@ -2928,7 +2928,6 @@ body.project-page-mode .toolset-layout { display: none; }
           if (!startButton) return;
           var bounds = startButton.getBoundingClientRect();
           if (!bounds.width || !bounds.height) return;
-          picker.style.setProperty("--project-action-width", bounds.width + "px");
           picker.style.setProperty("--project-action-height", bounds.height + "px");
         }
         if (startButton && window.ResizeObserver) {

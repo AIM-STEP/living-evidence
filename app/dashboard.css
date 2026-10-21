@@ -92,11 +92,11 @@ button, input, select, textarea { font-family: inherit; }
   font-size: 12px; line-height: 1.3; font-weight: 500;
 }
 .workflow-column .pw-toolbar .pw-start {
-  flex: 0 0 auto; width: 190px; max-width: 100%;
+  flex: 0 0 auto; width: max-content; max-width: 100%;
   background: var(--brand-text); color: #fff;
 }
 .workflow-column .pw-start:hover { background: var(--brand-hover); }
-.workflow-column .pw-sort-picker { flex: 0 0 auto; width: var(--project-action-width, 190px); max-width: 100%; min-width: 0; margin-left: auto; }
+.workflow-column .pw-sort-picker { flex: 0 0 auto; width: max-content; max-width: 100%; min-width: 0; margin-left: auto; }
 .workflow-column .pw-toolbar .pw-sort-trigger {
   width: 100%; height: var(--project-action-height, auto);
   justify-content: center; gap: 3px; white-space: normal;
