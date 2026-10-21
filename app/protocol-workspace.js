@@ -39,7 +39,7 @@ function renderImports(){
   trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls',choices.id);
   menu.closeMenu=()=>{choices.hidden=true;trigger.setAttribute('aria-expanded','false');};
   trigger.onclick=()=>{const open=choices.hidden;document.querySelectorAll('.proposal-file-menu').forEach(other=>{if(other!==menu)other.closeMenu();});choices.hidden=!open;trigger.setAttribute('aria-expanded',String(open));};
-  for(const [action,en,zh]of [['delete','Delete','删除'],['project','Build Projects from this','据此构建 Projects'],['criteria','Generate Eligibility criteria from this','据此生成 Eligibility criteria']]){
+  for(const [action,en,zh]of [['delete','Delete','删除'],['project','Build Projects from this proposal','据此构建 Projects'],['criteria','Generate Eligibility criteria from this proposal','据此生成 Eligibility criteria']]){
    const button=document.createElement('button');button.type='button';button.textContent=chinese?zh:en;
    button.disabled=!!fileJobs.get(file.id)&&(action!=='delete'||fileJobs.get(file.id).committing);
    button.onclick=()=>{menu.closeMenu();return fileAction(file,action);};choices.appendChild(button);
