@@ -1,23 +1,15 @@
 [hidden]{display:none!important}.page-title{margin:0 0 18px}.panel{margin-bottom:20px}.panel-head{padding:14px 18px}.panel-body{padding:16px 18px}h2{font-size:16px;margin:0}h3{font-size:14px}.hint{color:#71737b;font-size:12px;margin:0 0 10px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px}.full{grid-column:1/-1}select{width:100%;padding:8px;border:1px solid #c5c6cb;border-radius:6px;margin-bottom:16px;background:#fff;font:inherit}textarea{line-height:1.5}button:disabled{opacity:.45;cursor:default}.confirm{display:flex;align-items:flex-start;gap:8px;margin:18px 0;font-weight:400}.confirm input{width:auto;margin:3px 0}.run-row{display:flex;align-items:center;gap:14px;margin:0 0 20px;font-size:12px;color:#4d6bfe}.protocol-progress{height:16px;border-radius:20px;background:#dbdff0;flex:1;overflow:hidden}.protocol-progress>span{height:100%;display:block;min-width:32px;width:0;background:#4f60b3;border-radius:20px;transition:width .5s ease}.protocol-progress b{display:block;text-align:right;padding-right:5px;color:white;line-height:16px;font-size:10px}#protocol-status{font-size:13px;color:#3c4a8c;margin-top:12px}.error{color:#2c41a5!important}details{margin:12px 0}summary{cursor:pointer;color:#4d6bfe;font-size:13px}#handoff-content{font-size:13px;white-space:pre-wrap;margin:12px 0}#protocol-issues{color:#384584;font-size:13px;padding-left:20px}.toolbar{flex-wrap:wrap}.btn{display:inline-flex;align-items:center;gap:5px}.btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6}@media(max-width:600px){.form-grid{grid-template-columns:1fr}.panel-head{gap:8px}.run-row{flex-wrap:wrap}.protocol-progress{min-width:140px}}@media(prefers-reduced-motion:reduce){.protocol-progress>span{transition:none}}
 
 #export-format{width:auto;min-height:32px;margin:0;padding:4px 8px;font-size:12px}
-.proposal-source-control { max-width: 320px; }
-#proposal-machine-criteria { margin: 16px 0 0; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; }
 .proposal-generated { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
 .proposal-generated-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .proposal-generated-heading label { margin: 0; }
 #generated-proposal-text { margin: 0; }
-.manual-section-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; }
-.manual-section-navigation label { margin: 0; }
-#manual-section-picker { width: auto; max-width: 100%; margin: 0; }
-.manual-form-reference { font-size: 12px; }
 .prospero-manual-section { min-width: 0; margin: 0 0 24px; padding: 16px; border: 1px solid var(--line); border-radius: 6px; scroll-margin-top: 20px; }
 .prospero-manual-section > legend { padding: 0 6px; font-size: 14px; font-weight: 600; }
 .prospero-manual-section input, .prospero-manual-section textarea, .prospero-manual-section select { margin-bottom: 4px; }
 .prospero-manual-section .hint { margin-bottom: 6px; }
 .manual-field-feedback { font-size: 11px; color: var(--muted); margin: 0 0 14px; }
-.manual-team-member { min-width: 0; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; }
-.manual-team-member legend { font-size: 12px; padding: 0 4px; }
 
 .tool-page.tool-build-protocol .tool-writing-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .tool-page.tool-build-protocol .tool-writing-layout .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; }
@@ -61,3 +53,26 @@
 
 .manual-criteria-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .manual-criteria-link:focus-visible { outline: 2px solid #7e8ac7; outline-offset: 3px; }
+
+/* A consistent left-aligned reading and editing column in each proposal step. */
+#proposal-manual-form { padding-top: 8px; }
+#proposal-manual-form .prospero-manual-section { padding: 20px 24px 24px; margin: 0 0 28px; border-color: #dfe4ec; border-radius: 10px; }
+#proposal-manual-form .prospero-manual-section:last-child { margin-bottom: 0; }
+#proposal-manual-form .prospero-manual-section > legend { padding: 0 8px; font-size: 15px; line-height: 1.5; font-weight: 600; }
+.tool-page.tool-build-protocol #proposal-manual-form .form-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; max-width: 920px; align-items: start; }
+.tool-page.tool-build-protocol #manual-section-basic .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#proposal-manual-form .manual-field { min-width: 0; text-align: left; }
+#proposal-manual-form label { margin: 0 0 8px; font-size: 13px; line-height: 1.5; }
+#proposal-manual-form input, #proposal-manual-form textarea, #proposal-manual-form select { display: block; width: 100%; margin: 0; padding: 11px 13px; font-size: 14px; line-height: 1.6; border-color: #c7d0dc; border-radius: 8px; }
+#proposal-manual-form select { max-width: 420px; min-height: 46px; text-align: left; margin-inline: 0 auto; }
+#proposal-manual-form textarea { min-height: 132px; }
+#manual-protocol-rationale, #manual-protocol-objectives { min-height: 156px; }
+#manual-protocol-synthesis { min-height: 196px; }
+#proposal-manual-form .hint { margin: 7px 0 0; max-width: 85ch; line-height: 1.6; }
+#proposal-manual-form .manual-field-feedback { margin: 5px 0 0; line-height: 1.5; }
+#proposal-manual-form #manual-section-eligibility { padding-block: 12px; }
+@media (max-width: 600px) {
+ #proposal-manual-form .prospero-manual-section { padding: 16px; margin-bottom: 22px; }
+ .tool-page.tool-build-protocol #manual-section-basic .form-grid { grid-template-columns: minmax(0, 1fr); }
+ .tool-page.tool-build-protocol #proposal-manual-form .form-grid { gap: 20px; }
+}
