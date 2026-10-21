@@ -1,3 +1,19 @@
 [hidden]{display:none!important}.page-title{margin:0 0 18px}.panel{margin-bottom:20px}.panel-head{padding:14px 18px}.panel-body{padding:16px 18px}h2{font-size:16px;margin:0}h3{font-size:14px}.hint{color:#71737b;font-size:12px;margin:0 0 10px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px}.full{grid-column:1/-1}select{width:100%;padding:8px;border:1px solid #c5c6cb;border-radius:6px;margin-bottom:16px;background:#fff;font:inherit}textarea{line-height:1.5}button:disabled{opacity:.45;cursor:default}.confirm{display:flex;align-items:flex-start;gap:8px;margin:18px 0;font-weight:400}.confirm input{width:auto;margin:3px 0}.run-row{display:flex;align-items:center;gap:14px;margin:0 0 20px;font-size:12px;color:#4d6bfe}.protocol-progress{height:16px;border-radius:20px;background:#dbdff0;flex:1;overflow:hidden}.protocol-progress>span{height:100%;display:block;min-width:32px;width:0;background:#4f60b3;border-radius:20px;transition:width .5s ease}.protocol-progress b{display:block;text-align:right;padding-right:5px;color:white;line-height:16px;font-size:10px}#protocol-status{font-size:13px;color:#3c4a8c;margin-top:12px}.error{color:#2c41a5!important}details{margin:12px 0}summary{cursor:pointer;color:#4d6bfe;font-size:13px}#handoff-content{font-size:13px;white-space:pre-wrap;margin:12px 0}#protocol-issues{color:#384584;font-size:13px;padding-left:20px}.toolbar{flex-wrap:wrap}.btn{display:inline-flex;align-items:center;gap:5px}.btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6}@media(max-width:600px){.form-grid{grid-template-columns:1fr}.panel-head{gap:8px}.run-row{flex-wrap:wrap}.protocol-progress{min-width:140px}}@media(prefers-reduced-motion:reduce){.protocol-progress>span{transition:none}}
 
 #export-format{width:auto;min-height:32px;margin:0;padding:4px 8px;font-size:12px}
+
+.tool-page.tool-build-protocol .tool-writing-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.tool-page.tool-build-protocol .tool-writing-layout .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; }
+.tool-page.tool-build-protocol .tool-writing-layout .form-grid .full { grid-column: 1 / -1; }
+.proposal-imports { margin-bottom: 14px; }
+.proposal-imports table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+.proposal-imports th, .proposal-imports td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.proposal-imports th { font-weight: 500; color: var(--muted); }
+.proposal-imports th:last-child { width: 180px; }
+#import-status { white-space: pre-line; font-size: 13px; }
+#import-status:empty { display: none; }
+@media (max-width: 600px) {
+  .tool-page.tool-build-protocol .tool-writing-layout .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .proposal-imports th:last-child { width: 125px; }
+  .proposal-imports th, .proposal-imports td { padding-inline: 6px; }
+}
