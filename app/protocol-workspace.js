@@ -68,6 +68,42 @@ function manualCriteriaLink(){
  if(target!=='default')url.searchParams.set('projectId',target);
  return url.href;
 }
+function savedManualCriteria(){
+ const target=new URL(manualCriteriaLink()).searchParams.get('projectId')||'default';
+ const empty={includes:[],exclusions:[]};
+ try{
+  if(projectDeleted(target))return empty;
+  const raw=JSON.parse(localStorage.getItem('aimstep-eligibility:'+target)||'null');
+  if(!raw||Object.hasOwn(raw,'generationMethodChoice')&&!raw.generationMethodChoice)return empty;
+  const rows=(raw.activeGenerator==='machine'?raw.machineCriteria:raw.criteria)||[];
+  if(!Array.isArray(rows)||!rows.some(row=>['condition','uncertain','definition'].some(field=>String(row[field]||'').trim())))return empty;
+  let hash=2166136261;for(const c of JSON.stringify(rows.map(row=>[String(row.title||''),String(row.condition||''),String(row.uncertain||''),String(row.definition||'')])))hash=Math.imul(hash^c.charCodeAt(0),16777619);
+  let summary=null;try{summary=JSON.parse(localStorage.getItem('aimstep-eligibility-summary:'+target)||'null');}catch(_){}
+  if(summary?.rowsSig===(hash>>>0).toString(16)&&Array.isArray(summary.includes)&&Array.isArray(summary.exclusions))return {includes:summary.includes,exclusions:summary.exclusions};
+  const result={includes:[],exclusions:[]};
+  for(const row of rows){
+   const include=[String(row.condition||'').trim()],exclude=[String(row.uncertain||'').trim()];
+   for(const clause of String(row.definition||'').split(/\n+/)){if(/^\s*(?:exclude|excluding|do not include|ineligible\b|not eligible\b)/i.test(clause))exclude.push(clause);else include.push(clause);}
+   if(include.some(Boolean))result.includes.push({label:row.title,text:include.filter(Boolean).join('\n')});
+   if(exclude.some(Boolean))result.exclusions.push({domain:row.title,text:exclude.filter(Boolean).join('\n')});
+  }
+  return result;
+ }catch(_){return empty;}
+}
+function renderManualCriteria(){
+ const entry=manualSections.get('eligibility');if(!entry)return;
+ entry.legend.href=manualCriteriaLink();
+ const data=savedManualCriteria(),groups=[['Inclusion criteria','纳入标准',data.includes],['Exclusion criteria','排除标准',data.exclusions]];
+ const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN';
+ entry.grid.hidden=!groups.some(group=>group[2].some(item=>String(item.text||'').trim()));
+ entry.grid.replaceChildren(...groups.map(([en,zh,items])=>{
+  const section=document.createElement('section'),heading=document.createElement('h3'),list=document.createElement('ul');
+  section.className='manual-criteria-group';heading.textContent=chinese?zh:en;section.append(heading,list);
+  for(const item of items){if(!String(item.text||'').trim())continue;const row=document.createElement('li'),label=document.createElement('strong'),text=document.createElement('span');label.textContent=(item.label||item.domain||'')+': ';text.textContent=item.text;row.append(label,text);list.appendChild(row);}
+  if(!list.children.length){const empty=document.createElement('p');empty.className='hint';empty.textContent=chinese?'尚未填写。':'Not specified.';section.appendChild(empty);}
+  return section;
+ }));
+}
 function renderManualForm(){
  state.manualProtocolInputs=M.migrate(state.manualProtocolInputs,state.inputs);
  if(!manualFormReady){
@@ -79,9 +115,9 @@ function renderManualForm(){
    if(section.tool){
     const link=document.createElement('a');link.href=manualCriteriaLink();link.className='manual-criteria-link';
     link.onclick=event=>{if(!safeSave()){event.preventDefault();return;}link.href=manualCriteriaLink();};
-    legend.appendChild(link);title=link;grid.hidden=true;
+    legend.appendChild(link);title=link;grid.hidden=true;grid.className='manual-criteria-summary';grid.setAttribute('data-ui-preserve','');grid.setAttribute('aria-live','polite');
    }
-   manualSections.set(section.id,{element,legend:title});
+   manualSections.set(section.id,{element,legend:title,grid});
    for(const field of section.fields){
     const box=document.createElement('div'),label=document.createElement('label'),hint=document.createElement('p');
     box.id='manual-field-'+field.id;box.className='manual-field'+(field.type==='textarea'||field.id==='reviewTitle'?' full':'');label.htmlFor='manual-protocol-'+field.id;label.textContent=field.label+(field.required?' *':'');
@@ -96,7 +132,7 @@ function renderManualForm(){
   manualFormReady=true;
  }
  for(const field of M.fields){const control=manualControls.get(field.id);if(control){control.value=state.manualProtocolInputs[field.id]||'';updateManualFeedback(field);}}
- updateManualVisibility();
+ updateManualVisibility();renderManualCriteria();
 }
 function renderGeneration(){
  const draft=state.proposalDrafts?.manual;$('proposal-generated').hidden=!draft?.text;
@@ -134,7 +170,7 @@ function reconcileFileResults(){
  try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved){let changed=false;for(const item of cleared){const file=saved.imports?.find(file=>file.id===item.id);if(file?.[item.field]===item.target){delete file[item.field];changed=true;}}if(changed)localStorage.setItem(key,JSON.stringify(saved));}}catch(error){status('Could not update saved completion status. Please free browser storage and try again.',true);}
 }
 window.addEventListener?.('storage',event=>{
- if(!event.key||event.key.startsWith('aimstep-eligibility:')||event.key.startsWith('aimstep-project-deleted:'))renderImports();
+ if(!event.key||event.key.startsWith('aimstep-eligibility:')||event.key.startsWith('aimstep-eligibility-summary:')||event.key.startsWith('aimstep-project-deleted:'))renderImports();
 });
 window.addEventListener?.('focus',()=>renderImports());
 window.addEventListener?.('pageshow',()=>renderImports());
@@ -169,7 +205,7 @@ function renderImports(){
   }
   info.append(heading,date);row.append(info,actions);return row;
  }));
- renderFilePreview();
+ renderFilePreview();renderManualCriteria();
 }
 function clearFilePreview(){
  $('proposal-preview-frame').hidden=true;$('proposal-preview-frame').removeAttribute('src');

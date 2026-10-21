@@ -79,3 +79,12 @@
  .tool-page.tool-build-protocol #manual-section-basic .form-grid { grid-template-columns: minmax(0, 1fr); }
  .tool-page.tool-build-protocol #proposal-manual-form .form-grid { gap: 20px; }
 }
+
+.manual-criteria-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; padding-top: 12px; }
+.manual-criteria-group { min-width: 0; }
+.manual-criteria-group h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+.manual-criteria-group ul { margin: 0; padding-left: 18px; }
+.manual-criteria-group li { margin: 0 0 12px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.manual-criteria-group li:last-child { margin-bottom: 0; }
+.manual-criteria-group strong { font-weight: 500; }
+@media (max-width: 760px) { .manual-criteria-summary { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
