@@ -51,6 +51,8 @@ const file=(name,text)=>({name,size:text.length,text:async()=>text});
  const metadata={name:'AI project title',projectType:'systematic',datasetKind:'real',questionType:'effectiveness',areaOfResearch:'med'};
  const ai=async(url,opts)=>{const request=JSON.parse(opts.body);requests.push(request.messages[1].content);return {ok:true,json:async()=>({message:{content:JSON.stringify(request.format.properties?.name?metadata:mapping)}})}};
  app=setup(fixture,{fetch:ai,projects:{createFromProposal:async(payload,id)=>{created.push({payload,id});return {id:'new-project',name:payload.name}}}});
+ const menu=app.get('proposal-import-list').children[1].children[2].children[0];
+ assert.equal(menu.children[0].className,'proposal-file-trigger');assert.equal(menu.children[1].hidden,true);menu.children[0].onclick();assert.equal(menu.children[1].hidden,false);menu.children[0].onclick();assert.equal(menu.children[1].hidden,true);
  await action(app,1,1);assert.deepEqual(requests,['Only second source']);assert.equal(created.length,1);assert.equal(app.state().imports[1].projectId,'new-project');assert(app.data.has('aimstep-protocol:new-project'));
  requests=[];await action(app,1,2);assert.deepEqual(requests,['Only second source']);assert.equal(JSON.parse(app.data.get('criteria-action')).target,'new-project');
  await action(app,0,0);assert.equal(app.state().imports.length,1);assert.equal(app.state().imports[0].name,'two.txt');assert(!app.state().importText.includes('Only first source'));assert.equal(app.state().text,'Draft');

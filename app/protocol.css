@@ -21,12 +21,13 @@
 .proposal-imports .proposal-actions-heading { width: 48px; }
 .proposal-imports .proposal-file-actions { overflow: visible; text-align: right; }
 .proposal-file-menu { position: relative; margin: 0; }
-.proposal-file-menu summary { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 5px; font-size: 20px; line-height: 1; list-style: none; }
-.proposal-file-menu summary::-webkit-details-marker { display: none; }
+.proposal-file-trigger { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 5px; border: 1px solid #cbd3e2; border-radius: 6px; background: #f4f6fc; color: #4059c5; cursor: pointer; }
+.proposal-file-trigger svg { display: block; width: 20px; height: 20px; fill: currentColor; }
+.proposal-file-trigger:focus-visible { outline: 2px solid #4d6bfe; outline-offset: 2px; }
 .proposal-file-choices { position: absolute; right: 0; top: 32px; z-index: 20; display: grid; min-width: 245px; max-width: calc(100vw - 64px); padding: 5px; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px #17192018; }
 .proposal-file-choices button { border: 0; border-radius: 4px; background: transparent; padding: 9px 10px; text-align: left; font: inherit; font-size: 12px; color: var(--ink); }
 .proposal-file-choices button:hover:not(:disabled) { background: #f2f5ff; }
 .proposal-result-link { text-decoration: underline; }
 
-.proposal-file-menu:not([open]) .proposal-file-choices { display: none; }
+.proposal-file-choices[hidden] { display: none !important; }
 .proposal-actions-heading .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
