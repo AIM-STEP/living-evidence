@@ -3584,7 +3584,12 @@ body.project-page-mode .toolset-layout { display: none; }
           otherPage.hidden = view !== "page";
           toolset.hidden = !dashboard;
           document.getElementById("writing-tools").hidden = !dashboard;
-          if (view === "page" && target && frame.getAttribute("src") !== target.href) frame.src = target.href;
+          if (view === "page" && target) {
+            var frameTarget = new URL(target.href);
+            // Refresh the internal proposal document without changing public links.
+            if (/\/build-protocol\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-7");
+            if (frame.getAttribute("src") !== frameTarget.href) frame.src = frameTarget.href;
+          }
           if (push) {
             var url = routeUrl(view, target);
             history.pushState({ projectId: activeProject ? activeProject.id : "", projectName: activeProject ? activeProject.name : "" }, "", url.pathname + url.search + url.hash);
