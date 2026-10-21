@@ -45,10 +45,10 @@ function fieldErrors(field,value){
  if(field.type==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(content))errors.push('Enter a valid email address.');
  return errors;
 }
-function validate(values){
+function validate(values,options={}){
  const errors=[];
  if(!text(values.reviewTitle))errors.push('Enter a review title before generating.');
- for(const item of fields){if(item.type==='team'||!active(item,values))continue;for(const error of fieldErrors(item,values[item.id]))errors.push(item.label+': '+error);}
+ for(const item of fields){if(item.type==='team'||!active(item,values))continue;for(const error of fieldErrors(item,values[item.id])){if(options.draft&&error.startsWith('Use at least '))continue;errors.push(item.label+': '+error);}}
  return errors;
 }
 function display(item,value){
