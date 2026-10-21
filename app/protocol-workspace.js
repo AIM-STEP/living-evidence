@@ -3,7 +3,7 @@
 const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'default',key='aimstep-protocol:'+scope;
 const inputNames=['question','framework','type','eligibility','outcomes','search','methods','team','other'];
 let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null;
-const fileJobs=new Map();
+const fileJobs=new Map(),selectedFileActions=new Map();
 try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={...state,...saved};else{const legacy=JSON.parse(localStorage.getItem('aimstep-writing:protocol:'+scope)||'null');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}}catch(_){status("Saved proposal could not be read. Export any visible work before continuing.",true);}
 if(!Array.isArray(state.imports))state.imports=[];
 if(!state.imports.length&&state.importName)state.imports.push({name:state.importName,importedAt:state.importedAt||[...state.history].reverse().find(x=>x.action==='before-import')?.date||null});
@@ -38,7 +38,8 @@ function renderImports(){
    const button=document.createElement('button');button.type='button';button.className='proposal-file-action'+(action==='delete'?' proposal-file-delete':'');button.textContent=chinese?zh:en;
    if(action==='delete'){button.setAttribute('aria-label',(chinese?'删除：':'Delete: ')+file.name);button.title=chinese?'删除':'Delete';}
    button.disabled=!!fileJobs.get(file.id)&&(action!=='delete'||fileJobs.get(file.id).committing);
-   button.onclick=()=>fileAction(file,action);actions.appendChild(button);
+   button.setAttribute('data-selected',String(selectedFileActions.get(file.id)===action));
+   button.onclick=()=>{selectedFileActions.set(file.id,action);Array.from(actions.children).forEach(item=>item.setAttribute('data-selected',String(item===button)));return fileAction(file,action);};actions.appendChild(button);
   }
   row.append(name,date,actions);return row;
  }));
