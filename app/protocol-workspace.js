@@ -443,18 +443,18 @@ async function collectProposalInput(signal){
  return {input,text};
 }
 async function draftingMaterials(source,signal){
- return window.AimstepProposalMaterials.prepare(source,{model,signal,status,core:window.AimstepManuscriptCore});
+ return window.AimstepProposalMaterials.prepare(source,{model,signal,status:()=>{},core:window.AimstepManuscriptCore});
 }
 $('generate-protocol').onclick=()=>run('Generating proposal with the local model…',async signal=>{
  save();const errors=M.validate(state.manualProtocolInputs,{draft:true});
  if(errors.length)throw Error(errors.slice(0,5).join('\n')+(errors.length>5?'\nCheck the other highlighted fields.':''));
  if(!window.AimstepProposalDrafting||!window.AimstepProposalContext||!window.AimstepProposalPdf||!window.AimstepProposalModel||!window.AimstepProposalMaterials)throw Error('Some proposal modules did not load. Reload the page and try Generate again.');
- status('Reading saved project materials…');
+ status('Generating proposal…');
  const D=window.AimstepProposalDrafting,guide=D.guidance(state.manualProtocolInputs.reviewType);
  const base=localStorage.getItem(key),source=await collectProposalInput(signal);
  const check=async()=>{const current=await collectProposalInput(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');if(localStorage.getItem(key)!==base||current.text!==source.text)throw Error('Project information changed during drafting. Generate again using the latest saved information.');};
  const materials=await draftingMaterials(source,signal);
- status('Reading project materials and '+guide.reviewType+' guidance…');progress(8);
+ progress(8);
  const plan=D.validatePlan(await model('Plan a complete prospective review protocol for the selected Review type. Apply these verified methodological instructions: '+JSON.stringify(guide)+'. Analyze ALL supplied materials. Form entries and saved eligibility decisions override older uploaded drafts. Preserve every inclusion/exclusion rule, threshold and negation. Requirements must fit this review type. Identify missing facts in confirmations. You may propose methodological details, but identify them as proposed for author confirmation. Do not invent results, completed activities, registration, team identities, contact details, funding, citations or dates. Return a concise drafting approach, required methodological items and unresolved author decisions.',JSON.stringify(materials),D.planSchema,signal));
  const batches=[['title','rationale','eligibility','outcomes'],['search','extraction','bias'],['synthesis','certainty'],['timeline','team','funding','availability','amendments']];
  let sections=[],issues=[...plan.confirmations];
