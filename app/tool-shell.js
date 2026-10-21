@@ -12,8 +12,8 @@
     ['certainty-of-evidence.html', 'Certainty of evidence', '证据确定性评价']
   ];
   const writing = [
-    ['build-protocol.html', 'Build a proposal', '制定研究提案'],
-    ['drafting-manuscript.html', "Summary of evidence", '汇总证据']
+    ['build-protocol.html', 'Build your proposal', '制定研究提案'],
+    ['drafting-manuscript.html', "Summary your evidence", '汇总证据']
   ];
   const url = new URL(location.href);
   const steps = writing.some(step => url.pathname.endsWith('/' + step[0])) ? writing : workflow;
