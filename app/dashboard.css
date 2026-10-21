@@ -73,7 +73,7 @@ button, input, select, textarea { font-family: inherit; }
   justify-content: flex-start; min-height: 44px; padding: 8px 0 9px;
   border: 0; border-bottom: 4px solid transparent; border-radius: 0;
   background: transparent; color: #171920; font-size: 14px;
-  font-weight: 700; line-height: 1.5; text-align: left;
+  font-weight: 400; line-height: 1.5; text-align: left;
 }
 .workflow-column .pw-tab[aria-selected="true"] { border-bottom-color: var(--brand); }
 .workflow-column .pw-tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
