@@ -55,9 +55,9 @@ button, input, select, textarea { font-family: inherit; }
 }
 .lang:hover, .login:hover:not(:disabled) { background: #f3f6fc; border-color: #b9c7e2; }
 .toolset-layout {
-  grid-template-columns: minmax(320px, 1.1fr) minmax(380px, 1.65fr) minmax(210px, .6fr);
+  grid-template-columns: clamp(320px, 31vw, 510px) minmax(380px, 1fr) clamp(210px, 17vw, 280px);
   gap: 24px; padding: 32px 0 56px;
-  width: min(1600px, calc(100% - 48px)); margin-left: 24px; margin-right: auto;
+  width: calc(100% - 48px); margin-inline: 24px;
 }
 .workflow-column {
   min-width: 0; padding: 24px;
