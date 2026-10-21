@@ -1713,7 +1713,7 @@ body.project-page-mode .toolset-layout { display: none; }
 
 </style>
   <link rel="stylesheet" href="app/theme.css?v=20261020-5">
-  <link rel="stylesheet" href="app/dashboard.css?v=20261021-3">
+  <link rel="stylesheet" href="app/dashboard.css?v=20261021-4">
 </head>
   <body>
     <!-- Logo artwork (from AIM-STEP_square.svg) plus shared gradients/filters for the tiles -->
@@ -2151,17 +2151,48 @@ body.project-page-mode .toolset-layout { display: none; }
         <div class="footer-meta">
           <time class="clock" id="clock"></time>
           <span><span data-i18n="visitors">Visitors</span> <b id="visitor-count" aria-live="polite">—</b></span>
-          <details class="footer-contact">
-            <summary data-i18n="nav_contact">Contact</summary>
-            <div class="footer-contact-list" aria-label="Contact list">
-              <a href="mailto:liang.yao@ntu.edu.sg">Liang Yao <span>liang.yao@ntu.edu.sg</span></a>
-              <a href="mailto:liu.ming@ntu.edu.sg">Ming Liu <span>liu.ming@ntu.edu.sg</span></a>
-              <a href="mailto:CONG0016@e.ntu.edu.sg">Zheng Cong <span>CONG0016@e.ntu.edu.sg</span></a>
-            </div>
-          </details>
+          <button type="button" class="footer-contact-trigger" id="footer-contact-trigger" aria-haspopup="dialog" aria-controls="footer-contact-dialog" data-i18n="nav_contact">Contact</button>
         </div>
       </div>
     </footer>
+    <dialog class="footer-contact-dialog" id="footer-contact-dialog" aria-labelledby="footer-contact-title">
+      <div class="footer-contact-card">
+        <button type="button" class="footer-contact-close" id="footer-contact-close" aria-label="Close">×</button>
+        <h2 id="footer-contact-title" data-i18n="nav_contact">Contact</h2>
+        <div class="footer-contact-list">
+          <div class="footer-contact-row"><span>Liang Yao</span><a href="mailto:liang.yao@ntu.edu.sg">liang.yao@ntu.edu.sg</a></div>
+          <div class="footer-contact-row"><span>Ming Liu</span><a href="mailto:liu.ming@ntu.edu.sg">liu.ming@ntu.edu.sg</a></div>
+          <div class="footer-contact-row"><span>Zheng Cong</span><a href="mailto:CONG0016@e.ntu.edu.sg">CONG0016@e.ntu.edu.sg</a></div>
+        </div>
+      </div>
+    </dialog>
+    <script>
+      (function () {
+        var trigger = document.getElementById("footer-contact-trigger");
+        var dialog = document.getElementById("footer-contact-dialog");
+        var closeButton = document.getElementById("footer-contact-close");
+        if (!trigger || !dialog || !closeButton) return;
+        function open() {
+          if (typeof dialog.showModal === "function") dialog.showModal();
+          else dialog.setAttribute("open", "");
+          closeButton.focus();
+        }
+        function close() {
+          if (typeof dialog.close === "function" && dialog.open) dialog.close();
+          else dialog.removeAttribute("open");
+          trigger.focus();
+        }
+        trigger.addEventListener("click", open);
+        closeButton.addEventListener("click", close);
+        dialog.addEventListener("click", function (event) {
+          if (event.target === dialog) close();
+        });
+        dialog.addEventListener("cancel", function (event) {
+          event.preventDefault();
+          close();
+        });
+      })();
+    </script>
     <dialog class="login-dialog" id="login-dialog" aria-labelledby="login-title">
       <form class="login-card" id="login-form" novalidate>
         <button type="button" class="login-close" id="login-close" aria-label="Close">×</button>

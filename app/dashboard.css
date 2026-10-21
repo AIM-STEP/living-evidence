@@ -213,19 +213,38 @@ body.project-create-mode .workflow-column .pw-create-title { font-size: 22px; li
 }
 footer { padding: 20px 0; background: transparent; border-color: var(--dashboard-border); }
 .footer-inner { gap: 12px 24px; font-size: 13px; line-height: 1.6; color: var(--dashboard-muted); }
-.footer-contact { position: relative; }
-.footer-contact summary {
-  cursor: pointer; color: inherit; list-style: none;
+.footer-contact-trigger {
+  padding: 0; border: 0; background: transparent; color: inherit;
+  font: inherit; cursor: pointer;
 }
-.footer-contact summary::-webkit-details-marker { display: none; }
-.footer-contact summary::marker { content: ""; }
+.footer-contact-trigger:hover { color: var(--brand-text); }
+.footer-contact-dialog {
+  width: min(440px, calc(100vw - 32px)); max-width: calc(100vw - 32px);
+  margin: auto; padding: 0; border: 1px solid var(--dashboard-border);
+  border-radius: 12px; background: #fff; color: var(--dashboard-ink);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.2);
+}
+.footer-contact-dialog::backdrop { background: rgba(15, 23, 42, 0.38); }
+.footer-contact-card { position: relative; padding: 28px; }
+.footer-contact-card h2 {
+  margin: 0 0 18px; font-size: 20px; line-height: 1.4; font-weight: 500;
+}
+.footer-contact-close {
+  position: absolute; top: 10px; right: 10px; width: 32px; height: 32px;
+  padding: 0; border: 0; border-radius: 6px; background: transparent;
+  color: var(--dashboard-muted); font-size: 22px; line-height: 1; cursor: pointer;
+}
+.footer-contact-close:hover { background: #f3f6fc; color: var(--dashboard-ink); }
 .footer-contact-list {
   display: flex; flex-direction: column; gap: 4px;
-  margin-top: 8px; white-space: nowrap;
+  margin: 0; white-space: normal;
 }
-.footer-contact-list a { color: inherit; overflow-wrap: anywhere; }
-.footer-contact-list a:hover { color: var(--brand-text); }
-.footer-contact-list span { margin-left: 6px; }
+.footer-contact-row {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px;
+  line-height: 1.5;
+}
+.footer-contact-row a { color: var(--brand-text); overflow-wrap: anywhere; }
+.footer-contact-row a:hover { color: var(--brand-hover); }
 @media (max-width: 1100px) {
   .workflow-column { padding: 20px; }
   .toolset-layout { gap: 24px; }
