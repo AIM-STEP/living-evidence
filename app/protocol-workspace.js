@@ -1,12 +1,15 @@
 (()=>{
 'use strict';
 const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'default',key='aimstep-protocol:'+scope;
+const G=window.AimstepProtocolGeneration;
 const inputNames=['question','framework','type','eligibility','outcomes','search','methods','team','other'];
 let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null,previewFileId=null;
 let previewToken=0,previewUrl=null,previewLoadedId=null;
 const fileJobs=new Map(),selectedFileActions=new Map(),fileProgress=new Map();
 try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={...state,...saved};else{const legacy=JSON.parse(localStorage.getItem('aimstep-writing:protocol:'+scope)||'null');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}}catch(_){status("Saved proposal could not be read. Export any visible work before continuing.",true);}
 if(!Array.isArray(state.imports))state.imports=[];
+if(!['manual','machine'].includes(state.generationSource))state.generationSource='manual';
+if(!state.proposalDrafts||typeof state.proposalDrafts!=='object')state.proposalDrafts={};
 if(!state.imports.length&&state.importName)state.imports.push({name:state.importName,importedAt:state.importedAt||[...state.history].reverse().find(x=>x.action==='before-import')?.date||null});
 // Recover individual source text from earlier combined imports, in their saved order.
 let importCursor=0;
@@ -23,9 +26,48 @@ for(const a of document.querySelectorAll('[data-project-link]')){const u=new URL
 const icons={import:'M12 16V3m-4 4 4-4 4 4M5 14v6h14v-6',save:'M19 21H5V3h12l4 4v14ZM7 3v6h10V3M7 21v-8h10v8',export:'M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5',clear:'M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6'};
 for(const [id,path]of Object.entries(icons))$(id+'-protocol').insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>');
 function status(message,error=false){$('protocol-status').textContent=message;$('protocol-status').classList.toggle('error',error);}
-function save(){state.text=$('protocol-text').value;state.inputs=Object.fromEntries(inputNames.map(n=>[n,$('input-'+n).value]));state.updatedAt=new Date().toISOString();localStorage.setItem(key,JSON.stringify(state));}
+function save(){state.text=$('protocol-text').value;state.inputs=Object.fromEntries(inputNames.map(n=>[n,$('input-'+n).value]));state.generationSource=$('proposal-generation-source').value==='machine'?'machine':'manual';state.updatedAt=new Date().toISOString();localStorage.setItem(key,JSON.stringify(state));}
 function safeSave(){cancelBackgroundAnalysis();try{save();return true;}catch(e){status('Could not save the protocol. Export a copy before leaving.',true);return false;}}
-function render(){for(const n of inputNames)if(state.inputs[n]!==undefined)$('input-'+n).value=state.inputs[n];$('protocol-text').value=state.text;renderImports();$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
+function render(){for(const n of inputNames)if(state.inputs[n]!==undefined)$('input-'+n).value=state.inputs[n];$('protocol-text').value=state.text;renderImports();renderGeneration();$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
+function machineSource(){
+ let raw;
+ try{raw=JSON.parse(localStorage.getItem('aimstep-eligibility:'+scope)||'null');}catch(_){throw Error('The saved eligibility criteria could not be read. Save them again in Eligibility criteria.');}
+ return G.source(raw);
+}
+function renderGeneration(){
+ const mode=state.generationSource||'manual',machine=mode==='machine',chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN';
+ $('proposal-generation-source').value=mode;$('proposal-manual-inputs').hidden=machine;$('proposal-machine-inputs').hidden=!machine;
+ if(machine){
+  try{
+   const input=machineSource();
+   $('proposal-machine-criteria').textContent=[input.question,...input.rows.map(row=>[row.title,row.inclusion?(chinese?'纳入：':'Inclusion: ')+row.inclusion:'',row.exclusion?(chinese?'排除：':'Exclusion: ')+row.exclusion:'',row.other].filter(Boolean).join('\n'))].filter(Boolean).join('\n\n');
+   $('proposal-machine-status').textContent=input.rows.length?(chinese?'根据当前项目的纳排标准生成 PROSPERO 计划书，未提供的信息留空。':'Generate a PROSPERO proposal from this project’s eligibility criteria. Unspecified information stays blank.'):(chinese?'请先在 Eligibility criteria 中保存纳排标准。':'Save inclusion and exclusion criteria in Eligibility criteria first.');
+   if(state.proposalDrafts?.machine?.source&&state.proposalDrafts.machine.source!==JSON.stringify(input))$('proposal-machine-status').textContent=chinese?'纳排标准已更改，请点击 Generate 更新计划书。':'Eligibility criteria changed. Click Generate to update the proposal.';
+  }catch(error){$('proposal-machine-criteria').textContent='';$('proposal-machine-status').textContent=error.message;}
+ }
+ const draft=state.proposalDrafts?.[mode];$('proposal-generated').hidden=!draft?.text;
+ $('generated-proposal-text').value=draft?.text||'';
+}
+$('proposal-generation-source').onchange=()=>{
+ state.generationSource=$('proposal-generation-source').value==='machine'?'machine':'manual';
+ if(!safeSave())return;
+ renderGeneration();
+ if(state.generationSource==='machine'){
+  try{if(state.proposalDrafts?.machine?.source===JSON.stringify(machineSource()))return;}catch(_){}
+  return $('generate-protocol').onclick();
+ }
+};
+$('generated-proposal-text').oninput=()=>{
+ const draft=state.proposalDrafts?.[state.generationSource||'manual'];if(!draft)return;
+ draft.text=$('generated-proposal-text').value;$('protocol-text').value=draft.text;state.mapping=null;state.confirmedAt=null;safeSave();
+};
+$('download-generated-proposal').onclick=()=>{
+ const draft=state.proposalDrafts?.[state.generationSource||'manual'];if(!draft?.text)return;
+ const data=AimstepDefinitionWord.create('Review proposal',[{label:'Proposal',definition:draft.text}],new Date().toISOString().slice(0,10));
+ const url=URL.createObjectURL(new Blob([data],{type:AimstepDefinitionWord.mime})),a=document.createElement('a');
+ a.href=url;a.download='AIM-STEP-proposal-'+Date.now()+'.docx';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
+};
+window.addEventListener?.('storage',event=>{if(event.key==='aimstep-eligibility:'+scope&&state.generationSource==='machine')renderGeneration();});
 function renderImports(){
  const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN';
  const previewButtons=[];
@@ -104,7 +146,7 @@ $('proposal-original-file').onchange=async()=>{
   if(previewFileId===file.id)await renderFilePreview();
  }catch(error){$('proposal-preview-empty').textContent='Could not save the original file. Please try again.';}
 };
-document.addEventListener('aimstep:lang',renderImports);
+document.addEventListener('aimstep:lang',()=>{renderImports();renderGeneration();});
 function projectService(){
  const host=window.parent&&window.parent!==window?window.parent:window;
  const service=host.AIMSTEP?.projectController;
@@ -257,9 +299,26 @@ $('protocol-file').onchange=()=>{
  });
 };
 $('generate-protocol').onclick=()=>run("Generating proposal…",async signal=>{
- save();if(!state.inputs.question.trim())throw Error('Enter your review question before generating.');
- const answer=await model("Draft an English systematic review proposal in PROSPERO-aligned sections, with PRISMA-P completeness. Use precisely these section IDs: "+C.sections.map(x=>x[0]).join(', ')+'. Preserve the supplied review type. Scoping or other non-eligible reviews must not be called eligible for PROSPERO registration. Use supplied facts only for PICO, inclusion/exclusion, dates, team, funding and registration. Missing facts must say Not specified — to confirm. Method recommendations may be offered only as Proposed — to confirm, never as agreed plans. Do not invent citations, completed searches, registration numbers, reviewers, approvals or results. Cover information sources/platforms, reproducible draft searches, selection, extraction/data management, outcome priority/time points, risk of bias, synthesis/effect measures and heterogeneity where appropriate, additional analyses, reporting bias, certainty, contributors/support, timeline/current stage and amendments. Do not choose clinical thresholds or rating rules for the user. Include issues listing what remains missing or proposed. Each section occurs exactly once.',JSON.stringify(state.inputs),C.draftSchema,signal);
- const draft=C.validateDraft(answer);state.history.push({date:new Date().toISOString(),text:state.text,action:'before-generation'});state.text=C.text(draft.sections);state.issues=draft.issues;state.mapping=null;state.confirmedAt=null;render();save();status('Draft generated. Review, edit and confirm before applying it to the next tools.');
+ save();const mode=state.generationSource,base=localStorage.getItem(key);let draft,text,source;
+ if(mode==='machine'){
+  const input=machineSource();if(!input.rows.length)throw Error('Save inclusion and exclusion criteria in Eligibility criteria before generating a proposal.');
+  source=JSON.stringify(input);
+  const prompt='Prepare an English PROSPERO-format review protocol using ONLY the current project eligibility source supplied. Return EVERY field exactly once using these field definitions: '+JSON.stringify(G.fields)+'. Each evidence entry must cite the exact sourceId and its full verbatim text. A source may only support its listed allowed field IDs. Preserve every inclusion/exclusion rule, negation, threshold and exception. Do not treat an excluded group as included or an outcome eligibility rule as a primary outcome. For each field with no explicit supporting information return text "" and evidence []. Leave missing dates, review team, contact details, affiliations, funding, search plans, extraction, risk-of-bias, reporting-bias, certainty and synthesis methods BLANK. Do not add defaults, recommended methods, placeholders, "Not specified", "To confirm", registration IDs, results or claims of registry eligibility. Publication date restrictions are not the review start/end dates. A title or objective may be phrased from supported criteria, without adding facts. This is a draft, not a PROSPERO submission.';
+  draft=G.validate(await model(prompt,source,G.schema,signal),input);text=G.text(draft.fields);
+  if(JSON.stringify(machineSource())!==source)throw Error('Eligibility criteria changed during generation. Generate again using the latest criteria.');
+ }else{
+  if(!state.inputs.question.trim())throw Error('Enter your review question before generating.');
+  const answer=await model("Draft an English systematic review proposal in PROSPERO-aligned sections, with PRISMA-P completeness. Use precisely these section IDs: "+C.sections.map(x=>x[0]).join(', ')+'. Preserve the supplied review type. Scoping or other non-eligible reviews must not be called eligible for PROSPERO registration. Use supplied facts only for PICO, inclusion/exclusion, dates, team, funding and registration. Missing facts must say Not specified — to confirm. Method recommendations may be offered only as Proposed — to confirm, never as agreed plans. Do not invent citations, completed searches, registration numbers, reviewers, approvals or results. Cover information sources/platforms, reproducible draft searches, selection, extraction/data management, outcome priority/time points, risk of bias, synthesis/effect measures and heterogeneity where appropriate, additional analyses, reporting bias, certainty, contributors/support, timeline/current stage and amendments. Do not choose clinical thresholds or rating rules for the user. Include issues listing what remains missing or proposed. Each section occurs exactly once.',JSON.stringify(state.inputs),C.draftSchema,signal);
+  draft=C.validateDraft(answer);text=C.text(draft.sections);
+ }
+ if(signal.aborted)throw new DOMException('Stopped','AbortError');
+ if(localStorage.getItem(key)!==base)throw Error('The proposal changed in another tab. Reload before generating again.');
+ const previous=JSON.parse(JSON.stringify(state)),at=new Date().toISOString();
+ state.history.push({date:at,text:state.text,action:'before-generation',mode});
+ state.proposalDrafts??={};state.proposalDrafts[mode]={text,at,source:source||null,fields:draft.fields||null,model:state.lastModel};
+ state.text=text;state.issues=draft.issues;state.mapping=null;state.confirmedAt=null;
+ try{render();save();}catch(error){state=previous;render();throw Error('Could not save the proposal. Your previous draft has been kept.');}
+ status('Proposal generated. You can edit the draft and download it as Word.');
 });
 $('submit-protocol').onclick=()=>{if(!$('confirm-protocol').checked){status("Review the proposal and select the confirmation checkbox before submitting.",true);return;}run("Checking and applying confirmed proposal…",async signal=>{save();const text=state.text,base=handoffVersion();if(!text.trim())throw Error("Import or create a proposal first.");const mapping=await map(text,signal);apply(mapping,"confirmed proposal",base);state.issues=mapping.issues;state.confirmedAt=new Date().toISOString();save();render();status('Confirmed and applied to Eligibility criteria and Search strategy. Previous work is backed up.');});};
 $('protocol-text').oninput=()=>{state.mapping=null;state.confirmedAt=null;$('confirm-protocol').checked=false;$('handoff-preview').hidden=true;safeSave();};

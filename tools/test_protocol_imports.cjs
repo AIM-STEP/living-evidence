@@ -1,8 +1,10 @@
 const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm');
+const protocolCore=require('../app/protocol-core.js'),generation=require('../app/protocol-generation.js');
 const code=fs.readFileSync(require('node:path').join(__dirname,'../app/protocol-workspace.js'),'utf8');
 function setup(saved,options={}){
  const nodes=new Map(),data=new Map(saved?[['aimstep-protocol:test',JSON.stringify(saved)]]:[]);let fail=false;
- class E{constructor(){this.attrs={};this.value='';this.textContent='';this.hidden=true;this.children=[];this.style={};this.classList={toggle(){}};this.tagName='TEXTAREA';}setAttribute(k,v){this.attrs[k]=v;}getAttribute(k){return this.attrs[k];}removeAttribute(k){delete this.attrs[k];delete this[k];}insertAdjacentHTML(){}append(...c){this.children.push(...c)}appendChild(c){this.children.push(c)}replaceChildren(...c){this.children=c}querySelector(){return new E()}get firstElementChild(){return new E()}}
+ if(options.criteria)data.set('aimstep-eligibility:test',JSON.stringify(options.criteria));
+ class E{constructor(){this.attrs={};this.value='';this.textContent='';this.hidden=true;this.children=[];this.style={};this.classList={toggle(){}};this.tagName='TEXTAREA';}setAttribute(k,v){this.attrs[k]=v;}getAttribute(k){return this.attrs[k];}removeAttribute(k){delete this.attrs[k];delete this[k];}click(){this.clicked=true;}insertAdjacentHTML(){}append(...c){this.children.push(...c)}appendChild(c){this.children.push(c)}replaceChildren(...c){this.children=c}querySelector(){return new E()}get firstElementChild(){return new E()}}
  const originals=options.originals||new Map(),urls=new Map(),revoked=new Set();
  class PreviewURL extends URL{}
  PreviewURL.createObjectURL=blob=>{const url='blob:synthetic-'+urls.size;urls.set(url,blob);return url;};PreviewURL.revokeObjectURL=url=>revoked.add(url);
@@ -10,7 +12,7 @@ function setup(saved,options={}){
  const get=id=>{if(!nodes.has(id))nodes.set(id,new E());return nodes.get(id)};
  const storage={getItem:k=>data.get(k)||null,setItem(k,v){if(fail)throw Error('Quota');data.set(k,v)}};
  const context={window:{AIMSTEP:{lang:()=> 'en',projectController:options.projects},AimstepProtocolCore:{handoffSchema:{},commitEligibility:(_storage,target,value,source)=>{data.set('criteria-action',JSON.stringify({target,value,source}));},validateHandoff:value=>value,commit:()=>{data.set('applied',String(Number(data.get('applied')||0)+1))}}},document:{getElementById:get,querySelectorAll:selector=>selector.startsWith('main ')?['import-protocol','protocol-text','generate-protocol'].map(get):[],createElement:()=>new E(),addEventListener(){},documentElement:{lang:'en'}},location:{search:'?projectId=test',href:'https://aimsetp.com/build-protocol.html?projectId=test'},localStorage:storage,URL,URLSearchParams,AbortController,DOMException,Intl,Date,setInterval:()=>1,clearInterval(){},setTimeout(){},fetch:options.fetch|| (async()=>{throw Error('AI unavailable')}),AimstepExtractionFormImport:{sourceText:async f=>{if(f.name.endsWith('.bad'))throw Error('Unsupported');return f.text()}},AimstepExtractionSources:{readPdf:async f=>({doc:{fullText:await f.text()}})},confirm:()=>true};
- context.URL=PreviewURL;context.window.AimstepProposalFiles=fileStore;
+ context.URL=PreviewURL;context.Blob=Blob;context.AimstepDefinitionWord=require('../app/extraction-definition-word.js');context.window.AimstepProposalFiles=fileStore;context.window.AimstepProtocolGeneration=generation;context.window.AimstepProtocolCore={...protocolCore,...context.window.AimstepProtocolCore};
  vm.runInNewContext(code,context);return {get,data,originals,urls,revoked,fail:()=>{fail=true},state:()=>JSON.parse(data.get('aimstep-protocol:test'))};
 }
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -117,6 +119,36 @@ const file=(name,text)=>new File([text],name);
  pendingOriginals[0].resolve(rawPdf);await firstPreview;assert.equal(app.get('proposal-preview-title').textContent,'native.docx');assert.equal(app.get('proposal-preview-download').href,latestUrl);assert.equal(app.get('proposal-preview-frame').hidden,true);
  const closingPreview=slowNames[0].onclick();app.get('proposal-preview-close').onclick();pendingOriginals[2].resolve(rawPdf);await closingPreview;assert.equal(app.get('proposal-preview').hidden,true);
  app=setup(null,{failOriginalSave:true});app.get('protocol-file').files=[rawPdf];await app.get('protocol-file').onchange();assert.equal(app.state().imports.length,0);assert.equal(app.originals.size,0);
+ const criteria={generationMethodChoice:'manual',activeGenerator:'manual',question:'Exercise for adults with fibromyalgia',reviewType:'Systematic Review',framework:'PICO',criteria:[{title:'Population',condition:'Adults with fibromyalgia.',uncertain:'Exclude children.'},{title:'Intervention',condition:'Exercise for at least 12 weeks.'}]};
+ const machineReply=()=>({fields:generation.fields.map(([id])=>({id,text:id==='reviewTitle'?criteria.question:id==='team'?'Invented review team':'',evidence:id==='reviewTitle'?[{sourceId:'question',quote:criteria.question}]:id==='team'?[{sourceId:'row-0-inclusion',quote:'Adults with fibromyalgia.'}]:[]})),issues:[]});
+ const aiReply=value=>({ok:true,json:async()=>({model:'synthetic-local',message:{content:JSON.stringify(value)}})});
+ const generationRequests=[];
+ app=setup(null,{criteria,fetch:async(url,options)=>{const body=JSON.parse(options.body);generationRequests.push({url,body});return aiReply(body.format.properties.fields?machineReply():{sections:protocolCore.sections.map(([id])=>({id,text:'Manual supplied content'})),issues:[]});}});
+ assert.equal(app.get('proposal-generation-source').value,'manual');assert.equal(app.get('proposal-manual-inputs').hidden,false);assert.equal(app.get('proposal-machine-inputs').hidden,true);
+ app.get('input-question').value='Manual-only question';app.get('input-team').value='Manual-only team';app.data.set('aimstep-eligibility:other-project','{"question":"Unrelated project"}');
+ const criteriaBefore=app.data.get('aimstep-eligibility:test');app.get('proposal-generation-source').value='machine';await app.get('proposal-generation-source').onchange();
+ assert.equal(generationRequests.length,1);assert.equal(generationRequests[0].url,'http://127.0.0.1:8765/api/eligibility/model');assert.equal(generationRequests[0].body.provider,'local');
+ const sent=generationRequests[0].body.messages[1].content;assert(sent.includes('Exercise for at least 12 weeks.'));assert(!sent.includes('Manual-only'));assert(!sent.includes('Unrelated project'));
+ assert.equal(app.get('proposal-manual-inputs').hidden,true);assert.equal(app.get('proposal-machine-inputs').hidden,false);assert.equal(app.get('proposal-generated').hidden,false);
+ assert.equal(app.data.get('aimstep-eligibility:test'),criteriaBefore);assert(!app.state().proposalDrafts.machine.text.includes('Invented review team'));assert.equal(app.state().proposalDrafts.machine.fields.find(item=>item.id==='startDate').text,'');
+ assert(app.get('generated-proposal-text').value.includes('Exclusion: Exclude children.'));
+ app.get('generated-proposal-text').value+='\nUser addition';app.get('generated-proposal-text').oninput();
+ app.get('download-generated-proposal').onclick();const downloaded=[...app.urls.values()].at(-1);assert.equal(downloaded.type,'application/vnd.openxmlformats-officedocument.wordprocessingml.document');assert((await downloaded.text()).includes('User addition'));
+ const machineSaved=app.state();const machineReloaded=setup(machineSaved,{criteria});assert.equal(machineReloaded.get('proposal-generation-source').value,'machine');assert(machineReloaded.get('generated-proposal-text').value.endsWith('User addition'));
+ app.get('proposal-generation-source').value='manual';await app.get('proposal-generation-source').onchange();assert.equal(app.get('input-question').value,'Manual-only question');assert.equal(app.get('proposal-manual-inputs').hidden,false);
+ await app.get('generate-protocol').onclick();assert.equal(generationRequests.length,2);assert(app.state().proposalDrafts.manual.text.includes('Manual supplied content'));
+ app.get('proposal-generation-source').value='machine';await app.get('proposal-generation-source').onchange();assert.equal(generationRequests.length,2);assert(app.get('generated-proposal-text').value.endsWith('User addition'));
+ let missingCalls=0;app=setup(null,{fetch:async()=>{missingCalls++;throw Error('Unexpected AI call');}});app.data.set('aimstep-eligibility:other-project',JSON.stringify(criteria));
+ app.get('proposal-generation-source').value='machine';await app.get('proposal-generation-source').onchange();assert.equal(missingCalls,0);assert(app.get('protocol-status').textContent.includes('Save inclusion and exclusion criteria'));
+ app=setup(null,{criteria,fetch:()=>new Promise(resolve=>{release=()=>resolve(aiReply(machineReply()));})});
+ app.get('proposal-generation-source').value='machine';const staleGeneration=app.get('proposal-generation-source').onchange();await flush();
+ app.data.set('aimstep-eligibility:test',JSON.stringify({...criteria,question:'Updated question'}));release();await staleGeneration;
+ assert.equal(app.state().proposalDrafts.machine,undefined);assert(app.get('protocol-status').textContent.includes('Eligibility criteria changed'));
+ app=setup(null,{criteria,fetch:()=>new Promise(resolve=>{release=()=>resolve(aiReply(machineReply()));})});
+ app.get('proposal-generation-source').value='machine';const changedProposal=app.get('proposal-generation-source').onchange();await flush();
+ const otherTab=JSON.stringify({...app.state(),text:'Newer draft in another tab'});app.data.set('aimstep-protocol:test',otherTab);release();await changedProposal;
+ assert.equal(app.data.get('aimstep-protocol:test'),otherTab);assert(app.get('protocol-status').textContent.includes('changed in another tab'));
+ console.log('PASS manual/machine source switching, local provider requests, project isolation, blank unsupported fields, editable/reloaded output, cached switching, missing criteria and stale criteria/proposal protection');
  console.log('PASS repeated project/criteria actions and reload reuse saved results at 100% without AI, project creation or storage writes; failed actions can retry');
  console.log('PASS both completed bars remain at 100% across actions and reloads; generating or failing criteria preserves the completed project bar');
  console.log('PASS hidden initial preview, original-file preview after reload, missing-original recovery and no AI or draft changes when previewing');
