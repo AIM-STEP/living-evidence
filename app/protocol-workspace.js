@@ -2,7 +2,8 @@
 'use strict';
 const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'default',key='aimstep-protocol:'+scope;
 const G=window.AimstepProtocolGeneration;
-const inputNames=['question','framework','type','eligibility','outcomes','search','methods','team','other'];
+const M=window.AimstepProtocolManual,manualControls=new Map(),manualWrappers=new Map(),manualSections=new Map(),manualFeedback=new Map();
+let manualFormReady=false;
 let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null,previewFileId=null;
 let previewToken=0,previewUrl=null,previewLoadedId=null;
 const fileJobs=new Map(),selectedFileActions=new Map(),fileProgress=new Map();
@@ -10,6 +11,7 @@ try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={..
 if(!Array.isArray(state.imports))state.imports=[];
 if(!['manual','machine'].includes(state.generationSource))state.generationSource='manual';
 if(!state.proposalDrafts||typeof state.proposalDrafts!=='object')state.proposalDrafts={};
+state.manualProtocolInputs=M.migrate(state.manualProtocolInputs,state.inputs);
 if(!state.imports.length&&state.importName)state.imports.push({name:state.importName,importedAt:state.importedAt||[...state.history].reverse().find(x=>x.action==='before-import')?.date||null});
 // Recover individual source text from earlier combined imports, in their saved order.
 let importCursor=0;
@@ -26,9 +28,88 @@ for(const a of document.querySelectorAll('[data-project-link]')){const u=new URL
 const icons={import:'M12 16V3m-4 4 4-4 4 4M5 14v6h14v-6',save:'M19 21H5V3h12l4 4v14ZM7 3v6h10V3M7 21v-8h10v8',export:'M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5',clear:'M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6'};
 for(const [id,path]of Object.entries(icons))$(id+'-protocol').insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>');
 function status(message,error=false){$('protocol-status').textContent=message;$('protocol-status').classList.toggle('error',error);}
-function save(){state.text=$('protocol-text').value;state.inputs=Object.fromEntries(inputNames.map(n=>[n,$('input-'+n).value]));state.generationSource=$('proposal-generation-source').value==='machine'?'machine':'manual';state.updatedAt=new Date().toISOString();localStorage.setItem(key,JSON.stringify(state));}
+function save(){state.text=$('protocol-text').value;state.manualProtocolInputs=readManualInputs();state.generationSource=$('proposal-generation-source').value==='machine'?'machine':'manual';state.updatedAt=new Date().toISOString();localStorage.setItem(key,JSON.stringify(state));}
 function safeSave(){cancelBackgroundAnalysis();try{save();return true;}catch(e){status('Could not save the protocol. Export a copy before leaving.',true);return false;}}
-function render(){for(const n of inputNames)if(state.inputs[n]!==undefined)$('input-'+n).value=state.inputs[n];$('protocol-text').value=state.text;renderImports();renderGeneration();$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
+function render(){$('protocol-text').value=state.text;renderImports();renderManualForm();renderGeneration();$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
+function readManualInputs(){
+ const values={...(state.manualProtocolInputs||{})};
+ for(const [id,control]of manualControls)values[id]=control.value;
+ return values;
+}
+function manualControl(field,id){
+ const control=document.createElement(field.type==='select'?'select':field.type==='text'||field.type==='email'||field.type==='date'?'input':'textarea');
+ control.id=id;
+ if(field.type==='select'){
+  const blank=document.createElement('option');blank.value='';blank.textContent='Select…';control.appendChild(blank);
+  for(const [value,title]of field.options){const option=document.createElement('option');option.value=value;option.textContent=title;control.appendChild(option);}
+ }else if(field.type==='text'||field.type==='email'||field.type==='date')control.type=field.type;
+ else control.rows=3;
+ return control;
+}
+function updateManualFeedback(field){
+ const control=manualControls.get(field.id),feedback=manualFeedback.get(field.id);if(!control||!feedback)return;
+ const errors=M.fieldErrors(field,control.value),range=field.maxWords?(field.minWords?field.minWords+'–':'Up to ')+field.maxWords+' words':'';
+ feedback.textContent=[range,field.maxWords?M.wordCount(control.value)+' entered':'',errors.join(' ')].filter(Boolean).join(' · ');
+ feedback.hidden=!feedback.textContent;feedback.classList.toggle('error',!!errors.length);control.setAttribute('aria-invalid',String(!!errors.length));
+}
+function updateManualVisibility(){
+ const values=state.manualProtocolInputs||{};let number=0;
+ for(const section of M.sections){
+  const entry=manualSections.get(section.id),visible=!section.when||section.when(values);if(!entry)continue;
+  entry.element.hidden=!visible;entry.option.hidden=!visible;
+  if(visible){number++;entry.legend.textContent=number+'. '+section.title;entry.option.textContent=number+'. '+section.title;}
+ }
+ for(const field of M.fields)manualWrappers.get(field.id)?.toggleAttribute('hidden',!M.active(field,values));
+ const picker=$('manual-section-picker');if(manualSections.get(picker.value)?.element.hidden)picker.value=M.sections.find(section=>!section.when||section.when(values)).id;
+}
+function renderManualTeam(){
+ const values=state.manualProtocolInputs;
+ if(!Array.isArray(values.teamMembers)||!values.teamMembers.length)values.teamMembers=[{}];
+ const area=$('manual-protocol-teamMembers');
+ area.replaceChildren(...values.teamMembers.map((member,index)=>{
+  const card=document.createElement('fieldset'),legend=document.createElement('legend'),grid=document.createElement('div');
+  card.className='manual-team-member';legend.textContent='Person '+(index+1);grid.className='form-grid';card.append(legend,grid);
+  const interestBoxes=[];
+  for(const field of M.teamFields){
+   const box=document.createElement('div'),label=document.createElement('label'),id='manual-team-'+index+'-'+field.id,control=manualControl(field,id);
+   label.htmlFor=id;label.textContent=field.label;control.value=member[field.id]||'';box.append(label,control);grid.appendChild(box);
+   if(field.id==='interestDetails'){box.className='full';box.hidden=member.interests!=='yes';interestBoxes.push(box);}
+   const update=()=>{member[field.id]=control.value;interestBoxes.forEach(box=>{box.hidden=member.interests!=='yes';});safeSave();};
+   if(field.type==='select')control.onchange=update;else control.oninput=update;
+  }
+  const remove=document.createElement('button');remove.type='button';remove.className='btn';remove.textContent='Remove person';
+  remove.onclick=()=>{values.teamMembers.splice(index,1);renderManualTeam();safeSave();};card.appendChild(remove);return card;
+ }));
+}
+function renderManualForm(){
+ state.manualProtocolInputs=M.migrate(state.manualProtocolInputs,state.inputs);
+ if(!manualFormReady){
+  const form=$('proposal-manual-form'),jump=$('manual-section-picker');
+  for(const section of M.sections){
+   const element=document.createElement('fieldset'),legend=document.createElement('legend'),grid=document.createElement('div'),option=document.createElement('option');
+   element.id='manual-section-'+section.id;element.className='prospero-manual-section';grid.className='form-grid';element.append(legend,grid);form.appendChild(element);
+   option.value=section.id;jump.appendChild(option);manualSections.set(section.id,{element,legend,option});
+   for(const field of section.fields){
+    const box=document.createElement('div'),label=document.createElement('label'),hint=document.createElement('p');
+    box.id='manual-field-'+field.id;box.className=field.type==='textarea'||field.type==='team'?'full':'';label.htmlFor='manual-protocol-'+field.id;label.textContent=field.label+(field.required?' *':'');
+    hint.className='hint';hint.id='manual-hint-'+field.id;hint.textContent=field.hint;hint.hidden=!field.hint;box.append(label,hint);grid.appendChild(box);manualWrappers.set(field.id,box);
+    if(field.type==='team'){
+     const members=document.createElement('div'),add=document.createElement('button');members.id='manual-protocol-teamMembers';add.type='button';add.className='btn';add.id='manual-add-person';add.textContent='Add person';
+     add.onclick=()=>{state.manualProtocolInputs.teamMembers??=[];state.manualProtocolInputs.teamMembers.push({});renderManualTeam();safeSave();};box.append(members,add);continue;
+    }
+    const control=manualControl(field,'manual-protocol-'+field.id),feedback=document.createElement('p');
+    feedback.id='manual-feedback-'+field.id;feedback.className='manual-field-feedback';control.setAttribute('aria-describedby',hint.id+' '+feedback.id);box.append(control,feedback);
+    manualControls.set(field.id,control);manualFeedback.set(field.id,feedback);
+    const update=()=>{state.manualProtocolInputs[field.id]=control.value;updateManualVisibility();updateManualFeedback(field);safeSave();};
+    if(field.type==='select'||field.type==='date')control.onchange=update;else control.oninput=update;
+   }
+  }
+  jump.onchange=()=>manualSections.get(jump.value)?.element.scrollIntoView?.({behavior:'smooth',block:'start'});
+  manualFormReady=true;
+ }
+ for(const field of M.fields){const control=manualControls.get(field.id);if(control){control.value=state.manualProtocolInputs[field.id]||'';updateManualFeedback(field);}}
+ renderManualTeam();updateManualVisibility();
+}
 function machineSource(){
  let raw;
  try{raw=JSON.parse(localStorage.getItem('aimstep-eligibility:'+scope)||'null');}catch(_){throw Error('The saved eligibility criteria could not be read. Save them again in Eligibility criteria.');}
@@ -307,25 +388,24 @@ $('generate-protocol').onclick=()=>run("Generating proposal…",async signal=>{
   draft=G.validate(await model(prompt,source,G.schema,signal),input);text=G.text(draft.fields);
   if(JSON.stringify(machineSource())!==source)throw Error('Eligibility criteria changed during generation. Generate again using the latest criteria.');
  }else{
-  if(!state.inputs.question.trim())throw Error('Enter your review question before generating.');
-  const answer=await model("Draft an English systematic review proposal in PROSPERO-aligned sections, with PRISMA-P completeness. Use precisely these section IDs: "+C.sections.map(x=>x[0]).join(', ')+'. Preserve the supplied review type. Scoping or other non-eligible reviews must not be called eligible for PROSPERO registration. Use supplied facts only for PICO, inclusion/exclusion, dates, team, funding and registration. Missing facts must say Not specified — to confirm. Method recommendations may be offered only as Proposed — to confirm, never as agreed plans. Do not invent citations, completed searches, registration numbers, reviewers, approvals or results. Cover information sources/platforms, reproducible draft searches, selection, extraction/data management, outcome priority/time points, risk of bias, synthesis/effect measures and heterogeneity where appropriate, additional analyses, reporting bias, certainty, contributors/support, timeline/current stage and amendments. Do not choose clinical thresholds or rating rules for the user. Include issues listing what remains missing or proposed. Each section occurs exactly once.',JSON.stringify(state.inputs),C.draftSchema,signal);
-  draft=C.validateDraft(answer);text=C.text(draft.sections);
+  const values=state.manualProtocolInputs,errors=M.validate(values);
+  if(errors.length)throw Error(errors.slice(0,5).join('\n')+(errors.length>5?'\nCheck the other highlighted fields.':''));
+  const groups=M.snapshot(values);source=JSON.stringify(groups);draft={fields:groups.flatMap(group=>group.fields.map(field=>({...field,group:group.title}))),issues:[]};text=M.format(values);
  }
  if(signal.aborted)throw new DOMException('Stopped','AbortError');
  if(localStorage.getItem(key)!==base)throw Error('The proposal changed in another tab. Reload before generating again.');
  const previous=JSON.parse(JSON.stringify(state)),at=new Date().toISOString();
- state.history.push({date:at,text:state.text,action:'before-generation',mode});
- state.proposalDrafts??={};state.proposalDrafts[mode]={text,at,source:source||null,fields:draft.fields||null,model:state.lastModel};
+ state.history.push({date:at,text:state.proposalDrafts?.[mode]?.text||state.text,action:'before-generation',mode});
+ state.proposalDrafts??={};state.proposalDrafts[mode]={text,at,source:source||null,fields:draft.fields||null,model:mode==='machine'?state.lastModel:null};
  state.text=text;state.issues=draft.issues;state.mapping=null;state.confirmedAt=null;
  try{render();save();}catch(error){state=previous;render();throw Error('Could not save the proposal. Your previous draft has been kept.');}
  status('Proposal generated. You can edit the draft and download it as Word.');
 });
 $('submit-protocol').onclick=()=>{if(!$('confirm-protocol').checked){status("Review the proposal and select the confirmation checkbox before submitting.",true);return;}run("Checking and applying confirmed proposal…",async signal=>{save();const text=state.text,base=handoffVersion();if(!text.trim())throw Error("Import or create a proposal first.");const mapping=await map(text,signal);apply(mapping,"confirmed proposal",base);state.issues=mapping.issues;state.confirmedAt=new Date().toISOString();save();render();status('Confirmed and applied to Eligibility criteria and Search strategy. Previous work is backed up.');});};
 $('protocol-text').oninput=()=>{state.mapping=null;state.confirmedAt=null;$('confirm-protocol').checked=false;$('handoff-preview').hidden=true;safeSave();};
-for(const n of inputNames)$('input-'+n).oninput=safeSave;
 $('save-protocol').onclick=()=>{if(safeSave())status('Saved. Submit confirmed changes to update the next tools.');};
 $('stop-protocol').onclick=()=>controller?.abort();
-$('clear-protocol').onclick=()=>{if(!confirm("Clear this proposal draft and inputs? Criteria and search strategies already applied to other tools will be kept."))return;cancelBackgroundAnalysis();state={version:1,inputs:{},text:'',issues:[],mapping:null,history:state.history,imports:state.imports,importName:state.importName,importText:state.importText};for(const n of inputNames){const el=$('input-'+n);if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';}render();safeSave();status("Proposal draft cleared.");};
+$('clear-protocol').onclick=()=>{if(!confirm("Clear this proposal draft and inputs? Criteria and search strategies already applied to other tools will be kept."))return;cancelBackgroundAnalysis();state={version:1,inputs:{},text:'',issues:[],mapping:null,history:state.history,imports:state.imports,importName:state.importName,importText:state.importText};render();safeSave();status("Proposal draft cleared.");};
 $('export-protocol').onclick=()=>{if(!$('protocol-text').value.trim()){status("Add a proposal before exporting.",true);return;}safeSave();const text="AIM-STEP proposal\nExported: "+new Date().toISOString()+'\nStatus: '+(state.confirmedAt?'Confirmed in AIM-STEP':'Draft — requires review')+'\n\n'+$('protocol-text').value+(state.issues.length?'\n\nItems to review\n'+state.issues.map(x=>'• '+x).join('\n'):'');const word=$('export-format').value==='docx',data=word?AimstepDefinitionWord.create("Review proposal",[{label:"Proposal",definition:$('protocol-text').value},...(state.issues.length?[{label:'Items to review',definition:state.issues.join('\n')}]:[])],(state.confirmedAt?'Confirmed in AIM-STEP':'Draft — requires review')+' · '+new Date().toISOString().slice(0,10)):text;const url=URL.createObjectURL(new Blob([data],{type:word?AimstepDefinitionWord.mime:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='AIM-STEP-proposal-'+Date.now()+(word?'.docx':'.txt');a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
 render();
 if(state.importAnalysis?.status==='pending'&&state.importText&&state.text===state.importText)void analyzeImportedInBackground();

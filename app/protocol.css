@@ -7,6 +7,17 @@
 .proposal-generated-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .proposal-generated-heading label { margin: 0; }
 #generated-proposal-text { margin: 0; }
+.manual-section-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 18px; }
+.manual-section-navigation label { margin: 0; }
+#manual-section-picker { width: auto; max-width: 100%; margin: 0; }
+.manual-form-reference { font-size: 12px; }
+.prospero-manual-section { min-width: 0; margin: 0 0 24px; padding: 16px; border: 1px solid var(--line); border-radius: 6px; scroll-margin-top: 20px; }
+.prospero-manual-section > legend { padding: 0 6px; font-size: 14px; font-weight: 600; }
+.prospero-manual-section input, .prospero-manual-section textarea, .prospero-manual-section select { margin-bottom: 4px; }
+.prospero-manual-section .hint { margin-bottom: 6px; }
+.manual-field-feedback { font-size: 11px; color: var(--muted); margin: 0 0 14px; }
+.manual-team-member { min-width: 0; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; }
+.manual-team-member legend { font-size: 12px; padding: 0 4px; }
 
 .tool-page.tool-build-protocol .tool-writing-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .tool-page.tool-build-protocol .tool-writing-layout .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; }
