@@ -29,17 +29,19 @@ function renderImports(){
  const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN';
  $('proposal-imports').hidden=!state.imports.length;
  $('proposal-import-list').replaceChildren(...state.imports.map(file=>{
-  const row=document.createElement('li'),name=document.createElement('span'),date=document.createElement('span');
-  row.className='proposal-file-row';name.className='proposal-file-name';date.className='proposal-file-date';
+  const row=document.createElement('li'),info=document.createElement('div'),heading=document.createElement('div'),name=document.createElement('span'),date=document.createElement('span');
+  row.className='proposal-file-row';info.className='proposal-file-info';heading.className='proposal-file-heading';name.className='proposal-file-name';date.className='proposal-file-date';
   name.textContent=file.name;
+  heading.appendChild(name);
   if(file.importedAt&&!Number.isNaN(Date.parse(file.importedAt))){const time=document.createElement('time');time.dateTime=file.importedAt;time.textContent=new Intl.DateTimeFormat(chinese?'zh-CN':'en-GB',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(file.importedAt));date.appendChild(time);}else date.textContent=chinese?'日期未记录':'Date not recorded';
   const actions=document.createElement('div'),actionButtons=[];actions.className='proposal-file-actions';
-  for(const [action,en,zh]of [['project','Build Projects from this proposal','据此构建 Projects'],['criteria','Generate Eligibility criteria from this proposal','据此生成 Eligibility criteria'],['delete','×','×']]){
+  for(const [action,en,zh]of [['project','Build Projects','构建 Projects'],['criteria','Generate Eligibility criteria','生成 Eligibility criteria'],['delete','×','×']]){
    const button=document.createElement('button');button.type='button';button.className='proposal-file-action'+(action==='delete'?' proposal-file-delete':'');button.textContent=chinese?zh:en;
    if(action==='delete'){button.setAttribute('aria-label',(chinese?'删除：':'Delete: ')+file.name);button.title=chinese?'删除':'Delete';}
    button.disabled=!!fileJobs.get(file.id)&&(action!=='delete'||fileJobs.get(file.id).committing);
    button.setAttribute('data-selected',String(selectedFileActions.get(file.id)===action));
    button.onclick=()=>{selectedFileActions.set(file.id,action);actionButtons.forEach(item=>item.setAttribute('data-selected',String(item===button)));return fileAction(file,action);};actionButtons.push(button);
+   if(action==='delete'){heading.appendChild(button);continue;}
    const group=document.createElement('div');group.className='proposal-action-group';group.appendChild(button);
    if(action!=='delete'){
     const meter=document.createElement('div'),fill=document.createElement('span'),label=document.createElement('b');meter.className='protocol-progress proposal-action-progress';meter.setAttribute('role','progressbar');meter.setAttribute('aria-label',button.textContent);meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax','100');
@@ -48,7 +50,7 @@ function renderImports(){
    }
    actions.appendChild(group);
   }
-  row.append(name,date,actions);return row;
+  info.append(heading,date);row.append(info,actions);return row;
  }));
 }
 document.addEventListener('aimstep:lang',renderImports);
