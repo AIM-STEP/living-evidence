@@ -649,7 +649,7 @@ window.AimstepToolTranslations = {
   "Change decision": "修改判断",
   "Change judgement": "修改评价",
   "Click Generate to generate criteria from the current text and attachments.": "点击“生成”，根据当前文字与附件生成标准。",
-  "Click Standardize to generate a publication-style paragraph with the local model.": "点击“规范化”，使用本地模型生成适合发表的段落。",
+  "Click Generate to generate a publication-style paragraph with the local model.": "点击“生成”，使用本地模型生成适合发表的段落。",
   "Comparison (intervention vs control)": "比较（干预与对照）",
   "Condition": "条件",
   "Confirm assessment": "确认评估",
