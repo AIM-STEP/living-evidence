@@ -2,7 +2,7 @@
 'use strict';
 const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'default',key='aimstep-protocol:'+scope;
 const inputNames=['question','framework','type','eligibility','outcomes','search','methods','team','other'];
-let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null;
+let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null;
 try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={...state,...saved};else{const legacy=JSON.parse(localStorage.getItem('aimstep-writing:protocol:'+scope)||'null');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}}catch(_){status("Saved proposal could not be read. Export any visible work before continuing.",true);}
 if(!Array.isArray(state.imports))state.imports=[];
 if(!state.imports.length&&state.importName)state.imports.push({name:state.importName,importedAt:state.importedAt||[...state.history].reverse().find(x=>x.action==='before-import')?.date||null});
@@ -11,8 +11,8 @@ const icons={import:'M12 16V3m-4 4 4-4 4 4M5 14v6h14v-6',save:'M19 21H5V3h12l4 4
 for(const [id,path]of Object.entries(icons))$(id+'-protocol').insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>');
 function status(message,error=false){$('protocol-status').textContent=message;$('protocol-status').classList.toggle('error',error);}
 function save(){state.text=$('protocol-text').value;state.inputs=Object.fromEntries(inputNames.map(n=>[n,$('input-'+n).value]));state.updatedAt=new Date().toISOString();localStorage.setItem(key,JSON.stringify(state));}
-function safeSave(){try{save();return true;}catch(e){status('Could not save the protocol. Export a copy before leaving.',true);return false;}}
-function render(){for(const n of inputNames)if(state.inputs[n]!==undefined)$('input-'+n).value=state.inputs[n];$('protocol-text').value=state.text;renderImports();$('analyze-import').hidden=!state.importText;$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
+function safeSave(){cancelBackgroundAnalysis();try{save();return true;}catch(e){status('Could not save the protocol. Export a copy before leaving.',true);return false;}}
+function render(){for(const n of inputNames)if(state.inputs[n]!==undefined)$('input-'+n).value=state.inputs[n];$('protocol-text').value=state.text;renderImports();$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
 function renderImports(){
  const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN';
  $('import-name-heading').textContent=chinese?'文件名称':'File name';
@@ -27,7 +27,7 @@ function renderImports(){
 }
 document.addEventListener('aimstep:lang',renderImports);
 function progress(n){const p=$('protocol-progress');p.setAttribute('aria-valuenow',String(Math.round(n)));p.firstElementChild.style.width=n+'%';p.querySelector('b').textContent=Math.round(n)+'%';}
-async function run(label,work){if(controller)return;controller=new AbortController();const signal=controller.signal;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>{if(el.id!=='stop-protocol')el.disabled=true;});$('run-row').hidden=false;$('run-label').textContent=label;progress(5);let estimate=5;const timer=setInterval(()=>{estimate+=Math.max(.2,(85-estimate)/30);progress(estimate);},1000);status('');try{await work(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');progress(100);}catch(e){status(e.name==='AbortError'?'Stopped. Your draft has been kept.':e.message,e.name!=='AbortError');}finally{clearInterval(timer);controller=null;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>el.disabled=false);$('stop-protocol').disabled=false;$('run-row').hidden=true;}}
+async function run(label,work){if(controller)return;cancelBackgroundAnalysis();controller=new AbortController();const signal=controller.signal;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>{if(el.id!=='stop-protocol')el.disabled=true;});$('run-row').hidden=false;$('run-label').textContent=label;progress(5);let estimate=5;const timer=setInterval(()=>{estimate+=Math.max(.2,(85-estimate)/30);progress(estimate);},1000);status('');try{await work(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');progress(100);}catch(e){status(e.name==='AbortError'?'Stopped. Your draft has been kept.':e.message,e.name!=='AbortError');}finally{clearInterval(timer);controller=null;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>el.disabled=false);$('stop-protocol').disabled=false;$('run-row').hidden=true;}}
 async function model(system,input,schema,signal){
  if(input.length>120000)throw Error('Use source material under 120,000 characters. Nothing has been truncated.');
  const online=window.AIMSTEPOnlineModel,base=online?.online?online.base:'http://127.0.0.1:8765/api/eligibility';
@@ -39,11 +39,38 @@ async function model(system,input,schema,signal){
 async function map(text,signal){if(text.length>120000)throw Error("This proposal is too long for one reliable AI pass. Import a focused version under 120,000 characters; nothing has been truncated.");const value=await model("Extract only explicit review eligibility rules and search plans. Group by criterion dimension. inclusionQuotes and exclusionQuotes MUST contain exact, complete source excerpts, preserving negation, thresholds and qualifiers. Never invent an inverse exclusion, infer a missing rule, or turn an outcome of interest into an eligibility requirement unless the proposal explicitly requires it. Do not extract statements marked Proposed or To confirm as settled rules. searchQuotes: verbatim search plans, strategies, databases/platforms and supplementary sources. limitQuotes: explicit search date/language/other restrictions only. databases: exact source database names. question: review objective. Return missing information, ambiguity and platform mismatches in issues. Never claim registration or validation.",text,C.handoffSchema,signal);return C.validateHandoff(value,text);}
 function handoffVersion(){return ['aimstep-eligibility:','aimstep-search-strategy:'].map(k=>localStorage.getItem(k+scope)).join('\n');}
 function apply(mapping,source,base){if(base!==handoffVersion())throw Error('Criteria or search strategies changed in another tab. Review those changes and try submitting again.');C.commit(localStorage,scope,mapping,source);state.mapping=mapping;state.appliedAt=new Date().toISOString();state.history.push({date:state.appliedAt,source,mapping,model:state.lastModel});}
-async function analyzeImported(signal){const source=state.importText,base=handoffVersion(),mapping=await map(source,signal);state.issues=mapping.issues;apply(mapping,'import: '+state.importName,base);save();render();$('import-status').textContent='Analyzed. Explicit criteria and search plans are available in the next tools.';status('Imported rules applied. Previous criteria and search drafts are backed up. Review and confirm any edits below.');}
+function cancelBackgroundAnalysis(){
+ if(!backgroundAnalysis)return;
+ backgroundAnalysis.abort();backgroundAnalysis=null;
+ if(state.importAnalysis?.status==='pending')state.importAnalysis.status='cancelled';
+}
+async function analyzeImportedInBackground(){
+ cancelBackgroundAnalysis();
+ const job=new AbortController(),source=state.importText,name=state.importName,base=handoffVersion();
+ backgroundAnalysis=job;
+ state.importAnalysis={status:'pending',startedAt:new Date().toISOString()};
+ let savedVersion;
+ try{
+  save();savedVersion=localStorage.getItem(key);
+  const mapping=await map(source,job.signal);
+  // Never replace newer edits, another import, or another tab's project state.
+  if(job.signal.aborted||backgroundAnalysis!==job||state.importText!==source||localStorage.getItem(key)!==savedVersion)return;
+  apply(mapping,'import: '+name,base);
+  state.issues=mapping.issues;
+  state.importAnalysis={status:'complete',completedAt:new Date().toISOString()};
+  save();
+  // Keep the editor, focus, confirmation checkbox and file list undisturbed.
+ }catch(error){
+  if(!job.signal.aborted&&backgroundAnalysis===job&&savedVersion&&localStorage.getItem(key)===savedVersion){
+   state.importAnalysis={status:'failed',message:error.message};
+   try{save();}catch(_){}
+  }
+ }finally{if(backgroundAnalysis===job)backgroundAnalysis=null;}
+}
 $('import-protocol').onclick=()=>{$('protocol-file').value='';$('protocol-file').click();};
 $('protocol-file').onchange=()=>{
  const files=Array.from($('protocol-file').files||[]);if(!files.length)return;
- return run("Reading and analyzing proposal…",async signal=>{
+ return run("Reading proposal…",async signal=>{
   save();const additions=[],warnings=[];
   for(const file of files){
    if(signal.aborted)throw new DOMException('Stopped','AbortError');
@@ -56,7 +83,6 @@ $('protocol-file').onchange=()=>{
     additions.push({name:file.name,importedAt:new Date().toISOString(),text});
    }catch(error){if(signal.aborted||error.name==='AbortError')throw error;warnings.push(file.name+': '+error.message);}
   }
-  $('import-status').textContent=warnings.join('\n');
   if(!additions.length)throw Error(warnings.join('\n')||'No readable proposal was imported.');
   const text=[state.importText||'',...additions.map(file=>'File: '+file.name+'\n'+file.text)].filter(Boolean).join('\n\n');
   if(text.length>120000)throw Error('The combined proposals exceed 120,000 characters. No new files were added.');
@@ -65,11 +91,10 @@ $('protocol-file').onchange=()=>{
   state.imports.push(...additions.map(({name,importedAt})=>({name,importedAt})));
   state.confirmedAt=null;state.importName=state.imports.map(file=>file.name).join(', ');state.importText=text;state.text=text;state.mapping=null;state.issues=[];
   try{render();save();}catch(error){state=previous;render();throw Error('Could not save imported files. Your previous proposal has been kept.');}
-  $('import-status').textContent=[additions.length+' file(s) imported.',...warnings].join('\n');
-  try{await analyzeImported(signal);}finally{if(warnings.length)$('import-status').textContent+='\n'+warnings.join('\n');}
+  if(warnings.length)status(warnings.join('\n'),true);
+  void analyzeImportedInBackground();
  });
 };
-$('analyze-import').onclick=()=>run("Analyzing original imported proposal…",analyzeImported);
 $('generate-protocol').onclick=()=>run("Generating proposal…",async signal=>{
  save();if(!state.inputs.question.trim())throw Error('Enter your review question before generating.');
  const answer=await model("Draft an English systematic review proposal in PROSPERO-aligned sections, with PRISMA-P completeness. Use precisely these section IDs: "+C.sections.map(x=>x[0]).join(', ')+'. Preserve the supplied review type. Scoping or other non-eligible reviews must not be called eligible for PROSPERO registration. Use supplied facts only for PICO, inclusion/exclusion, dates, team, funding and registration. Missing facts must say Not specified — to confirm. Method recommendations may be offered only as Proposed — to confirm, never as agreed plans. Do not invent citations, completed searches, registration numbers, reviewers, approvals or results. Cover information sources/platforms, reproducible draft searches, selection, extraction/data management, outcome priority/time points, risk of bias, synthesis/effect measures and heterogeneity where appropriate, additional analyses, reporting bias, certainty, contributors/support, timeline/current stage and amendments. Do not choose clinical thresholds or rating rules for the user. Include issues listing what remains missing or proposed. Each section occurs exactly once.',JSON.stringify(state.inputs),C.draftSchema,signal);
@@ -80,7 +105,8 @@ $('protocol-text').oninput=()=>{state.mapping=null;state.confirmedAt=null;$('con
 for(const n of inputNames)$('input-'+n).oninput=safeSave;
 $('save-protocol').onclick=()=>{if(safeSave())status('Saved. Submit confirmed changes to update the next tools.');};
 $('stop-protocol').onclick=()=>controller?.abort();
-$('clear-protocol').onclick=()=>{if(!confirm("Clear this proposal draft and inputs? Criteria and search strategies already applied to other tools will be kept."))return;state={version:1,inputs:{},text:'',issues:[],mapping:null,history:state.history,imports:state.imports,importName:state.importName,importText:state.importText};$('import-status').textContent='';for(const n of inputNames){const el=$('input-'+n);if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';}render();safeSave();status("Proposal draft cleared.");};
+$('clear-protocol').onclick=()=>{if(!confirm("Clear this proposal draft and inputs? Criteria and search strategies already applied to other tools will be kept."))return;cancelBackgroundAnalysis();state={version:1,inputs:{},text:'',issues:[],mapping:null,history:state.history,imports:state.imports,importName:state.importName,importText:state.importText};for(const n of inputNames){const el=$('input-'+n);if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';}render();safeSave();status("Proposal draft cleared.");};
 $('export-protocol').onclick=()=>{if(!$('protocol-text').value.trim()){status("Add a proposal before exporting.",true);return;}safeSave();const text="AIM-STEP proposal\nExported: "+new Date().toISOString()+'\nStatus: '+(state.confirmedAt?'Confirmed in AIM-STEP':'Draft — requires review')+'\n\n'+$('protocol-text').value+(state.issues.length?'\n\nItems to review\n'+state.issues.map(x=>'• '+x).join('\n'):'');const word=$('export-format').value==='docx',data=word?AimstepDefinitionWord.create("Review proposal",[{label:"Proposal",definition:$('protocol-text').value},...(state.issues.length?[{label:'Items to review',definition:state.issues.join('\n')}]:[])],(state.confirmedAt?'Confirmed in AIM-STEP':'Draft — requires review')+' · '+new Date().toISOString().slice(0,10)):text;const url=URL.createObjectURL(new Blob([data],{type:word?AimstepDefinitionWord.mime:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='AIM-STEP-proposal-'+Date.now()+(word?'.docx':'.txt');a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
 render();
+if(state.importAnalysis?.status==='pending'&&state.importText&&state.text===state.importText)void analyzeImportedInBackground();
 })();

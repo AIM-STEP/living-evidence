@@ -1,22 +1,50 @@
 const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm');
 const code=fs.readFileSync(require('node:path').join(__dirname,'../app/protocol-workspace.js'),'utf8');
-function setup(saved){
+function setup(saved,options={}){
  const nodes=new Map(),data=new Map(saved?[['aimstep-protocol:test',JSON.stringify(saved)]]:[]);let fail=false;
- class E{constructor(){this.value='';this.children=[];this.style={};this.classList={toggle(){}};this.tagName='TEXTAREA';}setAttribute(){}insertAdjacentHTML(){}append(...c){this.children.push(...c)}appendChild(c){this.children.push(c)}replaceChildren(...c){this.children=c}querySelector(){return new E()}get firstElementChild(){return new E()}}
+ class E{constructor(){this.value='';this.textContent='';this.hidden=true;this.children=[];this.style={};this.classList={toggle(){}};this.tagName='TEXTAREA';}setAttribute(){}insertAdjacentHTML(){}append(...c){this.children.push(...c)}appendChild(c){this.children.push(c)}replaceChildren(...c){this.children=c}querySelector(){return new E()}get firstElementChild(){return new E()}}
  const get=id=>{if(!nodes.has(id))nodes.set(id,new E());return nodes.get(id)};
  const storage={getItem:k=>data.get(k)||null,setItem(k,v){if(fail)throw Error('Quota');data.set(k,v)}};
- const context={window:{AimstepProtocolCore:{handoffSchema:{}}},document:{getElementById:get,querySelectorAll:()=>[],createElement:()=>new E(),addEventListener(){},documentElement:{lang:'en'}},location:{search:'?projectId=test',href:'https://aimsetp.com/build-protocol.html?projectId=test'},localStorage:storage,URL,URLSearchParams,AbortController,DOMException,Intl,Date,setInterval:()=>1,clearInterval(){},setTimeout(){},fetch:async()=>{throw Error('AI unavailable')},AimstepExtractionFormImport:{sourceText:async f=>{if(f.name.endsWith('.bad'))throw Error('Unsupported');return f.text()}},AimstepExtractionSources:{readPdf:async f=>({doc:{fullText:await f.text()}})},confirm:()=>true};
+ const context={window:{AimstepProtocolCore:{handoffSchema:{},validateHandoff:value=>value,commit:()=>{data.set('applied',String(Number(data.get('applied')||0)+1))}}},document:{getElementById:get,querySelectorAll:selector=>selector.startsWith('main ')?['import-protocol','protocol-text','generate-protocol'].map(get):[],createElement:()=>new E(),addEventListener(){},documentElement:{lang:'en'}},location:{search:'?projectId=test',href:'https://aimsetp.com/build-protocol.html?projectId=test'},localStorage:storage,URL,URLSearchParams,AbortController,DOMException,Intl,Date,setInterval:()=>1,clearInterval(){},setTimeout(){},fetch:options.fetch|| (async()=>{throw Error('AI unavailable')}),AimstepExtractionFormImport:{sourceText:async f=>{if(f.name.endsWith('.bad'))throw Error('Unsupported');return f.text()}},AimstepExtractionSources:{readPdf:async f=>({doc:{fullText:await f.text()}})},confirm:()=>true};
  vm.runInNewContext(code,context);return {get,data,fail:()=>{fail=true},state:()=>JSON.parse(data.get('aimstep-protocol:test'))};
 }
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
 const file=(name,text)=>({name,size:text.length,text:async()=>text});
 (async()=>{
  let app=setup();app.get('protocol-file').files=[file('first.docx','Adults only'),file('second.pdf','Search PubMed')];await app.get('protocol-file').onchange();
- let saved=app.state();assert.equal(saved.imports.length,2);assert(saved.imports.every(f=>!Number.isNaN(Date.parse(f.importedAt))));assert(saved.importText.includes('Adults only'));assert(saved.importText.includes('Search PubMed'));assert.equal(app.get('proposal-import-list').children.length,2);assert(app.get('protocol-status').textContent.includes('AI unavailable'));
+ let saved=app.state();assert.equal(saved.imports.length,2);assert(saved.imports.every(f=>!Number.isNaN(Date.parse(f.importedAt))));assert(saved.importText.includes('Adults only'));assert(saved.importText.includes('Search PubMed'));assert.equal(app.get('proposal-import-list').children.length,2);await flush();assert.equal(app.get('protocol-status').textContent,'');assert.equal(app.state().importAnalysis.status,'failed');
  app=setup(saved);assert.equal(app.get('proposal-import-list').children.length,2);
- app.get('protocol-file').files=[file('<img onerror=alert(1)>.md','Additional rules'),file('broken.bad','bad')];await app.get('protocol-file').onchange();assert.equal(app.state().imports.length,3);assert.equal(app.get('proposal-import-list').children[2].children[0].textContent,'<img onerror=alert(1)>.md');assert(app.get('import-status').textContent.includes('broken.bad'));
+ app.get('protocol-file').files=[file('<img onerror=alert(1)>.md','Additional rules'),file('broken.bad','bad')];await app.get('protocol-file').onchange();assert.equal(app.state().imports.length,3);assert.equal(app.get('proposal-import-list').children[2].children[0].textContent,'<img onerror=alert(1)>.md');assert(app.get('protocol-status').textContent.includes('broken.bad'));
  app.get('clear-protocol').onclick();assert.equal(app.state().imports.length,3);assert.equal(app.state().text,'');
  app=setup({version:1,inputs:{},text:'Legacy',issues:[],mapping:null,history:[],importName:'old.txt',importText:'Legacy'});assert.equal(app.get('proposal-import-list').children.length,1);assert.equal(app.get('proposal-import-list').children[0].children[1].textContent,'Date not recorded');
  app=setup(saved);app.get('protocol-file').files=[file('huge.txt','x'.repeat(120000))];await app.get('protocol-file').onchange();assert.equal(app.state().imports.length,2);
  app=setup(saved);app.fail();app.get('protocol-file').files=[file('new.txt','New')];await app.get('protocol-file').onchange();assert.equal(app.state().imports.length,2);
+ const mapping={rows:[],issues:[],searchQuotes:[],limitQuotes:[]};
+ const response=()=>({ok:true,json:async()=>({model:'test',message:{content:JSON.stringify(mapping)}})});
+ let release;
+ app=setup(null,{fetch:()=>new Promise(resolve=>{release=()=>resolve(response())})});
+ app.get('protocol-file').files=[file('background.txt','Adults only')];await app.get('protocol-file').onchange();
+ assert.equal(app.state().importAnalysis.status,'pending');assert.equal(app.get('run-row').hidden,true);
+ assert.equal(app.get('protocol-text').disabled,false);assert.equal(app.get('import-protocol').disabled,false);
+ app.get('confirm-protocol').checked=true;release();await flush();
+ assert.equal(app.state().importAnalysis.status,'complete');assert.equal(app.data.get('applied'),'1');
+ assert.equal(app.get('confirm-protocol').checked,true);assert.equal(app.get('protocol-status').textContent,'');
+ app=setup(null,{fetch:()=>new Promise(resolve=>{release=()=>resolve(response())})});
+ app.get('protocol-file').files=[file('edited.txt','Original')];await app.get('protocol-file').onchange();
+ app.get('protocol-text').value='User revised draft';app.get('protocol-text').oninput();release();await flush();
+ assert.equal(app.state().text,'User revised draft');assert.equal(app.data.get('applied'),undefined);
+ const releases=[];
+ app=setup(null,{fetch:()=>new Promise(resolve=>releases.push(()=>resolve(response())))});
+ app.get('protocol-file').files=[file('older.txt','First')];await app.get('protocol-file').onchange();
+ app.get('protocol-file').files=[file('newer.txt','Second')];await app.get('protocol-file').onchange();
+ releases[0]();await flush();assert.equal(app.data.get('applied'),undefined);
+ releases[1]();await flush();assert.equal(app.data.get('applied'),'1');assert.equal(app.state().imports.length,2);
+ app=setup(null,{fetch:()=>new Promise(resolve=>{release=()=>resolve(response())})});
+ app.get('protocol-file').files=[file('other-tab.txt','Original')];await app.get('protocol-file').onchange();
+ const external={...app.state(),text:'Newer draft in another tab'};app.data.set('aimstep-protocol:test',JSON.stringify(external));release();await flush();
+ assert.equal(app.state().text,external.text);assert.equal(app.data.get('applied'),undefined);
+ const pending={...saved,importAnalysis:{status:'pending'}};
+ app=setup(pending,{fetch:async()=>response()});await flush();assert.equal(app.state().importAnalysis.status,'complete');
+ console.log('PASS background analysis leaves controls enabled, applies quietly, preserves focus state, rejects stale edits/imports/tabs, and resumes pending imports');
  console.log('PASS multi-file import, dates, reload persistence, AI failure retention, partial failures, safe filenames, legacy migration, clear retention, size and storage errors');
 })().catch(e=>{console.error(e);process.exitCode=1});
