@@ -35,13 +35,14 @@ function app(options={}){
    if(options.realModel){requests.push({url});return fetch(url,request);}
    if(url.endsWith('/health')){if(options.offline)throw new TypeError('Synthetic unreachable');if(options.unavailable)return {ok:false,json:async()=>({service:'aimstep-local-eligibility-unavailable',status:'Ollama is not running'})};return {ok:true,json:async()=>({service:'aimstep-local-eligibility',model:'synthetic-local'})};}
    const body=JSON.parse(request.body);requests.push({url,body});busyResolve();
+   if(process.env.AIMSTEP_CAPTURE_PROPOSAL){fs.mkdirSync(process.env.AIMSTEP_CAPTURE_PROPOSAL,{recursive:true});fs.writeFileSync(path.join(process.env.AIMSTEP_CAPTURE_PROPOSAL,'request-'+requests.length+'.json'),request.body);}
    if(options.wait)return new Promise((resolve,reject)=>request.signal.addEventListener('abort',()=>reject(new DOMException('Stopped','AbortError')),{once:true}));
    if(options.modelError)return {ok:false,status:503,json:async()=>({error:'Synthetic inference unavailable'})};
    if(options.changeSource)data.set('aimstep-eligibility:test',JSON.stringify({criteria:[{title:'Population',condition:'Changed source'}]}));
-   const ids=body.format.properties.sections?.items.properties.id.enum;
-   let value=ids?{sections:ids.map(id=>({id,text:'Planned methods for '+id+'.'})),issues:[]}:{approach:'A prospective systematic review.',requirements:['Preserve supplied criteria.'],confirmations:[]};
+   const ids=(body.format.properties.sections?Object.keys(body.format.properties.sections.properties):null);
+   let value=ids?{sections:Object.fromEntries(ids.map(id=>[id,'Planned methods for '+id+'.'])),issues:[]}:{approach:'A prospective systematic review.',requirements:['Preserve supplied criteria.'],confirmations:[]};
    if(body.format.properties.facts)value={facts:['Synthetic planning summary without quotations.'],gaps:[]};
-   if(options.respond)value=options.respond(body,value,requests.length);
+   if(options.respond)value=await options.respond(body,value,requests.length);
    return {ok:true,json:async()=>({model:'synthetic-local',message:{content:typeof value==='string'?value:JSON.stringify(value)}})};
   }
  };
@@ -56,7 +57,7 @@ test('short but supplied draft fields reach the local model and generate a persi
  assert(manual.fields.every(field=>!('minWords' in field)&&!('maxWords' in field)));
  assert.deepEqual(manual.validate(fixture.manualProtocolInputs,{draft:true}),[]);
  const page=app();await page.generate();
- assert.equal(page.requests.length,8);assert(page.requests.every(request=>request.url==='http://127.0.0.1:8765/api/eligibility/model'&&request.body.provider==='local'));
+ assert.equal(page.requests.length,3);assert(page.requests.every(request=>request.url==='http://127.0.0.1:8765/api/eligibility/model'&&request.body.provider==='local'));
  assert.equal(page.state().imports.length,1);const file=page.state().imports[0];assert.equal(file.kind,'generated');assert(file.name.endsWith('.pdf'));assert.equal(page.files.get(file.id).type,'application/pdf');assert((await page.files.get(file.id).text()).startsWith('%PDF-1.4'));
  assert(page.get('proposal-generation-status').textContent.includes('Proposal generated'));assert.equal(page.get('generate-protocol').disabled,false);assert.equal(page.get('generate-protocol').textContent,'Generate');
  const row=page.get('proposal-generated-list').children[0];assert.equal(row.children[1].children.length,1);assert.equal(row.children[1].children[0].children[0].textContent,'Build Projects');
@@ -77,9 +78,9 @@ for(const [name,options,message]of [
 test('Stop cancels a pending local request and restores Generate',async()=>{const page=app({wait:true});const pending=page.generate();await page.modelStarted;assert.equal(page.get('run-row').hidden,false);assert.equal(page.get('proposal-generation-status').hidden,true);assert.equal(page.get('protocol-status').textContent,'');assert.equal(page.get('generate-protocol').disabled,true);assert.equal(page.get('generate-protocol').textContent,'Generating…');page.get('stop-protocol').click();await pending;assert(page.get('proposal-generation-status').textContent.includes('Stopped'));assert.equal(page.get('generate-protocol').disabled,false);assert.equal(page.state().imports.length,0);});
 test('missing dependency gives a visible reload instruction',async()=>{const page=app();page.ctx.AimstepProposalPdf=null;await page.generate();assert(page.get('proposal-generation-status').textContent.includes('modules did not load'));assert.equal(page.get('generate-protocol').disabled,false);});
 
-test('long multilingual materials recover malformed summaries, plan and sections through PDF saving',async()=>{
+test('long multilingual materials recover malformed summaries and sections through PDF saving',async()=>{
  const seen=new Map();const page=app({saved:{...fixture,manualProtocolInputs:{...fixture.manualProtocolInputs,rationale:'研究背景与方法。'.repeat(1600)}},respond(body,value){
-  const key=body.format.properties.facts?'digest:'+body.messages[1].content:body.format.properties.approach?'plan':'section:'+body.format.properties.sections.items.properties.id.enum.join(',');
+  const key=body.format.properties.facts?'digest:'+body.messages[1].content:body.format.properties.approach?'plan':'section:'+Object.keys(body.format.properties.sections.properties).join(',');
   const count=seen.get(key)||0;seen.set(key,count+1);
   if(!count)return '{"incomplete":';
   if(count===1&&!body.format.properties.sections)return {};
@@ -87,7 +88,7 @@ test('long multilingual materials recover malformed summaries, plan and sections
  }});
  await page.generate();assert.equal(page.state().imports.length,1,page.get('proposal-generation-status').textContent);
  assert(page.state().imports[0].text.includes('Appendix: complete author-provided planning information'));
- assert([...seen.keys()].some(key=>key.startsWith('digest:')));assert.equal(seen.get('plan'),3);
+ assert([...seen.keys()].some(key=>key.startsWith('digest:')));assert(!seen.has('plan'));
  assert([...seen.keys()].some(key=>key==='section:title'));assert.equal(page.files.size,1);
 });
 test('retry after PDF or metadata failure reuses all completed model work',async()=>{
@@ -103,13 +104,13 @@ test('changed source invalidates checkpoints before retrying',async()=>{
  page.data.set('aimstep-eligibility:test',JSON.stringify({criteria:[{title:'Population',condition:'Adults age at least 21.'}]}));
  options.failPdf=false;await page.generate();assert(page.requests.length>requests);assert.equal(page.state().imports.length,1);
 });
-test('persistent invalid plan is bounded and retry resumes after plan recovery',async()=>{
- let invalid=true;const page=app({respond(body,value){return invalid&&body.format.properties.approach?{}:value;}});
- await page.generate();assert.equal(page.requests.length,3);assert.equal(page.state().imports.length,0);assert.equal(page.get('generate-protocol').disabled,false);
+test('persistent invalid chapters are bounded and retry resumes after recovery',async()=>{
+ let invalid=true;const page=app({respond(body,value){return invalid?{}:value;}});
+ await page.generate();assert(page.requests.length<=6);assert.equal(page.state().imports.length,0);assert.equal(page.get('generate-protocol').disabled,false);
  invalid=false;await page.generate();assert.equal(page.state().imports.length,1);
 });
 test('repeated Generate clicks never start concurrent pipelines',async()=>{
- const page=app({wait:true}),pending=page.generate();await page.modelStarted;await page.generate();assert.equal(page.requests.length,1);page.get('stop-protocol').click();await pending;
+ const page=app({wait:true}),pending=page.generate();await page.modelStarted;await page.generate();assert.equal(page.requests.length,2);page.get('stop-protocol').click();await pending;
 });
 
 test('real local model completes a synthetic proposal through persisted PDF', {skip:!process.env.AIMSTEP_REAL_PROPOSAL,timeout:600000},async()=>{
@@ -122,12 +123,19 @@ test('real local model completes a synthetic proposal through persisted PDF', {s
 
 test('failed later chapter resumes from valid sections without repeating earlier batches',async()=>{
  let fail=true;const counts=new Map(),page=app({respond(body,value){
-  const ids=body.format.properties.sections?.items.properties.id.enum;if(!ids)return value;
+  const ids=(body.format.properties.sections?Object.keys(body.format.properties.sections.properties):null);if(!ids)return value;
   const key=ids.join(',');counts.set(key,(counts.get(key)||0)+1);
   if(fail&&ids.includes('search'))return {sections:ids.includes('extraction')?[{id:'extraction',text:'Retained extraction methods'}]:[],issues:[]};
   return value;
  }});
- await page.generate();assert.equal(page.state().imports.length,0);assert.equal(counts.get('title,rationale'),1);
- fail=false;await page.generate();assert.equal(page.state().imports.length,1);assert.equal(counts.get('title,rationale'),1);assert.equal(counts.get('search,extraction'),1);
+ await page.generate();assert.equal(page.state().imports.length,0);assert.equal(counts.get('title,rationale,eligibility,outcomes'),1);
+ fail=false;await page.generate();assert.equal(page.state().imports.length,1);assert.equal(counts.get('title,rationale,eligibility,outcomes'),1);assert.equal(counts.get('search,extraction,bias,synthesis,certainty'),1);
  assert(page.state().imports[0].text.includes('Retained extraction methods'));
+});
+
+test('proposal batches use at most two concurrent requests and retain every chapter',async()=>{
+ let active=0,max=0;const page=app({async respond(body,value){active++;max=Math.max(max,active);await new Promise(resolve=>setTimeout(resolve,5));active--;return value;}});
+ await page.generate();assert.equal(max,2);assert.equal(page.requests.length,3);assert.equal(page.state().imports.length,1);
+ assert(page.requests.every(request=>request.body.format.properties.sections.type==='object'));
+ const system=page.requests[0].body.messages[0].content;assert(page.requests.every(request=>request.body.messages[0].content===system));
 });

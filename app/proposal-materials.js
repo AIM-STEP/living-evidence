@@ -5,9 +5,9 @@
 'use strict';
 const schema={type:'object',properties:{facts:{type:'array',maxItems:4,items:{type:'string',maxLength:160}},gaps:{type:'array',maxItems:2,items:{type:'string',maxLength:80}}},required:['facts','gaps']};
 function cost(text){let value=0;for(const char of text)value+=char.codePointAt(0)>127?2:1/3;return value;}
-function parts(text,limit=2200){const out=[];let value='',budget=0;for(const char of text){const size=char.codePointAt(0)>127?2:1/3;if(budget+size>limit&&value){out.push(value);value='';budget=0;}value+=char;budget+=size;}if(value)out.push(value);return out;}
+function parts(text,limit=5000){const out=[];let value='',budget=0;for(const char of text){const size=char.codePointAt(0)>127?2:1/3;if(budget+size>limit&&value){out.push(value);value='';budget=0;}value+=char;budget+=size;}if(value)out.push(value);return out;}
 async function prepare(source,{model,signal,status,cache=new Map()}){
- if(source.text.length<=16000&&cost(source.text)<=4500)return {...source.input};
+ if(source.text.length<=32000&&cost(source.text)<=7000)return {...source.input};
  const materials=[{id:'AUTHOR',stage:'Current author form: authoritative',data:source.input.form},{id:'CRITERIA',stage:'Current complete inclusion and exclusion criteria: authoritative',data:source.input.eligibilityPreview},...source.input.project.materials.filter(item=>item.stage!=='Eligibility criteria'),...source.input.uploadedProposals.map((file,index)=>({id:'UPLOAD-'+index,stage:'Uploaded proposal: '+file.name,data:{text:file.text}}))];
  let packets=materials.flatMap(item=>parts(JSON.stringify(item.data)).map((text,index)=>({id:item.id+'-'+index,stage:item.stage,text}))),round=0;
  for(;round<8;){
@@ -24,7 +24,7 @@ async function prepare(source,{model,signal,status,cache=new Map()}){
    digests.push({id:packet.id,stage:packet.stage,facts:value.facts,gaps:value.gaps});
   }
   const result={projectId:source.input.project.projectId,materials:digests,completeAuthorInputsInAppendix:true},text=JSON.stringify(result);
-  if(cost(text)<=4500&&text.length<=16000)return result;
+  if(cost(text)<=7000&&text.length<=32000)return result;
   // Balanced reduction rereads every digest, rather than discarding late packets.
   packets=parts(text).map((text,index)=>({id:'PASS-'+round+'-'+index,stage:'Combined planning material',text}));
  }

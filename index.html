@@ -3624,7 +3624,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh internal tool documents without changing public links.
-            if (frameTarget.pathname.endsWith(".html")) frameTarget.searchParams.set("appVersion", "20261021-49");
+            if (frameTarget.pathname.endsWith(".html")) frameTarget.searchParams.set("appVersion", frameTarget.pathname.endsWith("/build-protocol.html") ? "20261021-50" : "20261021-49");
             // Keep proposal documents mounted so in-flight generation survives tool navigation.
             var selectedFrame = defaultFrame;
             if (/\/build-protocol\.html$/i.test(frameTarget.pathname)) {

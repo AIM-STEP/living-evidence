@@ -36,7 +36,7 @@ function create({fetch,location,online,setTimeout,clearTimeout}){
   try{return await timed(async requestSignal=>{
    const options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:requestSignal};
    const response=target.local?await fetch(target.base+'/model',{...options,targetAddressSpace:'loopback'}):await online.request(target.base+'/model',options);
-   if(!response.ok){let message='AI service returned HTTP '+response.status;try{message=(await response.json()).error||message;}catch(_){}throw Error(message);}
+   if(!response.ok){let code, message='AI service returned HTTP '+response.status;try{const detail=await response.json();message=detail.error||message;code=detail.code||(body.task==='proposal'&&response.status===422?'MODEL_OUTPUT_LIMIT':undefined);}catch(_){}throw Object.assign(Error(message),{code});}
    return await response.json();
   },signal,600000,'The model request exceeded 10 minutes. Check the local model service and try Generate again.');}
   catch(error){backend=null;if(signal?.aborted||error.name==='AbortError')throw error;if(error instanceof TypeError)throw Error(target.local?'Connection to the local model was interrupted. Check that the local service is running, then try Generate again.':'The online model service could not be reached. Start the local model service on 127.0.0.1:8765, or check the online service.');throw error;}

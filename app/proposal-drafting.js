@@ -24,8 +24,8 @@ function guidance(type){const value=types[type];if(!value)throw Error('Select a 
 const strings={type:'array',items:{type:'string'}};
 const planSchema={type:'object',properties:{approach:{type:'string'},requirements:strings,confirmations:strings},required:['approach','requirements','confirmations']};
 function validatePlan(value){if(typeof value?.approach!=='string'||!value.approach.trim()||!Array.isArray(value.requirements)||!Array.isArray(value.confirmations)||!value.requirements.every(item=>typeof item==='string')||!value.confirmations.every(item=>typeof item==='string'))throw Error('The model returned an incomplete drafting plan. Try Generate again.');return {approach:value.approach,requirements:value.requirements.map(String),confirmations:value.confirmations.map(String)};}
-function sectionSchema(ids){return {type:'object',properties:{sections:{type:'array',minItems:ids.length,maxItems:ids.length,items:{type:'object',properties:{id:{type:'string',enum:ids},text:{type:'string'}},required:['id','text']}},issues:strings},required:['sections','issues']};}
-function validateSections(value,ids){if(!Array.isArray(value?.sections)||!Array.isArray(value.issues)||value.sections.length!==ids.length)throw Error('The model returned an incomplete proposal section. Try Generate again.');return {sections:ids.map(id=>{const found=value.sections.filter(row=>row.id===id);if(found.length!==1||typeof found[0].text!=='string'||!found[0].text.trim())throw Error('The model omitted proposal section '+id+'. Try Generate again.');return {id,text:found[0].text.trim()};}),issues:value.issues.map(String)};}
+function sectionSchema(ids){return {type:'object',properties:{sections:{type:'object',properties:Object.fromEntries(ids.map(id=>[id,{type:'string',minLength:1}])),required:ids,additionalProperties:false},issues:strings},required:['sections','issues'],additionalProperties:false};}
+function validateSections(value,ids){if(value?.sections&&!Array.isArray(value.sections)&&typeof value.sections==='object')value={...value,sections:Object.entries(value.sections).map(([id,text])=>({id,text}))};if(!Array.isArray(value?.sections)||!Array.isArray(value.issues)||value.sections.length!==ids.length)throw Error('The model returned an incomplete proposal section. Try Generate again.');return {sections:ids.map(id=>{const found=value.sections.filter(row=>row.id===id);if(found.length!==1||typeof found[0].text!=='string'||!found[0].text.trim())throw Error('The model omitted proposal section '+id+'. Try Generate again.');return {id,text:found[0].text.trim()};}),issues:value.issues.map(String)};}
 function parseResponse(content){
  if(content&&typeof content==='object')return content;
  try{return JSON.parse(String(content||'').replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''));}
@@ -34,7 +34,7 @@ function parseResponse(content){
 async function structured(request,validate,signal,label){
  for(let attempt=0;attempt<3;attempt++){
   if(signal?.aborted)throw new DOMException('Stopped','AbortError');
-  let value;try{value=await request(attempt);}catch(error){if(error.code==='MODEL_JSON_INVALID')continue;throw error;}
+  let value;try{value=await request(attempt);}catch(error){if(['MODEL_JSON_INVALID','MODEL_OUTPUT_LIMIT'].includes(error.code))continue;throw error;}
   if(signal?.aborted)throw new DOMException('Stopped','AbortError');
   try{return validate(value);}catch(_){}
  }
@@ -45,15 +45,16 @@ async function generateSections({model,instructions,input,ids,signal,checkpoint=
  const stopped=()=>{if(signal?.aborted)throw new DOMException('Stopped','AbortError');};
  const accept=(value,requested)=>{
   if(Array.isArray(value?.issues))issues.push(...value.issues.filter(item=>typeof item==='string'));
-  if(!Array.isArray(value?.sections))return;
-  for(const id of requested){const rows=value.sections.filter(row=>row?.id===id);
+  if(!value?.sections||typeof value.sections!=='object')return;
+  const entries=Array.isArray(value.sections)?value.sections:Object.entries(value.sections).map(([id,text])=>({id,text}));
+  for(const id of requested){const rows=entries.filter(row=>row?.id===id);
    if(rows.length===1&&typeof rows[0].text==='string'&&rows[0].text.trim())saved.set(id,{id,text:rows[0].text.trim()});
   }
  };
  const request=async(requested,prompt)=>{
   stopped();
   try{const value=await model(prompt,input,sectionSchema(requested),signal);stopped();accept(value,requested);}
-  catch(error){if(error.code!=='MODEL_JSON_INVALID')throw error;}
+  catch(error){if(!['MODEL_JSON_INVALID','MODEL_OUTPUT_LIMIT'].includes(error.code))throw error;}
  };
  if(!saved.size)await request(ids,instructions);
  for(const id of ids){
@@ -62,6 +63,7 @@ async function generateSections({model,instructions,input,ids,signal,checkpoint=
  }
  return {sections:ids.map(id=>saved.get(id)),issues:[...new Set(issues)]};
 }
-const api={guidance,planSchema,validatePlan,sectionSchema,validateSections,generateSections,parseResponse,structured};
+const settings=Object.freeze({workers:2});
+const api={settings,guidance,planSchema,validatePlan,sectionSchema,validateSections,generateSections,parseResponse,structured};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepProposalDrafting=api;
 })(globalThis);
