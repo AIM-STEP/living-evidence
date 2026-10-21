@@ -362,7 +362,7 @@ async function run(label,work){
   for(const element of document.querySelectorAll('main button,main input,main textarea,main select')){if(element.id==='stop-protocol')continue;disabled.push([element,element.disabled]);element.disabled=true;}
   status('');proposalGenerating=creating;
   if(creating){button.textContent='Generating…';button.setAttribute('aria-busy','true');}
-  $('stop-protocol').disabled=false;$('run-row').hidden=creating;$('run-label').textContent=label;$('protocol-progress').setAttribute('aria-valuenow','0');progress(5);status(creating?'Preparing the proposal…':'');
+  $('stop-protocol').disabled=false;$('run-row').hidden=false;$('run-label').textContent=label;$('protocol-progress').setAttribute('aria-valuenow','0');progress(5);status(creating?'Preparing the proposal…':'');
   let estimate=5;timer=setInterval(()=>{estimate+=Math.max(.2,(85-estimate)/30);progress(estimate);},1000);
   await work(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');progress(100);
  }catch(error){proposalGenerating=false;status(error.name==='AbortError'?'Stopped. Your draft has been kept.':error.message,error.name!=='AbortError');}

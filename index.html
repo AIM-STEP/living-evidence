@@ -3329,6 +3329,7 @@ body.project-page-mode .toolset-layout { display: none; }
         var toggleButton = document.getElementById("workspace-toggle");
         var otherPage = document.getElementById("project-page");
         var frame = document.getElementById("project-page-frame");
+        var defaultFrame = frame, proposalFrames = new Map();
         var toolset = document.getElementById("toolset");
         var toolsetDialog = document.getElementById("toolset-status-dialog");
         var home = new URL("index.html", document.baseURI);
@@ -3347,7 +3348,7 @@ body.project-page-mode .toolset-layout { display: none; }
         }
         function rememberProject(id, name) {
           if (!id) return;
-          if (activeProject && activeProject.id !== id) frame.removeAttribute("src");
+          if (activeProject && activeProject.id !== id) defaultFrame.removeAttribute("src");
           activeProject = { id: id, name: name || "" };
           try { sessionStorage.setItem(contextKey, JSON.stringify(activeProject)); } catch (e) {}
           renderProjectLink();
@@ -3595,8 +3596,27 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh the internal proposal document without changing public links.
-            if (/\/(?:build-protocol|eligibility)\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-40");
+            if (/\/(?:build-protocol|eligibility)\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-41");
+            // Keep proposal documents mounted so in-flight generation survives tool navigation.
+            var selectedFrame = defaultFrame;
+            if (/\/build-protocol\.html$/i.test(frameTarget.pathname)) {
+              var proposalKey = frameTarget.href;
+              selectedFrame = proposalFrames.get(proposalKey);
+              if (!selectedFrame) {
+                selectedFrame = document.createElement("iframe");
+                selectedFrame.title = "Build a proposal";
+                selectedFrame.setAttribute("allow", defaultFrame.getAttribute("allow"));
+                selectedFrame.hidden = true;
+                bindToolFrame(selectedFrame);
+                otherPage.appendChild(selectedFrame);
+                proposalFrames.set(proposalKey, selectedFrame);
+              }
+            }
+            defaultFrame.hidden = selectedFrame !== defaultFrame;
+            proposalFrames.forEach(function (savedFrame) { savedFrame.hidden = savedFrame !== selectedFrame; });
+            frame = selectedFrame;
             if (frame.getAttribute("src") !== frameTarget.href) frame.src = frameTarget.href;
+            syncFrameLanguage();
           }
           if (push) {
             var url = routeUrl(view, target);
@@ -3718,19 +3738,22 @@ body.project-page-mode .toolset-layout { display: none; }
           var bounds = toolsetDialog.getBoundingClientRect();
           if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) toolsetDialog.close();
         });
-        frame.addEventListener("load", function () {
+        function bindToolFrame(toolFrame) {
+        toolFrame.addEventListener("load", function () {
           var doc;
-          try { doc = frame.contentDocument; } catch (e) { return; }
+          try { doc = toolFrame.contentDocument; } catch (e) { return; }
           if (!doc || !doc.head) return;
           // The original page keeps its scripts/forms and its own scroll area;
           // the outer header supplies the project link on every destination.
           var style = doc.createElement("style");
           style.textContent = ".site-header, .header, body > footer { display: none !important; }";
           doc.head.appendChild(style);
-          frame.title = doc.title || "Project page";
+          toolFrame.title = doc.title || "Project page";
           doc.addEventListener("click", followLink);
-          syncFrameLanguage();
+          if (frame === toolFrame) syncFrameLanguage();
         });
+        }
+        bindToolFrame(defaultFrame);
         function syncFrameLanguage() {
           try {
             var doc = frame.contentDocument;
@@ -3778,7 +3801,12 @@ body.project-page-mode .toolset-layout { display: none; }
           if (!activeProject || activeProject.id !== event.detail.projectId) return;
           activeProject = null;
           try { sessionStorage.removeItem(contextKey); } catch (e) {}
-          frame.removeAttribute("src");
+          defaultFrame.removeAttribute("src");
+          proposalFrames.forEach(function (savedFrame, url) {
+            var savedProject = new URL(url).searchParams.get("projectId") || new URL(url).searchParams.get("project");
+            if (savedProject === event.detail.projectId) { savedFrame.remove(); proposalFrames.delete(url); }
+          });
+          frame = defaultFrame;
           renderProjectLink();
           setView("toolset", null, false);
           history.replaceState(null, "", routeUrl("toolset"));
