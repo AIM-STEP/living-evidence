@@ -4,6 +4,7 @@ const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new 
 const M=window.AimstepProtocolManual,manualControls=new Map(),manualWrappers=new Map(),manualSections=new Map(),manualFeedback=new Map();
 let manualFormReady=false;
 let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null,previewFileId=null;
+let proposalGenerating=false;
 let previewToken=0,previewUrl=null,previewLoadedId=null;
 const fileJobs=new Map(),selectedFileActions=new Map(),fileProgress=new Map();
 try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={...state,...saved};else{const legacy=JSON.parse(localStorage.getItem('aimstep-writing:protocol:'+scope)||'null');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}}catch(_){status("Saved proposal could not be read. Export any visible work before continuing.",true);}
@@ -27,7 +28,7 @@ state.imports.forEach((file,index)=>{
 for(const a of document.querySelectorAll('[data-project-link]')){const u=new URL(a.getAttribute('href'),location.href);if(scope!=='default')u.searchParams.set('projectId',scope);a.href=u.href;}
 const icons={import:'M12 16V3m-4 4 4-4 4 4M5 14v6h14v-6',save:'M19 21H5V3h12l4 4v14ZM7 3v6h10V3M7 21v-8h10v8',export:'M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5',clear:'M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6'};
 for(const [id,path]of Object.entries(icons))$(id+'-protocol').insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>');
-function status(message,error=false){$('protocol-status').textContent=message;$('protocol-status').classList.toggle('error',error);const inline=$('proposal-generation-status');if(inline){inline.textContent=message;inline.hidden=!message;inline.classList.toggle('error',error);inline.setAttribute('role',error?'alert':'status');}}
+function status(message,error=false){if(proposalGenerating&&!error)return;$('protocol-status').textContent=message;$('protocol-status').classList.toggle('error',error);const inline=$('proposal-generation-status');if(inline){inline.textContent=message;inline.hidden=!message;inline.classList.toggle('error',error);inline.setAttribute('role',error?'alert':'status');}}
 function notifyProposals(){
  try{const host=window.parent&&window.parent!==window?window.parent:window;host.dispatchEvent(new host.Event('aimstep:proposals-updated'));}catch(_){}
 }
@@ -359,12 +360,13 @@ async function run(label,work){
  let timer=null;const button=$('generate-protocol'),buttonText=button.textContent,creating=label.startsWith('Generating proposal');
  try{
   for(const element of document.querySelectorAll('main button,main input,main textarea,main select')){if(element.id==='stop-protocol')continue;disabled.push([element,element.disabled]);element.disabled=true;}
+  status('');proposalGenerating=creating;
   if(creating){button.textContent='Generating…';button.setAttribute('aria-busy','true');}
-  $('stop-protocol').disabled=false;$('run-row').hidden=false;$('run-label').textContent=label;$('protocol-progress').setAttribute('aria-valuenow','0');progress(5);status(creating?'Preparing the proposal…':'');
+  $('stop-protocol').disabled=false;$('run-row').hidden=creating;$('run-label').textContent=label;$('protocol-progress').setAttribute('aria-valuenow','0');progress(5);status(creating?'Preparing the proposal…':'');
   let estimate=5;timer=setInterval(()=>{estimate+=Math.max(.2,(85-estimate)/30);progress(estimate);},1000);
   await work(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');progress(100);
- }catch(error){status(error.name==='AbortError'?'Stopped. Your draft has been kept.':error.message,error.name!=='AbortError');}
- finally{if(timer!==null)clearInterval(timer);controller=null;for(const [element,wasDisabled]of disabled)element.disabled=wasDisabled;button.textContent=buttonText;button.removeAttribute('aria-busy');$('stop-protocol').disabled=false;$('run-row').hidden=true;}
+ }catch(error){proposalGenerating=false;status(error.name==='AbortError'?'Stopped. Your draft has been kept.':error.message,error.name!=='AbortError');}
+ finally{proposalGenerating=false;if(timer!==null)clearInterval(timer);controller=null;for(const [element,wasDisabled]of disabled)element.disabled=wasDisabled;button.textContent=buttonText;button.removeAttribute('aria-busy');$('stop-protocol').disabled=false;$('run-row').hidden=true;}
 }
 async function model(system,input,schema,signal){
  if(input.length>120000)throw Error('Use source material under 120,000 characters. Nothing has been truncated.');
@@ -443,7 +445,7 @@ async function collectProposalInput(signal){
  return {input,text};
 }
 async function draftingMaterials(source,signal){
- return window.AimstepProposalMaterials.prepare(source,{model,signal,status:()=>{},core:window.AimstepManuscriptCore});
+ return window.AimstepProposalMaterials.prepare(source,{model,signal,status:()=>{},});
 }
 $('generate-protocol').onclick=()=>run('Generating proposal with the local model…',async signal=>{
  save();const errors=M.validate(state.manualProtocolInputs,{draft:true});
@@ -455,14 +457,14 @@ $('generate-protocol').onclick=()=>run('Generating proposal with the local model
  const check=async()=>{const current=await collectProposalInput(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');if(localStorage.getItem(key)!==base||current.text!==source.text)throw Error('Project information changed during drafting. Generate again using the latest saved information.');};
  const materials=await draftingMaterials(source,signal);
  progress(8);
- const plan=D.validatePlan(await model('Plan a complete prospective review protocol for the selected Review type. Apply these verified methodological instructions: '+JSON.stringify(guide)+'. Analyze ALL supplied materials. Form entries and saved eligibility decisions override older uploaded drafts. Preserve every inclusion/exclusion rule, threshold and negation. Requirements must fit this review type. Identify missing facts in confirmations. You may propose methodological details, but identify them as proposed for author confirmation. Do not invent results, completed activities, registration, team identities, contact details, funding, citations or dates. Return a concise drafting approach, required methodological items and unresolved author decisions.',JSON.stringify(materials),D.planSchema,signal));
+ const plan=D.validatePlan(await model('Plan a complete prospective review protocol for the selected Review type. Apply these verified methodological instructions: '+JSON.stringify(guide)+'. Analyze ALL supplied materials. Form entries and saved eligibility decisions override older uploaded drafts. Preserve every inclusion/exclusion rule, threshold and negation. Requirements must fit this review type. Identify missing facts in confirmations. You may propose methodological details, but identify them as proposed for author confirmation. No quotations, citations or quotation matching are required during generation. Do not invent results, completed activities, registration, team identities, contact details, funding, citations or dates. Return a concise drafting approach, required methodological items and unresolved author decisions.',JSON.stringify(materials),D.planSchema,signal));
  const batches=[['title','rationale','eligibility','outcomes'],['search','extraction','bias'],['synthesis','certainty'],['timeline','team','funding','availability','amendments']];
  let sections=[],issues=[...plan.confirmations];
  for(let index=0;index<batches.length;index++){
   if(signal.aborted)throw new DOMException('Stopped','AbortError');
   const ids=batches[index],definitions=C.sections.filter(([id])=>ids.includes(id));
   status('Writing '+guide.reviewType+' proposal: '+(index+1)+' / '+batches.length+'…');progress(15+index*17);
-  const instructions='Write polished, detailed prospective protocol sections in English for '+guide.reviewType+'. Apply the supplied review-specific guidance and drafting plan. Return ONLY these section IDs, each exactly once: '+JSON.stringify(definitions)+'. Integrate ALL relevant supplied information. Preserve the author title, rationale, objectives, eligibility decisions, search platforms, screening, extraction and synthesis instructions. Resolve older draft disagreements in favor of current form and saved criteria; report remaining conflicts in issues. Do not omit a criterion or invent an inverse exclusion. Use proposed methodological details to make a usable protocol where author methods are missing, explicitly labelled "Proposed for author confirmation". Missing factual details such as people, funding, registration and dates must be marked "To complete". Never invent study findings, references, identifiers or completed actions. Use paragraph prose with subheadings as appropriate; avoid markdown tables. Keep substantive sections focused, typically 150 to 350 words each, and administrative sections concise. Explain inapplicable methods according to the selected review type. Include no results section and make no claim of completed registration or external validation.';
+  const instructions='Do not add quotations or citations or perform quotation matching. Write polished, detailed prospective protocol sections in English for '+guide.reviewType+'. Apply the supplied review-specific guidance and drafting plan. Return ONLY these section IDs, each exactly once: '+JSON.stringify(definitions)+'. Integrate ALL relevant supplied information. Preserve the author title, rationale, objectives, eligibility decisions, search platforms, screening, extraction and synthesis instructions. Resolve older draft disagreements in favor of current form and saved criteria; report remaining conflicts in issues. Do not omit a criterion or invent an inverse exclusion. Use proposed methodological details to make a usable protocol where author methods are missing, explicitly labelled "Proposed for author confirmation". Missing factual details such as people, funding, registration and dates must be marked "To complete". Never invent study findings, references, identifiers or completed actions. Use paragraph prose with subheadings as appropriate; avoid markdown tables. Keep substantive sections focused, typically 150 to 350 words each, and administrative sections concise. Explain inapplicable methods according to the selected review type. Include no results section and make no claim of completed registration or external validation.';
   const result=D.validateSections(await model(instructions,JSON.stringify({guidance:guide,plan,materials}),D.sectionSchema(ids),signal),ids);
   sections.push(...result.sections);issues.push(...result.issues);
  }
@@ -487,7 +489,7 @@ $('generate-protocol').onclick=()=>run('Generating proposal with the local model
   state.imports.push(file);state.proposalDrafts??={};state.proposalDrafts.manual={fileId:id,at,model:state.lastModel};state.text=text;state.issues=draft.issues;state.mapping=null;state.confirmedAt=null;
   $('protocol-text').value=text;render();save();progress(100);
  }catch(error){state=previous;$('protocol-text').value=state.text;await window.AimstepProposalFiles.remove(id).catch(()=>{});render();throw error;}
- status('Proposal generated. Click its filename below Create a proposal to preview the PDF, or choose Build Projects.');
+ proposalGenerating=false;status('Proposal generated. Click its filename below Create a proposal to preview the PDF, or choose Build Projects.');
 });
 $('submit-protocol').onclick=()=>{if(!$('confirm-protocol').checked){status("Review the proposal and select the confirmation checkbox before submitting.",true);return;}run("Checking and applying confirmed proposal…",async signal=>{save();const text=state.text,base=handoffVersion();if(!text.trim())throw Error("Import or create a proposal first.");const mapping=await map(text,signal);apply(mapping,"confirmed proposal",base);state.issues=mapping.issues;state.confirmedAt=new Date().toISOString();save();render();status('Confirmed and applied to Eligibility criteria and Search strategy. Previous work is backed up.');});};
 $('protocol-text').oninput=()=>{state.mapping=null;state.confirmedAt=null;$('confirm-protocol').checked=false;$('handoff-preview').hidden=true;safeSave();};
