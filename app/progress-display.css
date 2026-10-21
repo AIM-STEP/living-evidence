@@ -1,0 +1,67 @@
+/* Percentage and fill share the same value and timing, including 0% and 100%. */
+.unified-progress {
+  position: relative !important;
+  box-sizing: border-box;
+  height: 18px !important;
+  min-height: 18px;
+  padding: 0 !important;
+  margin-block: 0 !important;
+  align-self: center;
+  border: 0 !important;
+  border-radius: 9px;
+  background: #e5e7f1;
+  overflow: visible !important;
+  isolation: isolate;
+}
+.unified-progress :is(.criteria-progress-track, .progress-track, .extract-progress-track, .draft-progress-track, .team-track) {
+  height: 18px !important;
+  margin: 0 !important;
+}
+.unified-progress .unified-progress-fill {
+  display: block;
+  width: var(--meter-value, 0%) !important;
+  min-width: 0 !important;
+  height: 100%;
+  border-radius: 9px;
+  animation: none !important;
+  transition: width .35s ease !important;
+}
+.unified-progress::after {
+  content: attr(data-progress-label);
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: clamp(18px, var(--meter-value, 0%), calc(100% - 18px));
+  transform: translate(-50%, -50%);
+  min-width: 32px;
+  padding: 0 2px;
+  border-radius: 8px;
+  color: #253b9c;
+  background: #fff;
+  font: 500 10px/16px "Inter", sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: left .35s ease;
+}
+.unified-progress :is(.criteria-progress-percent, .progress-percent, .screening-progress-percent, b),
+.workspace-progress-group > .workspace-progress-label { display: none !important; }
+.progress-title-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.progress-title-row > :is(h2,h3) { margin: 0 !important; flex: 0 0 auto; }
+.progress-title-row > .unified-progress { flex: 1 1 100px; min-width: 60px; }
+:is(.panel-head, .criteria-heading, .expanded-title-progress, .results-title-progress, .form-generator-head, .run-row):has(.unified-progress) {
+  align-items: center !important;
+}
+:is(.panel-head, .criteria-heading, .expanded-title-progress, .results-title-progress, .form-generator-head):has(.unified-progress) :is(h2,h3) {
+  margin-block: 0 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .unified-progress .unified-progress-fill, .unified-progress::after { transition: none !important; }
+}
