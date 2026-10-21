@@ -27,14 +27,13 @@ function safeSave(){cancelBackgroundAnalysis();try{save();return true;}catch(e){
 function render(){for(const n of inputNames)if(state.inputs[n]!==undefined)$('input-'+n).value=state.inputs[n];$('protocol-text').value=state.text;renderImports();$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
 function renderImports(){
  const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN';
- $('import-name-heading').textContent=chinese?'文件名称':'File name';
- $('import-date-heading').textContent=chinese?'导入日期':'Import date';
  $('proposal-imports').hidden=!state.imports.length;
  $('proposal-import-list').replaceChildren(...state.imports.map(file=>{
-  const row=document.createElement('tr'),name=document.createElement('td'),date=document.createElement('td');
+  const row=document.createElement('li'),name=document.createElement('span'),date=document.createElement('span');
+  row.className='proposal-file-row';name.className='proposal-file-name';date.className='proposal-file-date';
   name.textContent=file.name;
   if(file.importedAt&&!Number.isNaN(Date.parse(file.importedAt))){const time=document.createElement('time');time.dateTime=file.importedAt;time.textContent=new Intl.DateTimeFormat(chinese?'zh-CN':'en-GB',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(file.importedAt));date.appendChild(time);}else date.textContent=chinese?'日期未记录':'Date not recorded';
-  const actions=document.createElement('td'),menu=document.createElement('div'),trigger=document.createElement('button'),choices=document.createElement('div');
+  const actions=document.createElement('div'),menu=document.createElement('div'),trigger=document.createElement('button'),choices=document.createElement('div');
   actions.className='proposal-file-actions';menu.className='proposal-file-menu';trigger.type='button';trigger.className='proposal-file-trigger';trigger.insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>');trigger.setAttribute('aria-label',(chinese?'文件操作：':'File actions: ')+file.name);
   choices.className='proposal-file-choices';choices.hidden=true;choices.id='proposal-menu-'+file.id;
   trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls',choices.id);

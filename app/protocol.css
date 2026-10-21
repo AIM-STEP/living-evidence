@@ -6,20 +6,18 @@
 .tool-page.tool-build-protocol .tool-writing-layout .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; }
 .tool-page.tool-build-protocol .tool-writing-layout .form-grid .full { grid-column: 1 / -1; }
 .proposal-imports { margin-bottom: 14px; }
-.proposal-imports table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
-.proposal-imports th, .proposal-imports td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
-.proposal-imports th { font-weight: 500; color: var(--muted); }
-.proposal-imports th:nth-child(2) { width: 180px; }
-#import-status { white-space: pre-line; font-size: 13px; }
-#import-status:empty { display: none; }
+#proposal-import-list { list-style: none; padding: 0; margin: 0; }
+.proposal-file-row { display: grid; grid-template-columns: minmax(0, max-content) max-content minmax(32px, 1fr); align-items: center; gap: 20px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.proposal-file-name { min-width: 0; max-width: 55ch; overflow-wrap: anywhere; }
+.proposal-file-date { color: var(--muted); font-size: 12px; }
+.proposal-file-actions { justify-self: end; overflow: visible; }
 @media (max-width: 600px) {
   .tool-page.tool-build-protocol .tool-writing-layout .form-grid { grid-template-columns: minmax(0, 1fr); }
-  .proposal-imports th:nth-child(2) { width: 125px; }
-  .proposal-imports th, .proposal-imports td { padding-inline: 6px; }
+  .proposal-file-row { grid-template-columns: minmax(0, 1fr) 32px; gap: 4px 12px; }
+  .proposal-file-name, .proposal-file-date { grid-column: 1; }
+  .proposal-file-actions { grid-column: 2; grid-row: 1 / 3; }
 }
 
-.proposal-imports .proposal-actions-heading { width: 48px; }
-.proposal-imports .proposal-file-actions { overflow: visible; text-align: right; }
 .proposal-file-menu { position: relative; margin: 0; }
 .proposal-file-trigger { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 5px; border: 1px solid #cbd3e2; border-radius: 6px; background: #f4f6fc; color: #4059c5; cursor: pointer; }
 .proposal-file-trigger svg { display: block; width: 20px; height: 20px; fill: currentColor; }
@@ -30,4 +28,3 @@
 .proposal-result-link { text-decoration: underline; }
 
 .proposal-file-choices[hidden] { display: none !important; }
-.proposal-actions-heading .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
