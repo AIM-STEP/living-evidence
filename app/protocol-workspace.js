@@ -62,6 +62,13 @@ function updateManualVisibility(){
  for(const field of M.fields)manualWrappers.get(field.id)?.toggleAttribute('hidden',!M.active(field,values));
  const picker=$('manual-section-picker');if(manualSections.get(picker.value)?.element.hidden)picker.value=M.sections.find(section=>!section.when||section.when(values)).id;
 }
+function manualCriteriaLink(){
+ const file=state.imports.filter(file=>file.criteriaProjectId&&!projectDeleted(file.criteriaProjectId)&&criteriaExist(file.criteriaProjectId)).sort((a,b)=>String(a.criteriaGeneratedAt||a.importedAt||'').localeCompare(String(b.criteriaGeneratedAt||b.importedAt||''))).at(-1);
+ const projectFile=state.imports.filter(file=>file.projectId&&!projectDeleted(file.projectId)).at(-1);
+ const target=file?.criteriaProjectId||projectFile?.projectId||scope,url=new URL('eligibility.html',location.href);
+ if(target!=='default')url.searchParams.set('projectId',target);
+ return url.href;
+}
 function renderManualForm(){
  state.manualProtocolInputs=M.migrate(state.manualProtocolInputs,state.inputs);
  if(!manualFormReady){
@@ -69,7 +76,14 @@ function renderManualForm(){
   for(const section of M.sections){
    const element=document.createElement('fieldset'),legend=document.createElement('legend'),grid=document.createElement('div'),option=document.createElement('option');
    element.id='manual-section-'+section.id;element.className='prospero-manual-section';grid.className='form-grid';element.append(legend,grid);form.appendChild(element);
-   option.value=section.id;jump.appendChild(option);manualSections.set(section.id,{element,legend,option});
+   option.value=section.id;jump.appendChild(option);
+   let title=legend;
+   if(section.tool){
+    const link=document.createElement('a');link.href=manualCriteriaLink();link.className='manual-criteria-link';
+    link.onclick=event=>{if(!safeSave()){event.preventDefault();return;}link.href=manualCriteriaLink();};
+    legend.appendChild(link);title=link;grid.hidden=true;
+   }
+   manualSections.set(section.id,{element,legend:title,option});
    for(const field of section.fields){
     const box=document.createElement('div'),label=document.createElement('label'),hint=document.createElement('p');
     box.id='manual-field-'+field.id;box.className=field.type==='textarea'||field.type==='team'?'full':'';label.htmlFor='manual-protocol-'+field.id;label.textContent=field.label+(field.required?' *':'');
@@ -81,7 +95,7 @@ function renderManualForm(){
     if(field.type==='select'||field.type==='date')control.onchange=update;else control.oninput=update;
    }
   }
-  jump.onchange=()=>manualSections.get(jump.value)?.element.scrollIntoView?.({behavior:'smooth',block:'start'});
+  jump.onchange=()=>{const entry=manualSections.get(jump.value);if(M.sections.find(section=>section.id===jump.value)?.tool){entry.legend.click();return;}entry?.element.scrollIntoView?.({behavior:'smooth',block:'start'});};
   manualFormReady=true;
  }
  for(const field of M.fields){const control=manualControls.get(field.id);if(control){control.value=state.manualProtocolInputs[field.id]||'';updateManualFeedback(field);}}

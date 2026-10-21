@@ -58,3 +58,6 @@
 @media (max-width: 760px) {
   .proposal-import-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
 }
+
+.manual-criteria-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.manual-criteria-link:focus-visible { outline: 2px solid #7e8ac7; outline-offset: 3px; }
