@@ -386,3 +386,9 @@ body .workflow-column { padding: 32px; border-radius: 16px; box-shadow: 0 4px 20
   .header-products .product-nav-link, .product-nav-trigger { padding-inline: 10px; font-size: 14px; }
   .brand .brand-sub { white-space: normal; }
 }
+
+/* The summary belongs to the expanded project and stays hidden without one. */
+#project-workspace[hidden] { display: none !important; }
+#projects .pw-card[data-summary-open="true"] { background: #f1f5ff; box-shadow: inset 3px 0 #4d6bfe; }
+#projects .pw-card[data-summary-open="true"]::after { content: '⌃'; color: #4d6bfe; }
+.workspace-summary-project { margin-top: 6px; color: var(--dashboard-muted); font-size: 14px; overflow-wrap: anywhere; }

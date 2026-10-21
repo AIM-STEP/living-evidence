@@ -4,6 +4,7 @@ function setup(){
  const rows=[{title:'Exercise for pain',archived:false},{title:'中文疼痛综述',archived:false},{title:'Exercise archive',archived:true}].map(row=>({...row,dataset:{},hidden:false}));
  const grid={hidden:false,querySelectorAll:()=>rows};
  const tab=()=>({setAttribute(){}}),env={currentTab:tab(),archivedTab:tab(),showingArchived:false,projectSearch:{value:''},listEmpty:{hidden:false,textContent:''},list:{querySelectorAll:selector=>selector==='.pw-card'?rows:[grid],querySelector:()=>null},titleOf:row=>row.title,isArchived:row=>row.archived,translateActions(){},window:{AIMSTEP:{t:key=>key}}};
+ env.document={dispatchEvent(){}};env.CustomEvent=class {};
  vm.createContext(env);const start=html.indexOf('        function selectProjectTab('),end=html.indexOf('        function enhanceCard(',start);assert(start>0&&end>start);vm.runInContext(html.slice(start,end),env);
  return {env,rows,grid,select:archived=>env.selectProjectTab(archived)};
 }

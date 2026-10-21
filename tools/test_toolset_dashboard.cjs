@@ -36,7 +36,7 @@ function setup(query = '') {
     rememberProject(id,name){env.activeProject={id,name};},
     sitePage(value){return value ? new URL(value,env.home) : null;}
   };
-  env.defaultFrame=env.frame;env.proposalFrames=new Map();env.syncFrameLanguage=()=>{};env.bindToolFrame=()=>{};env.otherPage.appendChild=()=>{};
+  env.renderProjectSummary=()=>{env.page.hidden=!env.expandedProjectId;};env.defaultFrame=env.frame;env.proposalFrames=new Map();env.syncFrameLanguage=()=>{};env.bindToolFrame=()=>{};env.otherPage.appendChild=()=>{};
   vm.createContext(env);
   vm.runInContext(source('isProjectRoute','routeUrl') + source('routeUrl','isToolsetPage') +
     source('isToolsetPage','renderProjectLink') + source('setView','sitePage') +

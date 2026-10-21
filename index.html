@@ -1713,7 +1713,7 @@ body.project-page-mode .toolset-layout { display: none; }
 
 </style>
   <link rel="stylesheet" href="app/theme.css?v=20261020-5">
-  <link rel="stylesheet" href="app/dashboard.css?v=20261021-47">
+  <link rel="stylesheet" href="app/dashboard.css?v=20261021-52">
 <script defer src="app/header-navigation.js?v=20261021-47"></script>
 <link rel="stylesheet" href="app/progress-display.css?v=20261021-1">
 <script src="app/progress-display.js?v=20261021-1" defer></script>
@@ -2019,7 +2019,7 @@ body.project-page-mode .toolset-layout { display: none; }
           <div class="container">
             <header class="workspace-summary-header">
               <div class="workspace-heading">
-                <h1 id="workspace-summary-title" data-i18n="workspace_summary">Project Summary</h1>
+                <h1 id="workspace-summary-title" data-i18n="workspace_summary">Project Summary</h1><p id="workspace-summary-project" class="workspace-summary-project"></p>
               </div>
             </header>
             <section class="workspace-topbar" aria-labelledby="workspace-title">
@@ -3197,6 +3197,7 @@ body.project-page-mode .toolset-layout { display: none; }
             listEmpty.textContent = sourceNote && sourceNote.textContent !== window.AIMSTEP.t("pw_empty") ? sourceNote.textContent : list.childElementCount === 0 ? window.AIMSTEP.t("pw_loading") : window.AIMSTEP.t(emptyKey);
           }
           translateActions();
+          document.dispatchEvent(new CustomEvent("aimstep:project-view-changed"));
         }
       
         function enhanceCard(card) {
@@ -3365,7 +3366,7 @@ body.project-page-mode .toolset-layout { display: none; }
         if (/\/workflow\/project\/?$/.test(window.location.pathname)) home = new URL(window.location.pathname.replace(/workflow\/project\/?$/, "") + "index.html", window.location.origin);
         var projectRoute = "/workflow/project"; // accepted only for older links
         var contextKey = "aimstep-active-project";
-        var activeProject = null;
+        var activeProject = null, expandedProjectId = null;
         var setupLinks = Array.from(document.querySelectorAll(".workspace-setup-link[data-workspace-step]"));
         if (!list || !page || !steps || !setupOverview || !setupButton || !toggleButton) return;
 
@@ -3594,10 +3595,28 @@ body.project-page-mode .toolset-layout { display: none; }
           try { localStorage.setItem(setupStorageKey(activeProject.id), JSON.stringify(done)); } catch (e) { return; }
           renderSetupStatus();
         };
+        function renderProjectSummary() {
+          var cards = Array.from(list.querySelectorAll(".pw-card"));
+          var selected = cards.find(function (card) {
+            var link = card.querySelector(".pw-open");
+            return link && currentProjectId(link, card) === expandedProjectId;
+          });
+          var visible = !!(expandedProjectId && activeProject && activeProject.id === expandedProjectId && selected && !selected.hidden);
+          page.hidden = !visible;
+          document.body.classList.toggle("project-workspace-mode", visible);
+          var name = document.getElementById("workspace-summary-project");
+          if (name) name.textContent = visible ? currentProjectName(selected) : "";
+          cards.forEach(function (card) {
+            var link = card.querySelector(".pw-open"), open = visible && card === selected;
+            card.dataset.summaryOpen = String(open);
+            if (link) { link.setAttribute("aria-expanded", String(open)); link.setAttribute("aria-controls", "project-workspace"); }
+          });
+        }
         function refreshProject() {
           var record = projectRecord();
           if (record && record.name !== activeProject.name) rememberProject(record.id, record.name);
           else { renderProjectLink(); renderSetupStatus(); }
+          renderProjectSummary();
         }
         function setView(view, target, push) {
           var targetProject = target && (target.searchParams.get('projectId') || target.searchParams.get('project'));
@@ -3618,7 +3637,8 @@ body.project-page-mode .toolset-layout { display: none; }
           document.body.classList.toggle("project-workspace-mode", view === "project");
           document.body.classList.toggle("project-page-mode", view === "page");
           document.body.classList.toggle("toolset-mode", dashboard);
-          page.hidden = view !== "project";
+          expandedProjectId = view === "project" && activeProject ? activeProject.id : null;
+          page.hidden = true;
           otherPage.hidden = view !== "page";
           toolset.hidden = false;
           if (view === "page" && target) {
@@ -3662,6 +3682,7 @@ body.project-page-mode .toolset-layout { display: none; }
           var pageTitle = dashboard ? window.AIMSTEP.t("tk_title") : window.AIMSTEP.t("title");
           document.title = "AIM-STEP | " + pageTitle;
           renderSetupStatus();
+          renderProjectSummary();
           window.scrollTo({ top: 0, behavior: "instant" });
         }
         function sitePage(value) {
@@ -3800,6 +3821,12 @@ body.project-page-mode .toolset-layout { display: none; }
           clone.querySelectorAll(".pw-tag").forEach(function (tag) { tag.remove(); });
           return clone.textContent.trim();
         }
+        function toggleProjectSummary(link, card) {
+          var id = currentProjectId(link, card);
+          var collapse = expandedProjectId === id && !page.hidden;
+          rememberProject(id, currentProjectName(card));
+          setView(collapse ? "toolset" : "project", null, true);
+        }
         function openStep(step) {
           var panel = steps.querySelector("details.workspace-accordion:nth-child(" + step + ")");
           if (!panel) return;
@@ -3809,11 +3836,10 @@ body.project-page-mode .toolset-layout { display: none; }
         list.addEventListener("click", function (event) {
           var link = event.target.closest(".pw-open");
           var card = link && link.closest(".pw-card");
-          if (!card) return;
+          if (!card || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
           event.preventDefault();
           event.stopImmediatePropagation();
-          rememberProject(currentProjectId(link, card), currentProjectName(card));
-          setView("project", null, true);
+          toggleProjectSummary(link, card);
         }, true);
         setupLinks.forEach(function (link) {
           link.addEventListener("click", function (event) { event.preventDefault(); openStep(Number(link.dataset.workspaceStep)); });
@@ -3840,6 +3866,7 @@ body.project-page-mode .toolset-layout { display: none; }
           history.replaceState(null, "", routeUrl("toolset"));
         });
         document.addEventListener("aimstep:projects-ready", refreshProject);
+        document.addEventListener("aimstep:project-view-changed", renderProjectSummary);
         document.addEventListener("aimstep:lang", function () {
           refreshProject();
           syncFrameLanguage();
