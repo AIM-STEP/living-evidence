@@ -141,3 +141,12 @@ body.tool-page {
 .tool-page .tool-writing-layout :is(#protocol-text,#manuscript-text) { min-height: 560px; line-height: 1.75; }
 @media (max-width: 1100px) { .tool-page .tool-writing-layout { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 700px) { .tool-page .tool-writing-layout :is(#protocol-text,#manuscript-text) { min-height: 360px; } }
+/* Reveal/hide the three status dots without changing the label or button width. */
+.generating-dots { display: inline-block; vertical-align: bottom; animation: generating-dots-cycle 1.5s steps(1, end) infinite; }
+@keyframes generating-dots-cycle {
+  0%, 100% { clip-path: inset(0 var(--generating-dots-width, 1em) 0 0); }
+  16.66%, 83.33% { clip-path: inset(0 calc(var(--generating-dots-width, 1em) * 2 / 3) 0 0); }
+  33.33%, 66.66% { clip-path: inset(0 calc(var(--generating-dots-width, 1em) / 3) 0 0); }
+  50% { clip-path: inset(0); }
+}
+@media (prefers-reduced-motion: reduce) { .generating-dots { animation: none; clip-path: none; } }

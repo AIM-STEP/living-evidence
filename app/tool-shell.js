@@ -93,3 +93,48 @@
   document.addEventListener('aimstep:lang', renderLanguage);
   renderLanguage();
 })();
+
+/* Keep status text intact for localisation and accessibility; only its dots animate. */
+(function () {
+  'use strict';
+  const selector = 'button,[role="status"],[role="alert"],[data-ui-localize],.hint,.machine-word-placeholder';
+  const excluded = 'script,style,textarea,pre,code,[contenteditable="true"],[data-ui-preserve]';
+  function decorate(node) {
+    if (node.nodeType !== 3) return;
+    const parent = node.parentElement, text = node.nodeValue;
+    if (!parent || parent.closest(excluded) || !parent.closest(selector)) return;
+    const match = text.match(/^(?:Generating\b|正在生成)[^\n]*?(…|\.{3})\s*$/);
+    let label = parent.closest('.generating-dots');
+    if (!match) { if (label) label.classList.remove('generating-dots'); return; }
+    if (!label) {
+      label = document.createElement('span');
+      label.className = 'generating-dots';
+      parent.insertBefore(label, node);
+      label.appendChild(node);
+    }
+    const range = document.createRange();
+    const end = text.trimEnd().length;
+    range.setStart(node, end - match[1].length); range.setEnd(node, end);
+    const width = range.getBoundingClientRect?.().width;
+    const value = width > 0 ? width + 'px' : (match[1] === '…' ? '1em' : '.84em');
+    if (label.style.getPropertyValue('--generating-dots-width') !== value) label.style.setProperty('--generating-dots-width', value);
+  }
+  function scan(root) {
+    if (root.nodeType === 3) { decorate(root); return; }
+    if (root.nodeType !== 1 || root.matches(excluded)) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), texts = [];
+    while (walker.nextNode()) texts.push(walker.currentNode);
+    texts.forEach(decorate);
+  }
+  const observer = new MutationObserver(records => {
+    observer.disconnect();
+    for (const record of records) {
+      if (record.type === 'characterData') scan(record.target);
+      else record.addedNodes.forEach(scan);
+    }
+    observe();
+  });
+  function observe() { observer.observe(document.body, {subtree:true, childList:true, characterData:true}); }
+  scan(document.body); observe();
+  document.fonts?.ready.then(() => scan(document.body));
+})();
