@@ -1,9 +1,11 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8');
-const toolset=html.slice(html.indexOf('id="toolset-dropdown"'),html.indexOf('id="bank-trigger"'));
-const bank=html.slice(html.indexOf('id="bank-dropdown"'),html.indexOf('<div class="header-actions">'));
-assert.equal([...toolset.matchAll(/data-tool="/g)].length,8);assert.equal([...bank.matchAll(/data-tool="/g)].length,2);
+const toolset=html.slice(html.indexOf('id="toolset-dropdown"'),html.indexOf('class="product-nav-link"'));
+assert.equal([...toolset.matchAll(/data-tool="/g)].length,8);
 assert.deepEqual([...toolset.matchAll(/href="([^"]+)" data-tool=/g)].map(m=>m[1]),['eligibility.html','search-strategy.html','title-abstract-screening.html','full-text-screening.html','extraction.html','risk-of-bias.html','analysis.html','certainty-of-evidence.html']);
+assert.match(html,/<a class="product-nav-link" href="build-protocol.html" data-tool="protocol"><span data-i18n="nav_proposal">Proposal<\/span><\/a>/);
+assert.match(html,/<a class="product-nav-link" href="drafting-manuscript.html" data-tool="manuscript">Evidencebank<\/a>/);
+assert(!html.includes('id="bank-dropdown"'));assert(!html.includes('id="bank-trigger"'));
 assert(html.indexOf('id="projects"')>html.indexOf('<main>'));assert(html.indexOf('id="toolset"')<html.indexOf('</header>'));
 const timers=new Map();let timerId=0,document;
 class Node {
@@ -29,4 +31,5 @@ tool.fire('keydown',{target:tool.links[0],key:'Escape'});assert(tool.panel.hidde
 tool.fire('keydown',{target:tool.button,key:'ArrowUp'});assert.equal(document.activeElement,tool.links.at(-1));
 tool.panel.fire('click',{target:{closest:()=>tool.links[0]}});assert(tool.panel.hidden);
 tool.fire('pointerenter');window.fire('popstate');assert(tool.panel.hidden);
-console.log('PASS: ordered 8+2 header links, project-first home, hover gap crossing, touch/click, keyboard focus/Escape, selection and outside/history dismissal');
+tool.fire('pointerenter');nav.fire('click',{target:{closest:()=>({})}});assert(tool.panel.hidden);
+console.log('PASS: ordered Toolset, direct Proposal and Evidencebank links, project-first home, hover gap crossing, touch/click, keyboard focus/Escape, selection and outside/history dismissal');

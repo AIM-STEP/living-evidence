@@ -29,5 +29,6 @@
     panel.addEventListener('click', event => { if (event.target.closest('a[href]')) close(); });
   }
   document.addEventListener('pointerdown', event => { if (!nav.contains(event.target)) close(); });
+  nav.addEventListener('click', event => { if (event.target.closest('a[href]')) close(); });
   window.addEventListener('popstate', close);
 })();

@@ -1713,8 +1713,8 @@ body.project-page-mode .toolset-layout { display: none; }
 
 </style>
   <link rel="stylesheet" href="app/theme.css?v=20261020-5">
-  <link rel="stylesheet" href="app/dashboard.css?v=20261021-46">
-<script defer src="app/header-navigation.js?v=20261021-46"></script>
+  <link rel="stylesheet" href="app/dashboard.css?v=20261021-47">
+<script defer src="app/header-navigation.js?v=20261021-47"></script>
 <link rel="stylesheet" href="app/progress-display.css?v=20261021-1">
 <script src="app/progress-display.js?v=20261021-1" defer></script>
 </head>
@@ -1859,14 +1859,8 @@ body.project-page-mode .toolset-layout { display: none; }
 </section>
 </div>
           </div>
-          <div class="product-nav-item">
-            <button class="product-nav-trigger" type="button" id="bank-trigger" aria-expanded="false" aria-controls="bank-dropdown"><span>Bank</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg></button>
-            <div class="product-dropdown product-dropdown-bank" id="bank-dropdown" aria-labelledby="bank-trigger" hidden>      <section class="toolkit" id="writing-tools" aria-label="Writing tools"><div class="tool-grid">
-<div class="proposal-tool-group"><a class="tool tool-wide" href="build-protocol.html" data-tool="protocol"><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-front"><rect class="icon-face" x="10" y="7" width="27" height="34" rx="4"/><path d="M17 16h13M17 22h8M17 28h13"/><path class="accent" d="M28 33l3 3 7-8"/></g></svg></span><span class="tool-title" data-i18n="t_protocol">Build a proposal</span></a><ul id="dashboard-proposals" class="dashboard-proposals" aria-label="Proposals" hidden></ul></div>
-<a class="tool tool-wide" href="drafting-manuscript.html" data-tool="manuscript"><span class="tool-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="icon-front"><path class="icon-face" d="M12 7h19l6 6v28H12z"/><path d="M29 7v8h8M18 22h10M18 28h7"/><path class="accent" d="M27 34l3-8 10-10 4 4-10 10zM30 26l4 4"/></g></svg></span><span class="tool-title" data-i18n="t_manuscript">Summary of evidence</span></a>
-      </div></section>
-</div>
-          </div>
+          <a class="product-nav-link" href="build-protocol.html" data-tool="protocol"><span data-i18n="nav_proposal">Proposal</span></a>
+          <a class="product-nav-link" href="drafting-manuscript.html" data-tool="manuscript">Evidencebank</a>
         </nav>
         <div class="header-actions">
           <button type="button" class="lang" id="lang-toggle" aria-label="切换语言 / Switch language">
@@ -1894,14 +1888,15 @@ body.project-page-mode .toolset-layout { display: none; }
         <section class="pw" id="projects" aria-labelledby="pw-h">
           <div class="container">
             <div class="pw-head">
-              <h2 id="pw-h" data-i18n="pw_title">Your Projects</h2>
+              <div><h2 id="pw-h" data-i18n="pw_title">Your Projects</h2><p class="pw-intro" data-i18n="pw_intro">A workspace for your research, from question to evidence.</p></div>
+              <button type="button" class="btn btn-primary pw-start" id="pw-start" data-i18n="pw_start">Start a new project</button>
             </div>
             <div class="pw-tabs" id="pw-tabs" role="tablist" aria-label="Project views">
               <button type="button" class="pw-tab" id="pw-tab-current" role="tab" aria-selected="true" aria-controls="pw-list" data-i18n="pw_current">Current projects</button>
               <button type="button" class="pw-tab" id="pw-tab-archived" role="tab" aria-selected="false" aria-controls="pw-list" data-i18n="pw_archived">Archived projects</button>
             </div>
             <div class="pw-toolbar">
-              <button type="button" class="btn btn-primary pw-start" id="pw-start" data-i18n="pw_start">Start a new project</button>
+              <label class="pw-search" for="pw-search"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><span id="pw-search-label" class="pw-search-label" data-i18n="pw_search">Search projects</span><input type="search" id="pw-search" aria-labelledby="pw-search-label" placeholder="Search projects" data-i18n-ph="pw_search" autocomplete="off"></label>
               <div class="pw-sort-picker" id="pw-sort-picker">
                 <button type="button" class="pw-sort-trigger" id="pw-sort-trigger" aria-expanded="false" aria-controls="pw-sort-panel" aria-labelledby="pw-sort-label pw-sort-current">
                   <span id="pw-sort-label" data-i18n="pw_sort_label">Sort:</span>
@@ -2016,6 +2011,7 @@ body.project-page-mode .toolset-layout { display: none; }
             </form>
 
             <div class="pw-list" id="pw-list"></div>
+            <p class="pw-list-empty" id="pw-list-empty" role="status" hidden></p>
           </div>
         </section>
 
@@ -2324,6 +2320,12 @@ body.project-page-mode .toolset-layout { display: none; }
             t8_d: "Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment",
             home_lede: "A Simple, Transparent, Exact and Prompt tool for living evidence",
             pw_title: "Your Projects",
+            nav_proposal: "Proposal",
+            pw_intro: "A workspace for your research, from question to evidence.",
+            pw_search: "Search projects",
+            pw_no_matches: "No projects match your search. Try another name.",
+            pw_empty_current: "No current projects yet. Start a new project to begin.",
+            pw_empty_archived: "Your archived projects will appear here.",
             workspace_summary: "Project Summary",
             workspace_setup: "Project setup",
             workspace_setup_button: "Setup",
@@ -2479,6 +2481,12 @@ body.project-page-mode .toolset-layout { display: none; }
             t8_d: "循证医学证据质量分级，支持二次处理",
             home_lede: "一套简明、透明、准确、及时的活证据工具",
             pw_title: "我的项目",
+            nav_proposal: "方案",
+            pw_intro: "从研究问题到证据结论，在这里管理你的研究。",
+            pw_search: "搜索项目",
+            pw_no_matches: "没有找到匹配的项目，请尝试其他名称。",
+            pw_empty_current: "暂无进行中的项目，点击“新建项目”开始。",
+            pw_empty_archived: "已归档的项目会显示在这里。",
             workspace_summary: "项目摘要",
             workspace_setup: "项目设置",
             workspace_setup_button: "设置",
@@ -3052,6 +3060,8 @@ body.project-page-mode .toolset-layout { display: none; }
         var sort = document.getElementById("pw-sort");
         var storageKey = "aimstep-archived-projects";
         var archivedIds = readArchivedIds();
+        var projectSearch = document.getElementById("pw-search");
+        var listEmpty = document.getElementById("pw-list-empty");
         var showingArchived = !!(archivedTab && archivedTab.getAttribute("aria-selected") === "true");
         var observer = new MutationObserver(enhanceRows);
       
@@ -3174,11 +3184,18 @@ body.project-page-mode .toolset-layout { display: none; }
           list.querySelectorAll(".pw-card").forEach(function (card) {
             var state = isArchived(card);
             card.dataset.archived = state ? "true" : "false";
-            card.hidden = state !== showingArchived;
+            card.hidden = state !== showingArchived || !titleOf(card).toLocaleLowerCase().includes((projectSearch ? projectSearch.value : "").trim().toLocaleLowerCase());
           });
           list.querySelectorAll(".pw-grid").forEach(function (grid) {
             grid.hidden = !Array.from(grid.querySelectorAll(".pw-card")).some(function (card) { return !card.hidden; });
           });
+          if (listEmpty) {
+            var visible = Array.from(list.querySelectorAll(".pw-card")).some(function (card) { return !card.hidden; });
+            listEmpty.hidden = visible;
+            var emptyKey = projectSearch && projectSearch.value.trim() ? "pw_no_matches" : showingArchived ? "pw_empty_archived" : "pw_empty_current";
+            var sourceNote = list.querySelector(".pw-note");
+            listEmpty.textContent = sourceNote && sourceNote.textContent !== window.AIMSTEP.t("pw_empty") ? sourceNote.textContent : list.childElementCount === 0 ? window.AIMSTEP.t("pw_loading") : window.AIMSTEP.t(emptyKey);
+          }
           translateActions();
         }
       
@@ -3315,6 +3332,7 @@ body.project-page-mode .toolset-layout { display: none; }
           closeMenus(false);
           selectProjectTab(tab === archivedTab);
         });
+        if (projectSearch) projectSearch.addEventListener("input", function () { closeMenus(false); selectProjectTab(showingArchived); });
         if (sort) sort.addEventListener("change", enhanceRows);
         document.addEventListener("pointerdown", function (event) {
           if (!event.target.closest || !event.target.closest(".pw-row-actions")) closeMenus(false);
@@ -3603,7 +3621,6 @@ body.project-page-mode .toolset-layout { display: none; }
           page.hidden = view !== "project";
           otherPage.hidden = view !== "page";
           toolset.hidden = false;
-          document.getElementById("writing-tools").hidden = false;
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh the internal proposal document without changing public links.
@@ -3946,6 +3963,5 @@ body.project-page-mode .toolset-layout { display: none; }
       }
     </script>
 
-  <script src="app/dashboard-proposals.js?v=20261021-1"></script>
   </body>
 </html>

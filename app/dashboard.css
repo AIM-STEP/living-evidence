@@ -341,3 +341,48 @@ body .header-inner, body.has-active-project .header-inner { grid-template-column
   body .toolset-layout { width: calc(100% - 32px); padding-top: 24px; }
 }
 @media (prefers-reduced-motion: reduce) { .product-nav-trigger svg { transition: none; } }
+
+/* Direct writing destinations and a focused, searchable project workspace. */
+.header-products { gap: 4px; }
+.header-products .product-nav-link { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 8px; color: var(--dashboard-ink); font-size: 15px; font-weight: 600; line-height: 1.5; white-space: nowrap; }
+.header-products .product-nav-link:hover, .header-products .product-nav-link[aria-current="page"] { color: #3454d1; background: #eef2ff; }
+body .toolset-layout { width: min(1080px, calc(100% - 64px)); padding-top: 40px; }
+body .workflow-column { padding: 32px; border-radius: 16px; box-shadow: 0 4px 20px #26395905; }
+#projects .pw-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 0 28px; }
+#projects .pw-head h2 { font-size: 28px; line-height: 1.3; font-weight: 600; letter-spacing: -.035em; }
+#projects .pw-intro { margin-top: 8px; color: var(--dashboard-muted); font-size: 14px; line-height: 1.6; }
+#projects .pw-head .pw-start { flex: 0 0 auto; min-height: 44px; padding: 10px 18px; border: 1px solid #4d6bfe; border-radius: 8px; background: #4d6bfe; color: #fff; font-size: 14px; font-weight: 600; line-height: 1.5; }
+#projects .pw-head .pw-start:hover { background: #3c55df; border-color: #3c55df; }
+#projects .pw-tabs { gap: 28px; border-bottom: 1px solid var(--dashboard-border); }
+#projects .pw-tab { padding: 10px 0 12px; border-bottom-width: 2px; margin-bottom: -1px; font-size: 14px; color: var(--dashboard-muted); }
+#projects .pw-tab[aria-selected="true"] { color: #3454d1; }
+#projects .pw-toolbar { justify-content: space-between; gap: 16px; padding: 22px 0; }
+.pw-search { display: flex; align-items: center; gap: 10px; width: min(380px, 100%); min-height: 42px; padding: 8px 12px; border: 1px solid var(--dashboard-border); border-radius: 8px; background: #fff; color: var(--dashboard-muted); cursor: text; }
+.pw-search:focus-within { border-color: #4d6bfe; box-shadow: 0 0 0 3px #4d6bfe16; }
+.pw-search svg { flex: 0 0 18px; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.pw-search-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.pw-search input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; color: var(--dashboard-ink); font: inherit; font-size: 14px; line-height: 1.6; }
+.pw-search input::placeholder { color: #7c8799; }
+#projects .pw-toolbar .pw-sort-trigger { min-height: 42px; padding: 8px 12px; border-color: var(--dashboard-border); border-radius: 8px; color: var(--dashboard-muted); font-size: 13px; line-height: 1.5; }
+#projects .pw-grid { border-top: 0; }
+#projects .pw-card { min-height: 96px; padding: 20px 96px 20px 16px; border-bottom: 1px solid #edf0f5; border-radius: 8px; gap: 6px; }
+#projects .pw-card-title { order: 0; font-size: 16px; font-weight: 600; line-height: 1.5; letter-spacing: -.01em; }
+#projects .pw-meta { order: 1; margin: 0; font-size: 12px; line-height: 1.5; color: #728096; }
+#projects .pw-card::after { content: '→'; position: absolute; right: 64px; top: 50%; transform: translateY(-50%); color: #8996ad; font-size: 18px; pointer-events: none; }
+#projects .pw-card:hover::after { color: #4d6bfe; }
+#projects .pw-list-empty { margin: 0; padding: 44px 20px; border: 1px dashed #dce3ee; border-radius: 10px; background: #fafbfd; text-align: center; color: var(--dashboard-muted); font-size: 14px; line-height: 1.7; }
+@media (max-width: 760px) {
+  body .toolset-layout { width: calc(100% - 32px); padding-top: 24px; }
+  body .workflow-column { padding: 24px; }
+  #projects .pw-head { align-items: flex-start; flex-wrap: wrap; gap: 18px; padding-bottom: 22px; }
+  #projects .pw-head h2 { font-size: 25px; }
+}
+@media (max-width: 480px) {
+  body .workflow-column { padding: 20px 16px; }
+  #projects .pw-intro { font-size: 13px; }
+  #projects .pw-toolbar { gap: 12px; padding: 18px 0; }
+  .pw-search { width: 100%; }
+  #projects .pw-sort-picker { margin-left: auto; }
+  .header-products .product-nav-link, .product-nav-trigger { padding-inline: 10px; font-size: 14px; }
+  .brand .brand-sub { white-space: normal; }
+}
