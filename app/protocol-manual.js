@@ -40,18 +40,6 @@ const sections=[
   field('otherEligibility','Other eligibility rules','Record additional restrictions, exceptions or rules for mixed samples.'),
   earlier('legacyEligibility','Earlier combined eligibility notes')
  ]},
- {id:'timeline',title:'Timeline of the review',fields:[
-  field('startDate','Review start date','Use the review start date, not a publication-date search limit.',{type:'date'}),
-  field('endDate','Anticipated completion date','Use the expected completion date of the review.',{type:'date'}),
-  choice('livingReview','Will this be a living systematic review?',yesNo,'Selecting Yes opens the living-review methods section below.')
- ]},
- {id:'protocol',title:'Availability of the full protocol',fields:[
-  choice('protocolStatus','Full protocol status',[['not-written','Not yet written'],['published','Written and published'],['prepared-upload','Written; a file is prepared for upload'],['not-public','Written but not publicly available'],['other','Other arrangements']]),
-  field('protocolReference','Protocol DOI / URL','Provide the DOI or a stable link to the published protocol.',{type:'text',when:when('protocolStatus','published')}),
-  field('protocolFilename','Protocol attachment filename','Record the PDF filename to prepare for registration.',{type:'text',when:when('protocolStatus','prepared-upload')}),
-  choice('protocolRelease','When may the protocol be made available?',[['immediate','Immediately'],['after-review','After the review is completed']],'',{when:when('protocolStatus','prepared-upload')}),
-  field('protocolExplanation','Protocol availability details','Explain unavailable access or other publication arrangements.',{when:when('protocolStatus',['not-public','other']),minWords:5,maxWords:50})
- ]},
  {id:'searching',title:'Searching and screening',fields:[
   choice('publicationSources','Publication status of studies sought',[['published','Published studies'],['unpublished','Unpublished studies'],['both','Both published and unpublished studies']]),
   field('databases','Main databases and platforms','Name each database and the platform used to search it.'),
@@ -94,11 +82,6 @@ const sections=[
   field('certaintyReason','Reason for not assessing certainty','Explain the decision.',{when:when('assessCertainty','no')}),
   earlier('legacyMethods','Earlier combined review-methods notes')
  ]},
- {id:'outcomes',title:'Outcomes to be analysed',fields:[
-  field('mainOutcomes','Main outcomes','For each primary outcome specify its definition, measurement instrument, time points and planned effect measure.',{minWords:5,maxWords:250}),
-  field('additionalOutcomes','Additional outcomes','For each additional outcome include its definition, measurement instrument, time points and effect measure.',{maxWords:300}),
-  earlier('legacyOutcomes','Earlier combined outcome notes')
- ]},
  {id:'synthesis',title:'Planned data synthesis',fields:[
   choice('formalSynthesis','Is formal data synthesis planned?',yesNo),
   field('synthesis','Overall synthesis plan','Describe how study results will be combined, or the conditions required for synthesis.',{when:when('formalSynthesis','yes'),minWords:30,maxWords:500}),
@@ -112,51 +95,7 @@ const sections=[
   field('sensitivity','Sensitivity analyses','Specify the assumptions or decisions to be examined.',{when:when('formalSynthesis','yes')}),
   field('narrativeSynthesis','Qualitative / narrative synthesis','Describe the approach where pooling is inappropriate or a qualitative synthesis is planned.',{when:when('formalSynthesis','yes')})
  ]},
- {id:'living',title:'Living review methods',when:when('livingReview','yes'),fields:[
-  field('livingRationale','Rationale for a living review','Explain why continuing updates are needed.',{minWords:50,maxWords:250}),
-  field('livingMethods','Living-review methods','Describe surveillance frequency, update triggers, screening and analysis updates, versioning and stopping criteria.',{minWords:20,maxWords:250})
- ]},
- {id:'stage',title:'Current review stage',fields:[
-  ...[['pilot','Pilot work'],['searching','Formal searching / study identification'],['screening','Screening against eligibility criteria'],['extraction','Data extraction / receipt of participant data'],['bias','Risk-of-bias / quality assessment'],['synthesis','Data synthesis']].map(([id,label])=>choice('stage_'+id,label,[['not-started','Not started'],['started','Started'],['completed','Completed']],'Record the actual stage, not the planned next stage.')),
-  choice('reviewStatus','Overall review status',[['planned','Planned'],['ongoing','Ongoing'],['completed','Completed'],['discontinued','Discontinued']]),
-  choice('publishResults','Do you intend to publish the review results?',yesNo),
-  field('publicationLanguages','Publication language(s)','List the languages planned for the report.',{type:'text',when:when('publishResults','yes')}),
-  field('dissemination','Publication / dissemination plans','Describe the planned publication or explain why results will not be published.',{when:when('publishResults',['yes','no']),minWords:5,maxWords:50})
- ]},
- {id:'team',title:'Review affiliation, funding and peer review',fields:[
-  field('teamMembers','Review team and collaborators','Add each person separately, including contact details, institution, country, ORCID if known, and individual interests.',{type:'team'}),
-  field('guarantorEmail','Review guarantor email','Use the email address of the team member responsible for the record.',{type:'email'}),
-  field('contactEmail','Named contact email','Use the email address of the team member to contact about the review.',{type:'email'}),
-  field('contactAddress','Contact postal address','Provide an institutional address where appropriate.'),
-  field('affiliation','Organisational affiliation','Name the institution responsible for the review.',{type:'text',minWords:1,maxWords:20}),
-  choice('fundingStatus','Funding / support',[['external','External funding'],['institutional','No specific external funding; institutional support'],['none','No funding or agreed institutional support']]),
-  field('fundersNoncommercial','Noncommercial funders','Name the public, charitable or other noncommercial organisations.',{when:when('fundingStatus','external'),maxWords:50}),
-  field('fundersCommercial','Commercial funders','Name commercial organisations, if relevant.',{when:when('fundingStatus','external'),maxWords:50}),
-  field('grantNumbers','Grant / award numbers','Include all known identifiers.',{type:'text',when:when('fundingStatus','external')}),
-  field('funderRole','Role of the funder / sponsor','State the role in planning, conducting or reporting the review.',{when:when('fundingStatus','external'),maxWords:50}),
-  choice('additionalConflicts','Additional review-level conflicts of interest?',yesNo,'Individual interests are recorded with each team member.'),
-  field('conflicts','Review-level interests','Describe the interests and their management.',{when:when('additionalConflicts','yes'),minWords:10,maxWords:200}),
-  choice('peerReviewed','Has this protocol been peer reviewed?',yesNo),
-  field('peerReview','Peer-review details','Describe who reviewed the protocol and the review process.',{when:when('peerReviewed','yes'),minWords:10,maxWords:200}),
-  earlier('legacyTeam','Earlier combined team and timeline notes')
- ]},
- {id:'additional',title:'Additional information',fields:[
-  field('otherRegistration','Other registration details','Provide registry names and identifiers, if this review is registered elsewhere.',{maxWords:50}),
-  field('mesh','Medical Subject Headings','Optional: provide known controlled-vocabulary terms.',{type:'text'}),
-  field('additionalInformation','Additional information','Include relevant details not covered above.',{maxWords:250}),
-  choice('amendingRecord','Is this an amendment to an existing record?',yesNo),
-  field('existingRecord','Existing record identifier / link','Identify the record being amended.',{type:'text',when:when('amendingRecord','yes')}),
-  field('revisionNote','Changes and reasons','Explain the protocol changes and why they are being made.',{when:when('amendingRecord','yes'),minWords:5,maxWords:250}),
-  earlier('legacyOther','Earlier rationale and additional notes')
- ]}
-];
-const teamFields=[
- {id:'firstName',label:'First name'},{id:'lastName',label:'Last name'},
- {id:'email',label:'Email',type:'email'},{id:'orcid',label:'ORCID'},
- {id:'institution',label:'Institution'},{id:'country',label:'Country'},
- {id:'role',label:'Role',type:'select',options:[['team','Review team member'],['collaborator','Collaborator']]},
- {id:'interests',label:'Potential conflicts of interest',type:'select',options:yesNo},
- {id:'interestDetails',label:'Individual interests and their management',type:'textarea'}
+
 ];
 const fields=sections.flatMap(section=>section.fields.map(value=>({...value,section:section.id})));
 const text=value=>String(value??'').trim();
@@ -186,26 +125,20 @@ function validate(values){
  const errors=[];
  if(!text(values.reviewTitle))errors.push('Enter a review title before generating.');
  for(const item of fields){if(item.type==='team'||!active(item,values))continue;for(const error of fieldErrors(item,values[item.id]))errors.push(item.label+': '+error);}
- for(const [start,end,label]of [['startDate','endDate','Review dates'],['searchStart','searchEnd','Publication-date limits']]){
+ for(const [start,end,label]of [['searchStart','searchEnd','Publication-date limits']]){
   if(start==='searchStart'&&values.dateRestriction!=='yes')continue;
   if(values[start]&&values[end]&&values[start]>values[end])errors.push(label+': the end must not precede the start.');
- }
- const members=Array.isArray(values.teamMembers)?values.teamMembers:[];
- for(const [index,member]of members.entries()){
-  for(const item of teamFields)for(const error of fieldErrors(item,member[item.id]))errors.push('Team member '+(index+1)+' — '+item.label+': '+error);
-  if(text(member.orcid)&&!/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/i.test(text(member.orcid).replace(/^https?:\/\/orcid\.org\//,'')))errors.push('Team member '+(index+1)+': use a valid ORCID format.');
  }
  return errors;
 }
 function display(item,value){
  if(item.type==='select')return item.options.find(([id])=>id===value)?.[1]||text(value);
- if(item.type==='team')return (Array.isArray(value)?value:[]).filter(member=>Object.values(member).some(value=>text(value))).map((member,index)=>'Person '+(index+1)+'\n'+teamFields.filter(field=>field.id!=='interestDetails'||member.interests==='yes').map(field=>field.label+': '+display(field,member[field.id])).join('\n')).join('\n\n');
  return text(value);
 }
 function snapshot(values){
  return sections.filter(section=>!section.when||section.when(values)).map(section=>({title:section.title,fields:section.fields.filter(item=>active({...item,section:section.id},values)).map(item=>({id:item.id,label:item.label,text:display(item,values[item.id])}))}));
 }
 function format(values){return snapshot(values).map((section,index)=>(index+1)+'. '+section.title.toUpperCase()+'\n\n'+section.fields.map(field=>field.label+'\n'+field.text).join('\n\n')).join('\n\n');}
-const api={sections,fields,teamFields,migrate,active,wordCount,fieldErrors,validate,snapshot,format};
+const api={sections,fields,migrate,active,wordCount,fieldErrors,validate,snapshot,format};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepProtocolManual=api;
 })(globalThis);

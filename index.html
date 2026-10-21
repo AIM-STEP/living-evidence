@@ -3353,6 +3353,18 @@ body.project-page-mode .toolset-layout { display: none; }
           renderProjectLink();
           renderSetupStatus();
         }
+        // Select the project that owns the generated criteria while keeping the
+        // proposal editor mounted so its source files and completion meters stay visible.
+        window.AIMSTEP.activateProposalCriteria = function (id) {
+          if (!id || localStorage.getItem('aimstep-project-deleted:' + id)) return;
+          var controller = window.AIMSTEP.projectController;
+          var records = controller && controller.state().projects;
+          var record = Array.isArray(records) ? records.find(function (p) { return p.id === id; }) : null;
+          activeProject = { id: id, name: record ? record.name : activeProject && activeProject.id === id ? activeProject.name : '' };
+          try { sessionStorage.setItem(contextKey, JSON.stringify(activeProject)); } catch (e) {}
+          renderProjectLink();
+          renderSetupStatus();
+        };
         function projectRecord() {
           var controller = window.AIMSTEP && window.AIMSTEP.projectController;
           var records = controller && controller.state().projects;
@@ -3558,6 +3570,8 @@ body.project-page-mode .toolset-layout { display: none; }
           else { renderProjectLink(); renderSetupStatus(); }
         }
         function setView(view, target, push) {
+          var targetProject = target && (target.searchParams.get('projectId') || target.searchParams.get('project'));
+          if (targetProject && (!activeProject || activeProject.id !== targetProject)) rememberProject(targetProject, '');
           // The Toolset view lives in index so a single-file update also
           // updates the tools reached through older workflow.html links.
           if (view === "page" && target && isToolsetPage(target)) { view = "toolset"; target = null; }
@@ -3581,7 +3595,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh the internal proposal document without changing public links.
-            if (/\/(?:build-protocol|eligibility)\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-22");
+            if (/\/(?:build-protocol|eligibility)\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-23");
             if (frame.getAttribute("src") !== frameTarget.href) frame.src = frameTarget.href;
           }
           if (push) {
@@ -3674,7 +3688,7 @@ body.project-page-mode .toolset-layout { display: none; }
               revealSection(target.hash);
             }
           } else {
-            if (activeProject && /\/eligibility\.html$/.test(target.pathname) && !target.searchParams.has("project")) target.searchParams.set("project", activeProject.id);
+            if (activeProject && /\/eligibility\.html$/.test(target.pathname) && !target.searchParams.has("project") && !target.searchParams.has("projectId")) target.searchParams.set("projectId", activeProject.id);
             setView("page", target, true);
           }
           refreshProject();

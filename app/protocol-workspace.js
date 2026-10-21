@@ -62,25 +62,6 @@ function updateManualVisibility(){
  for(const field of M.fields)manualWrappers.get(field.id)?.toggleAttribute('hidden',!M.active(field,values));
  const picker=$('manual-section-picker');if(manualSections.get(picker.value)?.element.hidden)picker.value=M.sections.find(section=>!section.when||section.when(values)).id;
 }
-function renderManualTeam(){
- const values=state.manualProtocolInputs;
- if(!Array.isArray(values.teamMembers)||!values.teamMembers.length)values.teamMembers=[{}];
- const area=$('manual-protocol-teamMembers');
- area.replaceChildren(...values.teamMembers.map((member,index)=>{
-  const card=document.createElement('fieldset'),legend=document.createElement('legend'),grid=document.createElement('div');
-  card.className='manual-team-member';legend.textContent='Person '+(index+1);grid.className='form-grid';card.append(legend,grid);
-  const interestBoxes=[];
-  for(const field of M.teamFields){
-   const box=document.createElement('div'),label=document.createElement('label'),id='manual-team-'+index+'-'+field.id,control=manualControl(field,id);
-   label.htmlFor=id;label.textContent=field.label;control.value=member[field.id]||'';box.append(label,control);grid.appendChild(box);
-   if(field.id==='interestDetails'){box.className='full';box.hidden=member.interests!=='yes';interestBoxes.push(box);}
-   const update=()=>{member[field.id]=control.value;interestBoxes.forEach(box=>{box.hidden=member.interests!=='yes';});safeSave();};
-   if(field.type==='select')control.onchange=update;else control.oninput=update;
-  }
-  const remove=document.createElement('button');remove.type='button';remove.className='btn';remove.textContent='Remove person';
-  remove.onclick=()=>{values.teamMembers.splice(index,1);renderManualTeam();safeSave();};card.appendChild(remove);return card;
- }));
-}
 function renderManualForm(){
  state.manualProtocolInputs=M.migrate(state.manualProtocolInputs,state.inputs);
  if(!manualFormReady){
@@ -93,10 +74,6 @@ function renderManualForm(){
     const box=document.createElement('div'),label=document.createElement('label'),hint=document.createElement('p');
     box.id='manual-field-'+field.id;box.className=field.type==='textarea'||field.type==='team'?'full':'';label.htmlFor='manual-protocol-'+field.id;label.textContent=field.label+(field.required?' *':'');
     hint.className='hint';hint.id='manual-hint-'+field.id;hint.textContent=field.hint;hint.hidden=!field.hint;box.append(label,hint);grid.appendChild(box);manualWrappers.set(field.id,box);
-    if(field.type==='team'){
-     const members=document.createElement('div'),add=document.createElement('button');members.id='manual-protocol-teamMembers';add.type='button';add.className='btn';add.id='manual-add-person';add.textContent='Add person';
-     add.onclick=()=>{state.manualProtocolInputs.teamMembers??=[];state.manualProtocolInputs.teamMembers.push({});renderManualTeam();safeSave();};box.append(members,add);continue;
-    }
     const control=manualControl(field,'manual-protocol-'+field.id),feedback=document.createElement('p');
     feedback.id='manual-feedback-'+field.id;feedback.className='manual-field-feedback';control.setAttribute('aria-describedby',hint.id+' '+feedback.id);box.append(control,feedback);
     manualControls.set(field.id,control);manualFeedback.set(field.id,feedback);
@@ -108,7 +85,7 @@ function renderManualForm(){
   manualFormReady=true;
  }
  for(const field of M.fields){const control=manualControls.get(field.id);if(control){control.value=state.manualProtocolInputs[field.id]||'';updateManualFeedback(field);}}
- renderManualTeam();updateManualVisibility();
+ updateManualVisibility();
 }
 function machineSource(){
  let raw;
@@ -275,6 +252,11 @@ async function createProposalProject(file,signal,check){
  if(!localStorage.getItem(seedKey))localStorage.setItem(seedKey,JSON.stringify({version:1,inputs:{question:payload.name},text:file.text,issues:[],mapping:null,history:[],imports:[{...file,projectId:project.id}],importName:file.name,importText:file.text}));
  return project;
 }
+function activateCriteriaProject(target){
+ const host=window.parent&&window.parent!==window?window.parent:window;
+ if(typeof host.AIMSTEP?.activateProposalCriteria==='function')host.AIMSTEP.activateProposalCriteria(target);
+ else{try{sessionStorage.setItem('aimstep-active-project',JSON.stringify({id:target,name:''}));}catch(_){}}
+}
 function showFileResult(message,file,target){
  status(message);
  if(target){const link=document.createElement('a');link.href=target;link.textContent=' '+file.name;link.className='proposal-result-link';$('protocol-status').appendChild(link);}
@@ -298,6 +280,7 @@ async function fileAction(file,action){
  reconcileFileResults();
  const completedTarget=action==='project'?file.projectId:file.criteriaProjectId;
  if(completedTarget){
+  if(action==='criteria')activateCriteriaProject(completedTarget);
   fileProgress.set(file.id,{action,value:100});renderImports();
   showFileResult(action==='project'?'Project already created:':'Eligibility criteria already generated:',file,action==='project'?'index.html?view=project&projectId='+encodeURIComponent(completedTarget):'index.html?view=page&page=eligibility.html&projectId='+encodeURIComponent(completedTarget));
   return;
@@ -331,7 +314,8 @@ async function fileAction(file,action){
   const mapping=await map(file.text,job.controller.signal);check();setFileProgress(file.id,90);
   if(localStorage.getItem('aimstep-eligibility:'+target)!==before)throw Error('Eligibility criteria changed while AI was working. Run this action again to use the latest version.');
   C.commitEligibility(localStorage,target,mapping,'proposal file: '+file.name);
-  file.criteriaProjectId=target;save();setFileProgress(file.id,100);job.complete=true;
+  file.criteriaProjectId=target;file.criteriaGeneratedAt=new Date().toISOString();save();setFileProgress(file.id,100);job.complete=true;
+  activateCriteriaProject(target);
   showFileResult('Eligibility criteria generated:',file,'index.html?view=page&page=eligibility.html&projectId='+encodeURIComponent(target));
  }catch(error){if(error.name!=='AbortError')status(error.message,true);}
  finally{clearInterval(job.timer);if(fileJobs.get(file.id)===job){fileJobs.delete(file.id);if(!job.complete)fileProgress.delete(file.id);}renderImports();}
@@ -438,5 +422,8 @@ $('stop-protocol').onclick=()=>controller?.abort();
 $('clear-protocol').onclick=()=>{if(!confirm("Clear this proposal draft and inputs? Criteria and search strategies already applied to other tools will be kept."))return;cancelBackgroundAnalysis();state={version:1,inputs:{},text:'',issues:[],mapping:null,history:state.history,imports:state.imports,importName:state.importName,importText:state.importText};render();safeSave();status("Proposal draft cleared.");};
 $('export-protocol').onclick=()=>{if(!$('protocol-text').value.trim()){status("Add a proposal before exporting.",true);return;}safeSave();const text="AIM-STEP proposal\nExported: "+new Date().toISOString()+'\nStatus: '+(state.confirmedAt?'Confirmed in AIM-STEP':'Draft — requires review')+'\n\n'+$('protocol-text').value+(state.issues.length?'\n\nItems to review\n'+state.issues.map(x=>'• '+x).join('\n'):'');const word=$('export-format').value==='docx',data=word?AimstepDefinitionWord.create("Review proposal",[{label:"Proposal",definition:$('protocol-text').value},...(state.issues.length?[{label:'Items to review',definition:state.issues.join('\n')}]:[])],(state.confirmedAt?'Confirmed in AIM-STEP':'Draft — requires review')+' · '+new Date().toISOString().slice(0,10)):text;const url=URL.createObjectURL(new Blob([data],{type:word?AimstepDefinitionWord.mime:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='AIM-STEP-proposal-'+Date.now()+(word?'.docx':'.txt');a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
 render();
+// Restore the result destination for proposals generated before project selection was synchronized.
+const completedCriteria=state.imports.filter(file=>file.criteriaProjectId).sort((a,b)=>String(a.criteriaGeneratedAt||a.importedAt||'').localeCompare(String(b.criteriaGeneratedAt||b.importedAt||''))).at(-1);
+if(completedCriteria)activateCriteriaProject(completedCriteria.criteriaProjectId);
 if(state.importAnalysis?.status==='pending'&&state.importText&&state.text===state.importText)void analyzeImportedInBackground();
 })();
