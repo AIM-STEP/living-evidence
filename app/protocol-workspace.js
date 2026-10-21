@@ -148,8 +148,35 @@ $('download-generated-proposal').onclick=()=>{
  const url=URL.createObjectURL(new Blob([data],{type:AimstepDefinitionWord.mime})),a=document.createElement('a');
  a.href=url;a.download='AIM-STEP-proposal-'+Date.now()+'.docx';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
 };
-window.addEventListener?.('storage',event=>{if(event.key==='aimstep-eligibility:'+scope&&state.generationSource==='machine')renderGeneration();});
+// Completion belongs to a saved result, rather than to the last button click.
+function projectDeleted(id){return !!id&&!!localStorage.getItem('aimstep-project-deleted:'+id);}
+function criteriaExist(id){
+ try{const data=JSON.parse(localStorage.getItem('aimstep-eligibility:'+id)||'null');const rows=[...(Array.isArray(data?.criteria)?data.criteria:[]),...(Array.isArray(data?.machineCriteria)?data.machineCriteria:[])];return rows.some(row=>['condition','uncertain','definition'].some(field=>String(row[field]||'').trim()));}catch(_){return false;}
+}
+function reconcileFileResults(){
+ const cleared=[];
+ for(const file of state.imports){
+  for(const field of ['projectId','criteriaProjectId']){
+   const target=file[field];if(!target)continue;
+   if(!projectDeleted(target)&&(field!=='criteriaProjectId'||criteriaExist(target)))continue;
+   // An unfinished request is guarded separately and must not lose its live meter.
+   delete file[field];cleared.push({id:file.id,field,target});
+   const action=field==='projectId'?'project':'criteria';
+   if(fileProgress.get(file.id)?.action===action&&!fileJobs.has(file.id))fileProgress.delete(file.id);
+  }
+ }
+ if(!cleared.length)return;
+ // Patch only result references, preserving draft edits saved by another tab.
+ try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved){let changed=false;for(const item of cleared){const file=saved.imports?.find(file=>file.id===item.id);if(file?.[item.field]===item.target){delete file[item.field];changed=true;}}if(changed)localStorage.setItem(key,JSON.stringify(saved));}}catch(error){status('Could not update saved completion status. Please free browser storage and try again.',true);}
+}
+window.addEventListener?.('storage',event=>{
+ if(!event.key||event.key.startsWith('aimstep-eligibility:')||event.key.startsWith('aimstep-project-deleted:'))renderImports();
+ if((!event.key||event.key==='aimstep-eligibility:'+scope)&&state.generationSource==='machine')renderGeneration();
+});
+window.addEventListener?.('focus',()=>renderImports());
+window.addEventListener?.('pageshow',()=>renderImports());
 function renderImports(){
+ reconcileFileResults();
  const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN';
  const previewButtons=[];
  $('proposal-imports').hidden=!state.imports.length;
@@ -268,6 +295,7 @@ async function fileAction(file,action){
   return;
  }
  if(fileJobs.has(file.id))return;
+ reconcileFileResults();
  const completedTarget=action==='project'?file.projectId:file.criteriaProjectId;
  if(completedTarget){
   fileProgress.set(file.id,{action,value:100});renderImports();
@@ -280,17 +308,19 @@ async function fileAction(file,action){
  job.timer=setInterval(()=>{if(fileJobs.get(file.id)!==job)return;const value=fileProgress.get(file.id)?.value||5;if(value<85)setFileProgress(file.id,Math.min(85,value+Math.max(.2,(85-value)/30)));},1000);
  const check=()=>{
   const stored=JSON.parse(localStorage.getItem(key)||'null');
+  if(projectDeleted(job.target))throw Error('This project was deleted while generation was running. Please try again.');
   if(job.controller.signal.aborted||!state.imports.includes(file)||stored?.updatedAt!==state.updatedAt||!stored?.imports?.some(item=>item.id===file.id&&item.text===file.text))throw new DOMException('File changed or deleted','AbortError');
  };
  try{
   // Persist source ids before starting a background request, including legacy imports.
   save();
-  let target=file.projectId||(scope!=='default'?scope:null);
+  let target=file.projectId||(scope!=='default'&&!projectDeleted(scope)?scope:null);
+  job.target=target;
   const criteriaKey=target?'aimstep-eligibility:'+target:null;
   const priorCriteria=criteriaKey?localStorage.getItem(criteriaKey):null;
   if(action==='project'||!target){
    const project=await createProposalProject(file,job.controller.signal,()=>{check();setFileProgress(file.id,75);job.committing=true;renderImports();});
-   check();file.projectId=project.id;target=project.id;save();
+   check();if(projectDeleted(project.id))throw Error('This project was deleted while generation was running. Please try again.');file.projectId=project.id;target=project.id;job.target=target;save();
    if(action==='project'){
     setFileProgress(file.id,100);job.complete=true;
     showFileResult('Project created:',file,'index.html?view=project&projectId='+encodeURIComponent(target));return;
@@ -317,7 +347,7 @@ async function model(system,input,schema,signal){
  if(!response.ok){let msg='AI service returned HTTP '+response.status;try{msg=(await response.json()).error||msg;}catch(_){}throw Error(msg);}
  const data=await response.json();if(signal.aborted)throw new DOMException('Stopped','AbortError');let value;try{value=JSON.parse(String(data.message?.content||'').replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''));}catch(_){throw Error('AI returned incomplete JSON. Your previous work is unchanged. Try again.');}state.lastModel=data.model;return value;
 }
-async function map(text,signal){if(text.length>120000)throw Error("This proposal is too long for one reliable AI pass. Import a focused version under 120,000 characters; nothing has been truncated.");const value=await model("Extract only explicit review eligibility rules and search plans. Group by criterion dimension. inclusionQuotes and exclusionQuotes MUST contain exact, complete source excerpts, preserving negation, thresholds and qualifiers. Never invent an inverse exclusion, infer a missing rule, or turn an outcome of interest into an eligibility requirement unless the proposal explicitly requires it. Do not extract statements marked Proposed or To confirm as settled rules. searchQuotes: verbatim search plans, strategies, databases/platforms and supplementary sources. limitQuotes: explicit search date/language/other restrictions only. databases: exact source database names. question: review objective. Return missing information, ambiguity and platform mismatches in issues. Never claim registration or validation.",text,C.handoffSchema,signal);return C.validateHandoff(value,text);}
+async function map(text,signal){if(text.length>120000)throw Error("This proposal is too long for one reliable AI pass. Import a focused version under 120,000 characters; nothing has been truncated.");const value=await model("Extract only explicit review eligibility rules and search plans. Extract every explicitly stated inclusion and exclusion rule across the entire source, including tables, appendices, study designs, populations, interventions, comparators, outcomes when mandatory, settings, publication types and restrictions. Do not summarize or shorten rules. Group by criterion dimension. inclusionQuotes and exclusionQuotes MUST contain exact, complete source excerpts, preserving negation, thresholds and qualifiers. Never invent an inverse exclusion, infer a missing rule, or turn an outcome of interest into an eligibility requirement unless the proposal explicitly requires it. Do not extract statements marked Proposed or To confirm as settled rules. searchQuotes: verbatim search plans, strategies, databases/platforms and supplementary sources. limitQuotes: explicit search date/language/other restrictions only. databases: exact source database names. question: review objective. Return missing information, ambiguity and platform mismatches in issues. Never claim registration or validation.",text,C.handoffSchema,signal);return C.validateHandoff(value,text);}
 function handoffVersion(){return ['aimstep-eligibility:','aimstep-search-strategy:'].map(k=>localStorage.getItem(k+scope)).join('\n');}
 function apply(mapping,source,base){if(base!==handoffVersion())throw Error('Criteria or search strategies changed in another tab. Review those changes and try submitting again.');C.commit(localStorage,scope,mapping,source);state.mapping=mapping;state.appliedAt=new Date().toISOString();state.history.push({date:state.appliedAt,source,mapping,model:state.lastModel});}
 function cancelBackgroundAnalysis(){

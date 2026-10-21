@@ -1562,7 +1562,7 @@
 
 
       /* Project list cleanup and plum palette overrides */
-      .pw-head { display: none !important; }
+      .pw-head { display: block; }
       .pw-grid::before { content: none !important; display: none !important; padding: 0 !important; border: 0 !important; }
       .pw-grid[hidden], .pw-card[hidden] { display: none !important; }
       #pw-list { gap: 0; }
@@ -1713,7 +1713,7 @@ body.project-page-mode .toolset-layout { display: none; }
 
 </style>
   <link rel="stylesheet" href="app/theme.css?v=20261020-5">
-  <link rel="stylesheet" href="app/dashboard.css?v=20261021-15">
+  <link rel="stylesheet" href="app/dashboard.css?v=20261021-16">
 <link rel="stylesheet" href="app/progress-display.css?v=20261021-1">
 <script src="app/progress-display.js?v=20261021-1" defer></script>
 </head>
@@ -1816,7 +1816,7 @@ body.project-page-mode .toolset-layout { display: none; }
         <section class="pw" id="projects" aria-labelledby="pw-h">
           <div class="container">
             <div class="pw-head">
-              <h2 id="pw-h" data-i18n="pw_title">Your projects</h2>
+              <h2 id="pw-h" data-i18n="pw_title">Your Projects</h2>
             </div>
             <div class="pw-tabs" id="pw-tabs" role="tablist" aria-label="Project views">
               <button type="button" class="pw-tab" id="pw-tab-current" role="tab" aria-selected="true" aria-controls="pw-list" data-i18n="pw_current">Current projects</button>
@@ -2312,7 +2312,7 @@ body.project-page-mode .toolset-layout { display: none; }
             t8_t: "Certainty of evidence",
             t8_d: "Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment",
             home_lede: "A Simple, Transparent, Exact and Prompt tool for living evidence",
-            pw_title: "Your projects",
+            pw_title: "Your Projects",
             workspace_summary: "Project Summary",
             workspace_setup: "Project setup",
             workspace_setup_button: "Setup",
@@ -3581,7 +3581,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh the internal proposal document without changing public links.
-            if (/\/build-protocol\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-21");
+            if (/\/(?:build-protocol|eligibility)\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-22");
             if (frame.getAttribute("src") !== frameTarget.href) frame.src = frameTarget.href;
           }
           if (push) {
@@ -3796,7 +3796,7 @@ body.project-page-mode .toolset-layout { display: none; }
       // five-page package also works on its own with projects saved here.
       try {
         const [{ initProjects }, { firestoreBackend }] = await Promise.all([
-          import("./app/projects.js?v=20261021-1"), import("./app/backend.js?v=20261020-1")
+          import("./app/projects.js?v=20261021-2"), import("./app/backend.js?v=20261020-1")
         ]);
         window.AIMSTEP.projectController = initProjects({ backend: firestoreBackend });
         document.dispatchEvent(new CustomEvent("aimstep:projects-ready"));
@@ -3813,7 +3813,9 @@ body.project-page-mode .toolset-layout { display: none; }
         window.AIMSTEP.projectController = {
           state: () => ({ projects }),
           async createFromProposal(payload, requestId) {
-            const id = 'proposal-' + requestId;
+            const baseId = 'proposal-' + requestId;
+            let id = baseId;
+            while (localStorage.getItem('aimstep-project-deleted:' + id)) id += '-next';
             const current = JSON.parse(localStorage.getItem(key) || '[]');
             let project = current.find(p => p.id === id);
             if (!project) {
@@ -3826,6 +3828,7 @@ body.project-page-mode .toolset-layout { display: none; }
             return project;
           },
           async deleteProject(id) {
+            localStorage.setItem('aimstep-project-deleted:' + id, new Date().toISOString());
             const remaining = projects.filter(project => project.id !== id);
             localStorage.setItem(key, JSON.stringify(remaining));
             projects = remaining;

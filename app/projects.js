@@ -363,6 +363,7 @@ export function initProjects(options) {
     if (!user) throw new Error("Sign in before deleting a project.");
     const service = await ensureBackend();
     await service.deleteProject(id, user.uid);
+    localStorage.setItem('aimstep-project-deleted:' + id, new Date().toISOString());
     ++loadToken;
     projects = (projects || []).filter(project => String(project.id) !== String(id));
     hideBanner();
@@ -381,6 +382,7 @@ export function initProjects(options) {
     const service = await ensureBackend();
     const requestKey = 'aimstep-proposal-project:' + user.uid + ':' + requestId;
     let saved = JSON.parse(localStorage.getItem(requestKey) || 'null');
+    if (saved && localStorage.getItem('aimstep-project-deleted:' + saved.id)) saved = null;
     if (!saved) {
       saved = { id: service.newId(), created: false };
       localStorage.setItem(requestKey, JSON.stringify(saved));

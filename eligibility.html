@@ -639,7 +639,7 @@ function splitVisibleRules(row,field){
   }
   return {visible:visible.join('\n').trim(),hidden:hidden.join('\n').trim()};
 }
-function visibleCriterion(row){return {...row,...Object.fromEntries(['condition','uncertain','definition'].map(f=>[f,splitVisibleRules(row,f).visible]))}}
+function visibleCriterion(row){if(row.source==='protocol')return {...row};return {...row,...Object.fromEntries(['condition','uncertain','definition'].map(f=>[f,splitVisibleRules(row,f).visible]))}}
 function updateVisibleRule(row,field,value){row[field]=[value,splitVisibleRules(row,field).hidden].filter(Boolean).join('\n')}
 function hasConfirmedRules(){return (state.finalCriteria?.decisions||[]).some(d=>d.rule)}
 function criteriaForPage(data){
@@ -692,7 +692,7 @@ function ruleIssue(rule){
 function uniqueRules(rules){const seen=new Set();return rules.filter(rule=>{const key=ruleKey(rule);if(!key||seen.has(key))return false;seen.add(key);return true})}
 function standardizedRow(row,framework,pending){
   const [code,label]=domainInfo(row.title,framework),include=[],exclude=[];
-  const collect=(value,kind,target)=>{for(const rule of ruleClauses(value,kind)){const issue=ruleIssue(rule);if(issue)pending.push(label+': '+issue+(issue==='Operational definition required'?' ('+rule.replace(/\.$/,'')+')':''));else target.push(rule)}};
+  const collect=(value,kind,target)=>{for(const rule of ruleClauses(value,kind)){const issue=ruleIssue(rule);if(issue&&!(row.source==='protocol'&&issue==='English translation and verification required'))pending.push(label+': '+issue+(issue==='Operational definition required'?' ('+rule.replace(/\.$/,'')+')':''));else target.push(rule)}};
   collect(row.condition,'include',include);
   for(const clause of String(row.definition||'').split(/[\n;；]+/)){
     if(/^\s*(?:exclude|excluding|do not include|ineligible\b|not eligible\b)/i.test(clause))collect(clause,'exclude',exclude);
@@ -722,7 +722,7 @@ function previewLimits(pending){
   if(start||end)items.push('Publication date: '+(start&&end?start+' to '+end:start?'From '+start:'Through '+end));
   if(start&&end&&start>end)pending.push('The start date is later than the end date.');
   if(state.language)items.push('Language: '+state.language);
-  for(const rule of ruleClauses(state.limitsOther,'other')){const issue=ruleIssue(rule);if(issue)pending.push('Other limits: '+issue);else items.push('Additional limit: '+rule)}
+  for(const rule of ruleClauses(state.limitsOther,'other')){const issue=ruleIssue(rule);if(issue&&!(state.protocolSource&&issue==='English translation and verification required'))pending.push('Other limits: '+issue);else items.push('Additional limit: '+rule)}
   return items;
 }
 function standardizedCriteria(){
