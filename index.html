@@ -3416,10 +3416,11 @@ body.project-page-mode .toolset-layout { display: none; }
             url.search = target.search;
             url.hash = target.hash;
           } else {
-            if (view) url.searchParams.set("view", view);
+            if (view && view !== "project" && view !== "toolset") url.searchParams.set("view", view);
             if (target) url.searchParams.set("page", target.pathname.slice(home.pathname.lastIndexOf("/") + 1) + target.search + target.hash);
           }
-          if (activeProject && !url.searchParams.has("project") && !url.searchParams.has("projectId")) url.searchParams.set("projectId", activeProject.id);
+          // Project context belongs to session/history, never the public address.
+          ["projectId", "project", "id", "appVersion"].forEach(function (key) { url.searchParams.delete(key); });
           return url;
         }
         function isToolsetPage(url) {
@@ -3671,7 +3672,7 @@ body.project-page-mode .toolset-layout { display: none; }
           }
           if (push) {
             var url = routeUrl(view, target);
-            history.pushState({ projectId: activeProject ? activeProject.id : "", projectName: activeProject ? activeProject.name : "" }, "", url.pathname + url.search + url.hash);
+            history.pushState({ view: view, projectId: activeProject ? activeProject.id : "", projectName: activeProject ? activeProject.name : "" }, "", url.pathname + url.search + url.hash);
           }
           document.querySelectorAll(".nav a").forEach(function (link) {
             var navTarget = new URL(link.dataset.pageHref || link.getAttribute("href"), home);
@@ -3710,6 +3711,7 @@ body.project-page-mode .toolset-layout { display: none; }
           var cleanTarget = sitePage(location.href);
           if (cleanTarget && window.AIMSTEP_ROUTES[cleanTarget.pathname.split("/").pop()]) {
             setView("page", cleanTarget, false);
+            history.replaceState({ view: "page", projectId: activeProject ? activeProject.id : "", projectName: activeProject ? activeProject.name : "" }, "", routeUrl("page", cleanTarget));
             refreshProject();
             return;
           }
@@ -3717,7 +3719,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (isProjectRoute(location.pathname) || legacyProjectRoute) {
             if (id) {
               setView("project", null, false);
-              if (isProjectRoute(location.pathname)) history.replaceState({ projectId: id, projectName: activeProject ? activeProject.name : "" }, "", routeUrl("project"));
+              history.replaceState({ view: "project", projectId: id, projectName: activeProject ? activeProject.name : "" }, "", routeUrl("project"));
             } else {
               setView("", null, false);
               if (legacyProjectRoute) history.replaceState(null, "", home.pathname);
@@ -3732,9 +3734,14 @@ body.project-page-mode .toolset-layout { display: none; }
             });
             if (location.hash) target.hash = location.hash;
             setView("page", target, false);
-            history.replaceState(history.state, "", routeUrl("page", target));
+            history.replaceState({ view: "page", projectId: activeProject ? activeProject.id : "", projectName: activeProject ? activeProject.name : "" }, "", routeUrl("page", target));
           }
-          else setView(params.get("view") === "project" ? "project" : params.get("view") === "toolset" ? "toolset" : params.get("view") === "new-project" ? "new-project" : "", null, false);
+          else {
+            var restoredView = params.get("view") || (state && state.view) || "";
+            var homeView = ["project", "toolset", "new-project"].includes(restoredView) ? restoredView : "";
+            setView(homeView, null, false);
+            history.replaceState({ view: homeView, projectId: activeProject ? activeProject.id : "", projectName: activeProject ? activeProject.name : "" }, "", routeUrl(homeView));
+          }
           refreshProject();
         }
         function followLink(event) {

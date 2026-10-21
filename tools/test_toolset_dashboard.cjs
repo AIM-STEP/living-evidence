@@ -66,7 +66,8 @@ for (const query of ['', '?view=toolset', '?view=project&projectId=synthetic-das
   env.setView('toolset',null,true);
   assert(!env.toolset.hidden);
   assert(env.otherPage.hidden);
-  assert(env.history.url.includes('projectId=synthetic-dashboard'));
+  assert.equal(new URL(env.history.url,'https://aimsetp.com').search,'');
+  assert.equal(env.history.state.projectId,'synthetic-dashboard');
   env.setView('page',new URL('https://aimsetp.com/workflow.html'),false);
   assert(!env.toolset.hidden);
   assert(!classes.has('project-page-mode'));
@@ -127,3 +128,23 @@ for (const [file,slug] of Object.entries(routeWindow.AIMSTEP_ROUTES)) {
  assert.equal(new URL(old.env.frame.src).searchParams.get('project'),'legacy-project');
 }
 console.log('PASS: all ten clean tool routes, static reload entries, legacy links and project/language context');
+
+// Old project URLs migrate to clean addresses; history restores selection on reload/back.
+{
+ const {env}=setup('?projectId=legacy-project');env.restoreRoute();
+ assert.equal(new URL(env.history.url).pathname,'/');
+ assert.equal(new URL(env.history.url).search,'');
+ assert.equal(env.history.state.projectId,'legacy-project');
+ assert.equal(env.history.state.view,'project');
+ env.location=new URL(env.history.url);env.restoreRoute();
+ assert.equal(env.activeProject.id,'legacy-project');
+ assert.equal(env.page.hidden,false);
+ env.setView('page',new URL('https://aimsetp.com/eligibility.html?projectId=legacy-project&appVersion=old&lang=zh'),true);
+ assert.equal(env.history.url,'/eligibility/?lang=zh');
+ assert.equal(new URL(env.frame.src).searchParams.get('projectId'),'legacy-project');
+ env.setView('toolset',null,true);
+ assert.equal(env.history.url,'/');
+ env.location=new URL('https://aimsetp.com/');env.restoreRoute();
+ assert.equal(env.page.hidden,true);
+}
+console.log('PASS: clean public URLs retain private project context and history view');
