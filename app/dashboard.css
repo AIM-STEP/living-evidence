@@ -213,6 +213,19 @@ body.project-create-mode .workflow-column .pw-create-title { font-size: 22px; li
 }
 footer { padding: 20px 0; background: transparent; border-color: var(--dashboard-border); }
 .footer-inner { gap: 12px 24px; font-size: 13px; line-height: 1.6; color: var(--dashboard-muted); }
+.footer-contact { position: relative; }
+.footer-contact summary {
+  cursor: pointer; color: inherit; list-style: none;
+}
+.footer-contact summary::-webkit-details-marker { display: none; }
+.footer-contact summary::marker { content: ""; }
+.footer-contact-list {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-top: 8px; white-space: nowrap;
+}
+.footer-contact-list a { color: inherit; overflow-wrap: anywhere; }
+.footer-contact-list a:hover { color: var(--brand-text); }
+.footer-contact-list span { margin-left: 6px; }
 @media (max-width: 1100px) {
   .workflow-column { padding: 20px; }
   .toolset-layout { gap: 24px; }
