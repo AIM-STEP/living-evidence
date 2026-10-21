@@ -301,3 +301,43 @@ footer { padding: 20px 0; background: transparent; border-color: var(--dashboard
 .dashboard-proposal-delete:focus-visible { outline: 2px solid var(--brand-text); outline-offset: 2px; }
 
 #writing-tools .tool-grid { align-items: start; }
+
+/* Projects are the home view; tools and writing live in the shared header. */
+body .toolset-layout { grid-template-columns: minmax(0, 1fr); width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 36px 0 56px; }
+body .workflow-column { width: 100%; }
+body .header-inner, body.has-active-project .header-inner { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "brand nav lang"; gap: 24px; }
+.header-products { grid-area: nav; display: flex; align-items: center; gap: 12px; position: static; }
+.product-nav-item { position: static; }
+.product-nav-trigger { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-weight: 600; color: var(--dashboard-ink); cursor: pointer; }
+.product-nav-trigger:hover, .product-nav-trigger[aria-expanded="true"] { background: #eef2ff; color: #3454d1; }
+.product-nav-trigger svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; transition: transform .15s; }
+.product-nav-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+.site-header { position: sticky; z-index: 50; }
+.product-dropdown { position: absolute; top: 100%; right: 24px; width: min(720px, calc(100vw - 48px)); padding: 20px; border: 1px solid var(--dashboard-border); border-top: 3px solid #4d6bfe; border-radius: 0 0 14px 14px; background: #fff; box-shadow: 0 18px 40px #24334820; max-height: calc(100dvh - 110px); overflow-y: auto; }
+.product-dropdown-bank { width: min(560px, calc(100vw - 48px)); }
+.header-products :is(#toolset, #writing-tools) { display: block; padding: 0; margin: 0; background: transparent; }
+.header-products #toolset .container { width: 100%; margin: 0; }
+.header-products :is(#toolset, #writing-tools) .tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.header-products :is(#toolset, #writing-tools) .tool { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; min-height: 76px; height: auto; padding: 14px; margin: 0; border: 1px solid transparent; border-radius: 8px; background: #fff; text-align: left; }
+.header-products :is(#toolset, #writing-tools) .tool:hover { background: #f2f5ff; border-color: #e1e7fa; }
+.header-products :is(#toolset, #writing-tools) .tool .tool-step { display: none; }
+.header-products :is(#toolset, #writing-tools) .tool .tool-title { font-size: 14px; line-height: 1.5; font-weight: 500; }
+.header-products :is(#toolset, #writing-tools) .tool .tool-icon { width: 28px; height: 28px; }
+.header-products .proposal-tool-group { min-width: 0; }
+.header-products #dashboard-proposals { display: none; }
+.product-nav-trigger:focus-visible { outline: 2px solid #4d6bfe; outline-offset: 3px; }
+@media (max-width: 1100px) {
+  body .header-inner, body.has-active-project .header-inner { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand lang" "nav nav"; gap: 10px 16px; }
+  .header-products { justify-self: start; }
+  .product-dropdown { max-height: calc(100dvh - 160px); }
+}
+@media (max-width: 600px) {
+  body .header-inner, body.has-active-project .header-inner { grid-template-columns: minmax(0, 1fr); grid-template-areas: "brand" "nav" "lang"; gap: 8px; }
+  .header-products { width: 100%; }
+  .product-nav-trigger { min-height: 40px; padding: 8px 12px; }
+  .product-dropdown, .product-dropdown-bank { right: 16px; width: calc(100vw - 32px); padding: 12px; max-height: calc(100dvh - 220px); }
+  .header-products :is(#toolset, #writing-tools) .tool-grid { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .header-products :is(#toolset, #writing-tools) .tool { min-height: 58px; padding: 10px 12px; }
+  body .toolset-layout { width: calc(100% - 32px); padding-top: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .product-nav-trigger svg { transition: none; } }

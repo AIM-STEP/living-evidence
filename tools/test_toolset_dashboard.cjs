@@ -29,13 +29,14 @@ function setup(query = '') {
     activeProject: {id: 'synthetic-dashboard', name: 'Synthetic dashboard'},
     page: element(), otherPage: element(), toolset: element(), frame: element(),
     document: {title:'', body:{classList:{toggle(k,v){if(v)classes.add(k);else classes.delete(k);}}},
-      getElementById(id) {return nodes[id];}, querySelectorAll() {return [];}},
+      getElementById(id) {return nodes[id];}, querySelectorAll() {return [];},createElement(){return element();}},
     window: {AIMSTEP_ROUTES:routeWindow.AIMSTEP_ROUTES,AIMSTEP:{t:k=>k}, scrollTo(){}},
     history: {state:null,pushState(state,_,url){this.state=state;this.url=url;},replaceState(state,_,url){this.state=state;this.url=String(url);}},
     renderSetupStatus(){},refreshProject(){},readContext(){return null;},
     rememberProject(id,name){env.activeProject={id,name};},
     sitePage(value){return value ? new URL(value,env.home) : null;}
   };
+  env.defaultFrame=env.frame;env.proposalFrames=new Map();env.syncFrameLanguage=()=>{};env.bindToolFrame=()=>{};env.otherPage.appendChild=()=>{};
   vm.createContext(env);
   vm.runInContext(source('isProjectRoute','routeUrl') + source('routeUrl','isToolsetPage') +
     source('isToolsetPage','renderProjectLink') + source('setView','sitePage') +
@@ -61,7 +62,7 @@ for (const query of ['', '?view=toolset', '?view=project&projectId=synthetic-das
   assert(!classes.has('project-create-mode'));
   assert(nodes['pw-form'].hidden);
   assert.equal(new URL(env.frame.src).searchParams.get('projectId'),'synthetic-dashboard');
-  assert(env.toolset.hidden);
+  assert(!env.toolset.hidden); // Header tools remain available while a tool document is open.
   env.setView('toolset',null,true);
   assert(!env.toolset.hidden);
   assert(env.otherPage.hidden);
