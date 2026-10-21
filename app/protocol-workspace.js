@@ -48,8 +48,8 @@ function renderImports(){
    const group=document.createElement('div');group.className='proposal-action-group';group.appendChild(button);
    if(action!=='delete'){
     const meter=document.createElement('div'),fill=document.createElement('span'),label=document.createElement('b');meter.className='protocol-progress proposal-action-progress';meter.setAttribute('role','progressbar');meter.setAttribute('aria-label',button.textContent);meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax','100');
-    const current=fileProgress.get(file.id),visible=current?.action===action;meter.hidden=!visible;meter.setAttribute('aria-valuenow',String(visible?Math.round(current.value):0));fill.style.width=(visible?current.value:0)+'%';label.textContent=(visible?Math.round(current.value):0)+'%';fill.appendChild(label);meter.appendChild(fill);group.appendChild(meter);
-    if(visible){current.meter=meter;current.fill=fill;current.label=label;}
+    const current=fileProgress.get(file.id),active=current?.action===action,complete=!!(action==='project'?file.projectId:file.criteriaProjectId),visible=active||complete,value=complete?100:active?current.value:0;meter.hidden=!visible;meter.setAttribute('aria-valuenow',String(Math.round(value)));fill.style.width=value+'%';label.textContent=Math.round(value)+'%';fill.appendChild(label);meter.appendChild(fill);group.appendChild(meter);
+    if(active){current.meter=meter;current.fill=fill;current.label=label;}
    }
    actions.appendChild(group);
   }
