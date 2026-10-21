@@ -93,7 +93,7 @@ body.tool-page {
 }
 .tool-page .tool-flow-home { flex: 0 0 auto; }
 .tool-page .tool-flow-current { display: flex; align-items: center; gap: 10px; flex: 1 1 260px; min-width: 0; }
-.tool-page .tool-flow-position { flex: 0 0 auto; color: var(--tool-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.tool-page .tool-flow-position { display: none; }
 .tool-page .tool-flow .tool-flow-picker {
   width: auto; max-width: 100%; min-width: 0; min-height: 32px; margin: 0; padding: 4px 28px 4px 8px;
   border: 1px solid transparent; border-radius: 6px; background-color: transparent;
