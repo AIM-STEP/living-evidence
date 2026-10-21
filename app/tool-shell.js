@@ -34,13 +34,13 @@
   const label = nav.querySelector('[data-flow-label]');
   const projects = destination('index.html?view=toolset');
   home.href = projects;
-  if (index) previous.href = destination(steps[index - 1][0]);
-  else {
+  if (previous && index) previous.href = destination(steps[index - 1][0]);
+  else if (previous) {
     previous.removeAttribute('href');
     previous.setAttribute('aria-disabled', 'true');
     previous.setAttribute('tabindex', '-1');
   }
-  next.href = index < steps.length - 1 ? destination(steps[index + 1][0]) : projects;
+  if (next) next.href = index < steps.length - 1 ? destination(steps[index + 1][0]) : projects;
   // The real next anchor is kept in place, including Eligibility's save handler.
   // Jumping to another tool uses an anchor too, so the dashboard iframe router
   // can intercept it and keep its history and selected project in sync.
@@ -52,8 +52,8 @@
   picker.addEventListener('change', () => {
     const selected = allTools.find(step => step[0] === picker.value);
     if (selected && selected !== steps[index]) {
-      if (selected === steps[index + 1]) next.click();
-      else if (selected === steps[index - 1]) previous.click();
+      if (selected === steps[index + 1] && next) next.click();
+      else if (selected === steps[index - 1] && previous) previous.click();
       else { jump.href = destination(selected[0]); jump.click(); }
     }
     picker.value = steps[index][0];
@@ -70,10 +70,10 @@
     const titleIndex = chinese ? 2 : 1;
     nav.setAttribute('aria-label', chinese ? '研究流程导航' : 'Research workflow');
     home.textContent = chinese ? '返回项目' : 'Projects';
-    previous.textContent = chinese ? '上一步' : 'Previous';
-    next.textContent = index === steps.length - 1 ? (chinese ? '返回项目' : 'Back to projects') : (chinese ? '下一步' : 'Next');
-    previous.title = index ? (chinese ? '上一步：' : 'Previous: ') + steps[index - 1][titleIndex] : (chinese ? '当前为第一步' : 'This is the first step');
-    next.title = index < steps.length - 1 ? (chinese ? '下一步：' : 'Next: ') + steps[index + 1][titleIndex] : home.textContent;
+    if (previous) previous.textContent = chinese ? '上一步' : 'Previous';
+    if (next) next.textContent = index === steps.length - 1 ? (chinese ? '返回项目' : 'Back to projects') : (chinese ? '下一步' : 'Next');
+    if (previous) previous.title = index ? (chinese ? '上一步：' : 'Previous: ') + steps[index - 1][titleIndex] : (chinese ? '当前为第一步' : 'This is the first step');
+    if (next) next.title = index < steps.length - 1 ? (chinese ? '下一步：' : 'Next: ') + steps[index + 1][titleIndex] : home.textContent;
     label.textContent = chinese ? '选择工具' : 'Choose a tool';
     picker.replaceChildren(...[workflow, writing].map((group, groupIndex) => {
       const optgroup = document.createElement('optgroup');

@@ -31,19 +31,19 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   [...picker.options].forEach(option=>assert.doesNotMatch(option.textContent,/^\d/,page+' Chinese has no number prefix'));
   assert.match(picker.selectedOptions[0].textContent,/[\u4e00-\u9fff]/,page+' translated step');
   assert.equal(nav.querySelector('[data-flow-position]'),null,'step fraction is removed');
-  assert.equal(new URL(next.href).pathname,'/'+(index===group.length-1?'index':group[index+1])+'.html');checkProject(next);
-  if(index) { assert.equal(new URL(prev.href).pathname,'/'+group[index-1]+'.html');checkProject(prev); }
-  else { assert.equal(prev.hasAttribute('href'),false);assert.equal(prev.getAttribute('aria-disabled'),'true'); }
+  if(writing.includes(page)){assert.equal(next,null);assert.equal(prev,null);}else{assert.equal(new URL(next.href).pathname,'/'+(index===group.length-1?'index':group[index+1])+'.html');checkProject(next);}
+  if(!writing.includes(page)&&index) { assert.equal(new URL(prev.href).pathname,'/'+group[index-1]+'.html');checkProject(prev); }
+  else if(!writing.includes(page)) { assert.equal(prev.hasAttribute('href'),false);assert.equal(prev.getAttribute('aria-disabled'),'true'); }
   checkProject(nav.querySelector('[data-flow-home]'));
   const destinations=[];
   d.addEventListener('click',event=>{const a=event.target.closest('a[href]');if(a&&!event.defaultPrevented){destinations.push(a.href);event.preventDefault();}});
-  if(index<group.length-1) {picker.value=group[index+1]+'.html';picker.dispatchEvent(new w.Event('change'));assert.equal(destinations.at(-1),next.href);}
+  if(index<group.length-1) {picker.value=group[index+1]+'.html';picker.dispatchEvent(new w.Event('change'));assert.equal(new URL(destinations.at(-1)).pathname,'/'+group[index+1]+'.html');}
   if(page==='eligibility')assert.equal(savedByOriginalNext,1,'existing next/save handler retained');
   picker.value=(writing.includes(page)?workflow[0]:writing[0])+'.html';picker.dispatchEvent(new w.Event('change'));
   assert.equal(new URL(destinations.at(-1)).pathname,'/'+(writing.includes(page)?workflow[0]:writing[0])+'.html');assert.equal(picker.value,page+'.html');
   let before=0;d.addEventListener('aimstep:before-tool-navigation',e=>{before++;e.preventDefault();});
   const prior=destinations.length;nav.querySelector('[data-flow-home]').click();assert.equal(before,1);assert.equal(destinations.length,prior,'failed-save cancellation respected');
-  w.AIMSTEP.setLanguage('en');assert.deepEqual([...picker.options].map(option=>option.textContent),fallbackNames);assert.equal(prev.textContent,'Previous');
+  w.AIMSTEP.setLanguage('en');assert.deepEqual([...picker.options].map(option=>option.textContent),fallbackNames);if(prev)assert.equal(prev.textContent,'Previous');
   assert.equal(w.localStorage.getItem('synthetic-original'),'unchanged');
   if(studyField)assert.equal(studyField.value,'Synthetic original research text');
   console.log('PASS:',page,'project context, adjacent steps, jumps, cancellation, locale and original data');
