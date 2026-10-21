@@ -923,14 +923,14 @@ function renderCriteriaLibrary(){
 }
 function selectCriteriaSet(id){
  if(previewDirty&&!savePreviewEdits(false))return;
- const before=structuredClone(state);
+ const before=structuredClone(state),priorAttachments=attachedFiles.slice();
  try{
   const entry=window.AimstepEligibilityLibrary.read(localStorage,projectId||'default').entries.find(entry=>entry.id===id);if(!entry)return;
   stopMachineGeneration();stopManualRefinement();abortVoiceInput();attachedFiles.length=0;renderAttachments();
   state={...state,...structuredClone(entry.snapshot),criteriaLibraryId:entry.id};syncProposalCriteria();previewDirty=false;previewBase=null;fill();
   if(!save())throw Error('Could not open these criteria on this device.');
   const panel=$('preview').closest('.panel');panel?.classList.remove('is-collapsed');panel?.querySelector('.collapse-toggle')?.setAttribute('aria-expanded','true');
- }catch(error){state=before;fill();renderCriteriaLibrary();toast(error.message);}
+ }catch(error){state=before;attachedFiles.splice(0,attachedFiles.length,...priorAttachments);renderAttachments();fill();renderCriteriaLibrary();toast(error.message);}
 }
 function deleteCriteriaSet(id){
  if(previewDirty&&!savePreviewEdits(false))return;
