@@ -3,6 +3,7 @@
 const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'default',key='aimstep-protocol:'+scope;
 const inputNames=['question','framework','type','eligibility','outcomes','search','methods','team','other'];
 let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null,previewFileId=null;
+let previewToken=0,previewUrl=null,previewLoadedId=null;
 const fileJobs=new Map(),selectedFileActions=new Map(),fileProgress=new Map();
 try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={...state,...saved};else{const legacy=JSON.parse(localStorage.getItem('aimstep-writing:protocol:'+scope)||'null');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}}catch(_){status("Saved proposal could not be read. Export any visible work before continuing.",true);}
 if(!Array.isArray(state.imports))state.imports=[];
@@ -34,7 +35,7 @@ function renderImports(){
   row.className='proposal-file-row';info.className='proposal-file-info';heading.className='proposal-file-heading';name.className='proposal-file-name';date.className='proposal-file-date';
   name.textContent=file.name;
   name.type='button';name.setAttribute('aria-controls','proposal-preview');name.setAttribute('aria-pressed',String(previewFileId===file.id));
-  name.onclick=()=>{previewFileId=file.id;previewButtons.forEach(item=>item.button.setAttribute('aria-pressed',String(item.id===file.id)));renderFilePreview();};previewButtons.push({id:file.id,button:name});
+  name.onclick=()=>{previewFileId=previewFileId===file.id?null:file.id;previewButtons.forEach(item=>item.button.setAttribute('aria-pressed',String(item.id===previewFileId)));return renderFilePreview();};previewButtons.push({id:file.id,button:name});
   heading.appendChild(name);
   if(file.importedAt&&!Number.isNaN(Date.parse(file.importedAt))){const time=document.createElement('time');time.dateTime=file.importedAt;time.textContent=new Intl.DateTimeFormat(chinese?'zh-CN':'en-GB',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(file.importedAt));date.appendChild(time);}else date.textContent=chinese?'日期未记录':'Date not recorded';
   const actions=document.createElement('div'),actionButtons=[];actions.className='proposal-file-actions';
@@ -57,16 +58,52 @@ function renderImports(){
  }));
  renderFilePreview();
 }
-function renderFilePreview(){
+function clearFilePreview(){
+ $('proposal-preview-frame').hidden=true;$('proposal-preview-frame').removeAttribute('src');
+ for(const id of ['proposal-preview-open','proposal-preview-download']){$(id).hidden=true;$(id).removeAttribute('href');}
+ if(previewUrl)URL.revokeObjectURL(previewUrl);
+ previewUrl=null;previewLoadedId=null;
+}
+async function renderFilePreview(){
  const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN',file=state.imports.find(item=>item.id===previewFileId);
  if(!file)previewFileId=null;
+ $('proposal-preview').hidden=!file;
  $('proposal-preview-title').textContent=file?file.name:(chinese?'文件预览':'File preview');
- const text=file?.text||'',content=$('proposal-preview-content');
- if(content.textContent!==text){content.textContent=text;content.scrollTop=0;}
- content.hidden=!text.trim();
- $('proposal-preview-empty').hidden=!!text.trim();
- $('proposal-preview-empty').textContent=file?(chinese?'请重新导入此文件以预览内容。':'Re-import this file to preview its content.'):(chinese?'点击左侧文件名，在此浏览内容。':'Click a filename on the left to view its content here.');
+ if(file&&previewLoadedId===file.id&&previewUrl)return;
+ const token=++previewToken;clearFilePreview();
+ const message=$('proposal-preview-empty'),choose=$('proposal-preview-choose');
+ message.hidden=!file;choose.hidden=true;
+ choose.textContent=chinese?'选择原文件':'Choose original file';
+ if(!file)return;
+ message.textContent=chinese?'正在打开原文件…':'Opening original file…';
+ try{
+  const original=await window.AimstepProposalFiles.get(file.originalId||file.id);
+  if(token!==previewToken||previewFileId!==file.id||!state.imports.includes(file))return;
+  if(!original){message.textContent=chinese?'请选择此文件的原件，以原格式浏览。':'Choose the original file to view it in its original format.';choose.hidden=false;return;}
+  const pdf=/\.pdf$/i.test(file.name),plain=/\.(txt|md|markdown|json|csv|tsv)$/i.test(file.name),type=pdf?'application/pdf':plain?'text/plain':/\.docx$/i.test(file.name)?'application/vnd.openxmlformats-officedocument.wordprocessingml.document':/\.xlsx$/i.test(file.name)?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/octet-stream';
+  previewUrl=URL.createObjectURL(original.slice(0,original.size,type));previewLoadedId=file.id;
+  const open=$('proposal-preview-open'),download=$('proposal-preview-download');
+  open.href=download.href=previewUrl;download.download=file.name;open.hidden=download.hidden=false;
+  open.textContent=chinese?'打开原文件':'Open original';download.textContent=chinese?'下载原文件':'Download original';
+  if(pdf||plain){const frame=$('proposal-preview-frame');frame.src=previewUrl;frame.title=file.name;frame.hidden=false;message.hidden=true;}
+  else message.textContent=chinese?'浏览器无法直接显示此格式，请打开或下载原文件。':'This browser cannot display this format directly. Open or download the original file.';
+ }catch(error){if(token!==previewToken)return;message.textContent=chinese?'无法读取原文件，请重新选择。':'Could not read the original file. Choose it again.';choose.hidden=false;}
 }
+function closeFilePreview(){previewFileId=null;renderImports();}
+$('proposal-preview-close').onclick=closeFilePreview;
+$('proposal-preview-choose').onclick=()=>{$('proposal-original-file').value='';$('proposal-original-file').click();};
+$('proposal-original-file').onchange=async()=>{
+ const selected=$('proposal-original-file').files?.[0],file=state.imports.find(item=>item.id===previewFileId);
+ if(!selected||!file)return;
+ if(selected.name!==file.name){$('proposal-preview-empty').textContent='Choose the original file named '+file.name;return;}
+ if(selected.size>30*1024*1024){$('proposal-preview-empty').textContent='Choose a proposal smaller than 30 MB.';return;}
+ try{
+  await window.AimstepProposalFiles.put(file.id,selected);
+  if(!state.imports.includes(file))return;
+  file.originalId=file.id;save();
+  if(previewFileId===file.id)await renderFilePreview();
+ }catch(error){$('proposal-preview-empty').textContent='Could not save the original file. Please try again.';}
+};
 document.addEventListener('aimstep:lang',renderImports);
 function projectService(){
  const host=window.parent&&window.parent!==window?window.parent:window;
@@ -104,7 +141,7 @@ async function fileAction(file,action){
   state.importText=state.imports.map(item=>item.text?'File: '+item.name+'\n'+item.text:'').filter(Boolean).join('\n\n');
   if($('protocol-text').value===oldSource){state.text=state.importText;$('protocol-text').value=state.text;}
   state.mapping=null;state.confirmedAt=null;$('confirm-protocol').checked=false;$('handoff-preview').hidden=true;
-  try{save();renderImports();}catch(error){state=previous;render();status('Could not delete the file. Your saved copy has been kept.',true);}
+  try{save();renderImports();if(file.originalId&&!file.projectId)void window.AimstepProposalFiles.remove(file.originalId).catch(()=>{});}catch(error){state=previous;render();status('Could not delete the file. Your saved copy has been kept.',true);}
   return;
  }
  if(fileJobs.has(file.id))return;
@@ -201,17 +238,20 @@ $('protocol-file').onchange=()=>{
     if(signal.aborted)throw new DOMException('Stopped','AbortError');
     if(!text.trim())throw Error('No readable text was found. For a scanned PDF, upload an OCR-enabled PDF or a Word / text copy.');
     if(text.length>120000)throw Error('Choose a focused proposal under 120,000 characters. Nothing has been truncated.');
-    additions.push({name:file.name,importedAt:new Date().toISOString(),text});
+    additions.push({name:file.name,importedAt:new Date().toISOString(),text,original:file,id:globalThis.crypto?.randomUUID?.()||'file-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)});
    }catch(error){if(signal.aborted||error.name==='AbortError')throw error;warnings.push(file.name+': '+error.message);}
   }
   if(!additions.length)throw Error(warnings.join('\n')||'No readable proposal was imported.');
   const text=[state.importText||'',...additions.map(file=>'File: '+file.name+'\n'+file.text)].filter(Boolean).join('\n\n');
   if(text.length>120000)throw Error('The combined proposals exceed 120,000 characters. No new files were added.');
+  const originals=[];
+  try{for(const file of additions){originals.push(file.id);await window.AimstepProposalFiles.put(file.id,file.original);if(signal.aborted)throw new DOMException('Stopped','AbortError');}}
+  catch(error){await Promise.allSettled(originals.map(id=>window.AimstepProposalFiles.remove(id)));throw error;}
   const previous=JSON.parse(JSON.stringify(state));
   state.history.push({date:new Date().toISOString(),text:state.text,action:'before-import'});
-  state.imports.push(...additions.map(file=>({...file,id:globalThis.crypto?.randomUUID?.()||'file-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)})));
+  state.imports.push(...additions.map(({original,...file})=>({...file,originalId:file.id})));
   state.confirmedAt=null;state.importName=state.imports.map(file=>file.name).join(', ');state.importText=text;state.text=text;state.mapping=null;state.issues=[];
-  try{render();save();}catch(error){state=previous;render();throw Error('Could not save imported files. Your previous proposal has been kept.');}
+  try{render();save();}catch(error){state=previous;render();await Promise.allSettled(originals.map(id=>window.AimstepProposalFiles.remove(id)));throw Error('Could not save imported files. Your previous proposal has been kept.');}
   if(warnings.length)status(warnings.join('\n'),true);
   void analyzeImportedInBackground();
  });
