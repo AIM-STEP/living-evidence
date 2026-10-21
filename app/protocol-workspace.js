@@ -33,23 +33,17 @@ function renderImports(){
   row.className='proposal-file-row';name.className='proposal-file-name';date.className='proposal-file-date';
   name.textContent=file.name;
   if(file.importedAt&&!Number.isNaN(Date.parse(file.importedAt))){const time=document.createElement('time');time.dateTime=file.importedAt;time.textContent=new Intl.DateTimeFormat(chinese?'zh-CN':'en-GB',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(file.importedAt));date.appendChild(time);}else date.textContent=chinese?'日期未记录':'Date not recorded';
-  const actions=document.createElement('div'),menu=document.createElement('div'),trigger=document.createElement('button'),choices=document.createElement('div');
-  actions.className='proposal-file-actions';menu.className='proposal-file-menu';trigger.type='button';trigger.className='proposal-file-trigger';trigger.insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>');trigger.setAttribute('aria-label',(chinese?'文件操作：':'File actions: ')+file.name);
-  choices.className='proposal-file-choices';choices.hidden=true;choices.id='proposal-menu-'+file.id;
-  trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls',choices.id);
-  menu.closeMenu=()=>{choices.hidden=true;trigger.setAttribute('aria-expanded','false');};
-  trigger.onclick=()=>{const open=choices.hidden;document.querySelectorAll('.proposal-file-menu').forEach(other=>{if(other!==menu)other.closeMenu();});choices.hidden=!open;trigger.setAttribute('aria-expanded',String(open));};
-  for(const [action,en,zh]of [['delete','Delete','删除'],['project','Build Projects from this proposal','据此构建 Projects'],['criteria','Generate Eligibility criteria from this proposal','据此生成 Eligibility criteria']]){
-   const button=document.createElement('button');button.type='button';button.textContent=chinese?zh:en;
+  const actions=document.createElement('div');actions.className='proposal-file-actions';
+  for(const [action,en,zh]of [['project','Build Projects from this proposal','据此构建 Projects'],['criteria','Generate Eligibility criteria from this proposal','据此生成 Eligibility criteria'],['delete','×','×']]){
+   const button=document.createElement('button');button.type='button';button.className='proposal-file-action'+(action==='delete'?' proposal-file-delete':'');button.textContent=chinese?zh:en;
+   if(action==='delete'){button.setAttribute('aria-label',(chinese?'删除：':'Delete: ')+file.name);button.title=chinese?'删除':'Delete';}
    button.disabled=!!fileJobs.get(file.id)&&(action!=='delete'||fileJobs.get(file.id).committing);
-   button.onclick=()=>{menu.closeMenu();return fileAction(file,action);};choices.appendChild(button);
+   button.onclick=()=>fileAction(file,action);actions.appendChild(button);
   }
-  menu.append(trigger,choices);actions.appendChild(menu);row.append(name,date,actions);return row;
+  row.append(name,date,actions);return row;
  }));
 }
 document.addEventListener('aimstep:lang',renderImports);
-document.addEventListener('click',event=>document.querySelectorAll('.proposal-file-menu').forEach(menu=>{if(!menu.contains(event.target))menu.closeMenu();}));
-document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('.proposal-file-menu').forEach(menu=>{if(!menu.querySelector('.proposal-file-choices').hidden){menu.closeMenu();menu.querySelector('.proposal-file-trigger').focus();}});});
 function projectService(){
  const host=window.parent&&window.parent!==window?window.parent:window;
  const service=host.AIMSTEP?.projectController;
