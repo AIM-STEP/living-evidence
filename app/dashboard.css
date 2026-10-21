@@ -65,19 +65,18 @@ button, input, select, textarea { font-family: inherit; }
 }
 .workflow-column .pw-tabs {
   width: 100%; margin: 0; padding: 0;
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px; border: 0; border-radius: 8px;
+  display: flex; align-items: stretch; justify-content: flex-start;
+  gap: 28px; border: 0; border-radius: 0;
   background: transparent;
 }
 .workflow-column .pw-tab {
-  justify-content: center; min-height: 44px; padding: 8px;
-  border: 1px solid #171920; border-radius: 7px;
-  background: #fff; color: #171920; font-size: 14px;
-  font-weight: 500; line-height: 1.5; text-align: center;
+  justify-content: flex-start; min-height: 44px; padding: 8px 0 9px;
+  border: 0; border-bottom: 4px solid transparent; border-radius: 0;
+  background: transparent; color: #171920; font-size: 14px;
+  font-weight: 700; line-height: 1.5; text-align: left;
 }
-.workflow-column .pw-tab[aria-selected="true"],
-.workflow-column .pw-tab:active,
-.workflow-column .pw-tab:focus-visible { border-color: var(--brand); outline: none; }
+.workflow-column .pw-tab[aria-selected="true"] { border-bottom-color: var(--brand); }
+.workflow-column .pw-tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .workflow-column .pw-toolbar {
   display: flex; flex-wrap: nowrap;
   padding: 20px 0; gap: 8px; align-items: center;
@@ -230,8 +229,8 @@ footer { padding: 20px 0; background: transparent; border-color: var(--dashboard
   .header-project-link { max-width: 100%; }
   .toolset-layout { padding: 24px 0 32px; }
   .workflow-column { padding: 18px; border-radius: 12px; }
-  .workflow-column .pw-tabs { gap: 4px; }
-  .workflow-column .pw-tab { padding-inline: 6px; font-size: 13px; }
+  .workflow-column .pw-tabs { gap: 20px; }
+  .workflow-column .pw-tab { padding-inline: 0; font-size: 13px; }
   .workflow-column .btn, .pw-sort-trigger, .lang, .login { min-height: 44px; }
   #toolset .tool { grid-template-columns: 26px 24px minmax(0, 1fr); min-height: 72px; padding: 16px; gap: 12px; }
   #toolset .tool .tool-step { width: 26px; height: 26px; }
