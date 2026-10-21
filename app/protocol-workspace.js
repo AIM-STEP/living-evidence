@@ -42,9 +42,9 @@ function renderImports(){
    button.onclick=()=>{selectedFileActions.set(file.id,action);actionButtons.forEach(item=>item.setAttribute('data-selected',String(item===button)));return fileAction(file,action);};actionButtons.push(button);
    const group=document.createElement('div');group.className='proposal-action-group';group.appendChild(button);
    if(action!=='delete'){
-    const meter=document.createElement('div'),fill=document.createElement('span');meter.className='protocol-progress proposal-action-progress';meter.setAttribute('role','progressbar');meter.setAttribute('aria-label',en);meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax','100');
-    const current=fileProgress.get(file.id),visible=current?.action===action;meter.hidden=!visible;meter.setAttribute('aria-valuenow',String(visible?Math.round(current.value):0));fill.style.width=(visible?current.value:0)+'%';meter.appendChild(fill);group.appendChild(meter);
-    if(visible){current.meter=meter;current.fill=fill;}
+    const meter=document.createElement('div'),fill=document.createElement('span'),label=document.createElement('b');meter.className='protocol-progress proposal-action-progress';meter.setAttribute('role','progressbar');meter.setAttribute('aria-label',button.textContent);meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax','100');
+    const current=fileProgress.get(file.id),visible=current?.action===action;meter.hidden=!visible;meter.setAttribute('aria-valuenow',String(visible?Math.round(current.value):0));fill.style.width=(visible?current.value:0)+'%';label.textContent=(visible?Math.round(current.value):0)+'%';fill.appendChild(label);meter.appendChild(fill);group.appendChild(meter);
+    if(visible){current.meter=meter;current.fill=fill;current.label=label;}
    }
    actions.appendChild(group);
   }
@@ -76,7 +76,7 @@ function showFileResult(message,file,target){
  status(message);
  if(target){const link=document.createElement('a');link.href=target;link.textContent=' '+file.name;link.className='proposal-result-link';$('protocol-status').appendChild(link);}
 }
-function setFileProgress(id,value){const current=fileProgress.get(id);if(!current)return;current.value=Math.max(current.value,value);if(current.meter){current.meter.setAttribute('aria-valuenow',String(Math.round(current.value)));current.fill.style.width=current.value+'%';}}
+function setFileProgress(id,value){const current=fileProgress.get(id);if(!current)return;current.value=Math.max(current.value,value);if(current.meter){current.meter.setAttribute('aria-valuenow',String(Math.round(current.value)));current.fill.style.width=current.value+'%';current.label.textContent=Math.round(current.value)+'%';}}
 async function fileAction(file,action){
  if(action==='delete'){
   const existingJob=fileJobs.get(file.id);
