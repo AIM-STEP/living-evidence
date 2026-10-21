@@ -3596,7 +3596,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh the internal proposal document without changing public links.
-            if (/\/(?:build-protocol|eligibility)\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-42");
+            if (/\/(?:build-protocol|eligibility)\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-43");
             // Keep proposal documents mounted so in-flight generation survives tool navigation.
             var selectedFrame = defaultFrame;
             if (/\/build-protocol\.html$/i.test(frameTarget.pathname)) {

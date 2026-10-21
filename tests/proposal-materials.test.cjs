@@ -11,3 +11,15 @@ test('planning summaries need no verbatim quotation or citation',async()=>{
  }});
  assert(result.materials.some(item=>item.facts.includes('A paraphrased prospective review plan.')));
 });
+
+test('digest recovery is bounded and reuses completed packets on retry',async()=>{
+ const cache=new Map(),seen=new Map();let fail=true;
+ const options={signal:new AbortController().signal,status(){},cache,model:async(system,input)=>{
+  const packet=JSON.parse(input);seen.set(packet.id,(seen.get(packet.id)||0)+1);
+  if(fail&&packet.id==='AUTHOR-1')return {};
+  return {facts:['Compact summary'],gaps:[]};
+ }};
+ const input=source('Methods. '.repeat(4000));await assert.rejects(D.prepare(input,options),/material summary.*automatic retries/);
+ assert.equal(seen.get('AUTHOR-0'),1);assert.equal(seen.get('AUTHOR-1'),3);
+ fail=false;await D.prepare(input,options);assert.equal(seen.get('AUTHOR-0'),1);
+});
