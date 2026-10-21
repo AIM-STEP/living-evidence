@@ -24,8 +24,30 @@ function guidance(type){const value=types[type];if(!value)throw Error('Select a 
 const strings={type:'array',items:{type:'string'}};
 const planSchema={type:'object',properties:{approach:{type:'string'},requirements:strings,confirmations:strings},required:['approach','requirements','confirmations']};
 function validatePlan(value){if(typeof value?.approach!=='string'||!value.approach.trim()||!Array.isArray(value.requirements)||!Array.isArray(value.confirmations))throw Error('The model returned an incomplete drafting plan. Try Generate again.');return {approach:value.approach,requirements:value.requirements.map(String),confirmations:value.confirmations.map(String)};}
-function sectionSchema(ids){return {type:'object',properties:{sections:{type:'array',items:{type:'object',properties:{id:{type:'string',enum:ids},text:{type:'string'}},required:['id','text']}},issues:strings},required:['sections','issues']};}
+function sectionSchema(ids){return {type:'object',properties:{sections:{type:'array',minItems:ids.length,maxItems:ids.length,items:{type:'object',properties:{id:{type:'string',enum:ids},text:{type:'string'}},required:['id','text']}},issues:strings},required:['sections','issues']};}
 function validateSections(value,ids){if(!Array.isArray(value?.sections)||!Array.isArray(value.issues)||value.sections.length!==ids.length)throw Error('The model returned an incomplete proposal section. Try Generate again.');return {sections:ids.map(id=>{const found=value.sections.filter(row=>row.id===id);if(found.length!==1||typeof found[0].text!=='string'||!found[0].text.trim())throw Error('The model omitted proposal section '+id+'. Try Generate again.');return {id,text:found[0].text.trim()};}),issues:value.issues.map(String)};}
-const api={guidance,planSchema,validatePlan,sectionSchema,validateSections};
+async function generateSections({model,instructions,input,ids,signal}){
+ const saved=new Map(),issues=[];
+ const stopped=()=>{if(signal?.aborted)throw new DOMException('Stopped','AbortError');};
+ const accept=(value,requested)=>{
+  if(Array.isArray(value?.issues))issues.push(...value.issues.filter(item=>typeof item==='string'));
+  if(!Array.isArray(value?.sections))return;
+  for(const id of requested){const rows=value.sections.filter(row=>row?.id===id);
+   if(rows.length===1&&typeof rows[0].text==='string'&&rows[0].text.trim())saved.set(id,{id,text:rows[0].text.trim()});
+  }
+ };
+ const request=async(requested,prompt)=>{
+  stopped();
+  try{const value=await model(prompt,input,sectionSchema(requested),signal);stopped();accept(value,requested);}
+  catch(error){if(error.code!=='MODEL_JSON_INVALID')throw error;}
+ };
+ await request(ids,instructions);
+ for(const id of ids){
+  for(let attempt=0;!saved.has(id)&&attempt<2;attempt++)await request([id],instructions+' Repair the incomplete response by writing ONLY section '+id+'. Return one sections entry with exactly this id and a nonempty text string. Include issues as an array (empty if none).');
+  if(!saved.has(id))throw Error('The model could not complete the proposal section "'+id+'" after automatic retries. Your saved inputs and previous proposals are unchanged. Try Generate again.');
+ }
+ return {sections:ids.map(id=>saved.get(id)),issues:[...new Set(issues)]};
+}
+const api={guidance,planSchema,validatePlan,sectionSchema,validateSections,generateSections};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepProposalDrafting=api;
 })(globalThis);
