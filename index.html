@@ -1713,7 +1713,7 @@ body.project-page-mode .toolset-layout { display: none; }
 
 </style>
   <link rel="stylesheet" href="app/theme.css?v=20261020-5">
-  <link rel="stylesheet" href="app/dashboard.css?v=20261021-5">
+  <link rel="stylesheet" href="app/dashboard.css?v=20261021-6">
 </head>
   <body>
     <!-- Logo artwork (from AIM-STEP_square.svg) plus shared gradients/filters for the tiles -->
@@ -2173,16 +2173,23 @@ body.project-page-mode .toolset-layout { display: none; }
         var closeButton = document.getElementById("footer-contact-close");
         if (!trigger || !dialog || !closeButton) return;
         function open() {
-          if (typeof dialog.showModal === "function") dialog.showModal();
+          document.body.classList.add("contact-open");
+          trigger.setAttribute("aria-expanded", "true");
+          if (typeof dialog.show === "function") dialog.show();
           else dialog.setAttribute("open", "");
           closeButton.focus();
         }
         function close() {
+          document.body.classList.remove("contact-open");
+          trigger.setAttribute("aria-expanded", "false");
           if (typeof dialog.close === "function" && dialog.open) dialog.close();
           else dialog.removeAttribute("open");
           trigger.focus();
         }
         trigger.addEventListener("click", open);
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && dialog.open) close();
+        });
         closeButton.addEventListener("click", close);
         dialog.addEventListener("click", function (event) {
           if (event.target === dialog) close();
