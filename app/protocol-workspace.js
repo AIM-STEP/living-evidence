@@ -511,7 +511,15 @@ $('submit-protocol').onclick=()=>{if(!$('confirm-protocol').checked){status("Rev
 $('protocol-text').oninput=()=>{state.mapping=null;state.confirmedAt=null;$('confirm-protocol').checked=false;$('handoff-preview').hidden=true;safeSave();};
 $('save-protocol').onclick=()=>{if(safeSave())status('Saved. Submit confirmed changes to update the next tools.');};
 $('stop-protocol').onclick=()=>controller?.abort();
-$('clear-protocol').onclick=()=>{if(!confirm("Clear this proposal draft and inputs? Criteria and search strategies already applied to other tools will be kept."))return;cancelBackgroundAnalysis();state={version:1,inputs:{},text:'',issues:[],mapping:null,history:state.history,imports:state.imports,importName:state.importName,importText:state.importText};render();safeSave();status("Proposal draft cleared.");};
+function clearProposalDraft(){
+ if(controller||!confirm("Clear this proposal draft and inputs? Criteria and search strategies already applied to other tools will be kept."))return;
+ cancelBackgroundAnalysis();const previous=state;
+ state={...state,inputs:{},manualProtocolInputs:{},text:'',issues:[],mapping:null,confirmedAt:null,history:[...state.history,{date:new Date().toISOString(),action:'before-clear',text:state.text,manualProtocolInputs:{...state.manualProtocolInputs}}]};
+ try{render();save();proposalCheckpoint=null;status("Proposal draft cleared.");}
+ catch(error){state=previous;render();status('Could not save the cleared form. Your previous draft has been kept.',true);}
+}
+$('clear-protocol').onclick=clearProposalDraft;
+$('clear-create-proposal').onclick=clearProposalDraft;
 $('export-protocol').onclick=()=>{if(!$('protocol-text').value.trim()){status("Add a proposal before exporting.",true);return;}safeSave();const text="AIM-STEP proposal\nExported: "+new Date().toISOString()+'\nStatus: '+(state.confirmedAt?'Confirmed in AIM-STEP':'Draft — requires review')+'\n\n'+$('protocol-text').value+(state.issues.length?'\n\nItems to review\n'+state.issues.map(x=>'• '+x).join('\n'):'');const word=$('export-format').value==='docx',data=word?AimstepDefinitionWord.create("Review proposal",[{label:"Proposal",definition:$('protocol-text').value},...(state.issues.length?[{label:'Items to review',definition:state.issues.join('\n')}]:[])],(state.confirmedAt?'Confirmed in AIM-STEP':'Draft — requires review')+' · '+new Date().toISOString().slice(0,10)):text;const url=URL.createObjectURL(new Blob([data],{type:word?AimstepDefinitionWord.mime:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='AIM-STEP-proposal-'+Date.now()+(word?'.docx':'.txt');a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
 previewFileId=state.imports.find(file=>file.id===params.get('proposalId')||params.get('proposalName')&&file.name===params.get('proposalName'))?.id||null;
 render();

@@ -27,7 +27,7 @@ function app(options={}){
  const ctx={console,URL:PreviewURL,URLSearchParams,Blob,AbortController,DOMException,Intl,Date,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,queueMicrotask,Event,
   location:{search:'?projectId=test',href:'https://aimsetp.com/build-protocol.html?projectId=test',hostname:'aimsetp.com'},localStorage:storage,
   document:{getElementById:get,documentElement:{lang:'en'},addEventListener(){},querySelectorAll:selector=>selector.startsWith('main ')?[...nodes.values()].filter(node=>['INPUT','BUTTON','TEXTAREA','SELECT'].includes(node.tagName)):[],createElement(tag){const node=new E(tag);if(tag==='canvas'){node.getContext=()=>({fillRect(){},fillText(){},measureText:text=>({width:text.length*10})});node.toBlob=callback=>callback(new Blob([new Uint8Array([255,216,255,217])],{type:'image/jpeg'}));}return node;}},
-  indexedDB:{open(){const request={transaction:{abort(){queueMicrotask(()=>request.onerror?.());}}};queueMicrotask(()=>{if(options.blocked)request.onblocked?.();else request.onupgradeneeded?.();});return request;}},confirm:()=>true,
+  indexedDB:{open(){const request={transaction:{abort(){queueMicrotask(()=>request.onerror?.());}}};queueMicrotask(()=>{if(options.blocked)request.onblocked?.();else request.onupgradeneeded?.();});return request;}},confirm:()=>!options.cancelClear,
   addEventListener(name,fn){const handlers=events.get(name)||[];handlers.push(fn);events.set(name,handlers);},dispatchEvent(event){for(const fn of events.get(event.type)||[])fn(event);},
   AIMSTEP:{lang:()=> 'en'},AIMSTEPOnlineModel:{online:!options.realModel,base:'https://ai.aimsetp.com/api/eligibility',request:async()=>{requests.push({cloud:true});throw Error('Synthetic online outage');}},
   AimstepProposalFiles:{get:async id=>files.get(id),put:async(id,file)=>{if(options.failPdf)throw Error('Synthetic PDF storage full');files.set(id,file);},remove:async id=>files.delete(id)},
@@ -138,4 +138,15 @@ test('proposal batches use at most two concurrent requests and retain every chap
  await page.generate();assert.equal(max,2);assert.equal(page.requests.length,3);assert.equal(page.state().imports.length,1);
  assert(page.requests.every(request=>request.body.format.properties.sections.type==='object'));
  const system=page.requests[0].body.messages[0].content;assert(page.requests.every(request=>request.body.messages[0].content===system));
+});
+
+test('header Clear empties the form while preserving generated files and earlier criteria',async()=>{
+ const page=app();await page.generate();const id=page.state().imports[0].id;
+ page.data.set('aimstep-eligibility:test','saved criteria');page.get('clear-create-proposal').click();
+ assert.equal(page.state().manualProtocolInputs.reviewTitle,'');assert.equal(page.state().text,'');assert.equal(page.state().imports[0].id,id);assert.equal(page.files.size,1);assert.equal(page.data.get('aimstep-eligibility:test'),'saved criteria');
+ assert(html.indexOf('id="clear-create-proposal"')<html.indexOf('id="generate-protocol"'));
+});
+test('cancelled Clear and storage failure retain the previous draft',async()=>{
+ const options={cancelClear:true},page=app(options);await page.generate();const previous=page.data.get('aimstep-protocol:test');page.get('clear-create-proposal').click();assert.equal(page.data.get('aimstep-protocol:test'),previous);
+ options.cancelClear=false;options.failSave=true;page.get('clear-create-proposal').click();assert.equal(page.data.get('aimstep-protocol:test'),previous);assert.equal(page.get('manual-protocol-reviewTitle').value,fixture.manualProtocolInputs.reviewTitle);assert(page.get('proposal-generation-status').textContent.includes('previous draft has been kept'));
 });

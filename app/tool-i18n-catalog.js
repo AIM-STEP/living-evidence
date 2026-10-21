@@ -499,6 +499,7 @@ window.AimstepToolTranslations = {
   "Confirmed and applied to Eligibility criteria and Search strategy. Previous work is backed up.": "已确认并应用到纳入与排除标准及检索策略，原有内容已备份。",
   "Clear this evidence summary draft? Saved materials in the earlier tools will be kept.": "是否清空此证据总结草稿？前面工具中已保存的材料将保留。",
   "Clear the additional writing instructions? Your evidence summary will be kept.": "是否清空其他写作要求？证据总结将保留。",
+  "Could not save the cleared form. Your previous draft has been kept.": "无法保存清空后的表单，已保留原有草稿。",
   "Clear this proposal draft and inputs? Criteria and search strategies already applied to other tools will be kept.": "是否清空此研究提案草稿及输入内容？已应用到其他工具的标准和检索策略将保留。",
   "Clear all entered eligibility content, including criteria and source attachments?": "是否清空全部已输入的纳入与排除标准及源附件？",
   "Clear the review question? Your attachments and saved criteria will be kept.": "是否清空研究问题？附件与已保存的标准将保留。",

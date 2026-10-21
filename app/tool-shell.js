@@ -12,8 +12,8 @@
     ['certainty-of-evidence.html', 'Certainty of evidence', '证据确定性评价']
   ];
   const writing = [
-    ['build-protocol.html', 'Build a proposal', '制定研究提案'],
-    ['drafting-manuscript.html', "Summary of evidence", '汇总证据']
+    ['build-protocol.html', 'Proposal', '方案'],
+    ['drafting-manuscript.html', 'Evidencebank', '证据库']
   ];
   const url = new URL(location.href);
   const steps = writing.some(step => url.pathname.endsWith('/' + step[0])) ? writing : workflow;
@@ -68,24 +68,21 @@
   function renderLanguage() {
     const chinese = window.AIMSTEP?.lang() === 'zh' || document.documentElement.lang === 'zh-CN';
     const titleIndex = chinese ? 2 : 1;
-    nav.setAttribute('aria-label', chinese ? '研究流程导航' : 'Research workflow');
+    nav.setAttribute('aria-label', chinese ? '工具导航' : 'Tools navigation');
     home.textContent = chinese ? '返回项目' : 'Projects';
     if (previous) previous.textContent = chinese ? '上一步' : 'Previous';
     if (next) next.textContent = index === steps.length - 1 ? (chinese ? '返回项目' : 'Back to projects') : (chinese ? '下一步' : 'Next');
     if (previous) previous.title = index ? (chinese ? '上一步：' : 'Previous: ') + steps[index - 1][titleIndex] : (chinese ? '当前为第一步' : 'This is the first step');
     if (next) next.title = index < steps.length - 1 ? (chinese ? '下一步：' : 'Next: ') + steps[index + 1][titleIndex] : home.textContent;
     label.textContent = chinese ? '选择工具' : 'Choose a tool';
-    picker.replaceChildren(...[workflow, writing].map((group, groupIndex) => {
-      const optgroup = document.createElement('optgroup');
-      optgroup.label = groupIndex ? (chinese ? '写作工具' : 'Writing tools') : (chinese ? '研究流程' : 'Research workflow');
-      optgroup.append(...group.map(step => {
+    const group = document.createElement('optgroup');
+    group.label = chinese ? '工具集' : 'Toolset';
+    const optionFor = step => {
       const option = document.createElement('option');
-      option.value = step[0];
-      option.textContent = step[titleIndex];
-      return option;
-      }));
-      return optgroup;
-    }));
+      option.value = step[0]; option.textContent = step[titleIndex]; return option;
+    };
+    group.append(...workflow.map(optionFor));
+    picker.replaceChildren(group, ...writing.map(optionFor));
     picker.value = steps[index][0];
   }
   document.addEventListener('aimstep:lang', renderLanguage);
