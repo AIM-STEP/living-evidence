@@ -88,3 +88,10 @@
 .manual-criteria-group li:last-child { margin-bottom: 0; }
 .manual-criteria-group strong { font-weight: 500; }
 @media (max-width: 760px) { .manual-criteria-summary { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
+
+.proposal-create-layout { display: grid; grid-template-columns: minmax(0, var(--proposal-panel-width)) minmax(0, 1fr); gap: 20px; align-items: start; margin-bottom: 20px; }
+.proposal-create-layout > .proposal-create-panel { width: 100%; margin-bottom: 0; min-width: 0; }
+.proposal-create-layout > .proposal-preview-panel { position: sticky; top: 20px; min-width: 0; margin-bottom: 0; }
+#proposal-generated-list { list-style: none; margin: 0; padding: 0; }
+#proposal-generated .proposal-file-row { padding-block: 10px; }
+@media (max-width: 760px) { .proposal-create-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; } .proposal-create-layout > .proposal-preview-panel { position: static; } }

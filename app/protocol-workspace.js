@@ -135,19 +135,8 @@ function renderManualForm(){
  updateManualVisibility();renderManualCriteria();
 }
 function renderGeneration(){
- const draft=state.proposalDrafts?.manual;$('proposal-generated').hidden=!draft?.text;
- $('generated-proposal-text').value=draft?.text||'';
+ $('proposal-generated').hidden=!state.imports.some(file=>file.kind==='generated');
 }
-$('generated-proposal-text').oninput=()=>{
- const draft=state.proposalDrafts?.[state.generationSource||'manual'];if(!draft)return;
- draft.text=$('generated-proposal-text').value;$('protocol-text').value=draft.text;state.mapping=null;state.confirmedAt=null;safeSave();
-};
-$('download-generated-proposal').onclick=()=>{
- const draft=state.proposalDrafts?.[state.generationSource||'manual'];if(!draft?.text)return;
- const data=AimstepDefinitionWord.create('Review proposal',[{label:'Proposal',definition:draft.text}],new Date().toISOString().slice(0,10));
- const url=URL.createObjectURL(new Blob([data],{type:AimstepDefinitionWord.mime})),a=document.createElement('a');
- a.href=url;a.download='AIM-STEP-proposal-'+Date.now()+'.docx';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
-};
 // Completion belongs to a saved result, rather than to the last button click.
 function projectDeleted(id){return !!id&&!!localStorage.getItem('aimstep-project-deleted:'+id);}
 function criteriaExist(id){
@@ -178,8 +167,8 @@ function renderImports(){
  reconcileFileResults();
  const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN';
  const previewButtons=[];
- $('proposal-imports').hidden=!state.imports.length;
- $('proposal-import-list').replaceChildren(...state.imports.map(file=>{
+ $('proposal-imports').hidden=!state.imports.some(file=>file.kind!=='generated');
+ const rows=state.imports.map(file=>{
   const row=document.createElement('li'),info=document.createElement('div'),heading=document.createElement('div'),name=document.createElement('button'),date=document.createElement('span');
   row.className='proposal-file-row';info.className='proposal-file-info';heading.className='proposal-file-heading';name.className='proposal-file-name';date.className='proposal-file-date';
   name.textContent=file.name;
@@ -188,7 +177,7 @@ function renderImports(){
   heading.appendChild(name);
   if(file.importedAt&&!Number.isNaN(Date.parse(file.importedAt))){const time=document.createElement('time');time.dateTime=file.importedAt;time.textContent=new Intl.DateTimeFormat(chinese?'zh-CN':'en-GB',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(file.importedAt));date.appendChild(time);}else date.textContent=chinese?'日期未记录':'Date not recorded';
   const actions=document.createElement('div'),actionButtons=[];actions.className='proposal-file-actions';
-  for(const [action,en,zh]of [['project','Build Projects','构建 Projects'],['criteria','Generate Eligibility criteria','生成 Eligibility criteria'],['delete','×','×']]){
+  for(const [action,en,zh]of (file.kind==='generated'?[['project','Build Projects','构建 Projects'],['delete','×','×']]:[['project','Build Projects','构建 Projects'],['criteria','Generate Eligibility criteria','生成 Eligibility criteria'],['delete','×','×']])){
    const button=document.createElement('button');button.type='button';button.className='proposal-file-action'+(action==='delete'?' proposal-file-delete':'');button.textContent=chinese?zh:en;
    if(action==='delete'){button.setAttribute('aria-label',(chinese?'删除：':'Delete: ')+file.name);button.title=chinese?'删除':'Delete';}
    button.disabled=!!fileJobs.get(file.id)&&(action!=='delete'||fileJobs.get(file.id).committing);
@@ -204,8 +193,10 @@ function renderImports(){
    actions.appendChild(group);
   }
   info.append(heading,date);row.append(info,actions);return row;
- }));
- renderFilePreview();renderManualCriteria();
+ });
+ $('proposal-import-list').replaceChildren(...rows.filter((_,index)=>state.imports[index].kind!=='generated'));
+ $('proposal-generated-list').replaceChildren(...rows.filter((_,index)=>state.imports[index].kind==='generated'));
+ renderGeneration();renderFilePreview();renderManualCriteria();
 }
 function clearFilePreview(){
  $('proposal-preview-frame').hidden=true;$('proposal-preview-frame').removeAttribute('src');
@@ -216,6 +207,8 @@ function clearFilePreview(){
 async function renderFilePreview(){
  const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN',file=state.imports.find(item=>item.id===previewFileId);
  if(!file)previewFileId=null;
+ const previewHost=file?.kind==='generated'?$('proposal-create-layout'):$('proposal-import-layout');
+ if($('proposal-preview').parentNode!==previewHost)previewHost.appendChild($('proposal-preview'));
  $('proposal-preview').hidden=!file;
  $('proposal-preview-title').textContent=file?file.name:(chinese?'文件预览':'File preview');
  if(file&&previewLoadedId===file.id&&previewUrl)return;
@@ -291,9 +284,10 @@ async function fileAction(file,action){
   existingJob?.controller.abort();if(existingJob)clearInterval(existingJob.timer);fileJobs.delete(file.id);fileProgress.delete(file.id);cancelBackgroundAnalysis();
   const previous=JSON.parse(JSON.stringify(state)),oldSource=state.importText;
   state.imports=state.imports.filter(item=>item.id!==file.id);
-  state.importName=state.imports.map(item=>item.name).join(', ');
-  state.importText=state.imports.map(item=>item.text?'File: '+item.name+'\n'+item.text:'').filter(Boolean).join('\n\n');
+  state.importName=state.imports.filter(item=>item.kind!=='generated').map(item=>item.name).join(', ');
+  state.importText=state.imports.filter(item=>item.kind!=='generated').map(item=>item.text?'File: '+item.name+'\n'+item.text:'').filter(Boolean).join('\n\n');
   if($('protocol-text').value===oldSource){state.text=state.importText;$('protocol-text').value=state.text;}
+  if(state.proposalDrafts?.manual?.fileId===file.id)delete state.proposalDrafts.manual;
   state.mapping=null;state.confirmedAt=null;$('confirm-protocol').checked=false;$('handoff-preview').hidden=true;
   try{save();renderImports();if(file.originalId&&!file.projectId)void window.AimstepProposalFiles.remove(file.originalId).catch(()=>{});}catch(error){state=previous;render();status('Could not delete the file. Your saved copy has been kept.',true);}
   return;
@@ -343,8 +337,8 @@ async function fileAction(file,action){
  finally{clearInterval(job.timer);if(fileJobs.get(file.id)===job){fileJobs.delete(file.id);if(!job.complete)fileProgress.delete(file.id);}renderImports();}
 }
 
-function progress(n){const p=$('protocol-progress');p.setAttribute('aria-valuenow',String(Math.round(n)));p.firstElementChild.style.width=n+'%';p.querySelector('b').textContent=Math.round(n)+'%';}
-async function run(label,work){if(controller)return;cancelBackgroundAnalysis();controller=new AbortController();const signal=controller.signal;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>{if(el.id!=='stop-protocol')el.disabled=true;});$('run-row').hidden=false;$('run-label').textContent=label;progress(5);let estimate=5;const timer=setInterval(()=>{estimate+=Math.max(.2,(85-estimate)/30);progress(estimate);},1000);status('');try{await work(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');progress(100);}catch(e){status(e.name==='AbortError'?'Stopped. Your draft has been kept.':e.message,e.name!=='AbortError');}finally{clearInterval(timer);controller=null;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>el.disabled=false);$('stop-protocol').disabled=false;$('run-row').hidden=true;}}
+function progress(n){const p=$('protocol-progress');n=Math.max(Number(p.getAttribute('aria-valuenow'))||0,n);p.setAttribute('aria-valuenow',String(Math.round(n)));p.firstElementChild.style.width=n+'%';p.querySelector('b').textContent=Math.round(n)+'%';}
+async function run(label,work){if(controller)return;cancelBackgroundAnalysis();controller=new AbortController();const signal=controller.signal;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>{if(el.id!=='stop-protocol')el.disabled=true;});$('run-row').hidden=false;$('run-label').textContent=label;$('protocol-progress').setAttribute('aria-valuenow','0');progress(5);let estimate=5;const timer=setInterval(()=>{estimate+=Math.max(.2,(85-estimate)/30);progress(estimate);},1000);status('');try{await work(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');progress(100);}catch(e){status(e.name==='AbortError'?'Stopped. Your draft has been kept.':e.message,e.name!=='AbortError');}finally{clearInterval(timer);controller=null;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>el.disabled=false);$('stop-protocol').disabled=false;$('run-row').hidden=true;}}
 async function model(system,input,schema,signal){
  if(input.length>120000)throw Error('Use source material under 120,000 characters. Nothing has been truncated.');
  const online=window.AIMSTEPOnlineModel,base=online?.online?online.base:'http://127.0.0.1:8765/api/eligibility';
@@ -409,25 +403,76 @@ $('protocol-file').onchange=()=>{
   const previous=JSON.parse(JSON.stringify(state));
   state.history.push({date:new Date().toISOString(),text:state.text,action:'before-import'});
   state.imports.push(...additions.map(({original,...file})=>({...file,originalId:file.id})));
-  state.confirmedAt=null;state.importName=state.imports.map(file=>file.name).join(', ');state.importText=text;state.text=text;state.mapping=null;state.issues=[];
+  state.confirmedAt=null;state.importName=state.imports.filter(file=>file.kind!=='generated').map(file=>file.name).join(', ');state.importText=text;state.text=text;state.mapping=null;state.issues=[];
   try{render();save();}catch(error){state=previous;render();await Promise.allSettled(originals.map(id=>window.AimstepProposalFiles.remove(id)));throw Error('Could not save imported files. Your previous proposal has been kept.');}
   if(warnings.length)status(warnings.join('\n'),true);
   void analyzeImportedInBackground();
  });
 };
-$('generate-protocol').onclick=()=>run("Generating proposal…",async signal=>{
- save();const mode='manual',base=localStorage.getItem(key);
- const values=state.manualProtocolInputs,errors=M.validate(values);
+async function collectProposalInput(){
+ const target=new URL(manualCriteriaLink()).searchParams.get('projectId')||'default';
+ if(projectDeleted(target))throw Error('This project was deleted. Select an existing project before generating.');
+ const context=await window.AimstepProposalContext.collect(target);
+ const input={form:M.snapshot(state.manualProtocolInputs),eligibilityPreview:savedManualCriteria(),project:context,uploadedProposals:state.imports.filter(file=>file.kind!=='generated').map(file=>({name:file.name,text:file.text||''}))};
+ const text=JSON.stringify(input);
+ return {input,text};
+}
+async function draftingMaterials(source,signal){
+ if(source.text.length<=20000)return source.input;
+ const core={form:source.input.form,eligibilityPreview:source.input.eligibilityPreview,projectId:source.input.project.projectId,savedEligibility:source.input.project.eligibility};
+ if(JSON.stringify(core).length>16000)throw Error('The form and complete eligibility rules exceed one model context. Shorten duplicate source wording before generating; no criteria were omitted.');
+ const materials=[...source.input.project.materials,...source.input.uploadedProposals.map((file,index)=>({id:'UPLOAD-'+index,stage:'Uploaded proposal: '+file.name,data:{text:file.text}}))];
+ const packets=window.AimstepManuscriptCore.packets(materials,6500),digests=[];
+ for(let index=0;index<packets.length;index++){
+  if(signal.aborted)throw new DOMException('Stopped','AbortError');
+  status('Reading saved project materials: '+(index+1)+' / '+packets.length+'…');
+  const packet=packets[index],value=await model('Extract all information relevant to planning this review from the supplied project-material fragment. Preserve review questions, design, methods, eligibility, negations, thresholds, platforms, outcomes, data items, analysis plans, uncertainties and status. Every fact must quote an exact contiguous substring of packet.text; do not fabricate missing context when JSON is split. Distinguish completed activities, adopted decisions and unconfirmed draft suggestions. Existing numeric results are context, not prospective protocol findings. Include unresolved conflicts and possible omissions in gaps.',JSON.stringify(packet),window.AimstepManuscriptCore.factsSchema,signal);
+  const digest=window.AimstepManuscriptCore.facts(value,packet);digests.push({id:digest.id,stage:digest.stage,facts:digest.facts,gaps:digest.gaps});
+ }
+ const result={...core,materials:digests};
+ if(JSON.stringify(result).length>24000)throw Error('The complete source-grounded digest is too large for the local model context. Reduce superseded project material before generating; no sources were silently dropped.');
+ return result;
+}
+$('generate-protocol').onclick=()=>run('Generating proposal with the local model…',async signal=>{
+ save();const errors=M.validate(state.manualProtocolInputs);
  if(errors.length)throw Error(errors.slice(0,5).join('\n')+(errors.length>5?'\nCheck the other highlighted fields.':''));
- const groups=M.snapshot(values),source=JSON.stringify(groups),draft={fields:groups.flatMap(group=>group.fields.map(field=>({...field,group:group.title}))),issues:[]},text=M.format(values);
- if(signal.aborted)throw new DOMException('Stopped','AbortError');
- if(localStorage.getItem(key)!==base)throw Error('The proposal changed in another tab. Reload before generating again.');
- const previous=JSON.parse(JSON.stringify(state)),at=new Date().toISOString();
- state.history.push({date:at,text:state.proposalDrafts?.[mode]?.text||state.text,action:'before-generation',mode});
- state.proposalDrafts??={};state.proposalDrafts[mode]={text,at,source:source||null,fields:draft.fields||null,model:null};
- state.text=text;state.issues=draft.issues;state.mapping=null;state.confirmedAt=null;
- try{render();save();}catch(error){state=previous;render();throw Error('Could not save the proposal. Your previous draft has been kept.');}
- status('Proposal generated. You can edit the draft and download it as Word.');
+ const D=window.AimstepProposalDrafting,guide=D.guidance(state.manualProtocolInputs.reviewType);
+ const base=localStorage.getItem(key),source=await collectProposalInput();
+ const check=async()=>{const current=await collectProposalInput();if(signal.aborted)throw new DOMException('Stopped','AbortError');if(localStorage.getItem(key)!==base||current.text!==source.text)throw Error('Project information changed during drafting. Generate again using the latest saved information.');};
+ const materials=await draftingMaterials(source,signal);
+ status('Reading project materials and '+guide.reviewType+' guidance…');progress(8);
+ const plan=D.validatePlan(await model('Plan a complete prospective review protocol for the selected Review type. Apply these verified methodological instructions: '+JSON.stringify(guide)+'. Analyze ALL supplied materials. Form entries and saved eligibility decisions override older uploaded drafts. Preserve every inclusion/exclusion rule, threshold and negation. Requirements must fit this review type. Identify missing facts in confirmations. You may propose methodological details, but identify them as proposed for author confirmation. Do not invent results, completed activities, registration, team identities, contact details, funding, citations or dates. Return a concise drafting approach, required methodological items and unresolved author decisions.',JSON.stringify(materials),D.planSchema,signal));
+ const batches=[['title','rationale','eligibility','outcomes'],['search','extraction','bias'],['synthesis','certainty'],['timeline','team','funding','availability','amendments']];
+ let sections=[],issues=[...plan.confirmations];
+ for(let index=0;index<batches.length;index++){
+  if(signal.aborted)throw new DOMException('Stopped','AbortError');
+  const ids=batches[index],definitions=C.sections.filter(([id])=>ids.includes(id));
+  status('Writing '+guide.reviewType+' proposal: '+(index+1)+' / '+batches.length+'…');progress(15+index*17);
+  const instructions='Write polished, detailed prospective protocol sections in English for '+guide.reviewType+'. Apply the supplied review-specific guidance and drafting plan. Return ONLY these section IDs, each exactly once: '+JSON.stringify(definitions)+'. Integrate ALL relevant supplied information. Preserve the author title, rationale, objectives, eligibility decisions, search platforms, screening, extraction and synthesis instructions. Resolve older draft disagreements in favor of current form and saved criteria; report remaining conflicts in issues. Do not omit a criterion or invent an inverse exclusion. Use proposed methodological details to make a usable protocol where author methods are missing, explicitly labelled "Proposed for author confirmation". Missing factual details such as people, funding, registration and dates must be marked "To complete". Never invent study findings, references, identifiers or completed actions. Use paragraph prose with subheadings as appropriate; avoid markdown tables. Keep substantive sections focused, typically 150 to 350 words each, and administrative sections concise. Explain inapplicable methods according to the selected review type. Include no results section and make no claim of completed registration or external validation.';
+  const result=D.validateSections(await model(instructions,JSON.stringify({guidance:guide,plan,materials}),D.sectionSchema(ids),signal),ids);
+  sections.push(...result.sections);issues.push(...result.issues);
+ }
+ const draft=C.validateDraft({sections,issues:[...new Set(issues)]});
+ if(draft.sections.some(section=>!section.text.trim()))throw Error('The model did not complete all proposal sections. Please try Generate again.');
+ await check();status('Preparing the PDF proposal…');progress(88);
+ const title=state.manualProtocolInputs.reviewTitle.trim(),at=new Date().toISOString();
+ const supplied=savedManualCriteria(),criteriaText=[['Inclusion criteria',supplied.includes],['Exclusion criteria',supplied.exclusions]].map(([label,items])=>label+'\n'+items.map(item=>(item.label||item.domain||'')+': '+item.text).join('\n')).join('\n\n');
+ const blocks=[{text:guide.reviewType+' protocol | '+at.slice(0,10)},...draft.sections.map(section=>({heading:section.label,text:section.text}))];
+ if(supplied.includes.length||supplied.exclusions.length)blocks.push({heading:'Appendix: saved eligibility criteria',text:criteriaText});
+ if(draft.issues.length)blocks.push({heading:'Items for author confirmation',text:draft.issues.map((item,index)=>(index+1)+'. '+item).join('\n')});
+ blocks.push({heading:'Methodological guidance',text:guide.references.map(reference=>reference.title+'\n'+reference.url).join('\n\n')});
+ const text=title+'\n\n'+blocks.map(block=>[block.heading,block.text].filter(Boolean).join('\n')).join('\n\n');
+ const pdf=await window.AimstepProposalPdf.create(title,blocks,signal);await check();
+ const id=globalThis.crypto?.randomUUID?.()||'proposal-'+Date.now()+'-'+Math.random().toString(36).slice(2),name=title.replace(/[\\/:*?"<>|\u0000-\u001f]/g,' ').replace(/\s+/g,' ').trim().slice(0,90)+' - '+at.slice(0,19).replace(/[T:]/g,'-')+'.pdf';
+ const file={id,name,text,kind:'generated',importedAt:at,originalId:id,model:state.lastModel,reviewType:guide.reviewType};
+ await window.AimstepProposalFiles.put(id,pdf);
+ const previous=JSON.parse(JSON.stringify(state));
+ try{
+  await check();state.history.push({date:at,text:state.text,action:'before-generation',mode:'manual'});
+  state.imports.push(file);state.proposalDrafts??={};state.proposalDrafts.manual={fileId:id,at,model:state.lastModel};state.text=text;state.issues=draft.issues;state.mapping=null;state.confirmedAt=null;
+  $('protocol-text').value=text;render();save();progress(100);
+ }catch(error){state=previous;$('protocol-text').value=state.text;await window.AimstepProposalFiles.remove(id).catch(()=>{});render();throw error;}
+ status('Proposal generated. Click its filename below Create a proposal to preview the PDF, or choose Build Projects.');
 });
 $('submit-protocol').onclick=()=>{if(!$('confirm-protocol').checked){status("Review the proposal and select the confirmation checkbox before submitting.",true);return;}run("Checking and applying confirmed proposal…",async signal=>{save();const text=state.text,base=handoffVersion();if(!text.trim())throw Error("Import or create a proposal first.");const mapping=await map(text,signal);apply(mapping,"confirmed proposal",base);state.issues=mapping.issues;state.confirmedAt=new Date().toISOString();save();render();status('Confirmed and applied to Eligibility criteria and Search strategy. Previous work is backed up.');});};
 $('protocol-text').oninput=()=>{state.mapping=null;state.confirmedAt=null;$('confirm-protocol').checked=false;$('handoff-preview').hidden=true;safeSave();};
