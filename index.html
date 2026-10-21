@@ -3587,7 +3587,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh the internal proposal document without changing public links.
-            if (/\/build-protocol\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-13");
+            if (/\/build-protocol\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-14");
             if (frame.getAttribute("src") !== frameTarget.href) frame.src = frameTarget.href;
           }
           if (push) {

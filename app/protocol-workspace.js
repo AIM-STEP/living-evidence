@@ -94,6 +94,12 @@ async function fileAction(file,action){
   return;
  }
  if(fileJobs.has(file.id))return;
+ const completedTarget=action==='project'?file.projectId:file.criteriaProjectId;
+ if(completedTarget){
+  fileProgress.set(file.id,{action,value:100});renderImports();
+  showFileResult(action==='project'?'Project already created:':'Eligibility criteria already generated:',file,action==='project'?'index.html?view=project&projectId='+encodeURIComponent(completedTarget):'index.html?view=page&page=eligibility.html&projectId='+encodeURIComponent(completedTarget));
+  return;
+ }
  if(!file.text?.trim()){status('Re-import this file to recover its individual source text.',true);return;}
  cancelBackgroundAnalysis();
  const job={controller:new AbortController(),committing:false,complete:false};fileJobs.set(file.id,job);fileProgress.set(file.id,{action,value:5});renderImports();
