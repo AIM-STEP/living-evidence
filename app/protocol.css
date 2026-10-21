@@ -20,3 +20,7 @@
   .proposal-file-row { gap: 8px 12px; }
   .proposal-file-action { max-width: 100%; white-space: normal; }
 }
+
+.proposal-file-actions { align-items: flex-start; }
+.proposal-action-group { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; max-width: 100%; }
+.proposal-action-group > .proposal-action-progress { width: 100%; min-width: 0; flex: none; }

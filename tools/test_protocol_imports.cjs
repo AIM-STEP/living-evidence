@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm');
 const code=fs.readFileSync(require('node:path').join(__dirname,'../app/protocol-workspace.js'),'utf8');
 function setup(saved,options={}){
  const nodes=new Map(),data=new Map(saved?[['aimstep-protocol:test',JSON.stringify(saved)]]:[]);let fail=false;
- class E{constructor(){this.value='';this.textContent='';this.hidden=true;this.children=[];this.style={};this.classList={toggle(){}};this.tagName='TEXTAREA';}setAttribute(){}insertAdjacentHTML(){}append(...c){this.children.push(...c)}appendChild(c){this.children.push(c)}replaceChildren(...c){this.children=c}querySelector(){return new E()}get firstElementChild(){return new E()}}
+ class E{constructor(){this.attrs={};this.value='';this.textContent='';this.hidden=true;this.children=[];this.style={};this.classList={toggle(){}};this.tagName='TEXTAREA';}setAttribute(k,v){this.attrs[k]=v;}getAttribute(k){return this.attrs[k];}insertAdjacentHTML(){}append(...c){this.children.push(...c)}appendChild(c){this.children.push(c)}replaceChildren(...c){this.children=c}querySelector(){return new E()}get firstElementChild(){return new E()}}
  const get=id=>{if(!nodes.has(id))nodes.set(id,new E());return nodes.get(id)};
  const storage={getItem:k=>data.get(k)||null,setItem(k,v){if(fail)throw Error('Quota');data.set(k,v)}};
  const context={window:{AIMSTEP:{lang:()=> 'en',projectController:options.projects},AimstepProtocolCore:{handoffSchema:{},commitEligibility:(_storage,target,value,source)=>{data.set('criteria-action',JSON.stringify({target,value,source}));},validateHandoff:value=>value,commit:()=>{data.set('applied',String(Number(data.get('applied')||0)+1))}}},document:{getElementById:get,querySelectorAll:selector=>selector.startsWith('main ')?['import-protocol','protocol-text','generate-protocol'].map(get):[],createElement:()=>new E(),addEventListener(){},documentElement:{lang:'en'}},location:{search:'?projectId=test',href:'https://aimsetp.com/build-protocol.html?projectId=test'},localStorage:storage,URL,URLSearchParams,AbortController,DOMException,Intl,Date,setInterval:()=>1,clearInterval(){},setTimeout(){},fetch:options.fetch|| (async()=>{throw Error('AI unavailable')}),AimstepExtractionFormImport:{sourceText:async f=>{if(f.name.endsWith('.bad'))throw Error('Unsupported');return f.text()}},AimstepExtractionSources:{readPdf:async f=>({doc:{fullText:await f.text()}})},confirm:()=>true};
@@ -45,20 +45,20 @@ const file=(name,text)=>({name,size:text.length,text:async()=>text});
  assert.equal(app.state().text,external.text);assert.equal(app.data.get('applied'),undefined);
  const pending={...saved,importAnalysis:{status:'pending'}};
  app=setup(pending,{fetch:async()=>response()});await flush();assert.equal(app.state().importAnalysis.status,'complete');
- const action=(app,row,index)=>app.get('proposal-import-list').children[row].children[2].children[[2,0,1][index]].onclick();
+ const action=(app,row,index)=>app.get('proposal-import-list').children[row].children[2].children[[2,0,1][index]].children[0].onclick();
  const fixture={version:1,inputs:{},text:'Draft',issues:[],mapping:null,history:[],imports:[{name:'one.txt',text:'Only first source',importedAt:'2026-10-21T01:00:00Z'},{name:'two.txt',text:'Only second source',importedAt:'2026-10-21T02:00:00Z'}],importText:'File: one.txt\nOnly first source\n\nFile: two.txt\nOnly second source'};
  let requests=[],created=[];
  const metadata={name:'AI project title',projectType:'systematic',datasetKind:'real',questionType:'effectiveness',areaOfResearch:'med'};
  const ai=async(url,opts)=>{const request=JSON.parse(opts.body);requests.push(request.messages[1].content);return {ok:true,json:async()=>({message:{content:JSON.stringify(request.format.properties?.name?metadata:mapping)}})}};
  app=setup(fixture,{fetch:ai,projects:{createFromProposal:async(payload,id)=>{created.push({payload,id});return {id:'new-project',name:payload.name}}}});
- const buttons=app.get('proposal-import-list').children[1].children[2].children;
+ const buttons=app.get('proposal-import-list').children[1].children[2].children.map(group=>group.children[0]);
  assert.deepEqual(buttons.map(button=>button.textContent),['Build Projects from this proposal','Generate Eligibility criteria from this proposal','×']);
- await action(app,1,1);assert.deepEqual(requests,['Only second source']);assert.equal(created.length,1);assert.equal(app.state().imports[1].projectId,'new-project');assert(app.data.has('aimstep-protocol:new-project'));
+ await action(app,1,1);assert.deepEqual(requests,['Only second source']);assert.equal(created.length,1);assert.equal(app.state().imports[1].projectId,'new-project');assert(app.data.has('aimstep-protocol:new-project'));assert.equal(app.get('proposal-import-list').children[1].children[2].children[0].children[1].getAttribute('aria-valuenow'),'100');
  requests=[];await action(app,1,2);assert.deepEqual(requests,['Only second source']);assert.equal(JSON.parse(app.data.get('criteria-action')).target,'new-project');
  await action(app,0,0);assert.equal(app.state().imports.length,1);assert.equal(app.state().imports[0].name,'two.txt');assert(!app.state().importText.includes('Only first source'));assert.equal(app.state().text,'Draft');
  app=setup(fixture,{fetch:ai});await action(app,0,2);assert.equal(JSON.parse(app.data.get('criteria-action')).target,'test');
  app=setup(fixture,{fetch:()=>new Promise(resolve=>{release=()=>resolve(response())})});
- const pendingAction=action(app,0,2);await flush();await action(app,0,0);release();await pendingAction;
+ const pendingAction=action(app,0,2);await flush();const progressGroups=app.get('proposal-import-list').children[0].children[2].children;assert.equal(progressGroups[0].children[1].hidden,true);assert.equal(progressGroups[1].children[1].hidden,false);assert.equal(progressGroups[1].children[1].getAttribute('aria-valuenow'),'5');await action(app,0,0);release();await pendingAction;
  assert.equal(app.data.get('criteria-action'),undefined);assert.equal(app.state().imports.length,1);
  const legacy={...fixture,imports:fixture.imports.map(({name,importedAt})=>({name,importedAt}))};requests=[];
  app=setup(legacy,{fetch:ai});await action(app,1,2);assert.deepEqual(requests,['Only second source']);

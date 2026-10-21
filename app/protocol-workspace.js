@@ -3,7 +3,7 @@
 const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'default',key='aimstep-protocol:'+scope;
 const inputNames=['question','framework','type','eligibility','outcomes','search','methods','team','other'];
 let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null;
-const fileJobs=new Map(),selectedFileActions=new Map();
+const fileJobs=new Map(),selectedFileActions=new Map(),fileProgress=new Map();
 try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={...state,...saved};else{const legacy=JSON.parse(localStorage.getItem('aimstep-writing:protocol:'+scope)||'null');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}}catch(_){status("Saved proposal could not be read. Export any visible work before continuing.",true);}
 if(!Array.isArray(state.imports))state.imports=[];
 if(!state.imports.length&&state.importName)state.imports.push({name:state.importName,importedAt:state.importedAt||[...state.history].reverse().find(x=>x.action==='before-import')?.date||null});
@@ -33,13 +33,20 @@ function renderImports(){
   row.className='proposal-file-row';name.className='proposal-file-name';date.className='proposal-file-date';
   name.textContent=file.name;
   if(file.importedAt&&!Number.isNaN(Date.parse(file.importedAt))){const time=document.createElement('time');time.dateTime=file.importedAt;time.textContent=new Intl.DateTimeFormat(chinese?'zh-CN':'en-GB',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(file.importedAt));date.appendChild(time);}else date.textContent=chinese?'日期未记录':'Date not recorded';
-  const actions=document.createElement('div');actions.className='proposal-file-actions';
+  const actions=document.createElement('div'),actionButtons=[];actions.className='proposal-file-actions';
   for(const [action,en,zh]of [['project','Build Projects from this proposal','据此构建 Projects'],['criteria','Generate Eligibility criteria from this proposal','据此生成 Eligibility criteria'],['delete','×','×']]){
    const button=document.createElement('button');button.type='button';button.className='proposal-file-action'+(action==='delete'?' proposal-file-delete':'');button.textContent=chinese?zh:en;
    if(action==='delete'){button.setAttribute('aria-label',(chinese?'删除：':'Delete: ')+file.name);button.title=chinese?'删除':'Delete';}
    button.disabled=!!fileJobs.get(file.id)&&(action!=='delete'||fileJobs.get(file.id).committing);
    button.setAttribute('data-selected',String(selectedFileActions.get(file.id)===action));
-   button.onclick=()=>{selectedFileActions.set(file.id,action);Array.from(actions.children).forEach(item=>item.setAttribute('data-selected',String(item===button)));return fileAction(file,action);};actions.appendChild(button);
+   button.onclick=()=>{selectedFileActions.set(file.id,action);actionButtons.forEach(item=>item.setAttribute('data-selected',String(item===button)));return fileAction(file,action);};actionButtons.push(button);
+   const group=document.createElement('div');group.className='proposal-action-group';group.appendChild(button);
+   if(action!=='delete'){
+    const meter=document.createElement('div'),fill=document.createElement('span');meter.className='protocol-progress proposal-action-progress';meter.setAttribute('role','progressbar');meter.setAttribute('aria-label',en);meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax','100');
+    const current=fileProgress.get(file.id),visible=current?.action===action;meter.hidden=!visible;meter.setAttribute('aria-valuenow',String(visible?Math.round(current.value):0));fill.style.width=(visible?current.value:0)+'%';meter.appendChild(fill);group.appendChild(meter);
+    if(visible){current.meter=meter;current.fill=fill;}
+   }
+   actions.appendChild(group);
   }
   row.append(name,date,actions);return row;
  }));
@@ -69,11 +76,12 @@ function showFileResult(message,file,target){
  status(message);
  if(target){const link=document.createElement('a');link.href=target;link.textContent=' '+file.name;link.className='proposal-result-link';$('protocol-status').appendChild(link);}
 }
+function setFileProgress(id,value){const current=fileProgress.get(id);if(!current)return;current.value=Math.max(current.value,value);if(current.meter){current.meter.setAttribute('aria-valuenow',String(Math.round(current.value)));current.fill.style.width=current.value+'%';}}
 async function fileAction(file,action){
  if(action==='delete'){
   const existingJob=fileJobs.get(file.id);
   if(existingJob?.committing)return;
-  existingJob?.controller.abort();fileJobs.delete(file.id);cancelBackgroundAnalysis();
+  existingJob?.controller.abort();if(existingJob)clearInterval(existingJob.timer);fileJobs.delete(file.id);fileProgress.delete(file.id);cancelBackgroundAnalysis();
   const previous=JSON.parse(JSON.stringify(state)),oldSource=state.importText;
   state.imports=state.imports.filter(item=>item.id!==file.id);
   state.importName=state.imports.map(item=>item.name).join(', ');
@@ -86,7 +94,8 @@ async function fileAction(file,action){
  if(fileJobs.has(file.id))return;
  if(!file.text?.trim()){status('Re-import this file to recover its individual source text.',true);return;}
  cancelBackgroundAnalysis();
- const job={controller:new AbortController(),committing:false};fileJobs.set(file.id,job);renderImports();
+ const job={controller:new AbortController(),committing:false,complete:false};fileJobs.set(file.id,job);fileProgress.set(file.id,{action,value:5});renderImports();
+ job.timer=setInterval(()=>{if(fileJobs.get(file.id)!==job)return;const value=fileProgress.get(file.id)?.value||5;if(value<85)setFileProgress(file.id,Math.min(85,value+Math.max(.2,(85-value)/30)));},1000);
  const check=()=>{
   const stored=JSON.parse(localStorage.getItem(key)||'null');
   if(job.controller.signal.aborted||!state.imports.includes(file)||stored?.updatedAt!==state.updatedAt||!stored?.imports?.some(item=>item.id===file.id&&item.text===file.text))throw new DOMException('File changed or deleted','AbortError');
@@ -98,21 +107,22 @@ async function fileAction(file,action){
   const criteriaKey=target?'aimstep-eligibility:'+target:null;
   const priorCriteria=criteriaKey?localStorage.getItem(criteriaKey):null;
   if(action==='project'||!target){
-   const project=await createProposalProject(file,job.controller.signal,()=>{check();job.committing=true;renderImports();});
+   const project=await createProposalProject(file,job.controller.signal,()=>{check();setFileProgress(file.id,75);job.committing=true;renderImports();});
    check();file.projectId=project.id;target=project.id;save();
    if(action==='project'){
+    setFileProgress(file.id,100);job.complete=true;
     showFileResult('Project created:',file,'index.html?view=project&projectId='+encodeURIComponent(target));return;
    }
   }
   job.committing=false;renderImports();
   const before=criteriaKey?priorCriteria:localStorage.getItem('aimstep-eligibility:'+target);
-  const mapping=await map(file.text,job.controller.signal);check();
+  const mapping=await map(file.text,job.controller.signal);check();setFileProgress(file.id,90);
   if(localStorage.getItem('aimstep-eligibility:'+target)!==before)throw Error('Eligibility criteria changed while AI was working. Run this action again to use the latest version.');
   C.commitEligibility(localStorage,target,mapping,'proposal file: '+file.name);
-  file.criteriaProjectId=target;save();
+  file.criteriaProjectId=target;save();setFileProgress(file.id,100);job.complete=true;
   showFileResult('Eligibility criteria generated:',file,'index.html?view=page&page=eligibility.html&projectId='+encodeURIComponent(target));
  }catch(error){if(error.name!=='AbortError')status(error.message,true);}
- finally{if(fileJobs.get(file.id)===job)fileJobs.delete(file.id);renderImports();}
+ finally{clearInterval(job.timer);if(fileJobs.get(file.id)===job){fileJobs.delete(file.id);if(!job.complete)fileProgress.delete(file.id);}renderImports();}
 }
 
 function progress(n){const p=$('protocol-progress');p.setAttribute('aria-valuenow',String(Math.round(n)));p.firstElementChild.style.width=n+'%';p.querySelector('b').textContent=Math.round(n)+'%';}
