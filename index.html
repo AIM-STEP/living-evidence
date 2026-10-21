@@ -3623,8 +3623,8 @@ body.project-page-mode .toolset-layout { display: none; }
           toolset.hidden = false;
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
-            // Refresh the internal proposal document without changing public links.
-            if (/\/(?:build-protocol|eligibility)\.html$/.test(frameTarget.pathname)) frameTarget.searchParams.set("appVersion", "20261021-45");
+            // Refresh internal tool documents without changing public links.
+            if (frameTarget.pathname.endsWith(".html")) frameTarget.searchParams.set("appVersion", "20261021-49");
             // Keep proposal documents mounted so in-flight generation survives tool navigation.
             var selectedFrame = defaultFrame;
             if (/\/build-protocol\.html$/i.test(frameTarget.pathname)) {

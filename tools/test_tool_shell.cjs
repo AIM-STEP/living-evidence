@@ -30,7 +30,7 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(picker.options.length,10);assert.equal(picker.value,page+'.html');
   [...picker.options].forEach(option=>assert.doesNotMatch(option.textContent,/^\d/,page+' Chinese has no number prefix'));
   assert.match(picker.selectedOptions[0].textContent,/[\u4e00-\u9fff]/,page+' translated step');
-  assert.equal(nav.querySelector('[data-flow-position]').textContent,(index+1)+' / '+group.length);
+  assert.equal(nav.querySelector('[data-flow-position]'),null,'step fraction is removed');
   assert.equal(new URL(next.href).pathname,'/'+(index===group.length-1?'index':group[index+1])+'.html');checkProject(next);
   if(index) { assert.equal(new URL(prev.href).pathname,'/'+group[index-1]+'.html');checkProject(prev); }
   else { assert.equal(prev.hasAttribute('href'),false);assert.equal(prev.getAttribute('aria-disabled'),'true'); }

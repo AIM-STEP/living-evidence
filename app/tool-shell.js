@@ -32,7 +32,6 @@
   const next = nav.querySelector('[data-flow-next]');
   const picker = nav.querySelector('[data-flow-picker]');
   const label = nav.querySelector('[data-flow-label]');
-  const position = nav.querySelector('[data-flow-position]');
   const projects = destination('index.html?view=toolset');
   home.href = projects;
   if (index) previous.href = destination(steps[index - 1][0]);
@@ -76,7 +75,6 @@
     previous.title = index ? (chinese ? '上一步：' : 'Previous: ') + steps[index - 1][titleIndex] : (chinese ? '当前为第一步' : 'This is the first step');
     next.title = index < steps.length - 1 ? (chinese ? '下一步：' : 'Next: ') + steps[index + 1][titleIndex] : home.textContent;
     label.textContent = chinese ? '选择工具' : 'Choose a tool';
-    position.textContent = (index + 1) + ' / ' + steps.length;
     picker.replaceChildren(...[workflow, writing].map((group, groupIndex) => {
       const optgroup = document.createElement('optgroup');
       optgroup.label = groupIndex ? (chinese ? '写作工具' : 'Writing tools') : (chinese ? '研究流程' : 'Research workflow');
