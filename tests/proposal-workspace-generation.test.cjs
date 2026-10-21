@@ -44,7 +44,7 @@ function app(options={}){
  };
  ctx.window=ctx;ctx.parent=ctx;
  const sandbox=vm.createContext(ctx);
- for(const name of ['protocol-core','protocol-manual','manuscript-core','proposal-context','proposal-drafting','proposal-pdf','proposal-model','protocol-workspace'])vm.runInContext(fs.readFileSync(path.join(root,'app',name+'.js'),'utf8'),sandbox,{filename:name+'.js'});
+ for(const name of ['protocol-core','protocol-manual','manuscript-core','proposal-context','proposal-drafting','proposal-materials','proposal-pdf','proposal-model','protocol-workspace'])vm.runInContext(fs.readFileSync(path.join(root,'app',name+'.js'),'utf8'),sandbox,{filename:name+'.js'});
  return {get,data,files,requests,modelStarted,ctx,state:()=>JSON.parse(data.get('aimstep-protocol:test')),generate:()=>get('generate-protocol').click()};
 }
 test('short but supplied draft fields reach the local model and generate a persisted PDF with right-side preview',async()=>{

@@ -442,25 +442,12 @@ async function collectProposalInput(signal){
  return {input,text};
 }
 async function draftingMaterials(source,signal){
- if(source.text.length<=20000)return source.input;
- const core={form:source.input.form,eligibilityPreview:source.input.eligibilityPreview,projectId:source.input.project.projectId,savedEligibility:source.input.project.eligibility};
- if(JSON.stringify(core).length>16000)throw Error('The form and complete eligibility rules exceed one model context. Shorten duplicate source wording before generating; no criteria were omitted.');
- const materials=[...source.input.project.materials,...source.input.uploadedProposals.map((file,index)=>({id:'UPLOAD-'+index,stage:'Uploaded proposal: '+file.name,data:{text:file.text}}))];
- const packets=window.AimstepManuscriptCore.packets(materials,6500),digests=[];
- for(let index=0;index<packets.length;index++){
-  if(signal.aborted)throw new DOMException('Stopped','AbortError');
-  status('Reading saved project materials: '+(index+1)+' / '+packets.length+'…');
-  const packet=packets[index],value=await model('Extract all information relevant to planning this review from the supplied project-material fragment. Preserve review questions, design, methods, eligibility, negations, thresholds, platforms, outcomes, data items, analysis plans, uncertainties and status. Every fact must quote an exact contiguous substring of packet.text; do not fabricate missing context when JSON is split. Distinguish completed activities, adopted decisions and unconfirmed draft suggestions. Existing numeric results are context, not prospective protocol findings. Include unresolved conflicts and possible omissions in gaps.',JSON.stringify(packet),window.AimstepManuscriptCore.factsSchema,signal);
-  const digest=window.AimstepManuscriptCore.facts(value,packet);digests.push({id:digest.id,stage:digest.stage,facts:digest.facts,gaps:digest.gaps});
- }
- const result={...core,materials:digests};
- if(JSON.stringify(result).length>24000)throw Error('The complete source-grounded digest is too large for the local model context. Reduce superseded project material before generating; no sources were silently dropped.');
- return result;
+ return window.AimstepProposalMaterials.prepare(source,{model,signal,status,core:window.AimstepManuscriptCore});
 }
 $('generate-protocol').onclick=()=>run('Generating proposal with the local model…',async signal=>{
  save();const errors=M.validate(state.manualProtocolInputs,{draft:true});
  if(errors.length)throw Error(errors.slice(0,5).join('\n')+(errors.length>5?'\nCheck the other highlighted fields.':''));
- if(!window.AimstepProposalDrafting||!window.AimstepProposalContext||!window.AimstepProposalPdf||!window.AimstepProposalModel)throw Error('Some proposal modules did not load. Reload the page and try Generate again.');
+ if(!window.AimstepProposalDrafting||!window.AimstepProposalContext||!window.AimstepProposalPdf||!window.AimstepProposalModel||!window.AimstepProposalMaterials)throw Error('Some proposal modules did not load. Reload the page and try Generate again.');
  status('Reading saved project materials…');
  const D=window.AimstepProposalDrafting,guide=D.guidance(state.manualProtocolInputs.reviewType);
  const base=localStorage.getItem(key),source=await collectProposalInput(signal);
@@ -484,6 +471,7 @@ $('generate-protocol').onclick=()=>run('Generating proposal with the local model
  const title=state.manualProtocolInputs.reviewTitle.trim(),at=new Date().toISOString();
  const supplied=savedManualCriteria(),criteriaText=[['Inclusion criteria',supplied.includes],['Exclusion criteria',supplied.exclusions]].map(([label,items])=>label+'\n'+items.map(item=>(item.label||item.domain||'')+': '+item.text).join('\n')).join('\n\n');
  const blocks=[{text:guide.reviewType+' protocol | '+at.slice(0,10)},...draft.sections.map(section=>({heading:section.label,text:section.text}))];
+ if(materials.completeAuthorInputsInAppendix)blocks.push({heading:'Appendix: complete author-provided planning information',text:M.format(state.manualProtocolInputs)});
  if(supplied.includes.length||supplied.exclusions.length)blocks.push({heading:'Appendix: saved eligibility criteria',text:criteriaText});
  if(draft.issues.length)blocks.push({heading:'Items for author confirmation',text:draft.issues.map((item,index)=>(index+1)+'. '+item).join('\n')});
  blocks.push({heading:'Methodological guidance',text:guide.references.map(reference=>reference.title+'\n'+reference.url).join('\n\n')});
