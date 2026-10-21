@@ -3,9 +3,21 @@
 const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'default',key='aimstep-protocol:'+scope;
 const inputNames=['question','framework','type','eligibility','outcomes','search','methods','team','other'];
 let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null;
+const fileJobs=new Map();
 try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={...state,...saved};else{const legacy=JSON.parse(localStorage.getItem('aimstep-writing:protocol:'+scope)||'null');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}}catch(_){status("Saved proposal could not be read. Export any visible work before continuing.",true);}
 if(!Array.isArray(state.imports))state.imports=[];
 if(!state.imports.length&&state.importName)state.imports.push({name:state.importName,importedAt:state.importedAt||[...state.history].reverse().find(x=>x.action==='before-import')?.date||null});
+// Recover individual source text from earlier combined imports, in their saved order.
+let importCursor=0;
+state.imports.forEach((file,index)=>{
+ if(!file.id)file.id=globalThis.crypto?.randomUUID?.()||'file-'+Date.now().toString(36)+'-'+index+'-'+Math.random().toString(36).slice(2);
+ if(typeof file.text==='string')return;
+ const combined=state.importText||'',marker='File: '+file.name+'\n';
+ const start=combined.indexOf(marker,importCursor);
+ const next=state.imports[index+1],end=next?combined.indexOf('\n\nFile: '+next.name+'\n',start<0?importCursor:start+marker.length):combined.length;
+ if(start>=0&&(end<0||end>=start)){file.text=combined.slice(start+marker.length,end<0?combined.length:end);importCursor=end<0?combined.length:end;}
+ else if(index===0&&(state.imports.length===1||end>=0)){file.text=combined.slice(0,end<0?combined.length:end);importCursor=end;}
+});
 for(const a of document.querySelectorAll('[data-project-link]')){const u=new URL(a.getAttribute('href'),location.href);if(scope!=='default')u.searchParams.set('projectId',scope);a.href=u.href;}
 const icons={import:'M12 16V3m-4 4 4-4 4 4M5 14v6h14v-6',save:'M19 21H5V3h12l4 4v14ZM7 3v6h10V3M7 21v-8h10v8',export:'M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5',clear:'M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6'};
 for(const [id,path]of Object.entries(icons))$(id+'-protocol').insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>');
@@ -22,10 +34,90 @@ function renderImports(){
   const row=document.createElement('tr'),name=document.createElement('td'),date=document.createElement('td');
   name.textContent=file.name;
   if(file.importedAt&&!Number.isNaN(Date.parse(file.importedAt))){const time=document.createElement('time');time.dateTime=file.importedAt;time.textContent=new Intl.DateTimeFormat(chinese?'zh-CN':'en-GB',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(file.importedAt));date.appendChild(time);}else date.textContent=chinese?'日期未记录':'Date not recorded';
-  row.append(name,date);return row;
+  const actions=document.createElement('td'),menu=document.createElement('details'),trigger=document.createElement('summary'),choices=document.createElement('div');
+  actions.className='proposal-file-actions';menu.className='proposal-file-menu';trigger.textContent='⋯';trigger.setAttribute('aria-label',(chinese?'文件操作：':'File actions: ')+file.name);
+  choices.className='proposal-file-choices';
+  for(const [action,en,zh]of [['delete','Delete','删除'],['project','Build Projects from this','据此构建 Projects'],['criteria','Generate Eligibility criteria from this','据此生成 Eligibility criteria']]){
+   const button=document.createElement('button');button.type='button';button.textContent=chinese?zh:en;
+   button.disabled=!!fileJobs.get(file.id)&&(action!=='delete'||fileJobs.get(file.id).committing);
+   button.onclick=()=>{menu.open=false;return fileAction(file,action);};choices.appendChild(button);
+  }
+  menu.append(trigger,choices);actions.appendChild(menu);row.append(name,date,actions);return row;
  }));
 }
 document.addEventListener('aimstep:lang',renderImports);
+document.addEventListener('click',event=>document.querySelectorAll('.proposal-file-menu[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;}));
+document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('.proposal-file-menu[open]').forEach(menu=>{menu.open=false;menu.querySelector('summary').focus();});});
+function projectService(){
+ const host=window.parent&&window.parent!==window?window.parent:window;
+ const service=host.AIMSTEP?.projectController;
+ if(!service?.createFromProposal)throw Error('Project service is still loading. Try again shortly.');
+ return service;
+}
+const projectSchema={type:'object',properties:{name:{type:'string',maxLength:200},projectType:{type:'string',enum:['systematic','scoping','rapid','umbrella','narrative','integrative','other']},datasetKind:{type:'string',enum:['real','synthetic']},questionType:{type:'string',enum:['effectiveness','prevention','etiology','diagnosis','prognosis','qualitative','prevalence','mapping','methodology','other']},areaOfResearch:{type:'string',enum:['arts','agri','bio','earth','econ','edu','eng','med','psy','other']}},required:['name','projectType','datasetKind','questionType','areaOfResearch']};
+async function createProposalProject(file,signal,check){
+ const service=projectService();
+ const payload=await model('Extract project metadata from this proposal. Use a concise faithful review title, never invent findings or registration. Classify the review and research question using the provided enums; use other when unspecified. Use synthetic only when the proposal explicitly identifies simulated, teaching or test data; otherwise real.',file.text,projectSchema,signal);
+ for(const [name,schema]of Object.entries(projectSchema.properties))if(typeof payload[name]!=='string'||schema.enum&&!schema.enum.includes(payload[name]))throw Error('AI returned invalid project metadata. Try again.');
+ if(!payload.name.trim()||payload.name.length>200)throw Error('AI returned an invalid project title.');
+ check();
+ const project=await service.createFromProposal(payload,scope+':'+file.id);
+ // Creation is irreversible once sent; preserve the created id even if the
+ // originating row was removed while the project service was responding.
+ const seedKey='aimstep-protocol:'+project.id;
+ if(!localStorage.getItem(seedKey))localStorage.setItem(seedKey,JSON.stringify({version:1,inputs:{question:payload.name},text:file.text,issues:[],mapping:null,history:[],imports:[{...file,projectId:project.id}],importName:file.name,importText:file.text}));
+ return project;
+}
+function showFileResult(message,file,target){
+ status(message);
+ if(target){const link=document.createElement('a');link.href=target;link.textContent=' '+file.name;link.className='proposal-result-link';$('protocol-status').appendChild(link);}
+}
+async function fileAction(file,action){
+ if(action==='delete'){
+  const existingJob=fileJobs.get(file.id);
+  if(existingJob?.committing)return;
+  existingJob?.controller.abort();fileJobs.delete(file.id);cancelBackgroundAnalysis();
+  const previous=JSON.parse(JSON.stringify(state)),oldSource=state.importText;
+  state.imports=state.imports.filter(item=>item.id!==file.id);
+  state.importName=state.imports.map(item=>item.name).join(', ');
+  state.importText=state.imports.map(item=>item.text?'File: '+item.name+'\n'+item.text:'').filter(Boolean).join('\n\n');
+  if($('protocol-text').value===oldSource){state.text=state.importText;$('protocol-text').value=state.text;}
+  state.mapping=null;state.confirmedAt=null;$('confirm-protocol').checked=false;$('handoff-preview').hidden=true;
+  try{save();renderImports();}catch(error){state=previous;render();status('Could not delete the file. Your saved copy has been kept.',true);}
+  return;
+ }
+ if(fileJobs.has(file.id))return;
+ if(!file.text?.trim()){status('Re-import this file to recover its individual source text.',true);return;}
+ cancelBackgroundAnalysis();
+ const job={controller:new AbortController(),committing:false};fileJobs.set(file.id,job);renderImports();
+ const check=()=>{
+  const stored=JSON.parse(localStorage.getItem(key)||'null');
+  if(job.controller.signal.aborted||!state.imports.includes(file)||stored?.updatedAt!==state.updatedAt||!stored?.imports?.some(item=>item.id===file.id&&item.text===file.text))throw new DOMException('File changed or deleted','AbortError');
+ };
+ try{
+  // Persist source ids before starting a background request, including legacy imports.
+  save();
+  let target=file.projectId||(scope!=='default'?scope:null);
+  const criteriaKey=target?'aimstep-eligibility:'+target:null;
+  const priorCriteria=criteriaKey?localStorage.getItem(criteriaKey):null;
+  if(action==='project'||!target){
+   const project=await createProposalProject(file,job.controller.signal,()=>{check();job.committing=true;renderImports();});
+   check();file.projectId=project.id;target=project.id;save();
+   if(action==='project'){
+    showFileResult('Project created:',file,'index.html?view=project&projectId='+encodeURIComponent(target));return;
+   }
+  }
+  job.committing=false;renderImports();
+  const before=criteriaKey?priorCriteria:localStorage.getItem('aimstep-eligibility:'+target);
+  const mapping=await map(file.text,job.controller.signal);check();
+  if(localStorage.getItem('aimstep-eligibility:'+target)!==before)throw Error('Eligibility criteria changed while AI was working. Run this action again to use the latest version.');
+  C.commitEligibility(localStorage,target,mapping,'proposal file: '+file.name);
+  file.criteriaProjectId=target;save();
+  showFileResult('Eligibility criteria generated:',file,'index.html?view=page&page=eligibility.html&projectId='+encodeURIComponent(target));
+ }catch(error){if(error.name!=='AbortError')status(error.message,true);}
+ finally{if(fileJobs.get(file.id)===job)fileJobs.delete(file.id);renderImports();}
+}
+
 function progress(n){const p=$('protocol-progress');p.setAttribute('aria-valuenow',String(Math.round(n)));p.firstElementChild.style.width=n+'%';p.querySelector('b').textContent=Math.round(n)+'%';}
 async function run(label,work){if(controller)return;cancelBackgroundAnalysis();controller=new AbortController();const signal=controller.signal;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>{if(el.id!=='stop-protocol')el.disabled=true;});$('run-row').hidden=false;$('run-label').textContent=label;progress(5);let estimate=5;const timer=setInterval(()=>{estimate+=Math.max(.2,(85-estimate)/30);progress(estimate);},1000);status('');try{await work(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');progress(100);}catch(e){status(e.name==='AbortError'?'Stopped. Your draft has been kept.':e.message,e.name!=='AbortError');}finally{clearInterval(timer);controller=null;document.querySelectorAll('main button,main input,main textarea,main select').forEach(el=>el.disabled=false);$('stop-protocol').disabled=false;$('run-row').hidden=true;}}
 async function model(system,input,schema,signal){
@@ -88,7 +180,7 @@ $('protocol-file').onchange=()=>{
   if(text.length>120000)throw Error('The combined proposals exceed 120,000 characters. No new files were added.');
   const previous=JSON.parse(JSON.stringify(state));
   state.history.push({date:new Date().toISOString(),text:state.text,action:'before-import'});
-  state.imports.push(...additions.map(({name,importedAt})=>({name,importedAt})));
+  state.imports.push(...additions.map(file=>({...file,id:globalThis.crypto?.randomUUID?.()||'file-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)})));
   state.confirmedAt=null;state.importName=state.imports.map(file=>file.name).join(', ');state.importText=text;state.text=text;state.mapping=null;state.issues=[];
   try{render();save();}catch(error){state=previous;render();throw Error('Could not save imported files. Your previous proposal has been kept.');}
   if(warnings.length)status(warnings.join('\n'),true);

@@ -369,6 +369,32 @@ export function initProjects(options) {
     render();
   }
 
+  // Reuse the same authenticated project backend for proposal-derived projects.
+  // Persist the allocated id so a membership retry never creates a duplicate.
+  async function createFromProposal(payload, requestId) {
+    const user = auth.user();
+    if (!user) throw new Error('Sign in before creating a project.');
+    if (!payload.name?.trim() || payload.name.length > 200) throw new Error('Invalid project title.');
+    for (const [field, value] of [[fields.type, payload.projectType], [fields.dataset, payload.datasetKind], [fields.question, payload.questionType], [fields.area, payload.areaOfResearch]]) {
+      if (!Array.from(field.input.options).some(option => option.value === value)) throw new Error('Invalid project classification.');
+    }
+    const service = await ensureBackend();
+    const requestKey = 'aimstep-proposal-project:' + user.uid + ':' + requestId;
+    let saved = JSON.parse(localStorage.getItem(requestKey) || 'null');
+    if (!saved) {
+      saved = { id: service.newId(), created: false };
+      localStorage.setItem(requestKey, JSON.stringify(saved));
+    }
+    if (!saved.created) {
+      await service.createProject(saved.id, user.uid, payload);
+      saved.created = true;
+      localStorage.setItem(requestKey, JSON.stringify(saved));
+    }
+    await service.addMembership(saved.id, user.uid);
+    await load();
+    return { id: saved.id, name: payload.name };
+  }
+
   /* ----------------------------------------------------------------- wire */
 
   els.start.addEventListener("click", () => {
@@ -406,5 +432,5 @@ export function initProjects(options) {
   render();
 
   // Exposed for the tests, which drive the same functions the buttons do.
-  return { submit, openForm, closeForm, load, render, deleteProject, state: () => ({ view, saving, projects, loadError }) };
+  return { submit, openForm, closeForm, load, render, deleteProject, createFromProposal, state: () => ({ view, saving, projects, loadError }) };
 }

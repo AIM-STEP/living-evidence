@@ -3799,7 +3799,7 @@ body.project-page-mode .toolset-layout { display: none; }
       // five-page package also works on its own with projects saved here.
       try {
         const [{ initProjects }, { firestoreBackend }] = await Promise.all([
-          import("./app/projects.js?v=20261020-1"), import("./app/backend.js?v=20261020-1")
+          import("./app/projects.js?v=20261021-1"), import("./app/backend.js?v=20261020-1")
         ]);
         window.AIMSTEP.projectController = initProjects({ backend: firestoreBackend });
         document.dispatchEvent(new CustomEvent("aimstep:projects-ready"));
@@ -3815,6 +3815,19 @@ body.project-page-mode .toolset-layout { display: none; }
         } catch (e) {}
         window.AIMSTEP.projectController = {
           state: () => ({ projects }),
+          async createFromProposal(payload, requestId) {
+            const id = 'proposal-' + requestId;
+            const current = JSON.parse(localStorage.getItem(key) || '[]');
+            let project = current.find(p => p.id === id);
+            if (!project) {
+              project = { id, name: payload.name, type: payload.projectType, dataset: payload.datasetKind, question: payload.questionType, area: payload.areaOfResearch, created_at: new Date().toISOString() };
+              current.push(project);
+              localStorage.setItem(key, JSON.stringify(current));
+            }
+            projects = current;
+            renderProjects();
+            return project;
+          },
           async deleteProject(id) {
             const remaining = projects.filter(project => project.id !== id);
             localStorage.setItem(key, JSON.stringify(remaining));

@@ -9,11 +9,24 @@
 .proposal-imports table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
 .proposal-imports th, .proposal-imports td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .proposal-imports th { font-weight: 500; color: var(--muted); }
-.proposal-imports th:last-child { width: 180px; }
+.proposal-imports th:nth-child(2) { width: 180px; }
 #import-status { white-space: pre-line; font-size: 13px; }
 #import-status:empty { display: none; }
 @media (max-width: 600px) {
   .tool-page.tool-build-protocol .tool-writing-layout .form-grid { grid-template-columns: minmax(0, 1fr); }
-  .proposal-imports th:last-child { width: 125px; }
+  .proposal-imports th:nth-child(2) { width: 125px; }
   .proposal-imports th, .proposal-imports td { padding-inline: 6px; }
 }
+
+.proposal-imports .proposal-actions-heading { width: 48px; }
+.proposal-imports .proposal-file-actions { overflow: visible; text-align: right; }
+.proposal-file-menu { position: relative; margin: 0; }
+.proposal-file-menu summary { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 5px; font-size: 20px; line-height: 1; list-style: none; }
+.proposal-file-menu summary::-webkit-details-marker { display: none; }
+.proposal-file-choices { position: absolute; right: 0; top: 32px; z-index: 20; display: grid; min-width: 245px; max-width: calc(100vw - 64px); padding: 5px; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px #17192018; }
+.proposal-file-choices button { border: 0; border-radius: 4px; background: transparent; padding: 9px 10px; text-align: left; font: inherit; font-size: 12px; color: var(--ink); }
+.proposal-file-choices button:hover:not(:disabled) { background: #f2f5ff; }
+.proposal-result-link { text-decoration: underline; }
+
+.proposal-file-menu:not([open]) .proposal-file-choices { display: none; }
+.proposal-actions-heading .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
