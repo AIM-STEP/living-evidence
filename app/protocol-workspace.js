@@ -2,7 +2,7 @@
 'use strict';
 const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'default',key='aimstep-protocol:'+scope;
 const inputNames=['question','framework','type','eligibility','outcomes','search','methods','team','other'];
-let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null;
+let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null,previewFileId=null;
 const fileJobs=new Map(),selectedFileActions=new Map(),fileProgress=new Map();
 try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={...state,...saved};else{const legacy=JSON.parse(localStorage.getItem('aimstep-writing:protocol:'+scope)||'null');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}}catch(_){status("Saved proposal could not be read. Export any visible work before continuing.",true);}
 if(!Array.isArray(state.imports))state.imports=[];
@@ -27,11 +27,14 @@ function safeSave(){cancelBackgroundAnalysis();try{save();return true;}catch(e){
 function render(){for(const n of inputNames)if(state.inputs[n]!==undefined)$('input-'+n).value=state.inputs[n];$('protocol-text').value=state.text;renderImports();$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
 function renderImports(){
  const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN';
+ const previewButtons=[];
  $('proposal-imports').hidden=!state.imports.length;
  $('proposal-import-list').replaceChildren(...state.imports.map(file=>{
-  const row=document.createElement('li'),info=document.createElement('div'),heading=document.createElement('div'),name=document.createElement('span'),date=document.createElement('span');
+  const row=document.createElement('li'),info=document.createElement('div'),heading=document.createElement('div'),name=document.createElement('button'),date=document.createElement('span');
   row.className='proposal-file-row';info.className='proposal-file-info';heading.className='proposal-file-heading';name.className='proposal-file-name';date.className='proposal-file-date';
   name.textContent=file.name;
+  name.type='button';name.setAttribute('aria-controls','proposal-preview');name.setAttribute('aria-pressed',String(previewFileId===file.id));
+  name.onclick=()=>{previewFileId=file.id;previewButtons.forEach(item=>item.button.setAttribute('aria-pressed',String(item.id===file.id)));renderFilePreview();};previewButtons.push({id:file.id,button:name});
   heading.appendChild(name);
   if(file.importedAt&&!Number.isNaN(Date.parse(file.importedAt))){const time=document.createElement('time');time.dateTime=file.importedAt;time.textContent=new Intl.DateTimeFormat(chinese?'zh-CN':'en-GB',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(file.importedAt));date.appendChild(time);}else date.textContent=chinese?'日期未记录':'Date not recorded';
   const actions=document.createElement('div'),actionButtons=[];actions.className='proposal-file-actions';
@@ -52,6 +55,17 @@ function renderImports(){
   }
   info.append(heading,date);row.append(info,actions);return row;
  }));
+ renderFilePreview();
+}
+function renderFilePreview(){
+ const chinese=window.AIMSTEP?.lang()==='zh'||document.documentElement.lang==='zh-CN',file=state.imports.find(item=>item.id===previewFileId);
+ if(!file)previewFileId=null;
+ $('proposal-preview-title').textContent=file?file.name:(chinese?'文件预览':'File preview');
+ const text=file?.text||'',content=$('proposal-preview-content');
+ if(content.textContent!==text){content.textContent=text;content.scrollTop=0;}
+ content.hidden=!text.trim();
+ $('proposal-preview-empty').hidden=!!text.trim();
+ $('proposal-preview-empty').textContent=file?(chinese?'请重新导入此文件以预览内容。':'Re-import this file to preview its content.'):(chinese?'点击左侧文件名，在此浏览内容。':'Click a filename on the left to view its content here.');
 }
 document.addEventListener('aimstep:lang',renderImports);
 function projectService(){
