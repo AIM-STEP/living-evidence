@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>ACHIEVE bitten peanut</title>
+  <g transform="rotate(35 32 32)">
+    <path fill="#4D6BFE" d="M32 4C18 4 14 17 21 28c2 3 2 6 0 9-8 13-3 23 11 23s19-10 11-23c-2-3-2-6 0-9 2-4 3-7 3-11-4 1-7-2-6-6-4 0-6-3-4-6l-4-1Z"/>
+    <path stroke="#fff" stroke-linecap="round" stroke-width="2.5" stroke-opacity=".85" d="M25 13c-4 4-3 8 0 12m2 16c-4 6-3 11 2 13"/>
+  </g>
+</svg>
