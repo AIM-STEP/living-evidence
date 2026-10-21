@@ -49,7 +49,7 @@
 .embedded-preview .right-column{position:static;width:100%;min-width:0}
 .embedded-preview .right-column>.panel{margin:0;border:0;border-radius:0;box-shadow:none}
 .embedded-preview .preview-body{padding:0}
-.criteria-heading{display:flex;align-items:center;gap:12px}.criteria-heading h2{flex:none;margin-bottom:0}.criteria-heading .head-actions{flex:1;min-width:0;align-items:center}#criteria-progress{position:relative;flex:1;min-width:80px;max-width:none;padding-top:0;margin:0;--progress:0%}.criteria-progress-track{height:14px;background:#e5e7f1;border-radius:8px;overflow:hidden}.criteria-progress-fill{height:100%;width:var(--progress);background:#4d6bfe;border-radius:8px;transition:width 1.2s ease}.criteria-progress-percent{position:absolute;top:-16px;left:clamp(14px,var(--progress),calc(100% - 17px));transform:translateX(-50%);font-size:11px;line-height:15px;color:#4d6bfe;transition:left 1.2s ease}@media(prefers-reduced-motion:reduce){.criteria-progress-fill,.criteria-progress-percent{transition:none}}
+.criteria-heading{display:flex;align-items:center;gap:12px;flex-wrap:nowrap}.criteria-heading h2{flex:none;margin:0}.criteria-heading .head-actions{flex:0 0 auto;min-width:0;align-items:center;flex-wrap:nowrap}#criteria-progress{position:relative;flex:1 1 80px;min-width:40px;max-width:none;height:18px;padding:0;margin:0;align-self:center;--progress:0%}.criteria-progress-track{height:18px;background:#e5e7f1;border-radius:9px;overflow:hidden}.criteria-progress-fill{height:100%;width:var(--progress);background:#4d6bfe;border-radius:9px;transition:width .35s ease}.criteria-progress-percent{position:absolute;top:50%;left:clamp(18px,var(--progress),calc(100% - 18px));transform:translate(-50%,-50%);min-width:32px;padding:0 2px;border-radius:8px;background:#fff;font-size:10px;line-height:16px;text-align:center;white-space:nowrap;color:#253b9c;transition:left .35s ease}@media(prefers-reduced-motion:reduce){.criteria-progress-fill,.criteria-progress-percent{transition:none}}
 #machine-generate-panel:not(.is-collapsed){padding-bottom:10px}#machine-generate-panel .machine-actions{margin-top:8px}
 </style>
 <style>
@@ -1062,9 +1062,9 @@ if(embeddedManual){
     const head=[...box.children].find(el=>el.matches('.section-head,.panel-head,.criteria-heading'));
     if(!head||head.querySelector('.collapse-toggle'))return;
     const name=(head.querySelector('h2')?.textContent||'section').replace(/\s+/g,' ').trim(),key='aimstep-collapsed:'+page+':'+pid+':'+name;
-    // Everything after the title goes to the right, with the toggle last.
+    // Keep the progress bar beside the title; only controls enter the button group.
     const actions=document.createElement('div');actions.className='head-actions';
-    [...head.children].slice(1).forEach(el=>actions.appendChild(el));
+    [...head.children].slice(1).filter(el=>el.id!=='criteria-progress').forEach(el=>actions.appendChild(el));
     const btn=document.createElement('button');btn.type='button';btn.className='collapse-toggle';btn.innerHTML=icon+'<span class="sr-only"></span>';
     actions.appendChild(btn);head.appendChild(actions);head.classList.add('has-collapse');
     const set=c=>{box.classList.toggle('is-collapsed',c);btn.setAttribute('aria-expanded',String(!c));const t=(c?'Expand ':'Collapse ')+name;btn.title=t;btn.querySelector('.sr-only').textContent=t};
