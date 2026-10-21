@@ -22,7 +22,7 @@
 .tool-page.tool-build-protocol .tool-writing-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .tool-page.tool-build-protocol .tool-writing-layout .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; }
 .tool-page.tool-build-protocol .tool-writing-layout .form-grid .full { grid-column: 1 / -1; }
-.proposal-import-layout { display: grid; grid-template-columns: minmax(0, 1.618fr) minmax(0, 1fr); gap: 20px; margin-bottom: 20px; }
+.proposal-import-layout { display: grid; grid-template-columns: minmax(0, calc(61.8% - 12.36px + 3cm)) minmax(0, 1fr); gap: 20px; margin-bottom: 20px; }
 .proposal-import-layout > .panel { min-width: 0; margin-bottom: 0; }
 .proposal-import-panel > .panel-body { max-height: 390px; overflow: auto; }
 .proposal-preview-panel { display: flex; flex-direction: column; }
