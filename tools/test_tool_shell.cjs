@@ -3,9 +3,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {JSDOM}=require('jsdom');
 const root=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const pages=['eligibility','search-strategy','build-protocol','title-abstract-screening','full-text-screening','extraction','risk-of-bias','analysis','certainty-of-evidence','drafting-manuscript'];
+const workflow=pages.filter(page=>!['build-protocol','drafting-manuscript'].includes(page));
+const writing=['build-protocol','drafting-manuscript'];
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 (async()=>{
- for(const [index,page] of pages.entries()) {
+ for(const page of pages) {
+  const group=writing.includes(page)?writing:workflow,index=group.indexOf(page);
   const dom=new JSDOM(read(page+'.html'),{url:'https://aimsetp.com/'+page+'.html?projectId=synthetic%20project',runScripts:'outside-only'}),w=dom.window,d=w.document;
   const nav=d.querySelector('.tool-flow');
   assert(nav,page+' navigation');assert.equal(d.querySelector('.crumb'),null,page+' breadcrumb removed');
@@ -27,17 +30,17 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(picker.options.length,10);assert.equal(picker.value,page+'.html');
   [...picker.options].forEach(option=>assert.doesNotMatch(option.textContent,/^\d/,page+' Chinese has no number prefix'));
   assert.match(picker.selectedOptions[0].textContent,/[\u4e00-\u9fff]/,page+' translated step');
-  assert.equal(nav.querySelector('[data-flow-position]').textContent,(index+1)+' / 10');
-  assert.equal(new URL(next.href).pathname,'/'+(index===9?'index':pages[index+1])+'.html');checkProject(next);
-  if(index) { assert.equal(new URL(prev.href).pathname,'/'+pages[index-1]+'.html');checkProject(prev); }
+  assert.equal(nav.querySelector('[data-flow-position]').textContent,(index+1)+' / '+group.length);
+  assert.equal(new URL(next.href).pathname,'/'+(index===group.length-1?'index':group[index+1])+'.html');checkProject(next);
+  if(index) { assert.equal(new URL(prev.href).pathname,'/'+group[index-1]+'.html');checkProject(prev); }
   else { assert.equal(prev.hasAttribute('href'),false);assert.equal(prev.getAttribute('aria-disabled'),'true'); }
   checkProject(nav.querySelector('[data-flow-home]'));
   const destinations=[];
   d.addEventListener('click',event=>{const a=event.target.closest('a[href]');if(a&&!event.defaultPrevented){destinations.push(a.href);event.preventDefault();}});
-  if(index<9) {picker.value=pages[index+1]+'.html';picker.dispatchEvent(new w.Event('change'));assert.equal(destinations.at(-1),next.href);}
+  if(index<group.length-1) {picker.value=group[index+1]+'.html';picker.dispatchEvent(new w.Event('change'));assert.equal(destinations.at(-1),next.href);}
   if(page==='eligibility')assert.equal(savedByOriginalNext,1,'existing next/save handler retained');
-  picker.value=pages[(index+5)%10]+'.html';picker.dispatchEvent(new w.Event('change'));
-  assert.equal(new URL(destinations.at(-1)).pathname,'/'+pages[(index+5)%10]+'.html');assert.equal(picker.value,page+'.html');
+  picker.value=(writing.includes(page)?workflow[0]:writing[0])+'.html';picker.dispatchEvent(new w.Event('change'));
+  assert.equal(new URL(destinations.at(-1)).pathname,'/'+(writing.includes(page)?workflow[0]:writing[0])+'.html');assert.equal(picker.value,page+'.html');
   let before=0;d.addEventListener('aimstep:before-tool-navigation',e=>{before++;e.preventDefault();});
   const prior=destinations.length;nav.querySelector('[data-flow-home]').click();assert.equal(before,1);assert.equal(destinations.length,prior,'failed-save cancellation respected');
   w.AIMSTEP.setLanguage('en');assert.deepEqual([...picker.options].map(option=>option.textContent),fallbackNames);assert.equal(prev.textContent,'Previous');
@@ -52,6 +55,7 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(new URL(dom.window.document.querySelector('[data-flow-next]').href).searchParams.get('projectId'),'legacy-project');dom.window.close();
  }
  const home=new JSDOM(read('index.html')).window.document;
- assert.deepEqual([...home.querySelectorAll('#toolset [data-tool]')].map(a=>a.getAttribute('href').replace('.html','')),pages,'homepage and navigation order match');
- console.log('PASS: legacy project aliases and homepage ten-step order');
+ assert.deepEqual([...home.querySelectorAll('#toolset [data-tool]')].map(a=>a.getAttribute('href').replace('.html','')),workflow,'homepage and navigation order match');
+ assert.deepEqual([...home.querySelectorAll('#writing-tools [data-tool]')].map(a=>a.getAttribute('href').replace('.html','')),writing);
+ console.log('PASS: legacy project aliases, eight workflow steps and two writing tools');
 })().catch(e=>{console.error(e);process.exitCode=1;});

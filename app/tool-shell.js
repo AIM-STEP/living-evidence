@@ -1,19 +1,23 @@
 /* Shared navigation for the ten project-scoped tools; no research state is changed. */
 (function () {
   'use strict';
-  const steps = [
+  const workflow = [
     ['eligibility.html', 'Eligibility criteria', '纳入与排除标准'],
     ['search-strategy.html', 'Search strategy', '检索策略'],
-    ['build-protocol.html', "Build the proposal", '制定研究提案'],
     ['title-abstract-screening.html', 'Title and abstract screening', '题目与摘要筛选'],
     ['full-text-screening.html', 'Full-text assess', '全文评估'],
     ['extraction.html', 'Extraction', '数据提取'],
     ['risk-of-bias.html', 'Risk of bias assessment', '偏倚风险评估'],
     ['analysis.html', 'Analysis', '统计分析'],
-    ['certainty-of-evidence.html', 'Certainty of evidence', '证据确定性评价'],
-    ['drafting-manuscript.html', "Summary the evidence", '汇总证据']
+    ['certainty-of-evidence.html', 'Certainty of evidence', '证据确定性评价']
+  ];
+  const writing = [
+    ['build-protocol.html', 'Build a proposal', '制定研究提案'],
+    ['drafting-manuscript.html', "Summary of evidence", '汇总证据']
   ];
   const url = new URL(location.href);
+  const steps = writing.some(step => url.pathname.endsWith('/' + step[0])) ? writing : workflow;
+  const allTools = [...workflow, ...writing];
   const index = steps.findIndex(step => url.pathname.endsWith('/' + step[0]));
   const nav = document.querySelector('.tool-flow');
   if (index < 0 || !nav) return;
@@ -47,11 +51,11 @@
   jump.tabIndex = -1;
   nav.appendChild(jump);
   picker.addEventListener('change', () => {
-    const selected = steps.findIndex(step => step[0] === picker.value);
-    if (selected >= 0 && selected !== index) {
-      if (selected === index + 1) next.click();
-      else if (selected === index - 1) previous.click();
-      else { jump.href = destination(steps[selected][0]); jump.click(); }
+    const selected = allTools.find(step => step[0] === picker.value);
+    if (selected && selected !== steps[index]) {
+      if (selected === steps[index + 1]) next.click();
+      else if (selected === steps[index - 1]) previous.click();
+      else { jump.href = destination(selected[0]); jump.click(); }
     }
     picker.value = steps[index][0];
   });
@@ -71,13 +75,18 @@
     next.textContent = index === steps.length - 1 ? (chinese ? '返回项目' : 'Back to projects') : (chinese ? '下一步' : 'Next');
     previous.title = index ? (chinese ? '上一步：' : 'Previous: ') + steps[index - 1][titleIndex] : (chinese ? '当前为第一步' : 'This is the first step');
     next.title = index < steps.length - 1 ? (chinese ? '下一步：' : 'Next: ') + steps[index + 1][titleIndex] : home.textContent;
-    label.textContent = chinese ? '选择研究步骤' : 'Choose a research step';
+    label.textContent = chinese ? '选择工具' : 'Choose a tool';
     position.textContent = (index + 1) + ' / ' + steps.length;
-    picker.replaceChildren(...steps.map(step => {
+    picker.replaceChildren(...[workflow, writing].map((group, groupIndex) => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = groupIndex ? (chinese ? '写作工具' : 'Writing tools') : (chinese ? '研究流程' : 'Research workflow');
+      optgroup.append(...group.map(step => {
       const option = document.createElement('option');
       option.value = step[0];
       option.textContent = step[titleIndex];
       return option;
+      }));
+      return optgroup;
     }));
     picker.value = steps[index][0];
   }

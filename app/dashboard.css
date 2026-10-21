@@ -55,8 +55,9 @@ button, input, select, textarea { font-family: inherit; }
 }
 .lang:hover, .login:hover:not(:disabled) { background: #f3f6fc; border-color: #b9c7e2; }
 .toolset-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.61803398875fr);
-  gap: 32px; padding: 32px 0 56px;
+  grid-template-columns: minmax(190px, .65fr) minmax(320px, 1fr) minmax(360px, 1.25fr);
+  gap: 20px; padding: 32px 0 56px;
+  width: min(1600px, calc(100% - 48px)); margin-left: 24px; margin-right: auto;
 }
 .workflow-column {
   min-width: 0; padding: 24px;
@@ -136,8 +137,8 @@ button, input, select, textarea { font-family: inherit; }
 .workflow-column .pw-banner { margin-bottom: 16px; padding: 16px; border-radius: 8px; background: var(--brand-soft); }
 .workflow-column .pw-banner-msg { font-size: 14px; line-height: 1.6; }
 /* Tool rows retain their requested large type, small flat icons and no arrows. */
-#toolset .tool-grid { gap: 10px; }
-#toolset .tool {
+:is(#toolset, #writing-tools) .tool-grid { gap: 10px; }
+:is(#toolset, #writing-tools) .tool {
   display: grid; grid-template-columns: 28px 28px minmax(0, 1fr);
   gap: 16px; align-items: center;
   min-height: 76px; height: auto; padding: 18px 24px;
@@ -145,16 +146,16 @@ button, input, select, textarea { font-family: inherit; }
   background: #fff; box-shadow: none; transform: none;
   transition: background-color .15s ease, border-color .15s ease;
 }
-#toolset .tool .tool-step {
+:is(#toolset, #writing-tools) .tool .tool-step {
   position: static; transform: none;
   width: 28px; height: 28px; border-radius: 8px;
   color: var(--brand-text); background: var(--brand-soft);
   font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums;
 }
-#toolset .tool .tool-icon { width: 28px; height: 28px; margin: 0; background: none; border: 0; border-radius: 0; box-shadow: none; transform: none; }
-#toolset .tool .tool-icon svg { width: 24px; height: 24px; stroke: var(--brand-text); filter: none; }
-#toolset .tool .tool-title { margin: 0; font-size: 19px; line-height: 1.45; font-weight: 500; letter-spacing: -.015em; color: var(--dashboard-ink); overflow-wrap: anywhere; }
-#toolset .tool:hover { background: #f2f6ff; border-color: #aebfe9; box-shadow: none; transform: none; }
+:is(#toolset, #writing-tools) .tool .tool-icon { width: 28px; height: 28px; margin: 0; background: none; border: 0; border-radius: 0; box-shadow: none; transform: none; }
+:is(#toolset, #writing-tools) .tool .tool-icon svg { width: 24px; height: 24px; stroke: var(--brand-text); filter: none; }
+:is(#toolset, #writing-tools) .tool .tool-title { margin: 0; font-size: 19px; line-height: 1.45; font-weight: 500; letter-spacing: -.015em; color: var(--dashboard-ink); overflow-wrap: anywhere; }
+:is(#toolset, #writing-tools) .tool:hover { background: #f2f6ff; border-color: #aebfe9; box-shadow: none; transform: none; }
 /* Form and summary typography scales with content, never with viewport width. */
 body.project-create-mode .workflow-column .pw-create-title { font-size: 22px; line-height: 1.4; font-weight: 500; letter-spacing: -.02em; margin: 0 0 20px; }
 .workflow-column .pw-form { padding: 0; margin: 0; border: 0; border-radius: 0; background: #fff; box-shadow: none; backdrop-filter: none; }
@@ -208,7 +209,7 @@ body.project-create-mode .workflow-column .pw-create-title { font-size: 22px; li
 .login-card p, .login-status { font-size: 14px; line-height: 1.6; }
 .login-card .btn, .login-card .btn-google { min-width: 0; min-height: 44px; height: auto; padding: 10px 16px; font-size: 14px; line-height: 1.5; border-radius: 8px; }
 .login-close { width: 40px; height: 40px; }
-#toolset .tool:focus-visible, .workflow-column :is(button,a):focus-visible, .header-actions button:focus-visible {
+:is(#toolset, #writing-tools) .tool:focus-visible, .workflow-column :is(button,a):focus-visible, .header-actions button:focus-visible {
   outline: 2px solid var(--brand-text); outline-offset: 3px;
 }
 footer { padding: 20px 0; background: transparent; border-color: var(--dashboard-border); }
@@ -268,13 +269,19 @@ footer { padding: 20px 0; background: transparent; border-color: var(--dashboard
   .workflow-column .pw-tabs { gap: 20px; }
   .workflow-column .pw-tab { padding-inline: 0; font-size: 13px; }
   .workflow-column .btn, .pw-sort-trigger, .lang, .login { min-height: 44px; }
-  #toolset .tool { grid-template-columns: 26px 24px minmax(0, 1fr); min-height: 72px; padding: 16px; gap: 12px; }
-  #toolset .tool .tool-step { width: 26px; height: 26px; }
-  #toolset .tool .tool-icon { width: 24px; height: 24px; }
-  #toolset .tool .tool-title { font-size: 17px; }
+  :is(#toolset, #writing-tools) .tool { grid-template-columns: 26px 24px minmax(0, 1fr); min-height: 72px; padding: 16px; gap: 12px; }
+  :is(#toolset, #writing-tools) .tool .tool-step { width: 26px; height: 26px; }
+  :is(#toolset, #writing-tools) .tool .tool-icon { width: 24px; height: 24px; }
+  :is(#toolset, #writing-tools) .tool .tool-title { font-size: 17px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  #toolset .tool, .lang, .login, .btn { transition: none; }
+  :is(#toolset, #writing-tools) .tool, .lang, .login, .btn { transition: none; }
 }
 
 .pw-delete-action { color: #b42318; }
+
+#writing-tools { min-width: 0; padding: 0; background: none; }
+#writing-tools .tool { grid-template-columns: 28px minmax(0, 1fr); padding-inline: 16px; }
+@media (max-width: 1100px) { .toolset-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); } #writing-tools { grid-column: 1 / -1; } #writing-tools .tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 980px) { .toolset-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .toolset-layout { width: calc(100% - 32px); margin-left: 16px; } #writing-tools .tool-grid { grid-template-columns: minmax(0, 1fr); } }
