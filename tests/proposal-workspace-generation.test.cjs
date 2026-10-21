@@ -48,7 +48,9 @@ function app(options={}){
  return {get,data,files,requests,modelStarted,ctx,state:()=>JSON.parse(data.get('aimstep-protocol:test')),generate:()=>get('generate-protocol').click()};
 }
 test('short but supplied draft fields reach the local model and generate a persisted PDF with right-side preview',async()=>{
- assert(manual.validate(fixture.manualProtocolInputs).some(error=>error.includes('at least')));
+ assert.deepEqual(manual.validate(fixture.manualProtocolInputs),[]);
+ assert.deepEqual(manual.validate({...fixture.manualProtocolInputs,reviewTitle:'review '.repeat(100),rationale:'rationale '.repeat(1000),objectives:'objective '.repeat(1000),synthesis:'method '.repeat(2000)}),[]);
+ assert(manual.fields.every(field=>!('minWords' in field)&&!('maxWords' in field)));
  assert.deepEqual(manual.validate(fixture.manualProtocolInputs,{draft:true}),[]);
  const page=app();await page.generate();
  assert.equal(page.requests.length,5);assert(page.requests.every(request=>request.url==='http://127.0.0.1:8765/api/eligibility/model'&&request.body.provider==='local'));

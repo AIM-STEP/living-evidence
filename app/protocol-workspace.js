@@ -61,8 +61,8 @@ function manualControl(field,id){
 }
 function updateManualFeedback(field){
  const control=manualControls.get(field.id),feedback=manualFeedback.get(field.id);if(!control||!feedback)return;
- const errors=M.fieldErrors(field,control.value).filter(error=>!error.startsWith('Use at least ')),range=field.maxWords?(field.minWords?field.minWords+'–':'Up to ')+field.maxWords+' words':'';
- feedback.textContent=[field.minWords&&range?'Suggested: '+range:range,field.maxWords?M.wordCount(control.value)+' entered':'',errors.join(' ')].filter(Boolean).join(' · ');
+ const errors=M.fieldErrors(field,control.value);
+ feedback.textContent=errors.join(' ');
  feedback.hidden=!feedback.textContent;feedback.classList.toggle('error',!!errors.length);control.setAttribute('aria-invalid',String(!!errors.length));
 }
 function updateManualVisibility(){
