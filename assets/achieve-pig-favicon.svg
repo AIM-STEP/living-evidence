@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="12 27 94 83" preserveAspectRatio="none" role="img"
-     aria-label="EvidenceBank：尖耳朵、突出鼻子和短腿的存钱罐小猪，背上菱形落向投币口，肚子是森林图，卷尾是美元符号">
+     aria-label="EvidenceBank：尖耳朵、鼻口上有白色美元符号的存钱罐小猪，背上菱形落向投币口，肚子是森林图，卷尾是美元符号">
   <!-- $ 卷尾（手绘 S + 竖线） -->
   <g transform="translate(95.5 62) rotate(32)">
     <path d="M 3.8 -5.5 Q -0.5 -8.5 -3.2 -5.2 Q -5.2 -2.4 -1.8 -0.8 Q 2 1 3.2 3.2 Q 5 6.4 1 8 Q -2.5 9.3 -4.5 6.5"
@@ -18,6 +18,11 @@
   <rect x="17" y="54" width="20" height="14" rx="6" fill="#3E7BEA"/>
   <circle cx="21" cy="58" r="1.4" fill="#FFFFFF"/>
   <circle cx="21" cy="64" r="1.4" fill="#FFFFFF"/>
+  <!-- 鼻口上的白色手绘美元符号 -->
+  <g transform="translate(29 61) scale(.55)" fill="none" stroke="#FFFFFF" stroke-linecap="round">
+    <path d="M3.8 -5.5 Q-.5 -8.5 -3.2 -5.2 Q-5.2 -2.4 -1.8 -.8 Q2 1 3.2 3.2 Q5 6.4 1 8 Q-2.5 9.3 -4.5 6.5" stroke-width="3.6"/>
+    <line x1="0" y1="-8.8" x2="0" y2="10" stroke-width="3"/>
+  </g>
   <circle cx="43" cy="57" r="2.7" fill="#FFFFFF"/>
   <!-- 正落向投币口的菱形（与森林图小钻同尺寸） -->
   <polygon points="60,39 64,36.5 68,39 64,41.5" fill="#3E7BEA" transform="rotate(-14 64 39)"/>
