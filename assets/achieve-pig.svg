@@ -9,8 +9,8 @@
   <!-- 奔跑四肢：前腿前伸、后腿后蹬 -->
   <rect x="42" y="89" width="9" height="8" rx="4" fill="#3E7BEA" transform="rotate(-32 46.5 90)"/>
   <rect x="70" y="89" width="9" height="8" rx="4" fill="#3E7BEA" transform="rotate(26 74.5 90)"/>
-  <!-- 前后翘起、背部中间下凹的身体与鼻子 -->
-  <path d="M29 64 C31 52 39 46 46 48 C55 51 57 62 65 62 C76 62 83 46 91 46 C99 51 101 68 96 79 C90 90 77 95 62 95 C44 95 34 87 30 75 C29 71 29 67 29 64Z" fill="#3E7BEA"/>
+  <!-- 圆润身体与微微上翘的前后背线 -->
+  <path d="M29 66 C29 54 36 47 44 47 C52 47 57 51 65 51 C73 51 81 47 88 47 C96 50 99 60 97 72 C94 85 81 94 62 94 C43 94 32 85 29 73 C28 70 28 68 29 66Z" fill="#3E7BEA"/>
   <!-- 抬起的头部：鼻子、鼻孔和眼睛一起向上转 -->
   <g transform="rotate(24 50 70)">
     <ellipse cx="27" cy="68" rx="8" ry="7" fill="#3E7BEA"/>
@@ -19,16 +19,14 @@
     <circle cx="40.5" cy="58.5" r="2.7" fill="#FFFFFF"/>
   </g>
   <!-- 正落向投币口的菱形（与森林图小钻同尺寸） -->
-  <polygon points="58,52 62,49.5 66,52 62,54.5" fill="#3E7BEA" transform="rotate(-14 62 52)"/>
+  <polygon points="58,45 62,42.5 66,45 62,47.5" fill="#3E7BEA" transform="rotate(-14 62 45)"/>
   <!-- 背上的横向投币口 -->
-  <rect x="55" y="60" width="14" height="3.4" rx="1.7" fill="#FFFFFF"/>
+  <rect x="55" y="51" width="14" height="3.4" rx="1.7" fill="#FFFFFF"/>
   <!-- 肚子上的迷你森林图：基准线 + 两行区间 + 底部合并大钻 -->
-  <g transform="translate(0 7)">
   <line x1="52" y1="56" x2="52" y2="84" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
   <line x1="46" y1="63" x2="70" y2="63" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
   <polygon points="55,63 59,60.5 63,63 59,65.5" fill="#FFFFFF"/>
   <line x1="48" y1="73" x2="76" y2="73" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
   <polygon points="62,73 66,70.5 70,73 66,75.5" fill="#FFFFFF"/>
   <polygon points="54,82 62,78 70,82 62,86" fill="#FFFFFF"/>
-  </g>
 </svg>
