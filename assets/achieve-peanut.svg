@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <title>ACHIEVE bitten peanut kernel</title>
-  <g transform="rotate(28 32 32)">
-    <path fill="#EDC28C" stroke="#A66A3B" stroke-width="2.5" stroke-linejoin="round" d="M31 5C19 5 12 17 13 32c1 16 8 26 19 27 12 0 20-12 19-28l-1-5c-5 1-8-2-7-6-5 0-8-4-5-9l-2-5-5-1Z"/>
-    <path fill="#F9DEB6" d="M27 10c-7 4-10 13-9 23 1 12 5 19 11 22-4-11-6-25-2-45Z"/>
-    <path stroke="#A66A3B" stroke-width="2.5" stroke-linecap="round" d="M32 12c-5 11-5 27 1 40"/>
-  </g>
-</svg>
