@@ -6,7 +6,7 @@
 
 Pilot screening 标题旁依次提供 Eligibility criteria、Screening criteria、Screening prompt。
 
-Eligibility criteria 弹窗提供 Clear，复用页面现有 Clear 的按钮样式与垃圾桶图标。确认清空仅修改弹窗草稿，点击 Save 后生效；关闭并放弃草稿不会修改原标准。清空保留研究问题、附件与文献记录，旧标准及已有筛选结果按原有机制留存历史。保存的空标准会显式记录，不再回退加载旧标准；保存失败恢复原数据，遇到并发标准变更时拒绝覆盖。
+Eligibility criteria 弹窗提供 Clear，与旁边 Import from local、Edit eligibility criteria、Save 使用相同的文字按钮样式。确认清空后立即保存，无需再点击 Save；重新打开或刷新后保持为空。清空保留研究问题、附件与文献记录，旧标准及已有筛选结果按原有机制留存历史。保存的空标准会显式记录，不再回退加载旧标准；保存失败恢复原数据并提示错误，遇到并发标准变更时拒绝覆盖。普通编辑及导入仍需点击 Save 后生效。
 
 1. 先保存 Screening criteria，保留本阶段需要判断的元素。
 2. 首次打开 Screening prompt，编辑区为空，Save 与 Export 暂不可用。点击 Generate 才显示根据当前已启用条件生成的文本，包含研究问题背景、逐项条件、缺失信息处理、原文证据和纠错规则；也可直接输入或本地导入。已显式保存的内容重新打开时保留。
