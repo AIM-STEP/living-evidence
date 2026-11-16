@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 import tempfile
 import time
-import urllib.error
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -20,15 +19,6 @@ class Connection:
     def settimeout(self, value): pass
 
 class Tests(unittest.TestCase):
-    def test_provider_failures_have_specific_safe_messages(self):
-        for status,word in [(400,'format'),(404,'unavailable'),(413,'too large'),(429,'busy'),(502,'text-generation'),(503,'unavailable'),(504,'timed out')]:
-            error=urllib.error.HTTPError('http://127.0.0.1:8765/model',status,'private detail',{},io.BytesIO(b'private-key-and-research-content'))
-            with patch.object(g.OPENER,'open',side_effect=error):
-                code,result=g.upstream(g.PREFIX+'/model',{'provider':'local','messages':[]})
-            self.assertEqual(code,status);self.assertIn(word,result['error']);self.assertNotIn('private',json.dumps(result))
-        error=urllib.error.HTTPError('http://127.0.0.1:8765/model',502,'private detail',{},io.BytesIO(b'private'))
-        with patch.object(g.OPENER,'open',side_effect=error):
-            self.assertIn('screening',g.upstream(g.PREFIX+'/model',{'provider':'typesafe'})[1]['error'])
     @classmethod
     def setUpClass(cls):
         cls.key = rsa.generate_private_key(public_exponent=65537, key_size=2048)

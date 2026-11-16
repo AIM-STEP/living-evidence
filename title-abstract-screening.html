@@ -2428,7 +2428,7 @@ async function generateScreeningPromptDraft(context,{signal}={}){
     const result=await AimstepScreeningPrompt.generate(context.criteria,async payload=>{
       const base=window.AIMSTEPOnlineModel?.online?window.AIMSTEPOnlineModel.base:LOCAL_SERVER+'/api/eligibility';
       const response=await localFetch(base+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'local',...payload}),signal:controller.signal});
-      const data=await response.json();if(!response.ok)throw Error(data.error||'AI prompt generation failed.');
+      const data=await response.json();if(!response.ok)throw Error(data.error==='The model service could not complete this request.'?'The AI prompt generation service is unavailable. Try again shortly or contact the AIM-STEP administrator.':data.error||'AI prompt generation failed.');
       return {content:data.message?.content,model:data.model};
     });
     if(controller.signal.aborted)throw new DOMException('Stopped','AbortError');
