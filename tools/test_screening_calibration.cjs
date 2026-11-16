@@ -38,3 +38,15 @@ assert.equal(vm.runInContext('pilotApprovalValid()',ctx),false);
 pilot.approved.calibration=engine.build(pilot,records,criteria,'sig');assert.equal(vm.runInContext('pilotApprovalValid()',ctx),true);
 pilot.human.b.calibrationCriterion='';assert.equal(vm.runInContext('pilotApprovalValid()',ctx),false);
 console.log('PASS: correction completeness, exact evidence, scoped history, frozen versions, bounded selection, both prompt variants and approval invalidation');
+
+// Every confirmed correction is supplemental guidance, independently of example selection.
+const corrections={...approved,lessons:Array.from({length:20},(_,i)=>({...approved.lessons[0],id:'correction-'+i,round:i+1,review:'mistake',correction:'Apply the current population rule: confirmed clarification '+i}))};
+const all=engine.supplement(corrections);assert.equal(all.correctionCount,20);assert.equal(all.lessonIds.length,20);assert.equal(all.rounds.length,20);
+assert(all.text.includes('clarification 0'));assert(all.text.includes('clarification 19'));
+const limited=engine.select(corrections,records[0]);assert.equal(limited.rules.length,12);assert(all.lessonIds.includes('correction-19'));
+const repeated=engine.supplement({...corrections,lessons:[corrections.lessons[0],{...corrections.lessons[0],id:'duplicate',round:21},{...corrections.lessons[1],review:'agree',aiDecision:'yes',reviewerDecision:'yes'}]});
+assert.equal(repeated.correctionCount,1);assert.deepEqual(repeated.lessonIds,['correction-0','duplicate']);assert.deepEqual(repeated.rounds,[1,21]);
+assert.throws(()=>engine.supplement(corrections,{maxChars:100}),/no feedback has been discarded/);
+const edited=engine.supplement({...corrections,lessons:corrections.lessons.map(l=>({...l,correction:l.correction+' revised'}))});assert.notEqual(edited.hash,all.hash);
+const combined=engine.merge(approved,{...corrections,criteriaSig:approved.criteriaSig});assert.equal(combined.lessons.length,22);assert.notEqual(combined.hash,approved.hash);assert.equal(engine.merge(approved,{...corrections,criteriaSig:'deleted-scope'}),approved);
+console.log('PASS complete feedback supplement beyond example limits, deduplication with round trace, agreement examples, explicit oversize failure, revisions and scoped memory');

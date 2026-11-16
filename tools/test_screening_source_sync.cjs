@@ -3,8 +3,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const html=fs.readFileSync(path.join(__dirname,'../title-abstract-screening.html'),'utf8');
 const part=(start,end)=>{const a=html.indexOf(start),b=html.indexOf(end,a);assert(a>=0&&b>a);return html.slice(a,b);};
 function setup(){
- const writes=[],events=[],c={structuredClone,Map,Set,JSON,Promise,AimstepDedup:require('../app/screening-dedup.js'),
- workspace:{sourceSig:'old',criteriaSig:'criteria',imports:[{id:'kept',records:[{uid:'r',title:'Original title',abstract:'Original abstract',authors:[],provenance:[]}]}],importedRuns:[],screeningStages:{saved:'criteria'},criteriaUpload:null,pilot:{size:20,rounds:[{ids:['r']}],human:{r:{decision:'yes'}},approved:{}},full:{ai:{r:{decision:'no'}},ai2:{},human:{}}},
+ const writes=[],events=[],c={SCREENING_DECISION_POLICY:'title-abstract-evidence-v2',structuredClone,Map,Set,JSON,Promise,AimstepDedup:require('../app/screening-dedup.js'),
+ workspace:{decisionPolicyVersion:'title-abstract-evidence-v2',sourceSig:'old',criteriaSig:'criteria',imports:[{id:'kept',records:[{uid:'r',title:'Original title',abstract:'Original abstract',authors:[],provenance:[]}]}],importedRuns:[],screeningStages:{saved:'criteria'},criteriaUpload:null,pilot:{size:20,rounds:[{ids:['r']}],human:{r:{decision:'yes'}},approved:{}},full:{ai:{r:{decision:'no'}},ai2:{},human:{}}},
  source:{sourceSig:'new',criteriaSig:'criteria',records:[{uid:'r',title:'Title'}],runs:[]},sourceError:'',busy:'',importing:false,pilotReviewSaving:false,fullReviewSaving:false,
  pilotReviewDrafts:new Map(),exclusionDrafts:new Map(),stagesDialog:{open:false},document:{visibilityState:'visible'},window:{},refreshPromise:null,
  newPilot:size=>({size,rounds:[],ai:{},human:{},approved:null}),newFull:()=>({ai:{},ai2:{},human:{}}),

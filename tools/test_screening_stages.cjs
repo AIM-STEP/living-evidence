@@ -30,7 +30,7 @@ const record={uid:'synthetic',title:'Adults with fibromyalgia',abstract:'Exercis
 const prompt=JSON.parse(ctx.pilotPrompt(record,0));assert.equal(prompt.criteria.length,3);assert(!prompt.criteria.some(c=>c.dimension.includes('Duration')));assert(prompt.stagePolicy.includes('Disabled and deleted'));
 const active=stages.active(criteria,config).rows;
 let answer={decision:'exclude',criteria:[{dimension:items[3].label,judgment:'not met',quote:'Exercise lasted six weeks.'}]};
-assert.equal(ctx.pilotDecision(answer,record).decision,'maybe');assert.equal(ctx.pilotDecision(answer,record).criteria.length,0);
+assert.equal(ctx.pilotDecision(answer,record).decision,'maybe');assert.equal(ctx.pilotDecision(answer,record).criteria.length,active.length);
 answer={criteria:[{dimension:active[0].title,judgment:'not met',quote:'invented'}]};assert.equal(ctx.pilotDecision(answer,record).decision,'maybe');
 answer={criteria:[{dimension:active[0].title,judgment:'not met',quote:'Adults with fibromyalgia'}]};assert.equal(ctx.pilotDecision(answer,record).decision,'no');
 const reading={...ctx.pilotDecision(answer,record),criteriaSig:'criteria-v1',stageSig:stages.signature(config)};

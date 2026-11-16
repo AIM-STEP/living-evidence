@@ -8,7 +8,7 @@ const ctx=vm.createContext({$,Map,Set,Math,JSON,Array,String,Date,console,
  source:{criteriaSig:'criteria',records:[record],criteria:{rows:[{title:'Population',condition:'Adults',definition:'',uncertain:'Children'},{title:'Intervention',condition:'Drug A'}]}},
  workspace:{pilot:{rounds:[],ai:{},human:{},approved:null},full:{ai:{},ai2:{},human:{},check:'unresolved'}},recordById:new Map([['r1',record]]),
  text:(x,n)=>String(x??'').slice(0,n),esc:x=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;'),excerpt:x=>String(x),
- forward:d=>d==='yes'||d==='maybe',fingerprint:()=> 'abcd',stale:()=>false,screeningProvider:()=> 'local',pilotCriteriaSig:()=> 'sig',currentCalibration:()=>({hash:'feedback'}),calibrationReady:()=>true,
+ forward:d=>d==='yes'||d==='maybe',fingerprint:()=> 'abcd',stale:()=>false,screeningStagesReady:()=>true,screeningStageSig:()=> 'stages',activeScreeningCriteria:()=>ctx.source.criteria,screeningProvider:()=> 'local',pilotCriteriaSig:()=> 'sig',currentCalibration:()=>({hash:'feedback'}),calibrationReady:()=>true,
  label:d=>({yes:'Yes',no:'No',maybe:'Maybe'}[d]||''),sourceDatabases:()=>['Synthetic'],projectId:'synthetic-project',now:()=> 'test-time',
  download:(...args)=>{output=args},toast(){},log(){},save:async()=>{},summary:()=>({pending:0})});
 function load(from,to){const a=html.indexOf(from),b=html.indexOf(to,a);assert(a>=0&&b>a);vm.runInContext(html.slice(a,b),ctx);}
@@ -22,21 +22,21 @@ load('function stamp(','function csvRows(');
 load('function sourceBibTeX(',"$('export-source').addEventListener");
 const evaluate=code=>vm.runInContext(code,ctx);
 const c=(dimension,judgment,quote='')=>({dimension,judgment,quote,reason:'Synthetic reason'});
-const result=(criteria,decision='maybe')=>({criteria,decision,criteriaSig:'criteria',model:'synthetic-model'});
+const result=(criteria,decision='maybe')=>({criteria,decision,stageSig:'stages',criteriaSig:'criteria',model:'synthetic-model'});
 const set=(a,b)=>{ctx.workspace.full.ai={r1:a};ctx.workspace.full.ai2={r1:b};ctx.workspace.full.human={};ctx.workspace.pilot.human={};ctx.workspace.pilot.approved=null;};
 // One supported failure beats unknown information on every other criterion.
 set(result([c('Population','not met','Children only.'),c('Intervention','unclear')],'no'),result([c('Population','unclear'),c('Intervention','unclear')]));
 assert.equal(evaluate("aiPair('r1')"),'no');assert.equal(evaluate('checkIds().length'),0);
 assert.match(evaluate("exclusionDetails('r1').reason"),/Population not met.*Adults.*Children only/);
 // Direct contradiction on that criterion requires a reviewer.
-ctx.workspace.full.ai2.r1=result([c('Population','met'),c('Intervention','unclear')]);
+ctx.workspace.full.ai2.r1=result([c('Population','met','Children only.'),c('Intervention','unclear')]);
 assert.equal(evaluate("aiPair('r1')"),'conflict');assert.equal(evaluate('conflictIds().length'),1);
 // A separate, uncontested failed criterion is sufficient despite another disagreement.
 ctx.workspace.full.ai.r1.criteria.push(c('Intervention','not met','Drug B only.'));
 assert.equal(evaluate("aiPair('r1')"),'no');
 // No supporting quote, including missing abstract, is never an inferred exclusion.
 set(result([c('Population','not met','Invented quote')],'no'),result([c('Population','unclear')]));
-assert.equal(evaluate("aiPair('r1')"),'maybe');assert.equal(evaluate('checkIds().length'),1);
+assert.equal(evaluate("aiPair('r1')"),'maybe');assert.equal(evaluate('checkIds().length'),0);
 ctx.record=record;ctx.value={criteria:[c('Population','not met','Children only.')],decision:'exclude'};
 assert.equal(evaluate('pilotDecision(value,record).decision'),'no');
 // New and migrated default review scopes avoid the old mandatory 300 checks.
@@ -45,7 +45,7 @@ ctx.old={version:3,check:'sample'};assert.equal(evaluate('validFull(old).check')
 ctx.old.checkPolicy=2;assert.equal(evaluate('validFull(old).check'),'sample');
 // Minimum one complete, compared pilot; starting another round revokes the gate.
 ctx.workspace.pilot={rounds:[],ai:{},human:{},approved:null};assert.equal(evaluate('pilotApprovalValid()'),false);
-ctx.workspace.pilot={rounds:[{ids:['r1'],revealedAt:'time'}],ai:{r1:{round:0}},human:{r1:{decision:'yes',reviewMode:'ai-first-v1',review:'agree',round:0,reviewedAI:'abcd'}},approved:{round:0,criteriaSig:'sig',calibration:{hash:'feedback'}}};
+ctx.workspace.pilot={rounds:[{ids:['r1'],revealedAt:'time'}],ai:{r1:{round:0,decision:'yes',stageSig:'stages'}},human:{r1:{decision:'yes',reviewMode:'ai-first-v2-tristate',review:'agree',round:0,reviewedAI:'abcd'}},approved:{round:0,criteriaSig:'sig',calibration:{hash:'feedback'}}};
 assert.equal(evaluate('pilotApprovalValid()'),true);
 ctx.workspace.pilot.rounds.push({ids:['r1']});assert.equal(evaluate('pilotApprovalValid()'),false);
 ctx.workspace.pilot.rounds.pop();delete ctx.workspace.pilot.human.r1;assert.equal(evaluate('pilotApprovalValid()'),false);

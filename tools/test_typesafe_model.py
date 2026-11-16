@@ -184,7 +184,9 @@ class TypeSafeTest(unittest.TestCase):
             self.assertNotIn('synthetic-key',json.dumps(request))
 
     def test_stage_policy_reaches_model_and_exclusion_only_rule_is_explicit(self):
-        self.payload['input']['stagePolicy'] = 'Only supplied conditions apply; defer other criteria to full text.'
+        self.payload['input']['stagePolicy'] = ('Only supplied conditions apply; defer other criteria to full text.\n\n'
+            'CONFIRMED PILOT FEEDBACK — SUPPLEMENTAL INSTRUCTIONS\n'
+            'A systematic review of RCTs is not itself an original randomized trial.')
         seen = []
         def respond(path, key, body):
             seen.append(body)

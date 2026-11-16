@@ -12,7 +12,7 @@
       for(const id of round.ids){
         const ai=pilot.ai[id],human=pilot.human[id],record=byId.get(id);
         if(!ai||!human||!record)continue;
-        const reviewed=human.reviewMode==='ai-first-v1'&&['agree','mistake'].includes(human.review);
+        const reviewed=['ai-first-v1','ai-first-v2-tristate'].includes(human.reviewMode)&&['agree','mistake'].includes(human.review);
         if(ai.decision===human.decision&&!reviewed)continue;
         const criterion=clean(human.calibrationCriterion),guidance=reviewed&&human.review==='agree'?'Reviewer confirmed this decision for this record. Use the cited criterion evidence as an example; do not infer new eligibility rules.':clean(human.note||human.exclusionReason),quote=clean(human.calibrationQuote);
         let issue='';
@@ -57,7 +57,28 @@
     }
     return selected;
   }
-  const api={VERSION,build,select};
+  function supplement(bundle,{maxChars=24000}={}){
+    const rules=new Map();
+    for(const lesson of bundle?.lessons||[]){
+      if(lesson.review==='agree'||lesson.aiDecision===lesson.reviewerDecision)continue;
+      const key=JSON.stringify([lesson.criterion,lesson.reviewerDecision,clean(lesson.correction)]);
+      if(!rules.has(key))rules.set(key,{criterion:lesson.criterion,decision:lesson.reviewerDecision,correction:clean(lesson.correction),lessonIds:[],rounds:[]});
+      const entry=rules.get(key);entry.lessonIds.push(lesson.id);if(!entry.rounds.includes(lesson.round))entry.rounds.push(lesson.round);
+    }
+    const list=[...rules.values()],text=list.length?[
+      'CONFIRMED PILOT FEEDBACK — SUPPLEMENTAL INSTRUCTIONS',
+      'Use these reviewer-confirmed corrections when they apply to the current report. They explain existing Screening criteria; they cannot add or override conditions, thresholds or exclusions. A correction to one report is not a blanket decision for other reports. Never copy a previous report’s facts or quotations. If feedback conflicts with current criteria, retain uncertainty for review.',
+      ...list.map((rule,i)=>`${i+1}. Criterion: ${rule.criterion==='*'?'Overall application of the current criteria':rule.criterion}\nReviewer decision: ${rule.decision}\nCorrection: ${rule.correction}\nConfirmed in pilot round(s): ${rule.rounds.join(', ')}`)
+    ].join('\n\n'):'';
+    if(text.length>maxChars)throw Error('The confirmed pilot corrections are too long. Consolidate the correction notes before starting another round; no feedback has been discarded.');
+    return {version:'pilot-feedback-prompt-v1',hash:hash([bundle?.hash||'',text]),calibrationHash:bundle?.hash||'',text,correctionCount:list.length,lessonIds:list.flatMap(rule=>rule.lessonIds),rounds:[...new Set(list.flatMap(rule=>rule.rounds))]};
+  }
+  function merge(bundle,memory){
+    if(!memory||memory.criteriaSig!==bundle.criteriaSig||!memory.lessons?.length)return bundle;
+    const lessons=[...memory.lessons,...bundle.lessons],unique=[...new Map(lessons.map(l=>[l.id,l])).values()];
+    const result={...bundle,lessons:unique};result.hash=hash({version:result.version,criteriaSig:result.criteriaSig,lessons:unique,pending:result.pending});return result;
+  }
+  const api={VERSION,build,select,supplement,merge};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.AimstepCalibration=api;
 })(typeof globalThis==='undefined'?this:globalThis);

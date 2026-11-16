@@ -63,6 +63,30 @@ TypeSafe `/v1/systemone` 使用共享 `state` 和逐问题 `instructions`，不�
 
 仅对当前启用条件判断 `met / not met / unclear`。排除需要至少一项明确不满足的条件及当前报告的原文证据，缺少排除证据时保留为 Maybe；模型输出的未知条件不会成为排除依据。Include 与 Maybe 均继续进入全文评估。
 
+## 人工反馈作为 Prompt 补充（2026-11-16）
+
+本次实现的是上下文学习，不训练或更新 TypeSafe/JEV 的模型权重。基础 Prompt 继续由用户生成、编辑并保存；人工反馈形成独立的 `pilot-feedback-prompt-v1` 补充指令，追加到实际请求的 `stagePolicy`，并进入分类、证据选择两次 TypeSafe 调用。预筛选及正式筛选两种阅读顺序使用相同补充。
+
+一轮全部人工评价保存完成后，按当前标准收集 Agree 与 Mistake。所有独立纠错说明均写入补充，重复说明合并并保留轮次和来源 ID；不受相关示例最多 4 条、选出规则最多 12 条的限制。Agree 作为正确判例进入记忆，按相关性选择示例，不把单篇文献的确认泛化为新纳排条件。未保存草稿、不完整轮次、过期或无效评价不会参与下一轮。本轮不使用尚在收集的本轮标签。
+
+补充只解释当前启用的标准，不可增加年龄阈值、疾病、人群、研究设计等要求，也不能复制其他文献的事实或引文；与当前标准或其他反馈冲突时保留不确定。每轮冻结反馈快照，逐篇结果保存补充哈希、参与轮次、反馈来源和基础 Prompt 哈希。正式筛选使用批准时冻结的反馈；后续纠错使批准失效。基础 Prompt 在相同标准下编辑后仍保留已确认反馈，但归档旧结果并要求重新预筛；标准或源变更、明确清空 Pilot 则重置活动反馈。补充超过 24,000 字符时明确报错，要求整理已有纠错说明，不静默删除旧反馈。
+
+## 判断、证据与汇总（`title-abstract-evidence-v2`）
+
+每个启用条件都必须有判断；遗漏条件为 unclear，未知或已删除条件不参与判断。met 和 not met 均要求当前标题摘要中真实存在的原文引文。缺少、伪造引文时改为 unclear；同一条件出现相互矛盾的有证据判断时保留不确定。引文真实性校验不等于自动证明语义正确，仍需 Pilot 人工检验。
+
+- 任一条件有证据 not met：Exclude。
+- 全部启用条件有证据 met：Include。
+- 其余情况：Maybe；不自动转换为 Include。
+
+执行指令要求识别本文实际招募的人群和研究设计，不能将背景或综述纳入研究的特征当作本文特征。仅当当前标准要求 RCT 时，系统综述、RCT 的 Meta-analysis 或非随机研究才因研究设计不符而排除；不通过无条件关键词黑名单排除。
+
+Pilot 显示并保存 Include、Maybe、Exclude。Agree 保留原判断；Mistake 必须选择一个不同的纠正判断并说明理由，AI 为 Maybe 时不默认翻转为 Include。正确率、一致率和 kappa 使用三分类；转入全文的召回率单独把 Include 与 Maybe 视为继续评估。正式筛选中，一次有证据的不满足不会被另一次无证据的 met 覆盖；同一条件出现两次有证据的直接矛盾则进入冲突处理。有效人工复核优先于 AI。
+
+旧判断策略的结果与批准自动归档到 `decisionPolicyArchives`，需重新预筛。明确的旧人工纠错保留为补充记忆；旧版把 Maybe 显示为 Include 后得到的 Agree 不作为已确认纳入或正例沿用。归档和清空依赖结果使用同一次保存事务；失败恢复原状态，刷新后不重复归档。JSON 导出携带策略归档。
+
+真实 API 合成样本测试：使用现有 TypeSafe 服务请求 `jev-latest`，实际返回 `jev-1.14.0`，连接器为 `typesafe-screen-v5`。儿童人群不符、系统综述及非随机研究为 Exclude；明确的成人 RCT 为 Include；缺少人群和设计信息为 Maybe。五条记录仅验证链路和这些边界案例，不是实际综述性能评估。
+
 ## 版本与保存保护
 
 - Prompt 绑定 `criteriaSig`、`stageSig` 及模块版本；指纹是确定性变化标识，不是密码学真实性验证。
@@ -76,6 +100,8 @@ TypeSafe `/v1/systemone` 使用共享 `state` 和逐问题 `instructions`，不�
 ## 验证
 
 ```sh
+node tools/test_screening_decisions.cjs
+node tools/test_screening_workflow.cjs
 node tools/test_screening_prompt.cjs
 node tools/test_screening_prompt_workflow.cjs
 node tools/test_screening_criteria_clear.cjs
@@ -87,6 +113,6 @@ node tools/test_screening_source_sync.cjs
 cd tools && python3 -B -m unittest test_typesafe_model.py
 ```
 
-新增检查执行实际页面函数及编辑器：每次打开空白、实际生成请求与模拟 AI 响应、四部分结构、缺项与旧前言拒绝、Stop 与失败保留草稿、导入、三种格式导出往返、菜单键盘与外部关闭、草稿隔离、失败回滚、标准并发变化、两种阅读顺序的 TypeSafe 请求，以及 Pilot → 人工评价 → 批准 → 编辑 Prompt → 归档并重新预筛。Python 检查验证两阶段请求均携带 Prompt、非法输入不发请求、无有效排除引文时保留记录。模型调用均由合成结果模拟，没有以真实账户进行付费筛选或据此声称性能。
+新增检查执行实际页面函数及编辑器：每次打开空白、实际生成请求与模拟 AI 响应、四部分结构、缺项与旧前言拒绝、Stop 与失败保留草稿、导入、三种格式导出往返、菜单键盘与外部关闭、草稿隔离、失败回滚、标准并发变化、两种阅读顺序的 TypeSafe 请求，以及 Pilot → 人工评价 → 批准 → 编辑 Prompt → 归档并重新预筛。Python 检查验证两阶段请求均携带 Prompt、非法输入不发请求、无有效排除引文时保留记录。自动化回归以模拟模型响应验证流程；另使用五条合成记录完成上述真实 TypeSafe API 边界测试，未读取用户文献，也不据此声称真实综述性能。
 
 旧 `test_pilot_ai_review.cjs` 仍缺少现有 `AIMScreeningCriteriaDialog` 测试替身，在修改前的 HEAD 页面也失败；新增完整页面工作流检查覆盖本次 Prompt 与 Pilot 集成。本环境此前没有可用的交互浏览器，视觉操作验收须与函数及部署文件核验区分。
