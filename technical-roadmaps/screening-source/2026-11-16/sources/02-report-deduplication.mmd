@@ -1,0 +1,29 @@
+flowchart TB
+    IN["不可变的原始记录与批次"] --> N["比较字段标准化<br/>Unicode NFKD、去音标、大写、标点/空白规范化<br/>原文另外保留；缺失字段不给正向证据"]
+    N --> ID["DOI：去前缀、解码、格式校验<br/>PMID：纯数字、去多余前导零"]
+    ID --> BLOCK["候选分块<br/>DOI / PMID / 完整标题 / 标题前40字符 / 标题前4词<br/>作者首词+年份 / 期刊+卷+页 / 年份+卷+页"]
+    BLOCK --> SIM["计算候选对相似度<br/>标题与作者：Jaro–Winkler<br/>完整摘要：不同词项集合 Sørensen–Dice"]
+    SIM --> REL{"相关性预判成立？<br/>同有效DOI或PMID；或<br/>标题≥0.85 且 作者≥0.75、同期刊、摘要≥0.80 至少一项"}
+    REL -- 否 --> DISTINCT["当前规则判为不同<br/>分别保留；不证明其绝无重复"]
+    REL -- 是 --> GUARD{"存在保护冲突？<br/>有效DOI不同 / 有效PMID不同 / 年份差>1<br/>显式报告类型不同 / 标题数字序列不同"}
+    GUARD -- 是 --> POSSIBLE["疑似重复：全部保留<br/>记录候选对、理由、分数；无需人工去重确认"]
+    GUARD -- 否 --> EXACT{"相同有效 PMID 或 DOI？"}
+    EXACT -- "是：R1或R2" --> EDGE["自动重复候选边"]
+    EXACT -- 否 --> PUB{"双方同时存在的卷、期、页有冲突？"}
+    PUB -- 是 --> POSSIBLE
+    PUB -- 否 --> RULE{"满足 R3 或 R4？"}
+    R3["R3：标题≥0.97；作者≥0.95<br/>同年、同期刊、同卷、同页；字段非空"] -.-> RULE
+    R4["R4：非空标题完全一致；作者≥0.95；同年、同期刊<br/>两段摘要各≥160规范化字符、各≥20不同词项<br/>全摘要 Dice≥0.98"] -.-> RULE
+    RULE -- 否 --> POSSIBLE
+    RULE -- 是 --> EDGE
+    EDGE --> SORT["排序：同PMID → 同DOI → 其他自动规则<br/>同级按固定成员对键排序"]
+    SORT --> ALL{"跨两个候选组的每一对原始成员<br/>都满足自动重复规则？"}
+    ALL -- 否 --> BRIDGE["group-conflict<br/>退为疑似；不归并这两个组"]
+    BRIDGE --> POSSIBLE
+    ALL -- 是 --> UNION["并查集归并同一报告"]
+    UNION --> FIELD["基础身份采用最早排序成员 UID<br/>逐字段选择可用信息；标识符优先有效值<br/>更长值优先，同长按稳定成员键排序<br/>来源取并集；保存原始成员与 fieldSources"]
+    FIELD --> OUT["输出 records / groups / pairs / stats<br/>移除数 = 有效输入成员数 - 保留记录数"]
+    DISTINCT --> OUT
+    POSSIBLE --> OUT
+    NOTE["相似度是字符串指标，不是重复概率<br/>A≈B 且 B≈C 不自动允许合并冲突的 A、C<br/>阈值尚未经过真实文献基准标定"]
+

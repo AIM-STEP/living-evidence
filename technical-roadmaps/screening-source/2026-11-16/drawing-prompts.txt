@@ -1,0 +1,116 @@
+Use case: infographic-diagram. Create one finished, precise Chinese technical flowchart, drawn as clean professional vector-like scientific documentation. Portrait 3:4 or tall 2:3, highest available resolution, generously spaced with readable Chinese typography and a flat pure-white background. Dark navy titles, muted teal process nodes, blue data stores, amber uncertainty branches, light red error/rollback nodes. Rounded rectangles for processing, diamonds for decisions, cylinders for stores, arrowheads with clear labels. No illustrations, no photos, no invented UI screenshots or logos. All essential text must be rendered accurately in simplified Chinese; English identifiers and decimals verbatim. Avoid intersecting arrows and tiny footnotes; wrap long labels across lines. Number every section. The four charts form a consistent series. This is a diagram of current implemented software, not proposed future work. Distinguish report-level deduplication from study/report association; uncertainty always retains records. Backend means browser background processing. No LLM calls are involved in import/dedup/linkage. Do not insert manual duplicate review or remove uncertain records. Footer: “AIM-STEP · 当前实现 c02eceb · 2026-11-16”.
+
+=== 图1 ===
+标题：“Screening source 技术流程图 ①｜完整数据流”
+副标题：“导入 → 报告级去重 → 研究关联 → 导出与 Pilot”
+Arrange top input branches, a central vertical processing spine, and three output branches at the bottom. Clear background swimlane and UI labels; backend processes never look like user-visible controls.
+INPUTS:
+A1 用户操作：“Import from search strategy” → “选择检索批次” → database cylinder “aimstep-search-results / 已选择批次的原始记录与来源”.
+A2 用户操作：“Import from local” → “RIS / NBIB / CSV / TSV / JSON / 文本” → “文件≤80 MB；解析与结构校验” → cylinder “aimstep-screen-imports / 原始导入批次”.
+Optional thin dashed loop from “全文退回报告（如有）” into input union; clearly label “既有流程回流”.
+MERGE arrows from A1 and A2 into “统一字段 cleanRecord：UID、标题、作者、年份、摘要、DOI、PMID、卷期页码、来源”.
+Then “有效记录至少有：标题 / DOI / PMID” → “按导入时间与批次键排序 / 保留原始成员与批次”.
+Add a red side branch from import validation: “解析失败 / 无有效记录 → 提示错误，中止本次导入；保留原有数据”.
+Then central process “报告级去重 report-dedup-v3 / 详见图②”.
+This process has branch “自动确认同一报告的重复记录” → “组内保留一条筛选记录；原始成员留存审计”. Another branch “疑似重复 / 无充分证据” → “全部分别保留；直接进入筛选”. Both join “去重后完整记录集合”.
+Then “研究与报告关联 study-links-v1 / 详见图③ / 不删除不同报告”.
+Then cylinder “source.records / 唯一活动源数据集”.
+THREE OUTPUT branches:
+B1 “Export ▾” → “RIS / CSV / BibTeX / JSON” with note “导出全部去重后记录，不随筛选决定缩小”.
+B2 “Export duplication” ← dashed from dedup audit. Then diamond “已实际移除重复记录？” yes “Excel .xlsx：仅移除成员” no “按钮禁用”. Five headers tiny but readable “ID号｜标题｜作者｜年份｜重复理由”.
+B3 “内部直接供 Pilot screening 抽样” → “逐篇报告筛选 / 不需要用户再次导入”.
+Side note box “后台维护：自动去重、研究关联、来源审计、版本同步；页面不显示 Study and report links / Deduplication details”.
+Bottom invariant strip “有效导入记录数 = 保留记录数 + 移除重复数；疑似记录对数不等于移除数”.
+
+
+=== 图2 ===
+标题：“Screening source 技术流程图 ②｜报告级去重算法”
+副标题：“report-dedup-v3 · 保守自动归并 · 疑似全部保留”
+Use 3 numbered sections: preprocessing at top, decision tree middle with a compact rule table to the side, group-level safety/output at bottom. Essential arrow labels accurate.
+1.“原始记录 → 比较字段标准化”
+detail “Unicode NFKD；去音标；大写；标点与空白规范化；原文另存”.
+“DOI：去URL前缀、解码、格式校验；PMID：纯数字、去多余前导零”.
+“候选分块：DOI / PMID / 完整标题 / 标题前40字符 / 前4词 / 作者首词+年份 / 期刊+卷+页 / 年份+卷+页”.
+Then “仅候选记录对计算：标题与作者 Jaro–Winkler；完整摘要词集合 Dice”.
+2.Diamond “满足相关性预判？” Explain at side “相同有效 DOI 或 PMID；或 标题≥0.85 且（作者≥0.75 / 同期刊 / 摘要≥0.80 至少一项）”.
+NO goes to “当前规则判为不同 / 分别保留”.
+YES → diamond “存在保护冲突？”
+Conflict list “有效 DOI 不同；有效 PMID 不同；年份差>1；显式报告类型不同；标题数字序列不同”.
+YES → amber “疑似重复：全部保留”.
+NO → diamond “相同有效 PMID 或 DOI？” YES → “自动重复候选边”.
+NO → diamond “卷 / 期 / 页存在冲突？” YES → amber retained.
+NO → diamond “满足 R3 或 R4？” YES → “自动重复候选边”; NO → amber retained.
+Side table must be exact:
+“R3：标题≥0.97；作者≥0.95；同年、同期刊、同卷、同页，字段非空”
+“R4：非空标题完全相同；作者≥0.95；同年、同期刊；两摘要各≥160字符、≥20不同词；Dice≥0.98”
+Footnote near rules: “缺失字段不提供正向证据；相似度不是重复概率”.
+3.“自动边排序：同PMID → 同DOI → 其他规则”
+→ diamond “跨两个候选组的每一对成员都满足自动重复规则？”
+NO → amber “group-conflict / 退为疑似，分别保留”.
+YES → “并查集归并同一报告”.
+Then “保留基础UID；逐字段选取可用信息；合并来源；保存全部原始成员、理由、分数、fieldSources”.
+End “输出 records / groups / pairs / stats”.
+Amber boxes connect to output retaining records, not to removal.
+Bottom banner “A≈B 且 B≈C，不代表允许把相互冲突的 A、C 合并。无需人工去重确认。”
+
+Readability: display all thresholds with ≥, > and decimals exactly; use a concise side legend “JW：Jaro–Winkler；Dice：2|A∩B|/(|A|+|B|)”. Small footer note “规则阈值尚未经过真实文献基准标定”.
+
+=== 图3 ===
+标题：“Screening source 技术流程图 ③｜同一研究多报告关联”
+副标题：“study-links-v1 · 关联不等于删除 · 全部报告独立筛选”
+Start “图②输出的全部保留报告 + 同项目已知关联证据”.
+Then “为每篇报告生成独立 Report ID / R-UID确定性指纹”.
+Split into two evidence paths.
+LEFT “提取本研究注册声明” → “结构化注册字段；标题摘要的明确注册语境” → diamond “同一 NCT / ISRCTN 注册号，且属于本研究？” YES → “共享 Study ID：S-NCT… / S-ISRCTN…”. Note “仅普通提及、他人试验或综述引用不足以关联”.
+RIGHT “提取明确报告关系声明” → “follow-up / secondary analysis / extension of … reported in DOI” → diamond “DOI唯一指向已知报告？” NO → “不凭此建立关联；保留报告”. YES → diamond “连接分量存在多个不同注册号？” YES → amber “注册冲突候选；不自动连接”. NO → “建立明确报告连接 / 共享研究标识”.
+A separate amber weak-evidence branch from start:
+“同号提及但缺少本研究证据；或共享作者 + 标题Dice≥0.45 + 地点/干预/招募期支持” → “仅保存候选；不改变研究归属”.
+All outcomes join “保留每篇报告的 UID / Report ID / Study IDs / 报告类型 / 原文依据 / 来源”.
+Special case box “一篇报告涉及多项试验：多个 Study ID；不能把两个试验合成一个”.
+Singleton box “证据不足：暂定独立研究组；暂定 Study ID 可随新证据更新”.
+Then cylinder “IndexedDB：aimstep-study-links / projects 按项目隔离 / 保存特征、证据片段和指纹”.
+Then arrow into “同一 source.records：报告条数保持不变 → 逐篇 Pilot / 正式筛选”.
+Dashed future update loop labeled “后续全文阶段：新增全文→补充证据；删除全文→撤回全文证据” returns to evidence extraction. Mark clearly “跨阶段补充，非源阶段下载”.
+Side note “建议主报告仅为元数据，不自动选择结果；两个详情区域均不在页面显示”.
+Bottom banner “研究关联不增加 Duplicates removed；候选无需用户确认；不调用大模型”.
+
+
+=== 图4 ===
+标题：“Screening source 技术流程图 ④｜同步、导出与 Pilot 交接”
+副标题：“后台更新与保存保护 · 单一源数据集”
+Two major vertical columns, with bottom shared invariants.
+LEFT title “A. 后台自动同步”
+Start “页面加载 / 导入 / 窗口聚焦 / 存储事件 / 每5秒检查”
+→ diamond “当前允许刷新？”
+NO conditions side “筛选或导入中；人工修改未保存；设置对话框打开；页面不可见” → “暂缓，等待后续检查” loop.
+YES → “读取批次并重建 source.records / sourceSig + criteriaSig”
+→ diamond “源或标准指纹发生变化？”
+NO → “保留既有筛选结果，不重复归档”.
+YES → diamond “已有筛选进度？”
+YES → “先归档旧 Pilot / 正式筛选 / 人工草稿与阶段快照”.
+NO bypass archive.
+Join “采用新源与标准指纹 / 重置依赖结果和 Pilot 批准”
+→ diamond “保存成功？”
+NO → red “恢复旧工作区；显示错误；后续可重试”.
+YES → “使用新源；已有结果被归档时提示重新预筛”.
+Small note “仅研究关联标签变化不触发筛选重置；不显示 Use latest source”.
+RIGHT title “B. 导出与内部交接”
+cylinder “同一个 source.records”
+split first branch “Export ▾” diamond “有可导出记录？”
+NO “禁用 Export”
+YES “RIS / BibTeX：逐报告书目”
+plus “CSV：书目 + Report ID / Study IDs / 类型”
+plus “JSON：全部记录 + 去重审计 + 研究组 / 候选 / 证据”.
+second branch “Export duplication” diamond “实际移除重复数>0？”
+NO “禁用按钮；不生成空文件”
+YES “Excel .xlsx / 单表 Duplications / 仅被移除成员”
+list exact “ID号｜标题｜作者｜年份｜重复理由”
+note “冻结首行、筛选、文本安全、保留前导零”.
+third branch “直接供 Pilot 抽样” → diamond “标准与阶段配置有效；源已同步；记录数≥3？”
+NO “等待补齐前置条件”
+YES “从 source.records 中排除前轮已用UID / 按保存的seed排序 / 取设定样本量”
+→ “进入 Pilot screening（此处为模块边界）”.
+Bottom important strip “源数据 Export 导出完整集合；To screen 仅显示未决定数量；疑似重复始终在保留集合内。归档与失败回滚是后台同步机制。”
+
+
+图②最终校正提示：仅将右下角输出字段 possiblePairs 校正为引擎原生字段 pairs，保留其他全部文字、数字、箭头、排版与样式。配套最终图片为 02-report-deduplication-v2.png。

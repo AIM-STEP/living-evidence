@@ -1,0 +1,38 @@
+flowchart TB
+    subgraph SYNC["A. 浏览器后台自动同步"]
+        TRIGGER["加载 / 导入 / 聚焦 / 存储事件 / 每5秒检查"] --> ALLOW{"允许刷新？"}
+        BLOCK["筛选或导入中；人工修改未保存<br/>设置对话框打开；页面不可见"] -. "暂停条件" .-> ALLOW
+        ALLOW -- 否 --> WAIT["暂缓；等待后续检查"]
+        WAIT -.-> TRIGGER
+        ALLOW -- 是 --> LOAD["读取批次，重建 source.records<br/>计算 sourceSig 和 criteriaSig"]
+        LOAD --> CHANGE{"源或标准指纹改变？"}
+        CHANGE -- 否 --> SAME["保持既有筛选结果<br/>不重复归档"]
+        CHANGE -- 是 --> PROGRESS{"已有筛选进度？"}
+        PROGRESS -- 是 --> ARCH["先归档旧 Pilot、正式筛选<br/>人工草稿、阶段快照及旧指纹"]
+        PROGRESS -- 否 --> ADOPT["采用新源及标准指纹<br/>重置依赖结果与 Pilot 批准"]
+        ARCH --> ADOPT
+        ADOPT --> SAVE{"保存成功？"}
+        SAVE -- 否 --> ROLLBACK["恢复旧工作区；显示错误<br/>后续可以重试"]
+        SAVE -- 是 --> NEW["使用新源<br/>如归档了既有结果，提示重新预筛"]
+        METADATA["仅研究关联标签更新不触发筛选重置<br/>不显示 Use latest source"]
+    end
+    subgraph OUTPUT["B. 导出与 Pilot 内部交接"]
+        SRC[("source.records<br/>统一活动源集合")]
+        SRC --> EXPORT{"有可导出记录？"}
+        EXPORT -- 否 --> EXOFF["禁用 Export"]
+        EXPORT -- 是 --> MENU["Export 下拉格式菜单"]
+        MENU --> BIB["RIS / BibTeX<br/>逐报告书目信息"]
+        MENU --> CSV["CSV<br/>书目 + Report ID / Study IDs / 类型"]
+        MENU --> JSON["JSON<br/>全部保留记录 + 完整去重审计<br/>研究组、候选、证据与字段来源"]
+        SRC --> DUP{"实际移除重复记录数 > 0？"}
+        DUP -- 否 --> DUPOFF["禁用 Export duplication<br/>不生成空 Excel"]
+        DUP -- 是 --> XLSX["Export duplication → .xlsx<br/>单表 Duplications；仅被移除成员<br/>ID号 / 标题 / 作者 / 年份 / 重复理由<br/>冻结首行、筛选、文本安全与前导零保留"]
+        SRC --> READY{"标准与阶段配置有效、源已同步<br/>并且保留记录数 ≥ 3？"}
+        READY -- 否 --> REQUIRE["等待补齐 Pilot 前置条件"]
+        READY -- 是 --> SAMPLE["排除前轮已用 UID<br/>按保存的 seed 进行确定性排序<br/>取设定样本量"]
+        SAMPLE --> PILOT["进入 Pilot screening<br/>此处为模块交接边界"]
+    end
+    NEW -.-> SRC
+    SAME -.-> SRC
+    NOTE["源 Export 始终导出完整保留集合<br/>To screen 仅显示尚未决定的数量<br/>疑似重复始终在保留集合内，不能从此扣除"]
+
