@@ -734,7 +734,6 @@ function renderSource(){  // Databases of the imports in use, not every database
   let warning='';
   if(sourceError)warning=sourceError;
   if(!source.records.length)warning+=(warning?'\n':'')+'No local search records found. Complete Search strategy for this project or import a results file.';
-  if(!source.criteria?.rows?.length)warning+=(warning?'\n':'')+'No operational eligibility rules found. Complete or upload criteria in the previous steps.';
   if(source.records.length>0&&source.records.length<3)warning+=(warning?'\n':'')+'At least 3 unique records are needed to begin pilot calibration.';
   if(stale()&&!sourceError)warning+=(warning?'\n':'')+'Updating screening source. Screening will be available when the update is saved.';
   showNotice('source-notice',warning||workspace?.sourceUpdateNotice||'',warning?'warning':'success');}
