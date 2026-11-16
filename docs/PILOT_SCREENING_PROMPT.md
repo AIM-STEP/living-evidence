@@ -8,6 +8,8 @@ Pilot screening 标题旁依次提供 Eligibility criteria、Screening criteria�
 
 Eligibility criteria 弹窗提供 Clear，与旁边 Import from local、Edit eligibility criteria、Save 使用相同的文字按钮样式。确认清空后立即保存，无需再点击 Save；重新打开或刷新后保持为空。清空保留研究问题、附件与文献记录，旧标准及已有筛选结果按原有机制留存历史。保存的空标准会显式记录，不再回退加载旧标准；保存失败恢复原数据并提示错误，遇到并发标准变更时拒绝覆盖。普通编辑及导入仍需点击 Save 后生效。
 
+嵌入预览启动及编辑均不得自动写入上游标准或标准库；只有独立 Eligibility 页面可以在启动时维护其标准库。弹窗打开时暂停源数据自动同步，避免重复去重和忙碌状态干扰操作。编辑器通过同源就绪消息初始化，无需等待字体、图片等完整加载；Clear 直接处理当前标准快照，不依赖嵌入编辑器加载成功。高度按预览内容测量，迟到的加载事件不得覆盖编辑或恢复已清空内容。操作被忙碌状态阻止时显示提示。
+
 1. 先保存 Screening criteria，保留本阶段需要判断的元素。
 2. 首次打开 Screening prompt，编辑区为空，Save 与 Export 暂不可用。点击 Generate 才显示根据当前已启用条件生成的文本，包含研究问题背景、逐项条件、缺失信息处理、原文证据和纠错规则；也可直接输入或本地导入。已显式保存的内容重新打开时保留。
 3. 可直接编辑文本，或点击 Import from local 导入 `.txt`、`.md`、`.json`。JSON 支持字符串，或含 `text`、`prompt`、`instructions` 字符串字段的对象；本工具导出的 JSON 可往返导入。文件最多 1 MB，提示词最多 20,000 字符。

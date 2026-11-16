@@ -401,7 +401,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js?v=20261006-queue1"></script>
 <script src="app/fulltext-assistant.js?v=20261006-queue1"></script>
-<script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js?v=20261116-clear-v2"></script><script>
+<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-clear-v3"></script><script>
 'use strict';
 (() => {
 const $=id=>document.getElementById(id);
@@ -996,7 +996,7 @@ async function updateStudyLinks(){
   catch(e){console.warn('Study links could not be updated. Reports and assessments are retained.',e);}
 }
 async function importFromScreening(){
-  if(!workspace||busy||syncingSource||workspace.sourceCleared)return;
+  if(!workspace||busy||syncingSource||workspace.sourceCleared||window.screeningCriteriaDialog?.active)return;
   syncingSource=true;let changed=false;
   try{
     const next=await readHandoff();if(!next||busy||workspace.sourceCleared)return;

@@ -1098,6 +1098,7 @@ if(embeddedPreview){
     clear(){return clearPreviewCriteria();},
     discard(){previewDirty=false;}
   };
+  window.parent?.postMessage({type:'aimstep:criteria-preview-ready'},location.origin);
 }
 // Reuse this exact manual editor in Full-text assess, with an isolated draft.
 if(embeddedManual){
@@ -1123,7 +1124,7 @@ if(embeddedManual){
   };
   window.aimstepManualEditor.load();
 }else{
- if(window.AimstepEligibilityLibrary){try{const saved=window.AimstepEligibilityLibrary.commit(localStorage,projectId||'default',state);state.criteriaLibraryId=saved.criteriaLibraryId;}catch(error){toast('Could not save the criteria list on this device.');}}
+ if(!embeddedPreview&&window.AimstepEligibilityLibrary){try{const saved=window.AimstepEligibilityLibrary.commit(localStorage,projectId||'default',state);state.criteriaLibraryId=saved.criteriaLibraryId;}catch(error){toast('Could not save the criteria list on this device.');}}
  fill();renderCriteriaLibrary();
 }
 })();

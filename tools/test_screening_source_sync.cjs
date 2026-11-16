@@ -6,7 +6,7 @@ function setup(){
  const writes=[],events=[],c={structuredClone,Map,Set,JSON,Promise,AimstepDedup:require('../app/screening-dedup.js'),
  workspace:{sourceSig:'old',criteriaSig:'criteria',imports:[{id:'kept',records:[{uid:'r',title:'Original title',abstract:'Original abstract',authors:[],provenance:[]}]}],importedRuns:[],screeningStages:{saved:'criteria'},criteriaUpload:null,pilot:{size:20,rounds:[{ids:['r']}],human:{r:{decision:'yes'}},approved:{}},full:{ai:{r:{decision:'no'}},ai2:{},human:{}}},
  source:{sourceSig:'new',criteriaSig:'criteria',records:[{uid:'r',title:'Title'}],runs:[]},sourceError:'',busy:'',importing:false,pilotReviewSaving:false,fullReviewSaving:false,
- pilotReviewDrafts:new Map(),exclusionDrafts:new Map(),stagesDialog:{open:false},document:{visibilityState:'visible'},refreshPromise:null,
+ pilotReviewDrafts:new Map(),exclusionDrafts:new Map(),stagesDialog:{open:false},document:{visibilityState:'visible'},window:{},refreshPromise:null,
  newPilot:size=>({size,rounds:[],ai:{},human:{},approved:null}),newFull:()=>({ai:{},ai2:{},human:{}}),
  log:(action,detail)=>events.push({action,...detail}),now:()=> 'test',save:async()=>{writes.push(structuredClone(c.workspace))},publishSummary(){},render(){},
  showNotice(...args){c.notice=args},fingerprint:JSON.stringify,
@@ -42,6 +42,7 @@ function setup(){
  for(const flag of ['busy','importing','pilotReviewSaving','fullReviewSaving']){c[flag]=flag==='busy'?'pilot':true;await c.refreshSource();assert.equal(reads,0);c[flag]=flag==='busy'?'':false;}
  c.pilotReviewDrafts.set('r',{});await c.refreshSource();assert.equal(reads,0);c.pilotReviewDrafts.clear();
  c.exclusionDrafts.set('r','draft');await c.refreshSource();assert.equal(reads,0);c.exclusionDrafts.clear();
+ c.window.screeningCriteriaDialog={active:true};await c.refreshSource();assert.equal(reads,0,'Eligibility popup pauses background source reads and deduplication');c.window.screeningCriteriaDialog.active=false;
  const pending=c.refreshSource();assert.equal(reads,1);assert.equal(c.busy,'source-refresh');await c.refreshSource();assert.equal(reads,1);release();await pending;assert.equal(c.busy,'');assert.equal(c.refreshPromise,null);
  c.loadSource=async()=>{throw Error('storage failed')};c.render=()=>{c.notice=['render replaced notice']};await c.refreshSource();assert(c.notice[1].includes('storage failed'));assert.equal(c.notice[2],'error');
  assert(!html.includes('id="sync-source"'));assert(!html.includes('Use latest source'));assert(!html.includes("$('sync-source')"));

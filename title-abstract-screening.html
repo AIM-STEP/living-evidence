@@ -378,7 +378,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/screening-prompt.js?v=20261116-editor-v2"></script>
 <script src="app/screening-prompt-editor.js?v=20261116-editor-v2"></script>
-<script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js?v=20261116-clear-v2"></script><script>
+<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-clear-v3"></script><script>
 'use strict';
 (() => {
 const $=id=>document.getElementById(id);
@@ -2484,7 +2484,7 @@ $('export-option').addEventListener('change',updateExportCount);
 $('export-results').addEventListener('click',exportResults);
 let refreshPromise=null;
 function refreshSource(){
-  if(!workspace||busy||importing||pilotReviewSaving||fullReviewSaving||pilotReviewDrafts.size||exclusionDrafts.size||stagesDialog.open||(globalThis.AimstepScreeningPrompt&&(pilotStarting||screeningPromptEditor?.isOpen()))||document.visibilityState==='hidden')return Promise.resolve();
+  if(!workspace||busy||importing||pilotReviewSaving||fullReviewSaving||pilotReviewDrafts.size||exclusionDrafts.size||stagesDialog.open||window.screeningCriteriaDialog?.active||(globalThis.AimstepScreeningPrompt&&(pilotStarting||screeningPromptEditor?.isOpen()))||document.visibilityState==='hidden')return Promise.resolve();
   if(refreshPromise)return refreshPromise;
   let failure='';busy='source-refresh';
   refreshPromise=(async()=>{
