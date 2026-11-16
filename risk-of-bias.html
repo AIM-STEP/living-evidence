@@ -243,7 +243,7 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2 data-ui-localize>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft" data-ui-localize>Import from local</button><input type="file" id="import-pdfs" accept=".pdf,application/pdf" multiple hidden><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Included studies</span></button></div></div>
 <div class="panel-body" id="source-body">
-<div id="study-links" class="source-trace" hidden></div>
+
 <div class="source-record-list" id="study-table" role="list" aria-label="Included studies"></div>
 
 <div class="source-summary" id="src-stats" hidden></div>
@@ -685,8 +685,8 @@ let syncingStudies=false;
 async function updateStudyLinks(){
   if(!globalThis.AimstepStudyLinks||!ws)return;
   const documents={};for(const r of ws.records){const doc=docCache.get(r.uid);if(doc)documents[r.uid]=doc;}
-  try{const result=await AimstepStudyLinks.sync(scope,ws.records,documents);const changed=JSON.stringify(ws.records)!==JSON.stringify(result.records);ws.records=result.records;ws.studyLinks={version:result.version,groups:result.groups,candidates:result.candidates,links:result.links};if(changed)await save();$('study-links').innerHTML=AimstepStudyLinks.html(result);}
-  catch(e){$('study-links').textContent='Study links could not be updated. Reports and extracted values are retained.';}
+  try{const result=await AimstepStudyLinks.sync(scope,ws.records,documents);const changed=JSON.stringify(ws.records)!==JSON.stringify(result.records);ws.records=result.records;ws.studyLinks={version:result.version,groups:result.groups,candidates:result.candidates,links:result.links};if(changed)await save();}
+  catch(e){console.warn('Study links could not be updated. Reports and extracted values are retained.',e);}
 }
 async function importStudies(){
   if(!ws||busy||syncingStudies)return;

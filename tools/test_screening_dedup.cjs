@@ -75,8 +75,9 @@ const context=vm.createContext({AimstepDedup:D,AimstepDedupExport:E,AimstepExtra
 vm.runInContext(slice('// Deduplication is automatic.', 'function renderSource()'),context);
 (async()=>{
  const before=JSON.stringify(context.workspace);
- context.renderDedupDetails();assert(elements['dedup-details-body'].innerHTML.includes('proceed to screening automatically'));
- for(const action of ['Same report: merge','keep separate','data-dedup-action','Reset duplicate review'])assert(!elements['dedup-details-body'].innerHTML.includes(action));
+ context.updateDedupExport();
+ for(const id of ['dedup-details','dedup-details-summary','dedup-details-body','study-links'])assert(!html.includes('id="'+id+'"'));
+ assert(!html.includes('AimstepStudyLinks.html('));assert(!html.includes('merged groups'));
  assert(!html.includes('applyDedupReview'));assert(!html.includes('data-dedup-action'));assert(!html.includes('Review duplicates'));
  assert.equal(JSON.stringify(context.workspace),before);assert.equal(context.source.records.length,3);
  // The audit action is in the always-visible source footer, outside collapsed details.
@@ -85,12 +86,12 @@ vm.runInContext(slice('// Deduplication is automatic.', 'function renderSource()
  // Possible-only records do not count as removed duplicates and cannot be exported here.
  assert.equal($('export-dedup-audit').disabled,true);$('export-dedup-audit').events.click();assert.equal(context.downloaded,undefined);
  const live=context.source,merged=D.run([batch([rec('kept',{doi:'10.1000/same'}),rec('removed',{doi:'10.1000/same'}),rec('possible',{doi:'10.1000/other'})])]);
- context.source={...live,records:merged.records,dedup:merged};context.renderDedupDetails();assert.equal($('export-dedup-audit').disabled,false);$('export-dedup-audit').events.click();
+ context.source={...live,records:merged.records,dedup:merged};context.updateDedupExport();assert.equal($('export-dedup-audit').disabled,false);$('export-dedup-audit').events.click();
  assert.match(context.downloaded[0],/^duplications-.*\.xlsx$/);assert.equal(context.downloaded[1],R.mime);
  assert.equal(context.downloaded[2][0],0x50);assert.equal(context.downloaded[2][1],0x4b);
  const workbook=E.sheets(context.dedupAudit());assert.equal(workbook.length,1);assert.equal(workbook[0].rows.length,2);
  assert.deepEqual(workbook[0].rows[0],['ID号','标题','作者','年份','重复理由']);assert.equal(workbook[0].rows[1][0],'removed');
- const lastDownload=context.downloaded;context.source={records:[]};context.renderDedupDetails();assert.equal($('export-dedup-audit').disabled,true);$('export-dedup-audit').events.click();assert.equal(context.downloaded,lastDownload);context.source=live;
+ const lastDownload=context.downloaded;context.source={records:[]};context.updateDedupExport();assert.equal($('export-dedup-audit').disabled,true);$('export-dedup-audit').events.click();assert.equal(context.downloaded,lastDownload);context.source=live;
  console.log('PASS: duplicate-only Excel export, five requested columns and disabled empty/possible-only states');count++;
  context.screeningStagesReady=()=>true;context.workspace.pilot={old:'pilot'};context.workspace.full={old:'full'};
  vm.runInContext(slice('async function syncSource()', '// Deduplication is automatic.'),context);

@@ -45,7 +45,7 @@ test('conflicting values and different time points require explicit per-outcome 
 });
 test('multi-study reports require a valid result-to-study assignment',()=>{const r=S.reconcile([report('both',{abstract:'Trial registration: NCT01234567 and NCT87654321.'})]);const pending=S.collate(arms('both'),r.records);assert.equal(pending.rows.length,0);const selected=S.collate(arms('both'),r.records,{assignments:{both:'S-NCT01234567'}});assert.equal(selected.rows.length,2);assert(selected.rows.every(x=>x.studyId==='S-NCT01234567'));});
 for(const name of ['title-abstract-screening','full-text-screening','extraction','risk-of-bias']){
- const html=fs.readFileSync(name+'.html','utf8');assert(html.includes('app/study-links.js'));assert(html.includes('id="study-links"'));for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(match[1].trim())new vm.Script(match[1]);
+ const html=fs.readFileSync(name+'.html','utf8');assert(html.includes('app/study-links.js'));assert(!html.includes('id="study-links"'));assert(!html.includes('AimstepStudyLinks.html('));for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(match[1].trim())new vm.Script(match[1]);
 }
-console.log('PASS: linked source, full-text, risk-of-bias and extraction pages include valid scripts and study-link panels');
+console.log('PASS: linked source, full-text, risk-of-bias and extraction pages keep valid scripts and background links without rendering study-link panels');
 console.log(count+' study linkage and evidence-collation checks passed.');

@@ -271,8 +271,7 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head source-panel-head"><h2 data-ui-localize>Screening source</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog" data-ui-localize>Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog" data-ui-localize>Import from local</button><button class="btn small clear-action" id="clear-source" type="button" aria-label="Clear screening source" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Screening source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Screening source</span></button></div></div> <div class="panel-body" id="source-body">
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span data-ui-localize>Databases</span></div><div><strong id="stat-total">0</strong><span data-ui-localize>Records imported</span></div><div><strong id="stat-dups">0</strong><span data-ui-localize>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span data-ui-localize>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden role="status"></p>
-<div id="study-links" class="source-trace" hidden></div>
-<details id="dedup-details" class="source-trace" hidden><summary id="dedup-details-summary">Deduplication details</summary><div id="dedup-details-body"></div></details>
+
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col" data-ui-localize>Imported</th><th scope="col" data-ui-localize>Database</th><th scope="col" class="num-col" data-ui-localize>Records</th><th scope="col" class="num-col" data-ui-localize>Duplicates</th><th scope="col" class="del-col"><span class="sr-only" data-ui-localize>Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
 <div class="toolbar source-foot"><span class="export-source"><button class="btn small" id="export-source" type="button" title="Export all deduplicated source records" aria-haspopup="menu" aria-expanded="false" aria-controls="source-export-menu"><span data-ui-localize>Export</span><span aria-hidden="true"> ▾</span></button><div id="source-export-menu" class="source-export-menu" role="menu" aria-labelledby="export-source" hidden><button type="button" role="menuitem" data-source-export="ris">RIS (EndNote, Zotero, Mendeley)</button><button type="button" role="menuitem" data-source-export="csv">CSV (Excel)</button><button type="button" role="menuitem" data-source-export="bib">BibTeX</button><button type="button" role="menuitem" data-source-export="json">JSON</button></div><button class="btn small" type="button" id="export-dedup-audit" title="Export duplication" data-ui-localize disabled>Export duplication</button></span></div>
@@ -686,37 +685,15 @@ async function syncSource(){
   }catch(e){workspace=before;publishSummary();throw new Error('Could not update screening source: '+e.message);}
 }
 // Deduplication is automatic. Possible duplicates proceed to screening separately.
-let dedupGroupsShown=20;
-const dedupReason={
- 'exact-pmid':'Same PMID','exact-doi':'Same DOI','title-author-publication':'Matching title, authors and publication details',
- 'exact-title-full-abstract':'Matching title and full abstract with author, journal and year support',
- 'different-doi':'Different DOI values','different-pmid':'Different PMID values','different-year':'Publication years differ',
- 'different-report-type':'Possibly different report types','different-title-numbers':'Different numbers or report parts in the titles',
- 'different-volume':'Different volumes','different-issue':'Different issues','different-pages':'Different pages',
- 'insufficient-corroboration':'Similar records with insufficient evidence to merge','group-conflict':'Conflicting evidence within the duplicate group'
-};
 function dedupAudit(){
   const d=source.dedup;
   return {format:'aimstep-deduplication-audit/v3',version:d?.version||AimstepDedup.VERSION,sourceSig:source.sourceSig,
     imported:d?.total||0,retained:source.records.length,duplicates:d?.duplicates||0,
     groups:d?.groups||[],possiblePairs:d?.pairs||[],policy:'retain-possible',legacyReviewerDecisions:workspace?.dedupDecisions||{},previousScreeningRuns:workspace?.dedupArchives||[]};
 }
-function dedupMemberHtml(member){
-  const r=member.record,metadata=[r.authors?.join('; '),r.year,r.journal,r.volume,r.issue,r.pages,r.doi&&'DOI: '+r.doi,r.pmid&&'PMID: '+r.pmid].filter(Boolean).join(' · ');
-  return '<div class="dedup-member"><strong>'+esc(r.title||'(untitled record)')+'</strong><p>'+esc(metadata)+'</p><p>'+esc(sourceDatabases(r).join('; ')||member.batchKey)+'</p><details><summary>Original abstract</summary><p class="dedup-abstract">'+esc(r.abstract||'No abstract available.')+'</p></details></div>';
+function updateDedupExport(){
+  $('export-dedup-audit').disabled=!source.records.length||!AimstepDedupExport.hasDuplicates(source.dedup);
 }
-function renderDedupDetails(){
-  const d=source.dedup,groups=(d?.groups||[]).filter(g=>g.members.length>1);
-  $('dedup-details').hidden=true;
-  $('export-dedup-audit').disabled=!source.records.length||!AimstepDedupExport.hasDuplicates(d);
-  $('dedup-details-summary').textContent='Deduplication details · '+groups.length+' merged groups';
-  $('dedup-details-body').innerHTML='<p class="hint">Possible duplicates are retained as separate records and proceed to screening automatically.</p>'+
-    groups.slice(0,dedupGroupsShown).map((g,i)=>'<details class="dedup-item"><summary>Merged group '+(i+1)+' · '+g.members.length+' records · '+esc(dedupReason[g.merges[0]?.reason]||'Automatic match')+'</summary>'+g.members.map(dedupMemberHtml).join('')+'</details>').join('')+
-    (groups.length>dedupGroupsShown?'<button class="btn small" type="button" data-dedup-more>Show more merged groups</button>':'');
-}
-$('dedup-details-body').addEventListener('click',event=>{
-  if(event.target.closest('[data-dedup-more]')){dedupGroupsShown+=20;renderDedupDetails();}
-});
 $('export-dedup-audit').addEventListener('click',()=>{
   if(!source.records.length||!AimstepDedupExport.hasDuplicates(source.dedup))return;
   try{
@@ -733,8 +710,7 @@ function renderSource(){  // Databases of the imports in use, not every database
   $('stat-pending').textContent=pending.toLocaleString();
   $('stat-pending').title=unique.toLocaleString()+' unique records; '+pending.toLocaleString()+' not yet resolved';
   const dn=$('dedup-note');dn.textContent=total?unique.toLocaleString()+' records after deduplication.'+(dedupStats.possible?' '+dedupStats.possible.toLocaleString()+' possible duplicate pairs retained for screening.':''):'';dn.hidden=!total;
-  renderDedupDetails();
-  $('study-links').innerHTML=source.studyLinks?AimstepStudyLinks.html(source.studyLinks):esc(source.studyLinksError||'');
+  updateDedupExport();
   const short=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString(undefined,{dateStyle:'short',timeStyle:'short'})};
   $('source-history-rows').innerHTML=source.runs.length?source.runs.slice().sort((a,b)=>String(b.importedAt||'').localeCompare(String(a.importedAt||''))).map(run=>{    const st=dedupStats.byImport.get(run.kind+':'+run.id)||{total:Math.max(0,Number(run.downloaded)||0),duplicates:0};
     const when=short(run.importedAt),count=st.total,dbn=databaseNames[run.db]||run.db||'Unknown',src=run.kind==='local'?'local file'+(run.file?': '+run.file:''):'Search strategy';
