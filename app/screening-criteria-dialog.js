@@ -16,7 +16,7 @@ window.AIMScreeningCriteriaDialog=function(config){
     base=localStorage.getItem(eligibilityKey);if(!value?.rows?.length&&!value?.cleared&&base){const previous=JSON.parse(base);value={question:previous.question||'',framework:previous.framework||'Other',reviewType:previous.reviewType||'',rows:previous.activeGenerator==='machine'?previous.machineCriteria:previous.criteria}}snapshot=structuredClone(value);dirty=false;cleared=false;showError('');observer?.disconnect();
     readyFrame=null;previewWorkspace=null;loading.hidden=true;
     $('criteria-editor').hidden=true;$('criteria-view').hidden=false;$('criteria-origin').hidden=true;saveButton.disabled=true;clearButton.disabled=!snapshot?.rows?.length;
-    if(!snapshot?.rows?.length){$('criteria-view').textContent='No eligibility rules saved for this project. Complete Eligibility criteria or select Import from local.';frame=null;return}
+    if(!snapshot?.rows?.length){$('criteria-view').replaceChildren();frame=null;return}
     const previous=JSON.parse(base||'null'),rows=previous?(previous.activeGenerator==='machine'?previous.machineCriteria:previous.criteria):null;
     const same=previous&&(previous.question||'')===(snapshot.question||'')&&(previous.framework||'Other')===(snapshot.framework||'Other')&&JSON.stringify((rows||[]).map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']))===JSON.stringify(snapshot.rows.map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']));
     const valueToLoad=same?previous:AIMSearchCriteriaEditor.workspace(previous,snapshot,new Date().toISOString());previewWorkspace=valueToLoad;loading.hidden=false;

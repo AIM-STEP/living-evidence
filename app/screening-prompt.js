@@ -28,10 +28,11 @@ function generate(criteria){
 }
 function validate(text){if(typeof text!=='string'||!text.trim())throw Error('Enter a screening prompt.');if(text.length>MAX_CHARS)throw Error('The screening prompt must be 20,000 characters or fewer.');if(text.includes('\0'))throw Error('The prompt contains unsupported null characters.');return text.replace(/^\uFEFF/,'').trim();}
 function resolve(criteria,saved,signatures={}){
- const custom=saved&&['edited','imported'].includes(saved.mode);
- const text=custom?validate(saved.text):generate(criteria);
+ const available=rows(criteria).length>0,custom=saved&&['edited','imported'].includes(saved.mode);
+ const text=custom?validate(saved.text):available?generate(criteria):saved?validate(saved.text):null;
+ if(text===null)return null;
  const criteriaSig=clean(signatures.criteriaSig),stageSig=clean(signatures.stageSig);
- const current=!custom||(saved.criteriaSig===criteriaSig&&saved.stageSig===stageSig&&saved.version===VERSION);
+ const current=available&&(!custom||(saved.criteriaSig===criteriaSig&&saved.stageSig===stageSig&&saved.version===VERSION));
  return {version:VERSION,mode:custom?saved.mode:'generated',text,current,criteriaSig,stageSig,filename:custom?clean(saved.filename):'',hash:hash([VERSION,criteriaSig,stageSig,text])};
 }
 function saved(text,mode,signatures={},filename=''){

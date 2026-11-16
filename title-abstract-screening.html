@@ -376,9 +376,9 @@ th{background:#f4f4f4}
 <script src="app/screening-stages.js?v=framework-editor-v3"></script>
 <script src="app/screening-criteria-suggestions.js?v=1"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
-<script src="app/screening-prompt.js?v=20261116-editor-v2"></script>
-<script src="app/screening-prompt-editor.js?v=20261116-editor-v2"></script>
-<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-clear-v3"></script><script>
+<script src="app/screening-prompt.js?v=20261116-independent-v1"></script>
+<script src="app/screening-prompt-editor.js?v=20261116-independent-v1"></script>
+<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-independent-v1"></script><script>
 'use strict';
 (() => {
 const $=id=>document.getElementById(id);
@@ -621,10 +621,10 @@ function screeningStagesReady(){return AimstepScreeningStages.valid(workspace?.s
 function screeningStageSig(){return AimstepScreeningStages.signature(workspace?.screeningStages)}
 function activeScreeningCriteria(){return AimstepScreeningStages.active(source.criteria,workspace?.screeningStages)}
 function currentScreeningPrompt(){
-  if(!globalThis.AimstepScreeningPrompt||!screeningStagesReady())return null;
-  return AimstepScreeningPrompt.resolve(activeScreeningCriteria(),workspace?.screeningPrompt,{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()});
+  if(!globalThis.AimstepScreeningPrompt)return null;
+  return AimstepScreeningPrompt.resolve(screeningStagesReady()?activeScreeningCriteria():null,workspace?.screeningPrompt,{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()});
 }
-function readySource(){return screeningStagesReady()&&!stale()&&source.records.length>=3&&!!source.criteria?.rows?.length&&(!globalThis.AimstepScreeningPrompt||currentScreeningPrompt()?.current)}
+function readySource(){return screeningStagesReady()&&!stale()&&source.records.length>=3&&!!activeScreeningCriteria()?.rows?.length&&(!globalThis.AimstepScreeningPrompt||currentScreeningPrompt()?.current)}
 // Records going forward (Yes and Maybe) and the criteria in use, for the
 // Full-text assess page. Written shortly after each change.
 let handoffTimer=null;
@@ -633,9 +633,10 @@ function publishForFullText(){
   handoffTimer=setTimeout(async()=>{
     try{
       if(!workspace||!source)return;
+      const criteria=source.criteria?.rows?.length?source.criteria:screeningStagesReady()?activeScreeningCriteria():source.criteria;
       const s=summary(),records=source.records.filter(r=>forward(finalDecision(r.uid))).map(r=>({uid:r.uid,title:r.title,authors:r.authors,year:r.year,journal:r.journal,volume:r.volume,issue:r.issue,pages:r.pages,doi:r.doi,pmid:r.pmid,url:r.url,abstract:r.abstract,...(globalThis.AimstepStudyLinks?AimstepStudyLinks.metadata(r):{}),databases:sourceDatabases(r),taDecision:finalDecision(r.uid),taSource:decisionSource(r.uid),returnId:workspace.returnTokens?.[r.uid]||''}));
       const db=await openDB('aimstep-fulltext-input');
-      await putProject(db,{id:scope,updatedAt:now(),criteria:source.criteria||null,criteriaSig:source.criteriaSig,criteriaOrigin:criteriaOrigin||null,records,pending:s.pending,screeningComplete:s.completed});
+      await putProject(db,{id:scope,updatedAt:now(),criteria:criteria||null,criteriaSig:criteria===source.criteria?source.criteriaSig:fingerprint(criteria),criteriaOrigin:criteriaOrigin||null,records,pending:s.pending,screeningComplete:s.completed});
       db.close();
     }catch(e){console.error('Full-text hand-off failed',e)}
   },800);
@@ -1271,7 +1272,7 @@ function renderPilot(){
   $('run-pilot').title=lastSt&&!lastSt.revealed&&lastSt.aiDone?'Save your review for every record in this round first.':'';
   $('stop-pilot').hidden=busy!=='pilot';
   $('reset-calibration').disabled=!!busy||pilotReviewSaving||!p.rounds.length;
-  if(globalThis.AimstepScreeningPrompt)$('open-screening-prompt').disabled=!!busy||pilotReviewSaving||!screeningStagesReady();
+  if(globalThis.AimstepScreeningPrompt)$('open-screening-prompt').disabled=clearActionsBlocked();
   const shown=st?.revealed;
   $('pilot-detail').textContent=pilotReviewDrafts.size?'Save your correction to complete this review.':shown?'Accuracy is the proportion of AI decisions you marked Agree in this round.':st?'Review each AI decision. Agree saves immediately; Mistake requires a reason and Save.':'Start a round to let the AI assess a random sample against your eligibility criteria.';
   $('pilot-filter').hidden=!shown;
@@ -1290,7 +1291,7 @@ function renderPilot(){
   const approved=pilotApprovalValid();renderPilotApproval();
   // Status lines set here are replaced or cleared here; messages from a run stay.
   const msg=$('pilot-message'),status=globalThis.AimstepScreeningPrompt&&screeningStagesReady()&&!currentScreeningPrompt()?.current?'Screening criteria changed. Review and save Screening prompt before screening.':!screeningStagesReady()&&source.criteria?.rows?.length?'Set and save Screening criteria before starting the pilot.':p.approved&&!approved?'The criteria or calibration feedback changed. Review corrections and approve the current version.':
-    !ready?(stale()?'The screening source is being updated. Please wait for it to finish.':source.records.length<3?'Import at least 3 records in Screening source.':!screeningStagesReady()?'Set and save Screening criteria before starting the pilot.':'Add eligibility criteria in Screening source first.'):'';
+    !ready?(stale()?'The screening source is being updated. Please wait for it to finish.':source.records.length<3?'Import at least 3 records in Screening source.':!screeningStagesReady()?'Set and save Screening criteria before starting the pilot.':'Review and save Screening prompt before screening.'):'';
   if(!busy&&status){showNotice('pilot-message',status,'warning');msg.dataset.status='1'}
   else if(!busy&&msg.dataset.status){showNotice('pilot-message','');delete msg.dataset.status}
 }
@@ -2217,7 +2218,7 @@ let stagesController=null;
 const stagesDialog=$('screening-stages-dialog');
 function renderStageButton(){
   const button=$('open-screening-criteria');
-  button.disabled=clearActionsBlocked()||!source.criteria?.rows?.length;
+  button.disabled=clearActionsBlocked();
   button.title=screeningStagesReady()?'Edit the criteria used for title and abstract screening.':'Set and save screening criteria before starting the pilot.';
 }
 function stageDraftSignature(){return JSON.stringify([stagesFramework,stagesDraft])}
@@ -2286,9 +2287,9 @@ $('open-screening-criteria').addEventListener('click',()=>{
   if(!AimstepScreeningStages.frameworks[stagesFramework])stagesFramework='Other';
   $('stage-add-picker').hidden=true;$('add-stage-element').setAttribute('aria-expanded','false');
   stagesInitial=stageDraftSignature();
-  $('stages-error').hidden=true;$('stages-help-text').hidden=true;$('stages-generation').hidden=!!saved;
+  $('stages-error').hidden=true;$('stages-help-text').hidden=true;$('stages-generation').hidden=!!saved||!source.criteria?.rows?.length;
   renderStageRows();stagesDialog.showModal();
-  if(!saved&&!cached)generateStageSuggestions();
+  if(!saved&&!cached&&source.criteria?.rows?.length)generateStageSuggestions();
 });
 $('stages-items').addEventListener('input',event=>{
   if(stagesSaving||!stagesDraft)return;
@@ -2382,12 +2383,12 @@ async function saveScreeningPrompt(draft,base){
   busy='prompt-settings';
   try{
     await loadSource();if(sourceError)throw Error(sourceError);
-    if(!screeningStagesReady()||base.criteriaSig!==source.criteriaSig||base.stageSig!==screeningStageSig())throw Error('Screening criteria changed. Export your draft if needed, then reopen the prompt to review the current criteria.');
+    if(base.criteriaSig!==source.criteriaSig||base.stageSig!==screeningStageSig())throw Error('Screening criteria changed. Export your draft if needed, then reopen the prompt to review the current criteria.');
     const previous=structuredClone(workspace),next=AimstepScreeningPrompt.saved(draft.text,draft.mode,base,draft.filename);
     try{
       const old=currentScreeningPrompt();workspace.screeningPrompt=next;const prompt=currentScreeningPrompt();
       const changed=!old?.current||old.hash!==prompt.hash,archived=changed&&archiveForPrompt(previous,'screening-prompt-edited');
-      workspace.screeningPromptAppliedHash=prompt.hash;workspace.screeningPromptSnapshot=structuredClone(prompt);
+      workspace.screeningPromptAppliedHash=prompt.current?prompt.hash:'';workspace.screeningPromptSnapshot=prompt.current?structuredClone(prompt):null;
       if(archived)workspace.sourceUpdateNotice='Screening prompt changed. Previous assessments were archived. Start a new pilot.';
       log('screening-prompt-saved',{hash:prompt.hash,mode:next.mode,filename:next.filename,archived});await save();
       if(archived)resetPromptAssessmentViews();
@@ -2396,7 +2397,7 @@ async function saveScreeningPrompt(draft,base){
 }
 const screeningPromptEditor=globalThis.AimstepScreeningPrompt&&globalThis.AimstepScreeningPromptEditor?AimstepScreeningPromptEditor.mount({
   blocked:clearActionsBlocked,
-  context:()=>{if(!screeningStagesReady())throw Error('Save Screening criteria before generating a screening prompt.');return {criteria:activeScreeningCriteria(),signatures:{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()}};},
+  context:()=>({criteria:screeningStagesReady()?activeScreeningCriteria():null,canGenerate:screeningStagesReady(),signatures:{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()}}),
   current:currentScreeningPrompt,saved:()=>workspace.screeningPrompt||null,apply:saveScreeningPrompt,
   notice:message=>showNotice('pilot-message',message,'warning'),
   download:file=>download('screening-prompt-'+stamp()+'.'+file.extension,file.mime,file.contents)

@@ -20,7 +20,8 @@ function mount(options){
   const items=menu.querySelectorAll('[data-prompt-export]');items[(focusIndex+items.length)%items.length]?.focus();
  }
  function lock(){
-  for(const id of ['generate-screening-prompt','import-screening-prompt','close-screening-prompt'])$(id).disabled=saving||reading;
+  for(const id of ['import-screening-prompt','close-screening-prompt'])$(id).disabled=saving||reading;
+  $('generate-screening-prompt').disabled=saving||reading||options.context().canGenerate===false;
   for(const id of ['save-screening-prompt','export-screening-prompt'])$(id).disabled=saving||reading||!text.value.trim();
   text.disabled=saving||reading;if(saving||reading||!text.value.trim())setExportOpen(false);
  }
@@ -31,7 +32,7 @@ function mount(options){
    const context=options.context(),saved=options.saved?.(),prompt=saved?options.current():null;
    base={...context.signatures};text.value=prompt?.text||'';baseline=text.value;mode=prompt?.mode||'generated';filename=prompt?.filename||'';
    error.hidden=true;setStatus('');setExportOpen(false);lock();
-   if(prompt&&!prompt.current)setStatus('Screening criteria changed. Review and save this prompt, or Generate a new prompt.');
+   if(prompt&&!prompt.current&&context.canGenerate!==false)setStatus('Screening criteria changed. Review and save this prompt, or Generate a new prompt.');
    dialog.showModal();
   }catch(e){options.notice(e.message);}
  });
@@ -50,7 +51,7 @@ function mount(options){
  });
  $('save-screening-prompt').addEventListener('click',async()=>{
   if(saving||reading||!text.value.trim())return;saving=true;lock();error.hidden=true;
-  try{const value=api.validate(text.value);await options.apply({text:value,mode,filename},base);const context=options.context(),prompt=options.current();base={...context.signatures};text.value=prompt.text;baseline=text.value;mode=prompt.mode;filename=prompt.filename;setStatus('Screening prompt saved. This version will be used for screening.');}
+  try{const value=api.validate(text.value);await options.apply({text:value,mode,filename},base);const context=options.context(),prompt=options.current();base={...context.signatures};text.value=prompt.text;baseline=text.value;mode=prompt.mode;filename=prompt.filename;setStatus(prompt.current?'Screening prompt saved. This version will be used for screening.':'Screening prompt saved.');}
   catch(e){fail(e);}finally{saving=false;lock();}
  });
  function exportDraft(format){
