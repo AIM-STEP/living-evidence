@@ -246,7 +246,7 @@ th{background:#f4f4f4}
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
-<script defer src="app/tool-i18n-catalog.js?v=20261116-source-sync"></script>
+<script defer src="app/tool-i18n-catalog.js?v=20261116-duplications"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261021-49">
@@ -274,7 +274,7 @@ th{background:#f4f4f4}
 <details id="dedup-details" class="source-trace" hidden><summary id="dedup-details-summary">Deduplication details</summary><div id="dedup-details-body"></div></details>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col" data-ui-localize>Imported</th><th scope="col" data-ui-localize>Database</th><th scope="col" class="num-col" data-ui-localize>Records</th><th scope="col" class="num-col" data-ui-localize>Duplicates</th><th scope="col" class="del-col"><span class="sr-only" data-ui-localize>Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
-<div class="toolbar source-foot"><span class="export-source"><label class="label inline" for="source-format" data-ui-localize>Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Export all deduplicated source records" data-ui-localize>Export</button><button class="btn small" type="button" id="export-dedup-audit" title="Export deduplication details (Excel)" data-ui-localize disabled>Export deduplication details</button></span></div>
+<div class="toolbar source-foot"><span class="export-source"><label class="label inline" for="source-format" data-ui-localize>Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Export all deduplicated source records" data-ui-localize>Export</button><button class="btn small" type="button" id="export-dedup-audit" title="export duolications" data-ui-localize disabled>export duolications</button></span></div>
 </div>
 </section>
 </div>
@@ -365,7 +365,7 @@ th{background:#f4f4f4}
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app/extraction-results.js?v=tabular-v1"></script>
-<script src="app/screening-dedup-export.js?v=1"></script>
+<script src="app/screening-dedup-export.js?v=duplicates-five-columns-v2"></script>
 <script src="app/screening-dedup.js?v=report-dedup-v3"></script>
 <script src="app/screening-stages.js?v=framework-editor-v3"></script>
 <script src="app/screening-criteria-suggestions.js?v=1"></script>
@@ -705,7 +705,7 @@ function dedupMemberHtml(member){
 function renderDedupDetails(){
   const d=source.dedup,groups=(d?.groups||[]).filter(g=>g.members.length>1);
   $('dedup-details').hidden=!source.records.length;
-  $('export-dedup-audit').disabled=!source.records.length;
+  $('export-dedup-audit').disabled=!source.records.length||!AimstepDedupExport.hasDuplicates(d);
   $('dedup-details-summary').textContent='Deduplication details · '+groups.length+' merged groups';
   $('dedup-details-body').innerHTML='<p class="hint">Possible duplicates are retained as separate records and proceed to screening automatically.</p>'+
     groups.slice(0,dedupGroupsShown).map((g,i)=>'<details class="dedup-item"><summary>Merged group '+(i+1)+' · '+g.members.length+' records · '+esc(dedupReason[g.merges[0]?.reason]||'Automatic match')+'</summary>'+g.members.map(dedupMemberHtml).join('')+'</details>').join('')+
@@ -715,10 +715,10 @@ $('dedup-details-body').addEventListener('click',event=>{
   if(event.target.closest('[data-dedup-more]')){dedupGroupsShown+=20;renderDedupDetails();}
 });
 $('export-dedup-audit').addEventListener('click',()=>{
-  if(!source.records.length)return;
+  if(!source.records.length||!AimstepDedupExport.hasDuplicates(source.dedup))return;
   try{
-    const sheets=AimstepDedupExport.sheets(dedupAudit(),{project:projectId,exportedAt:now()});
-    download('deduplication-details-'+stamp()+'.xlsx',AimstepExtractionResults.mime,AimstepExtractionResults.workbook(sheets));
+    const sheets=AimstepDedupExport.sheets(dedupAudit());
+    download('duplications-'+stamp()+'.xlsx',AimstepExtractionResults.mime,AimstepExtractionResults.workbook(sheets));
   }catch(e){showNotice('source-notice','Could not export deduplication details: '+e.message,'error');}
 });
 

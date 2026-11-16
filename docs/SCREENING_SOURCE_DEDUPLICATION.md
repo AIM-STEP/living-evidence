@@ -155,7 +155,7 @@ R3、R4 额外要求：双方同时存在的卷号、期号或页码不能不同
 
 疑似重复采用固定策略：全部保留为独立记录，直接进入 Pilot 抽样与后续正式筛选；不建立人工去重任务、不弹出去重确认，也不提供合并、保持分开、暂不处理、拆分或重置决定的按钮。
 
-Screening source 的 Deduplication details 仅展示自动合并组、依据和原始成员；其下方导出区域提供独立的“导出去重详情”按钮，直接下载 Excel（.xlsx）文件，无需展开详情。未导入记录时按钮禁用。自动合并组每次展示 20 组，可展开更多。疑似记录对保存在审计中，不要求用户逐对处理。
+Screening source 的 Deduplication details 仅展示自动合并组、依据和原始成员；其下方导出区域提供独立的 `export duolications` 按钮（中文界面为“导出重复记录”），下载 Excel（.xlsx）文件，无需展开详情。仅在确实存在自动合并删除的重复记录时启用；未导入、没有重复，或只有疑似重复时均禁用。自动合并组每次展示 20 组，可展开更多。疑似记录对保存在审计中，不要求用户逐对处理。
 
 疑似计数单位为“成员记录对”，不等于涉及的独特报告数，也不从 To screen 或 Pilot 候选集合中扣除。Pilot 仍按既有每轮样本量从全部保留记录中抽样，不表示每条疑似记录都会进入同一轮 Pilot。
 
@@ -167,14 +167,17 @@ Screening source 的 Deduplication details 仅展示自动合并组、依据和�
 
 源数据导出的范围固定为完整 `source.records`，与 Pilot 抽样使用同一数组。To screen 仍表示尚未决定的数量，它不会改变源数据 Export 的范围。
 
-“导出去重详情”按钮生成 Excel（.xlsx），每张工作表第一行均为多个字段名，第二行起逐行记录数据，并冻结第一行、启用筛选：
+`export duolications` 按钮生成单个工作表的 Excel（.xlsx）。第一行固定五列，第二行开始每行对应一条已自动合并删除的重复记录：
 
-- **Records**：每个原始成员一行；列包括 Group ID、Original record ID、Title、Authors、Year、Journal、Volume、Issue、Pages、DOI、PMID、Abstract、Databases、Import batch、Source record role、Possible duplicate retained、Selected fields、Member ID。
-- **Matches**：每个自动合并关系或保留的疑似关系一行；包括双方记录标识、标题、DOI、PMID、原因，以及标题、作者和摘要相似度。
-- **Summary**：项目、算法版本、导入数、保留数、重复删除数、疑似关系数、处理策略、导出时间和源数据指纹。
-- **Long text**：仅在字段超过 Excel 单元格 32,767 字符上限时生成，按字段与片段序号保存完整原文。主表显示前段并标注续文位置。
+| ID号 | 标题 | 作者 | 年份 | 重复理由 |
+|---|---|---|---|---|
+| 原始输入记录的 UID | 原始标题 | 全部作者以分号分隔 | 原始年份 | 中文匹配理由及保留记录 ID |
 
-标识符以文本保存，保留前导零；计数和相似度为数值；以等号开头的原始文本不会作为公式执行。Excel 文件展示当前去重集合，疑似重复始终保留用于筛选。
+工作表名为 `Duplications`，冻结第一行并启用筛选；文件名为 `duplications-<日期>.xlsx`。ID 以文本保存以保留前导零，类似公式的原始文本不会被执行。
+
+导出仅包含每个自动合并组中被删除的成员，不包含该组保留的主记录、独特记录或仅疑似重复的记录。因此数据行数与页面 Duplicates removed 一致。没有已删除重复记录时，不生成空文件。
+
+重复理由由实际合并记录生成：PMID 相同、DOI 相同、标题/作者/出版信息满足匹配规则，或标题与完整摘要等信息满足匹配规则，并标明合并后的保留记录 ID。不再导出 Records、Matches、Summary 或 Long text 等额外工作表和审计字段。
 
 JSON 源数据导出仍包含完整 `deduplication` 审计（包括历史数据），其格式为 `aimstep-deduplication-audit/v3`，包括：
 

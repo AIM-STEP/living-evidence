@@ -1,16 +1,16 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{spawnSync}=require('node:child_process');
 const D=require('../app/screening-dedup.js'),E=require('../app/screening-dedup-export.js'),R=require('../app/extraction-results.js');
-const long='Synthetic abstract <tag> & evidence. '.repeat(1400)+'😀';
-const base={title:'Exercise therapy for pain',authors:['Smith J'],year:'2024',journal:'Pain',volume:'1',issue:'1',pages:'1-9',doi:'10.1000/a',pmid:'000123',provenance:[{db:'pubmed',runId:'test'}]};
-const d=D.run([{key:'test',at:'test',records:[{...base,uid:'0001',abstract:long},{...base,uid:'0002',abstract:'Short abstract'},{...base,uid:'=1+1',doi:'10.1000/b',pmid:'456',abstract:'Different report'}]}]);
-const audit={...d,imported:d.total,retained:d.records.length,possiblePairs:d.pairs,sourceSig:'synthetic'};
-const sheets=E.sheets(audit,{project:'test',exportedAt:'2026-11-16'});
-assert.deepEqual(sheets.map(s=>s.name),['Records','Matches','Summary','Long text']);
-assert.equal(sheets[0].rows.length,4);assert.equal(sheets[1].rows.length,4);assert.equal(sheets[2].rows[1][2],3);assert.equal(sheets[2].rows[1][3],2);
-assert(sheets[0].rows[0].includes('Title'));assert(sheets[0].rows[0].includes('Abstract'));assert(sheets[0].rows[0].includes('Source record role'));
-assert.equal(sheets[3].rows.slice(1).map(r=>r[3]).join(''),long);for(const sheet of sheets)for(const row of sheet.rows)for(const value of row)if(typeof value==='string')assert(value.length<=32767);
-const folder=fs.mkdtempSync(path.join(os.tmpdir(),'aimstep-dedup-excel-')),file=path.join(folder,'synthetic.xlsx');
+const base={title:'Exercise therapy <trial> & pain',authors:['Smith J','李明'],year:'2024',journal:'Pain',volume:'1',issue:'1',pages:'1-9',doi:'10.1000/a',pmid:'000123',provenance:[{db:'pubmed',runId:'test'}]};
+const batch=records=>[{key:'test',at:'test',records}];
+const d=D.run(batch([{...base,uid:'0001',abstract:'Original'},{...base,uid:'0002',abstract:'Short abstract'},{...base,uid:'=1+1',abstract:'Another original'},{...base,uid:'possible-only',doi:'10.1000/b',pmid:'456',abstract:'Different report'}]));
+const sheets=E.sheets(d);
+assert.equal(E.hasDuplicates(d),true);assert.equal(sheets.length,1);assert.equal(sheets[0].name,'Duplications');assert.equal(sheets[0].rows.length,d.duplicates+1);
+assert.deepEqual(sheets[0].rows[0],['ID号','标题','作者','年份','重复理由']);assert(sheets[0].rows.every(row=>row.length===5));
+assert.deepEqual(sheets[0].rows.slice(1).map(row=>row[0]),['0002','=1+1']);assert(sheets[0].rows.slice(1).every(row=>/PMID 相同/.test(row[4])&&/保留记录 0001/.test(row[4])));
+const possible=D.run(batch([{...base,uid:'a'},{...base,uid:'b',doi:'10.1000/b',pmid:'456'}]));assert.equal(E.hasDuplicates(possible),false);assert.deepEqual(E.sheets(possible),[]);assert.deepEqual(E.sheets({groups:[]}),[]);
+const metadata=D.run(batch([{...base,uid:'a',doi:'',pmid:''},{...base,uid:'b',doi:'',pmid:''}]));assert(E.sheets(metadata)[0].rows[1][4].includes('标题、作者'));
+const folder=fs.mkdtempSync(path.join(os.tmpdir(),'aimstep-duplications-excel-')),file=path.join(folder,'synthetic.xlsx');
 try{
  fs.writeFileSync(file,R.workbook(sheets));
  const check=spawnSync('python3',['-c',`
@@ -20,22 +20,21 @@ with zipfile.ZipFile(sys.argv[1]) as z:
  assert z.testzip() is None
  for name in z.namelist():
   if name.endswith(('.xml','.rels')): ET.fromstring(z.read(name))
- for i in range(1,5):
-  sheet=ET.fromstring(z.read('xl/worksheets/sheet%d.xml'%i))
-  assert len(sheet.find('s:sheetData/s:row',ns))>1
-  pane=sheet.find('s:sheetViews/s:sheetView/s:pane',ns)
-  assert pane.get('ySplit')=='1' and pane.get('topLeftCell')=='B2'
-  assert sheet.find('s:autoFilter',ns) is not None
-  assert not sheet.findall('.//s:f',ns)
- records=ET.fromstring(z.read('xl/worksheets/sheet1.xml'))
- cells={c.get('r'):c for c in records.findall('.//s:c',ns)}
- assert cells['B2'].get('t')=='inlineStr' and cells['B2'].find('s:is/s:t',ns).text=='0001'
- assert cells['K2'].get('t')=='inlineStr' and cells['K2'].find('s:is/s:t',ns).text=='000123'
- assert cells['B4'].get('t')=='inlineStr' and cells['B4'].find('s:is/s:t',ns).text=='=1+1'
- summary=ET.fromstring(z.read('xl/worksheets/sheet3.xml'))
- counts={c.get('r'):c for c in summary.findall('.//s:c',ns)}
- assert counts['C2'].get('t')=='n' and counts['C2'].find('s:v',ns).text=='3'
-print('PASS: real XLSX ZIP/XML, first-row headers, frozen header, filters, typed counts, identifiers and formula-like text')
+ assert len([n for n in z.namelist() if n.startswith('xl/worksheets/')])==1
+ sheet=ET.fromstring(z.read('xl/worksheets/sheet1.xml'))
+ rows=sheet.findall('s:sheetData/s:row',ns)
+ assert len(rows)==3 and all(len(r)==5 for r in rows)
+ assert [c.find('s:is/s:t',ns).text for c in rows[0]]==['ID号','标题','作者','年份','重复理由']
+ pane=sheet.find('s:sheetViews/s:sheetView/s:pane',ns)
+ assert pane.get('ySplit')=='1' and pane.get('topLeftCell')=='B2'
+ assert sheet.find('s:autoFilter',ns).get('ref')=='A1:E3'
+ assert not sheet.findall('.//s:f',ns)
+ cells={c.get('r'):c for c in sheet.findall('.//s:c',ns)}
+ assert cells['A2'].get('t')=='inlineStr' and cells['A2'].find('s:is/s:t',ns).text=='0002'
+ assert cells['A3'].get('t')=='inlineStr' and cells['A3'].find('s:is/s:t',ns).text=='=1+1'
+ assert cells['B2'].find('s:is/s:t',ns).text=='Exercise therapy <trial> & pain'
+ assert cells['C2'].find('s:is/s:t',ns).text=='Smith J; 李明'
+print('PASS: one-sheet XLSX with five exact headers, duplicate-only rows, reasons, frozen header and filters')
 `,file],{encoding:'utf8'});assert.equal(check.status,0,check.stderr);process.stdout.write(check.stdout);
 }finally{fs.rmSync(folder,{recursive:true,force:true});}
-console.log('PASS: records, automatic/possible matches, summary and lossless long-text continuation');
+console.log('PASS: unique and possible-only records excluded; IDs, Chinese authors and formula-like text preserved');
