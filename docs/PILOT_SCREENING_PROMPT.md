@@ -1,6 +1,6 @@
 # Pilot screening：自动生成、编辑与导入 Screening prompt
 
-实现版本 `screening-prompt-v1`，日期 2026-11-16。该功能将保存并启用的 Screening criteria 转为可查看、可编辑的执行提示词，供 TypeSafe/JEV 的标题摘要筛选使用。
+接口版本 `screening-prompt-v1`、生成器 `current-criteria-v2`，日期 2026-11-16。该功能依据当前 Eligibility criteria 和已保存并启用的 Screening criteria 生成可查看、可编辑的执行提示词，供 TypeSafe/JEV 的标题摘要筛选使用。
 
 ## 用户操作
 
@@ -13,7 +13,7 @@ Eligibility criteria 弹窗提供 Clear，与旁边 Import from local、Edit eli
 嵌入预览启动及编辑均不得自动写入上游标准或标准库；只有独立 Eligibility 页面可以在启动时维护其标准库。弹窗打开时暂停源数据自动同步，避免重复去重和忙碌状态干扰操作。编辑器通过同源就绪消息初始化，无需等待字体、图片等完整加载；Clear 直接处理当前标准快照，不依赖嵌入编辑器加载成功。高度按预览内容测量，迟到的加载事件不得覆盖编辑或恢复已清空内容。操作被忙碌状态阻止时显示提示。
 
 1. 可以先编辑两个弹窗；自动生成 Prompt 或开始筛选前，先保存 Screening criteria，保留本阶段需要判断的元素。
-2. 每次打开 Screening prompt，编辑区均为空，不读取或回填以前保存、导入、生成的文本，Save 与 Export 暂不可用。只有点击 Generate、手动输入或本地导入才填充本次编辑区。Generate 根据当前已启用条件生成文本，包含研究问题背景、逐项条件、缺失信息处理、原文证据和纠错规则。打开弹窗本身不删除后台已保存的执行指令。
+2. 每次打开 Screening prompt，编辑区均为空，不读取或回填以前保存、导入、生成的文本，Save 与 Export 暂不可用。只有点击 Generate、手动输入或本地导入才填充本次编辑区。Generate 先重新读取当前已保存内容，分别写入 Eligibility criteria 的研究范围、纳排条件与定义，以及 Screening criteria 中已启用的阶段判断条件；保留原文、AND/OR、否定、阈值、单位和例外。读取失败或条件版本过期时保留草稿并报错。打开弹窗本身不删除后台已保存的执行指令。
 3. 可直接编辑文本，或点击 Import from local 导入 `.txt`、`.md`、`.json`。JSON 支持字符串，或含 `text`、`prompt`、`instructions` 字符串字段的对象；本工具导出的 JSON 可往返导入。文件最多 1 MB，提示词最多 20,000 字符。
 4. Generate 将草稿恢复为根据当前标准生成的版本。点击 Export 打开 TXT / Markdown / JSON 格式菜单，选定后下载当前草稿；TXT 与 Markdown 保留提示词正文，JSON 另外携带版本及标准指纹。尚未保存的草稿不会自动生效。
 5. Save 保存并应用当前文本。修改了实际指令时，旧 Pilot 和正式筛选结果归档，批准失效，需要重新预筛。保存本身不会调用模型或自动开始筛选。
@@ -23,7 +23,7 @@ Eligibility criteria 弹窗提供 Clear，与旁边 Import from local、Edit eli
 
 ## 生成策略与研究依据
 
-自动生成是确定性编译，不要求另一次大模型调用，不自动优化未知的准确率指标。它保留当前条件原文中的 AND、OR、否定、阈值及例外，逐项形成明确判断任务；生成、编辑与导入均不直接修改原始 Eligibility criteria 或已保存的 Screening criteria。
+自动生成是确定性编译，不要求另一次大模型调用，不自动优化未知的准确率指标。生成器同时接收当前完整的 Eligibility criteria 与 Screening criteria 生效后的条件，避免仅传入后者时遗漏上游内容。两份来源在 Prompt 中分开呈现，不从旧 Prompt、标准历史、示例问题或停用条件补写规则。Eligibility criteria 提供研究范围和定义；标题摘要阶段按已启用的 Screening criteria 逐项判断，未选入该阶段的条件不独立成为排除理由。对应条件直接冲突时，指示模型将相关项标为 unclear、指出来源冲突，交由人工核对，不自动合并或修改标准。这是执行指令，不代表已实现完整的语义冲突检测。没有 Eligibility criteria 时沿用现有 Screening criteria，不猜测缺失条件；没有有效 Screening criteria 时不能自动生成。生成结果超过长度限制时明确拒绝，不截断条件。
 
 - Homiar 等在持续更新的系统综述中迭代开发按标准提问的 Prompt，并在保留数据及后续更新中检验；这支持针对标准的问题、人工反馈与版本验证。[原始研究，2025-07-22](https://pmc.ncbi.nlm.nih.gov/articles/PMC12306261/)
 - 2026-10-19 的模型—提示策略比较发现，召回、精确率/F1的最优配置不同，提示效果依赖模型和任务。因此不默认把长推理、自我反思或某种 few-shot 方案称为普适最优。[Research Synthesis Methods，PMID 42895556](https://pubmed.ncbi.nlm.nih.gov/42895556/)

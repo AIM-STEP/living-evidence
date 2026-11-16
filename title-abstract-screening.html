@@ -376,8 +376,8 @@ th{background:#f4f4f4}
 <script src="app/screening-stages.js?v=framework-editor-v3"></script>
 <script src="app/screening-criteria-suggestions.js?v=1"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
-<script src="app/screening-prompt.js?v=20261116-independent-v1"></script>
-<script src="app/screening-prompt-editor.js?v=20261116-prompt-clear-v1"></script>
+<script src="app/screening-prompt.js?v=20261116-prompt-sources-v2"></script>
+<script src="app/screening-prompt-editor.js?v=20261116-prompt-sources-v2"></script>
 <script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-independent-v1"></script><script>
 'use strict';
 (() => {
@@ -622,7 +622,7 @@ function screeningStageSig(){return AimstepScreeningStages.signature(workspace?.
 function activeScreeningCriteria(){return AimstepScreeningStages.active(source.criteria,workspace?.screeningStages)}
 function currentScreeningPrompt(){
   if(!globalThis.AimstepScreeningPrompt||workspace?.screeningPromptCleared)return null;
-  return AimstepScreeningPrompt.resolve(screeningStagesReady()?activeScreeningCriteria():null,workspace?.screeningPrompt,{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()});
+  return AimstepScreeningPrompt.resolve(screeningStagesReady()?activeScreeningCriteria():null,workspace?.screeningPrompt,{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()},source.criteria);
 }
 function readySource(){return screeningStagesReady()&&!stale()&&source.records.length>=3&&!!activeScreeningCriteria()?.rows?.length&&(!globalThis.AimstepScreeningPrompt||currentScreeningPrompt()?.current)}
 // Records going forward (Yes and Maybe) and the criteria in use, for the
@@ -2407,9 +2407,16 @@ async function clearScreeningPrompt(){
   }catch(e){workspace=previous;publishSummary();throw e;}
   finally{busy='';render();}
 }
+function screeningPromptContext(){return {eligibilityCriteria:source.criteria,criteria:screeningStagesReady()?activeScreeningCriteria():null,canGenerate:screeningStagesReady(),signatures:{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()}}}
+async function refreshScreeningPromptContext(){
+  if(clearActionsBlocked())throw Error('Wait for the current operation to finish.');
+  busy='prompt-generation';
+  try{await loadSource();if(sourceError)throw Error(sourceError);return screeningPromptContext();}
+  finally{busy='';render();}
+}
 const screeningPromptEditor=globalThis.AimstepScreeningPrompt&&globalThis.AimstepScreeningPromptEditor?AimstepScreeningPromptEditor.mount({
   blocked:clearActionsBlocked,
-  context:()=>({criteria:screeningStagesReady()?activeScreeningCriteria():null,canGenerate:screeningStagesReady(),signatures:{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()}}),
+  context:screeningPromptContext,refresh:refreshScreeningPromptContext,
   current:currentScreeningPrompt,apply:saveScreeningPrompt,clear:clearScreeningPrompt,
   notice:message=>showNotice('pilot-message',message,'warning'),
   download:file=>download('screening-prompt-'+stamp()+'.'+file.extension,file.mime,file.contents)

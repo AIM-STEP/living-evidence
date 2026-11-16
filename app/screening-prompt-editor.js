@@ -36,10 +36,11 @@ function mount(options){
   }catch(e){options.notice(e.message);}
  });
  text.addEventListener('input',()=>{if(saving||reading)return;mode='edited';info();setExportOpen(false);lock();});
- $('generate-screening-prompt').addEventListener('click',()=>{
-  if(saving||reading)return;
+ $('generate-screening-prompt').addEventListener('click',async()=>{
+  if(saving||reading||options.blocked())return;
   if(dirty()&&!confirm('Replace this unsaved draft with a generated prompt?'))return;
-  try{const context=options.context();text.value=api.generate(context.criteria);mode='generated';filename='';error.hidden=true;info();setExportOpen(false);lock();}catch(e){fail(e);}
+  reading=true;lock();
+  try{const context=options.refresh?await options.refresh():options.context();if(context.canGenerate===false)throw Error('Save the current Screening criteria before generating a screening prompt.');const generated=api.generate(context.criteria,context.eligibilityCriteria);if(closed)return;text.value=generated;base={...context.signatures};mode='generated';filename='';error.hidden=true;info();setExportOpen(false);}catch(e){fail(e);}finally{reading=false;lock();}
  });
  $('import-screening-prompt').addEventListener('click',()=>{if(!saving&&!reading){setExportOpen(false);$('screening-prompt-file').click();}});
  $('clear-screening-prompt').addEventListener('click',async()=>{
