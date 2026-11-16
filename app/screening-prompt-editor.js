@@ -20,7 +20,7 @@ function mount(options){
   const items=menu.querySelectorAll('[data-prompt-export]');items[(focusIndex+items.length)%items.length]?.focus();
  }
  function lock(){
-  for(const id of ['import-screening-prompt','close-screening-prompt'])$(id).disabled=saving||reading;
+  for(const id of ['import-screening-prompt','clear-screening-prompt','close-screening-prompt'])$(id).disabled=saving||reading;
   $('generate-screening-prompt').disabled=saving||reading||options.context().canGenerate===false;
   for(const id of ['save-screening-prompt','export-screening-prompt'])$(id).disabled=saving||reading||!text.value.trim();
   text.disabled=saving||reading;if(saving||reading||!text.value.trim())setExportOpen(false);
@@ -29,10 +29,9 @@ function mount(options){
  $('open-screening-prompt').addEventListener('click',()=>{
   if(options.blocked())return;
   try{
-   const context=options.context(),saved=options.saved?.(),prompt=saved?options.current():null;
-   base={...context.signatures};text.value=prompt?.text||'';baseline=text.value;mode=prompt?.mode||'generated';filename=prompt?.filename||'';
+   const context=options.context();
+   base={...context.signatures};text.value='';baseline='';mode='generated';filename='';$('screening-prompt-file').value='';
    error.hidden=true;setStatus('');setExportOpen(false);lock();
-   if(prompt&&!prompt.current&&context.canGenerate!==false)setStatus('Screening criteria changed. Review and save this prompt, or Generate a new prompt.');
    dialog.showModal();
   }catch(e){options.notice(e.message);}
  });
@@ -43,6 +42,11 @@ function mount(options){
   try{const context=options.context();text.value=api.generate(context.criteria);mode='generated';filename='';error.hidden=true;info();setExportOpen(false);lock();}catch(e){fail(e);}
  });
  $('import-screening-prompt').addEventListener('click',()=>{if(!saving&&!reading){setExportOpen(false);$('screening-prompt-file').click();}});
+ $('clear-screening-prompt').addEventListener('click',async()=>{
+  if(saving||reading||options.blocked())return;saving=true;lock();error.hidden=true;
+  try{await options.clear();base={...options.context().signatures};text.value='';baseline='';mode='generated';filename='';$('screening-prompt-file').value='';setStatus('');setExportOpen(false);}
+  catch(e){fail(e);}finally{saving=false;lock();}
+ });
  $('screening-prompt-file').addEventListener('change',async event=>{
   const file=event.target.files?.[0];if(!file||saving||reading)return;
   if(dirty()&&!confirm('Replace this unsaved draft with the imported prompt?')){event.target.value='';return;}

@@ -364,9 +364,9 @@ th{background:#f4f4f4}
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <dialog id="screening-prompt-dialog" class="dialog" aria-labelledby="screening-prompt-title"><div class="panel-head"><h2 id="screening-prompt-title" data-ui-localize>Screening prompt</h2><button type="button" class="source-delete" id="close-screening-prompt" aria-label="Close screening prompt">×</button></div><div class="panel-body">
-<div class="toolbar"><button type="button" class="btn small" id="generate-screening-prompt" data-ui-localize>Generate</button><button type="button" class="btn small" id="import-screening-prompt" data-ui-localize>Import from local</button><input id="screening-prompt-file" type="file" accept=".txt,.md,.json,text/plain,text/markdown,application/json" hidden></div>
+<div class="toolbar"><button type="button" class="btn small" id="generate-screening-prompt" data-ui-localize>Generate</button><button type="button" class="btn small" id="import-screening-prompt" data-ui-localize>Import from local</button><button type="button" class="btn small" id="clear-screening-prompt" data-ui-localize>Clear</button><input id="screening-prompt-file" type="file" accept=".txt,.md,.json,text/plain,text/markdown,application/json" hidden></div>
 <p class="hint" id="screening-prompt-status" role="status" hidden></p>
-<label class="label" for="screening-prompt-text" data-ui-localize>Prompt instructions</label><textarea class="textarea" id="screening-prompt-text" rows="20" maxlength="20000" spellcheck="false" style="width:100%;font-family:ui-monospace,monospace"></textarea>
+<label class="label" for="screening-prompt-text" data-ui-localize>Prompt instructions</label><textarea class="textarea" id="screening-prompt-text" rows="20" maxlength="20000" autocomplete="off" spellcheck="false" style="width:100%;font-family:ui-monospace,monospace"></textarea>
 <p class="notice error" id="screening-prompt-error" role="alert" hidden></p><div class="toolbar"><button type="button" class="btn small" id="export-screening-prompt" aria-haspopup="menu" aria-expanded="false" aria-controls="screening-prompt-export-menu" disabled><span data-ui-localize>Export</span><span aria-hidden="true"> ▾</span></button><div id="screening-prompt-export-menu" class="source-export-menu" role="menu" aria-labelledby="export-screening-prompt" hidden><button type="button" role="menuitem" data-prompt-export="txt">TXT (.txt)</button><button type="button" role="menuitem" data-prompt-export="md">Markdown (.md)</button><button type="button" role="menuitem" data-prompt-export="json">JSON (.json)</button></div><button type="button" class="btn small" id="save-screening-prompt" data-ui-localize disabled>Save</button></div>
 </div></dialog>
 <script src="app/study-links.js?v=study-links-v1"></script>
@@ -377,7 +377,7 @@ th{background:#f4f4f4}
 <script src="app/screening-criteria-suggestions.js?v=1"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/screening-prompt.js?v=20261116-independent-v1"></script>
-<script src="app/screening-prompt-editor.js?v=20261116-independent-v1"></script>
+<script src="app/screening-prompt-editor.js?v=20261116-prompt-clear-v1"></script>
 <script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-independent-v1"></script><script>
 'use strict';
 (() => {
@@ -621,7 +621,7 @@ function screeningStagesReady(){return AimstepScreeningStages.valid(workspace?.s
 function screeningStageSig(){return AimstepScreeningStages.signature(workspace?.screeningStages)}
 function activeScreeningCriteria(){return AimstepScreeningStages.active(source.criteria,workspace?.screeningStages)}
 function currentScreeningPrompt(){
-  if(!globalThis.AimstepScreeningPrompt)return null;
+  if(!globalThis.AimstepScreeningPrompt||workspace?.screeningPromptCleared)return null;
   return AimstepScreeningPrompt.resolve(screeningStagesReady()?activeScreeningCriteria():null,workspace?.screeningPrompt,{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()});
 }
 function readySource(){return screeningStagesReady()&&!stale()&&source.records.length>=3&&!!activeScreeningCriteria()?.rows?.length&&(!globalThis.AimstepScreeningPrompt||currentScreeningPrompt()?.current)}
@@ -1290,7 +1290,7 @@ function renderPilot(){
   renderCalibration();
   const approved=pilotApprovalValid();renderPilotApproval();
   // Status lines set here are replaced or cleared here; messages from a run stay.
-  const msg=$('pilot-message'),status=globalThis.AimstepScreeningPrompt&&screeningStagesReady()&&!currentScreeningPrompt()?.current?'Screening criteria changed. Review and save Screening prompt before screening.':!screeningStagesReady()&&source.criteria?.rows?.length?'Set and save Screening criteria before starting the pilot.':p.approved&&!approved?'The criteria or calibration feedback changed. Review corrections and approve the current version.':
+  const msg=$('pilot-message'),status=globalThis.AimstepScreeningPrompt&&screeningStagesReady()&&!currentScreeningPrompt()?.current?(workspace.screeningPromptCleared?'Save a Screening prompt before screening.':'Screening criteria changed. Review and save Screening prompt before screening.'):!screeningStagesReady()&&source.criteria?.rows?.length?'Set and save Screening criteria before starting the pilot.':p.approved&&!approved?'The criteria or calibration feedback changed. Review corrections and approve the current version.':
     !ready?(stale()?'The screening source is being updated. Please wait for it to finish.':source.records.length<3?'Import at least 3 records in Screening source.':!screeningStagesReady()?'Set and save Screening criteria before starting the pilot.':'Review and save Screening prompt before screening.'):'';
   if(!busy&&status){showNotice('pilot-message',status,'warning');msg.dataset.status='1'}
   else if(!busy&&msg.dataset.status){showNotice('pilot-message','');delete msg.dataset.status}
@@ -2386,7 +2386,7 @@ async function saveScreeningPrompt(draft,base){
     if(base.criteriaSig!==source.criteriaSig||base.stageSig!==screeningStageSig())throw Error('Screening criteria changed. Export your draft if needed, then reopen the prompt to review the current criteria.');
     const previous=structuredClone(workspace),next=AimstepScreeningPrompt.saved(draft.text,draft.mode,base,draft.filename);
     try{
-      const old=currentScreeningPrompt();workspace.screeningPrompt=next;const prompt=currentScreeningPrompt();
+      const old=currentScreeningPrompt();workspace.screeningPrompt=next;workspace.screeningPromptCleared=false;const prompt=currentScreeningPrompt();
       const changed=!old?.current||old.hash!==prompt.hash,archived=changed&&archiveForPrompt(previous,'screening-prompt-edited');
       workspace.screeningPromptAppliedHash=prompt.current?prompt.hash:'';workspace.screeningPromptSnapshot=prompt.current?structuredClone(prompt):null;
       if(archived)workspace.sourceUpdateNotice='Screening prompt changed. Previous assessments were archived. Start a new pilot.';
@@ -2395,10 +2395,22 @@ async function saveScreeningPrompt(draft,base){
     }catch(e){workspace=previous;publishSummary();throw e;}
   }finally{busy='';render();}
 }
+async function clearScreeningPrompt(){
+  if(clearActionsBlocked())throw Error('Wait for the current operation to finish.');
+  const previous=structuredClone(workspace);busy='prompt-clear';
+  try{
+    const archived=archiveForPrompt(previous,'screening-prompt-cleared');
+    workspace.screeningPrompt=null;workspace.screeningPromptCleared=true;workspace.screeningPromptAppliedHash='';workspace.screeningPromptSnapshot=null;
+    if(archived)workspace.sourceUpdateNotice='Screening prompt cleared. Previous assessments were archived.';
+    log('screening-prompt-cleared',{archived});await save();
+    if(archived)resetPromptAssessmentViews();
+  }catch(e){workspace=previous;publishSummary();throw e;}
+  finally{busy='';render();}
+}
 const screeningPromptEditor=globalThis.AimstepScreeningPrompt&&globalThis.AimstepScreeningPromptEditor?AimstepScreeningPromptEditor.mount({
   blocked:clearActionsBlocked,
   context:()=>({criteria:screeningStagesReady()?activeScreeningCriteria():null,canGenerate:screeningStagesReady(),signatures:{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()}}),
-  current:currentScreeningPrompt,saved:()=>workspace.screeningPrompt||null,apply:saveScreeningPrompt,
+  current:currentScreeningPrompt,apply:saveScreeningPrompt,clear:clearScreeningPrompt,
   notice:message=>showNotice('pilot-message',message,'warning'),
   download:file=>download('screening-prompt-'+stamp()+'.'+file.extension,file.mime,file.contents)
 }):null;
