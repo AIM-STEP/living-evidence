@@ -1,12 +1,14 @@
 # Pilot screening：自动生成、编辑与导入 Screening prompt
 
-接口版本 `screening-prompt-v1`、生成器 `current-criteria-v2`，日期 2026-11-16。该功能依据当前 Eligibility criteria 和已保存并启用的 Screening criteria 生成可查看、可编辑的执行提示词，供 TypeSafe/JEV 的标题摘要筛选使用。
+接口版本 `screening-prompt-v1`、生成器 `current-criteria-v3`，日期 2026-11-16。该功能依据当前 Eligibility criteria 和已保存并启用的 Screening criteria 生成可查看、可编辑的执行提示词，供 TypeSafe/JEV 的标题摘要筛选使用。
 
 ## 用户操作
 
 Pilot screening 标题旁依次提供 Eligibility criteria、Screening criteria、Screening prompt。
 
 Eligibility criteria 不是编辑后两者的前置条件。没有上游标准时，Screening criteria 仍可打开，通过 Add criteria 添加、命名并保存纳排条件；不自动请求生成建议。Screening prompt 可先行输入、从本地导入、导出和保存，即使 Screening criteria 尚未保存。此时不能直接启动筛选；自动 Generate 需要有效的、已保存的 Screening criteria。稍后补充或修改标准后，自定义 Prompt 按原有版本保护要求复核保存。实际筛选依据已保存的 Screening criteria；没有上游标准时，向全文评估传递这些有效条件。
+
+当前 Eligibility 工作区是标准内容的唯一自动来源；该弹窗本地导入或编辑通过共享事务先保存到当前工作区。Search strategy 历史快照、旧上传副本和未激活的生成模式不再作为空值回退，空白与删除都保持为空。Eligibility 弹窗也不从旧工作区补填空快照。Screening criteria 只恢复与当前标准版本匹配的保存配置；Clear 确认后立即保存空配置并移除生成建议缓存，不需再按 Save。保存失败恢复原工作区及可见草稿。仅有元素名称而无任何纳排规则的行不属于有效生成输入；没有有效 Screening criteria 时禁止生成 Prompt。
 
 Eligibility criteria 弹窗提供 Clear，与旁边 Import from local、Edit eligibility criteria、Save 使用相同的文字按钮样式。确认清空后立即保存，无需再点击 Save；重新打开或刷新后保持为空。清空保留研究问题、附件与文献记录，旧标准及已有筛选结果按原有机制留存历史。保存的空标准会显式记录，不再回退加载旧标准；保存失败恢复原数据并提示错误，遇到并发标准变更时拒绝覆盖。普通编辑及导入仍需点击 Save 后生效。
 

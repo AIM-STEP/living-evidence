@@ -7,7 +7,7 @@ function setup(){
  const nodes=new Map(),ctx={AimstepScreeningStages:S,structuredClone,source:{criteria,criteriaSig:'c',sourceSig:'s',records:[{uid:'r'}]},workspace:{screeningStages:old,sourceSig:'s',criteriaSig:'c',pilot:{rounds:[{ids:['r']}],size:10},full:{ai:{r:{decision:'no'}}}},stagesDraft:old.elements.map((e,i)=>({...e,enabled:i===0})),stagesFramework:'PICO',stagesBase:'c',stagesInitial:'',stagesSaving:false,busy:'',now:()=>'',confirm:()=>true,clearActionsBlocked:()=>false,screeningHasProgress:()=>true,loadSource:async()=>{},save:async()=>{},render:()=>{},publishSummary:()=>{},log:()=>{},showNotice:()=>{},toast:()=>{},newPilot:size=>({size,rounds:[],ai:{},human:{}}),newFull:()=>({ai:{},ai2:{},human:{}}),
  $:id=>{if(!nodes.has(id))nodes.set(id,{disabled:false,hidden:true,textContent:''});return nodes.get(id)},
  pilotReviewDrafts:new Map(),pilotReviewErrors:new Map(),expandedPilotAssessments:new Set(),fullReviewErrors:new Map(),exclusionDrafts:new Map(),expandedFullAssessments:new Set(),collapsedFullAssessments:new Set(),fullNow:new Map(),fullDone:[]};
- vm.createContext(ctx);vm.runInContext(extract('function stageDraftSignature()','function stagesDirty()')+extract('function screeningStagesReady()','function readySource()')+extract('function clearCalibration()','async function syncSource()')+extract('async function saveStageSettings()',"$('save-stages').addEventListener"),ctx);
+ vm.createContext(ctx);vm.runInContext(extract('function stageDraftSignature()','function stagesDirty()')+extract('function screeningStagesReady()','function readySource()')+extract('function clearCalibration()','async function syncSource()')+extract('async function saveStageSettings(',"$('save-stages').addEventListener"),ctx);
  return ctx;
 }
 (async()=>{

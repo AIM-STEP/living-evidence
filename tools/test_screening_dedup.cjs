@@ -116,7 +116,7 @@ vm.runInContext(slice('// Deduplication is automatic.', 'function renderSource()
  // Pilot samples source.records directly, not a separate/export-filtered array.
  context.workspace.pilot={rounds:[]};context.fingerprint=v=>String(v).split('').reduce((n,c)=>Math.imul(n^c.charCodeAt(0),16777619)>>>0,2166136261).toString(16);
  vm.runInContext(slice('function pilotSample(', 'async function startPilotRound('),context);assert.equal(context.pilotSample(20,'test').length,3);
- context.stale=()=>false;vm.runInContext(slice('function readySource()', '// Records going forward'),context);assert.equal(context.readySource(),true);
+ context.stale=()=>false;context.activeScreeningCriteria=()=>context.source.criteria;vm.runInContext(slice('function readySource()', '// Records going forward'),context);assert.equal(context.readySource(),true);
  assert(html.includes('source={records,dedup,studyLinks,studyLinksError,runs:'));assert(html.includes('AimstepDedup.run(prepared)'));assert(!html.includes('run(prepared,{decisions:'));
  console.log('PASS: Export format menu, direct downloads, keyboard/outside dismissal, disabled state and shared Pilot dataset');count++;
  vm.runInContext(slice('function risRecords(', 'async function importFile('),context);

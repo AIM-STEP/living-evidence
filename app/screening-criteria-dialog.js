@@ -13,12 +13,12 @@ window.AIMScreeningCriteriaDialog=function(config){
   const blocked=()=>saving||config.busy();
   function discard(){if(saving)return false;if(dirty&&!confirm('Discard unsaved criteria edits?'))return false;frame?.contentWindow?.aimstepCriteriaPreview?.discard();dirty=false;return true}
   function mount(value){
-    base=localStorage.getItem(eligibilityKey);if(!value?.rows?.length&&!value?.cleared&&base){const previous=JSON.parse(base);value={question:previous.question||'',framework:previous.framework||'Other',reviewType:previous.reviewType||'',rows:previous.activeGenerator==='machine'?previous.machineCriteria:previous.criteria}}snapshot=structuredClone(value);dirty=false;cleared=false;showError('');observer?.disconnect();
+    base=localStorage.getItem(eligibilityKey);snapshot=structuredClone(value);dirty=false;cleared=false;showError('');observer?.disconnect();
     readyFrame=null;previewWorkspace=null;loading.hidden=true;
     $('criteria-editor').hidden=true;$('criteria-view').hidden=false;$('criteria-origin').hidden=true;saveButton.disabled=true;clearButton.disabled=!snapshot?.rows?.length;
     if(!snapshot?.rows?.length){$('criteria-view').replaceChildren();frame=null;return}
     const previous=JSON.parse(base||'null'),rows=previous?(previous.activeGenerator==='machine'?previous.machineCriteria:previous.criteria):null;
-    const same=previous&&(previous.question||'')===(snapshot.question||'')&&(previous.framework||'Other')===(snapshot.framework||'Other')&&JSON.stringify((rows||[]).map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']))===JSON.stringify(snapshot.rows.map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']));
+    const same=previous&&previous.generationMethodChoice&&(previous.question||'')===(snapshot.question||'')&&(previous.framework||'Other')===(snapshot.framework||'Other')&&JSON.stringify((rows||[]).map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']))===JSON.stringify(snapshot.rows.map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']));
     const valueToLoad=same?previous:AIMSearchCriteriaEditor.workspace(previous,snapshot,new Date().toISOString());previewWorkspace=valueToLoad;loading.hidden=false;
     const current=document.createElement('iframe');frame=current;current.className='criteria-preview-frame';current.title='Editable eligibility criteria';
     const url=new URL(config.pageLink('eligibility.html'),location.href);url.searchParams.set('embedded','search-criteria-preview');url.searchParams.set('criteriaPreviewVersion','20261116-clear-v3');current.src=url.href;

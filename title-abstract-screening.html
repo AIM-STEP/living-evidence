@@ -376,9 +376,9 @@ th{background:#f4f4f4}
 <script src="app/screening-stages.js?v=framework-editor-v3"></script>
 <script src="app/screening-criteria-suggestions.js?v=1"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
-<script src="app/screening-prompt.js?v=20261116-prompt-sources-v2"></script>
-<script src="app/screening-prompt-editor.js?v=20261116-prompt-sources-v2"></script>
-<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-independent-v1"></script><script>
+<script src="app/screening-prompt.js?v=20261116-prompt-sources-v3"></script>
+<script src="app/screening-prompt-editor.js?v=20261116-prompt-sources-v3"></script>
+<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-current-only-v2"></script><script>
 'use strict';
 (() => {
 const $=id=>document.getElementById(id);
@@ -482,7 +482,7 @@ function eligibilityFallback(){
     eligibilityRowsSig=summaryRowsSig(Object.hasOwn(raw,'generationMethodChoice')&&!raw.generationMethodChoice?[]:raw.activeGenerator==='machine'?raw.machineCriteria:raw.criteria);
     const choices=Object.hasOwn(raw,'generationMethodChoice')&&!raw.generationMethodChoice?[]:
       raw.activeGenerator==='machine'?raw.machineCriteria:raw.criteria;
-    return {framework:raw.framework||'',reviewType:raw.reviewType||'',question:raw.question||'',rows:(Array.isArray(choices)?choices:[]).map(row),limits:raw.dateRange||{}};
+    return {framework:raw.framework||'',reviewType:raw.reviewType||'',question:raw.question||'',rows:(Array.isArray(choices)?choices:[]).map(row).filter(r=>[r.condition,r.uncertain,r.definition].some(v=>v.trim())),limits:raw.dateRange||{}};
   }catch(e){return null}
 }
 function cleanRecord(r,uid){
@@ -577,8 +577,6 @@ async function loadSource({persist=true,includeReturns=true}={}){
     data=await getProject(db);
     db.close();
   }catch(e){sourceError='Search results cannot be read from browser storage: '+e.message}
-  let draft=null;
-  try{draft=JSON.parse(localStorage.getItem(searchKey)||'null')}catch(e){}
   const imports=Array.isArray(workspace?.imports)?workspace.imports:[];
   searchRuns=(Array.isArray(data?.runs)?data.runs:[]).filter(r=>r&&typeof r.id==='string');
   // Searches enter screening only through Import from search strategy. A
@@ -598,9 +596,10 @@ async function loadSource({persist=true,includeReturns=true}={}){
   let records=dedup.records,studyLinks=null,studyLinksError='';
   if(globalThis.AimstepStudyLinks){try{studyLinks=await AimstepStudyLinks.sync(scope,records);records=studyLinks.records;}catch(e){studyLinksError='Study links could not be saved. Reports remain available for screening.';}}
   dedupStats={byImport:dedup.stats,total:dedup.total,possible:dedup.possible};
-  const live=eligibilityFallback(),upload=validCriteriaUpload(workspace?.criteriaUpload);
-  const rawCriteria=upload?upload.snapshot:draft?.source==='previous'&&live?live:draft?.criteriaSnapshot||live;
-  criteriaOrigin=upload?{kind:upload.edited?'edited':'upload',name:upload.name}:rawCriteria&&rawCriteria===live?{kind:'eligibility'}:rawCriteria?{kind:'search',name:text(draft?.criteriaSnapshot?.origin,200)}:null;
+  // The shared eligibility dialog saves its imports/edits to this current
+  // workspace. Search snapshots and legacy uploads are history, never fallbacks.
+  const rawCriteria=eligibilityFallback();
+  criteriaOrigin=rawCriteria?{kind:'eligibility'}:null;
   const criteria=rawCriteria?{
     framework:text(rawCriteria.framework,100),reviewType:text(rawCriteria.reviewType,150),
     question:text(rawCriteria.question,20000),...(rawCriteria.cleared===true?{cleared:true}:{}),
@@ -2281,7 +2280,7 @@ $('stop-stages').addEventListener('click',()=>stagesController?.abort());
 $('open-screening-criteria').addEventListener('click',()=>{
   if(clearActionsBlocked())return;
   stagesBase=source.criteriaSig;
-  const saved=workspace.screeningStages,cached=reusableStageSuggestion();
+  const saved=workspace.screeningStages?.sourceSig===source.criteriaSig?workspace.screeningStages:null,cached=source.criteria?.rows?.length?reusableStageSuggestion():null;
   stagesDraft=saved?AimstepScreeningStages.editable(source.criteria,saved).filter(e=>e.enabled):cached?structuredClone(cached.elements):[];
   stagesFramework=saved?.framework||cached?.framework||source.criteria?.framework||'PICO';
   if(!AimstepScreeningStages.frameworks[stagesFramework])stagesFramework='Other';
@@ -2321,31 +2320,35 @@ stagesDialog.addEventListener('click',event=>{
 });
 stagesDialog.addEventListener('close',()=>{stagesDraft=null;stagesInitial=''});
 window.addEventListener('beforeunload',event=>{if(stagesDirty()){event.preventDefault();event.returnValue=''}});
-$('reset-stages').addEventListener('click',()=>{
-  if(stagesSaving||!confirm('Clear all screening criteria elements? Click Save to apply this change.'))return;
-  stagesDraft=[];renderStageRows();
+$('reset-stages').addEventListener('click',async()=>{
+  if(clearActionsBlocked()||stagesSaving||!confirm('Clear all screening criteria elements?'))return;
+  const previous=structuredClone(stagesDraft),previousBase=stagesBase;
+  stagesDraft=[];
+  if(!await saveStageSettings({confirmedClear:true})){stagesDraft=previous;stagesBase=previousBase}
+  renderStageRows();
 });
-async function saveStageSettings(){
-  if(clearActionsBlocked()||stagesSaving)return;
+async function saveStageSettings({confirmedClear=false}={}){
+  if(clearActionsBlocked()||stagesSaving)return false;
   const error=message=>{$('stages-error').textContent=message;$('stages-error').hidden=false};
   stagesSaving=true;$('save-stages').disabled=true;
-  try{await loadSource()}catch(e){error('Could not refresh eligibility criteria: '+e.message);return}
+  try{await loadSource()}catch(e){error('Could not refresh eligibility criteria: '+e.message);return false}
   finally{stagesSaving=false;$('save-stages').disabled=false;render()}
-  if(!stagesDraft)return;
-  if(stagesBase!==source.criteriaSig){error('Eligibility criteria changed. Close and reopen this dialog to review the updated conditions.');return}
+  if(!stagesDraft)return false;
+  if(stagesBase!==source.criteriaSig&&!confirmedClear){error('Eligibility criteria changed. Close and reopen this dialog to review the updated conditions.');return false}
   const next={version:2,sourceSig:source.criteriaSig,criteriaSnapshot:structuredClone(source.criteria),elements:structuredClone(stagesDraft),framework:stagesFramework,savedAt:now()};
-  if(next.elements.length>100){error('At most 100 elements can be configured.');return}
-  if(!AimstepScreeningStages.draftValid(next.elements)){error('Give each element a name and at least one inclusion or exclusion rule.');return}
+  if(next.elements.length>100){error('At most 100 elements can be configured.');return false}
+  if(!AimstepScreeningStages.draftValid(next.elements)){error('Give each element a name and at least one inclusion or exclusion rule.');return false}
   if(screeningStagesReady()&&screeningStageSig()===AimstepScreeningStages.signature(next)){
-    stagesInitial=stageDraftSignature();$('stages-status').textContent='Screening criteria saved.';toast('Screening criteria saved.');return;
+    stagesInitial=stageDraftSignature();$('stages-status').textContent='Screening criteria saved.';toast('Screening criteria saved.');return true;
   }
   const hasResults=screeningHasProgress();
-  if(hasResults&&!confirm('Save these screening criteria? Existing pilot and formal assessments will be archived. Start a new pilot and re-screen all records, including earlier exclusions.'))return;
+  if(hasResults&&!confirmedClear&&!confirm('Save these screening criteria? Existing pilot and formal assessments will be archived. Start a new pilot and re-screen all records, including earlier exclusions.'))return false;
   const previous=structuredClone(workspace);
   stagesSaving=true;busy='stage-settings';$('save-stages').disabled=true;$('reset-stages').disabled=true;$('stages-items').inert=true;
   try{
     if(hasResults)(workspace.screeningStageArchives??=[]).push({at:now(),reason:'screening-criteria-edited',settings:previous.screeningStages||null,criteriaSnapshot:previous.screeningStages?.criteriaSnapshot||structuredClone(source.criteria),criteriaSig:previous.criteriaSig,screeningPrompt:previous.screeningPromptSnapshot||null,records:structuredClone(source.records),pilot:previous.pilot,full:previous.full});
     workspace.screeningStages=next;
+    if(!next.elements.length)delete workspace.screeningStagesSuggestion;
     if(!workspace.screeningStagesInitial)workspace.screeningStagesInitial=structuredClone(next);
     clearCalibration();workspace.sourceSig=source.sourceSig;workspace.criteriaSig=source.criteriaSig;
     if(globalThis.AimstepScreeningPrompt){const prompt=currentScreeningPrompt();if(prompt?.current){workspace.screeningPromptAppliedHash=prompt.hash;workspace.screeningPromptSnapshot=structuredClone(prompt);}}
@@ -2354,7 +2357,8 @@ async function saveStageSettings(){
     pilotReviewDrafts.clear();pilotReviewErrors.clear();expandedPilotAssessments.clear();fullReviewErrors.clear();exclusionDrafts.clear();expandedFullAssessments.clear();collapsedFullAssessments.clear();fullNow.clear();fullDone.length=0;pilotView=-1;pilotFilter='agreed';fullFilter='';
     stagesInitial=stageDraftSignature();$('stages-error').hidden=true;$('stages-status').textContent='Screening criteria saved. Start a new pilot to use these settings.';toast(next.elements.length?'Screening criteria saved.':'Screening criteria cleared.');
     showNotice('pilot-message','');showNotice('full-message','');
-  }catch(e){workspace=previous;publishSummary();error('Could not save screening criteria: '+e.message)}
+    stagesBase=source.criteriaSig;return true;
+  }catch(e){workspace=previous;publishSummary();error('Could not save screening criteria: '+e.message);return false}
   finally{stagesSaving=false;busy='';$('save-stages').disabled=false;$('reset-stages').disabled=false;$('stages-items').inert=false;render();}
 }
 $('save-stages').addEventListener('click',saveStageSettings);

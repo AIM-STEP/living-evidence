@@ -1,13 +1,13 @@
 /* Editable, project-local screening instructions. Generation makes no model call. */
 (function(root){
 'use strict';
-const VERSION='screening-prompt-v1',GENERATOR_VERSION='current-criteria-v2',FORMAT='aimstep-screening-prompt/v1',MAX_CHARS=20000,MAX_BYTES=1024*1024;
+const VERSION='screening-prompt-v1',GENERATOR_VERSION='current-criteria-v3',FORMAT='aimstep-screening-prompt/v1',MAX_CHARS=20000,MAX_BYTES=1024*1024;
 const clean=v=>String(v??'').trim();
 function hash(value){let h=2166136261;for(const c of JSON.stringify(value))h=Math.imul(h^c.codePointAt(0),16777619);return (h>>>0).toString(16).padStart(8,'0');}
-function rows(criteria){return (criteria?.rows||[]).map(r=>({dimension:clean(r.title),inclusionRule:[r.condition,r.definition].map(clean).filter(Boolean).join('\n'),exclusionRule:clean(r.uncertain)}));}
+function rows(criteria){return (criteria?.rows||[]).map(r=>({dimension:clean(r.title),inclusionRule:[r.condition,r.definition].map(clean).filter(Boolean).join('\n'),exclusionRule:clean(r.uncertain)})).filter(r=>r.inclusionRule||r.exclusionRule);}
 function generate(criteria,eligibilityCriteria=null){
  const active=rows(criteria);if(!active.length)throw Error('Save at least one enabled Screening criterion first.');
- const eligibility=(eligibilityCriteria?.rows||[]).map((r,i)=>`${i+1}. ${clean(r.title)}\nInclusion: ${clean(r.condition)||'(not provided)'}\nExclusion: ${clean(r.uncertain)||'(not provided)'}\nDefinition / qualification: ${clean(r.definition)||'(not provided)'}`);
+ const eligibility=(eligibilityCriteria?.rows||[]).filter(r=>[r.condition,r.uncertain,r.definition].some(clean)).map((r,i)=>`${i+1}. ${clean(r.title)}\nInclusion: ${clean(r.condition)||'(not provided)'}\nExclusion: ${clean(r.uncertain)||'(not provided)'}\nDefinition / qualification: ${clean(r.definition)||'(not provided)'}`);
  return validate([
   'TITLE AND ABSTRACT SCREENING',
   'Review question: '+clean(eligibilityCriteria?.question||criteria?.question||'(not provided)')+'\nReview type: '+clean(eligibilityCriteria?.reviewType||criteria?.reviewType||'(not provided)')+'\nEligibility framework: '+clean(eligibilityCriteria?.framework||'(not provided)')+'\nScreening framework: '+clean(criteria?.framework||'(not provided)'),
