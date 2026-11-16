@@ -246,7 +246,7 @@ th{background:#f4f4f4}
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
-<script defer src="app/tool-i18n-catalog.js?v=20261116-export-menu"></script>
+<script defer src="app/tool-i18n-catalog.js?v=20261116-study-links"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261021-49">
@@ -271,10 +271,11 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head source-panel-head"><h2 data-ui-localize>Screening source</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog" data-ui-localize>Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog" data-ui-localize>Import from local</button><button class="btn small clear-action" id="clear-source" type="button" aria-label="Clear screening source" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Screening source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Screening source</span></button></div></div> <div class="panel-body" id="source-body">
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span data-ui-localize>Databases</span></div><div><strong id="stat-total">0</strong><span data-ui-localize>Records imported</span></div><div><strong id="stat-dups">0</strong><span data-ui-localize>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span data-ui-localize>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden role="status"></p>
+<div id="study-links" class="source-trace"></div>
 <details id="dedup-details" class="source-trace" hidden><summary id="dedup-details-summary">Deduplication details</summary><div id="dedup-details-body"></div></details>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col" data-ui-localize>Imported</th><th scope="col" data-ui-localize>Database</th><th scope="col" class="num-col" data-ui-localize>Records</th><th scope="col" class="num-col" data-ui-localize>Duplicates</th><th scope="col" class="del-col"><span class="sr-only" data-ui-localize>Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
-<div class="toolbar source-foot"><span class="export-source"><button class="btn small" id="export-source" type="button" title="Export all deduplicated source records" aria-haspopup="menu" aria-expanded="false" aria-controls="source-export-menu"><span data-ui-localize>Export</span><span aria-hidden="true"> ▾</span></button><div id="source-export-menu" class="source-export-menu" role="menu" aria-labelledby="export-source" hidden><button type="button" role="menuitem" data-source-export="ris">RIS (EndNote, Zotero, Mendeley)</button><button type="button" role="menuitem" data-source-export="csv">CSV (Excel)</button><button type="button" role="menuitem" data-source-export="bib">BibTeX</button><button type="button" role="menuitem" data-source-export="json">JSON</button></div><button class="btn small" type="button" id="export-dedup-audit" title="Export deplication" data-ui-localize disabled>Export deplication</button></span></div>
+<div class="toolbar source-foot"><span class="export-source"><button class="btn small" id="export-source" type="button" title="Export all deduplicated source records" aria-haspopup="menu" aria-expanded="false" aria-controls="source-export-menu"><span data-ui-localize>Export</span><span aria-hidden="true"> ▾</span></button><div id="source-export-menu" class="source-export-menu" role="menu" aria-labelledby="export-source" hidden><button type="button" role="menuitem" data-source-export="ris">RIS (EndNote, Zotero, Mendeley)</button><button type="button" role="menuitem" data-source-export="csv">CSV (Excel)</button><button type="button" role="menuitem" data-source-export="bib">BibTeX</button><button type="button" role="menuitem" data-source-export="json">JSON</button></div><button class="btn small" type="button" id="export-dedup-audit" title="Export duplication" data-ui-localize disabled>Export duplication</button></span></div>
 </div>
 </section>
 </div>
@@ -364,7 +365,8 @@ th{background:#f4f4f4}
 <div class="toolbar stages-footer"><button type="button" class="btn small clear-action" id="reset-stages" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button type="button" class="btn small clear-action" id="save-stages" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button></div>
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
-<script src="app/extraction-results.js?v=tabular-v1"></script>
+<script src="app/study-links.js?v=study-links-v1"></script>
+<script src="app/extraction-results.js?v=20261116-study-links"></script>
 <script src="app/screening-dedup-export.js?v=duplicates-five-columns-v2"></script>
 <script src="app/screening-dedup.js?v=report-dedup-v3"></script>
 <script src="app/screening-stages.js?v=framework-editor-v3"></script>
@@ -484,7 +486,7 @@ function cleanRecord(r,uid){
     authors:Array.isArray(r.authors)?r.authors.map(a=>text(a,500)):text(r.authors||'',10000).split(/;\s*/).filter(Boolean),
     year:text(r.year||r.pubYear,50),journal:text(r.journal||r.journalTitle,1000),
     doi:text(r.doi,300),pmid:text(r.pmid,100),url:text(r.url,2000),volume:text(r.volume,100),issue:text(r.issue||r.number,100),pages:text(r.pages||r.page||r.pageInfo,100),
-    provenance:Array.isArray(r.provenance)?r.provenance.slice():[]};
+    provenance:Array.isArray(r.provenance)?r.provenance.slice():[],...Object.fromEntries(['trialRegistration','registrationNumber','registryIds','studySites','interventions','recruitmentStart','recruitmentEnd'].filter(k=>r[k]!=null).map(k=>[k,structuredClone(r[k])]))};
 }
 function recordKeys(r){
   const doi=r.doi.toLowerCase().replace(/^https?:\/\/(?:dx\.)?doi\.org\//,'').replace(/^doi:\s*/,'').trim();
@@ -587,7 +589,8 @@ async function loadSource({persist=true,includeReturns=true}={}){
   batches.sort((a,b)=>String(a.at||'').localeCompare(String(b.at||'')));
   const prepared=batches.map(batch=>({...batch,records:batch.records.map(r=>cleanRecord(r,null))}));
   const dedup=AimstepDedup.run(prepared);
-  const records=dedup.records;
+  let records=dedup.records,studyLinks=null,studyLinksError='';
+  if(globalThis.AimstepStudyLinks){try{studyLinks=await AimstepStudyLinks.sync(scope,records);records=studyLinks.records;}catch(e){studyLinksError='Study links could not be saved. Reports remain available for screening.';}}
   dedupStats={byImport:dedup.stats,total:dedup.total,possible:dedup.possible};
   const live=eligibilityFallback(),upload=validCriteriaUpload(workspace?.criteriaUpload);
   const rawCriteria=upload?upload.snapshot:draft?.source==='previous'&&live?live:draft?.criteriaSnapshot||live;
@@ -596,7 +599,7 @@ async function loadSource({persist=true,includeReturns=true}={}){
     framework:text(rawCriteria.framework,100),reviewType:text(rawCriteria.reviewType,150),
     question:text(rawCriteria.question,20000),
     rows:(Array.isArray(rawCriteria.rows)?rawCriteria.rows:[]).map(row)
-  }:null;  source={records,dedup,runs:[...searchRuns.filter(r=>imported.has(r.id)).map(r=>({...r,kind:'search',importedAt:imported.get(r.id)})),...imports.map(r=>({id:r.id,db:r.db,startedAt:r.startedAt,downloaded:r.downloaded,added:r.added,file:r.file,status:'Imported',kind:'local',importedAt:r.startedAt}))],criteria,
+  }:null;  source={records,dedup,studyLinks,studyLinksError,runs:[...searchRuns.filter(r=>imported.has(r.id)).map(r=>({...r,kind:'search',importedAt:imported.get(r.id)})),...imports.map(r=>({id:r.id,db:r.db,startedAt:r.startedAt,downloaded:r.downloaded,added:r.added,file:r.file,status:'Imported',kind:'local',importedAt:r.startedAt}))],criteria,
     sourceSig:fingerprint([AimstepDedup.VERSION,records.map(r=>[r.uid,r.title,r.abstract,r.dedup.memberIds])]),
     criteriaSig:fingerprint(criteria)};
   recordById.clear();
@@ -619,7 +622,7 @@ function publishForFullText(){
   handoffTimer=setTimeout(async()=>{
     try{
       if(!workspace||!source)return;
-      const s=summary(),records=source.records.filter(r=>forward(finalDecision(r.uid))).map(r=>({uid:r.uid,title:r.title,authors:r.authors,year:r.year,journal:r.journal,volume:r.volume,issue:r.issue,pages:r.pages,doi:r.doi,pmid:r.pmid,url:r.url,abstract:r.abstract,databases:sourceDatabases(r),taDecision:finalDecision(r.uid),taSource:decisionSource(r.uid),returnId:workspace.returnTokens?.[r.uid]||''}));
+      const s=summary(),records=source.records.filter(r=>forward(finalDecision(r.uid))).map(r=>({uid:r.uid,title:r.title,authors:r.authors,year:r.year,journal:r.journal,volume:r.volume,issue:r.issue,pages:r.pages,doi:r.doi,pmid:r.pmid,url:r.url,abstract:r.abstract,...(globalThis.AimstepStudyLinks?AimstepStudyLinks.metadata(r):{}),databases:sourceDatabases(r),taDecision:finalDecision(r.uid),taSource:decisionSource(r.uid),returnId:workspace.returnTokens?.[r.uid]||''}));
       const db=await openDB('aimstep-fulltext-input');
       await putProject(db,{id:scope,updatedAt:now(),criteria:source.criteria||null,criteriaSig:source.criteriaSig,criteriaOrigin:criteriaOrigin||null,records,pending:s.pending,screeningComplete:s.completed});
       db.close();
@@ -731,6 +734,7 @@ function renderSource(){  // Databases of the imports in use, not every database
   $('stat-pending').title=unique.toLocaleString()+' unique records; '+pending.toLocaleString()+' not yet resolved';
   const dn=$('dedup-note');dn.textContent=total?unique.toLocaleString()+' records after deduplication.'+(dedupStats.possible?' '+dedupStats.possible.toLocaleString()+' possible duplicate pairs retained for screening.':''):'';dn.hidden=!total;
   renderDedupDetails();
+  $('study-links').innerHTML=source.studyLinks?AimstepStudyLinks.html(source.studyLinks):esc(source.studyLinksError||'');
   const short=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString(undefined,{dateStyle:'short',timeStyle:'short'})};
   $('source-history-rows').innerHTML=source.runs.length?source.runs.slice().sort((a,b)=>String(b.importedAt||'').localeCompare(String(a.importedAt||''))).map(run=>{    const st=dedupStats.byImport.get(run.kind+':'+run.id)||{total:Math.max(0,Number(run.downloaded)||0),duplicates:0};
     const when=short(run.importedAt),count=st.total,dbn=databaseNames[run.db]||run.db||'Unknown',src=run.kind==='local'?'local file'+(run.file?': '+run.file:''):'Search strategy';
@@ -1588,7 +1592,7 @@ function resultCsv(contents,separator){
     title:get(r,'title','articletitle','documenttitle','ti','标题','题名'),
     abstract:get(r,'abstract','abstracttext','ab','摘要'),
     authors:get(r,'authors','author','authornames','af','au','作者').split(/;\s*/).filter(Boolean),
-    doi:get(r,'doi','digitalobjectidentifier','di'),pmid:get(r,'pmid','pubmedid','pm'),
+    doi:get(r,'doi','digitalobjectidentifier','di'),pmid:get(r,'pmid','pubmedid','pm'),trialRegistration:get(r,'trialregistration','registrationnumber','trialid','nct','isrctn','clinicaltrialnumber'),
     journal:get(r,'journal','journaltitle','sourcetitle','publicationtitle','so','期刊'),
     year:get(r,'year','publicationyear','pubyear','py','年份'),
     volume:get(r,'volume','vl'),issue:get(r,'issue','is'),pages:get(r,'pages','pagestart','bp'),
@@ -1982,8 +1986,8 @@ function sourceRIS(records){
   }).join('\r\n\r\n')+'\r\n';
 }
 function sourceCSV(records){
-  const head=['Record ID','Title','Authors','Year','Journal','Volume','Issue','Pages','DOI','PMID','URL','Abstract','Databases'];
-  return '\uFEFF'+[head,...records.map(r=>[r.uid,r.title,r.authors.join('; '),r.year,r.journal,r.volume,r.issue,r.pages,r.doi,r.pmid,r.url,r.abstract,sourceDatabases(r).join('; ')])].map(row=>row.map(csvCell).join(',')).join('\r\n');
+  const head=['Record ID','Title','Authors','Year','Journal','Volume','Issue','Pages','DOI','PMID','URL','Abstract','Databases','Report ID','Study IDs','Report type'];
+  return '\uFEFF'+[head,...records.map(r=>[r.uid,r.title,r.authors.join('; '),r.year,r.journal,r.volume,r.issue,r.pages,r.doi,r.pmid,r.url,r.abstract,sourceDatabases(r).join('; '),r.reportId||'',(r.studyIds||[]).join('; '),r.reportType||''])].map(row=>row.map(csvCell).join(',')).join('\r\n');
 }
 function sourceBibTeX(records,screening=false){
   const tex=v=>String(v??'').replace(/\s+/g,' ').trim().replace(/[\\{}]/g,c=>c==='\\'?'\\textbackslash{}':'\\'+c).replace(/([&%$#_])/g,'\\$1');
@@ -2002,7 +2006,7 @@ function exportSource(format){
   const name='deduplicated-source-records-'+(projectId?projectId.replace(/[^\w-]+/g,'_')+'-':'')+stamp();
   if(format==='csv')download(name+'.csv','text/csv;charset=utf-8',sourceCSV(records));
   else if(format==='bib')download(name+'.bib','application/x-bibtex;charset=utf-8',sourceBibTeX(records));
-  else if(format==='json')download(name+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-deduplicated-records/v1',project:projectId,exportedAt:now(),imported:dedupStats.total,duplicates:Math.max(0,dedupStats.total-source.records.length),scope:'all-deduplicated',deduplication:dedupAudit(),records:records.map(r=>({...r,databases:sourceDatabases(r)}))},null,2));
+  else if(format==='json')download(name+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-deduplicated-records/v1',project:projectId,exportedAt:now(),imported:dedupStats.total,duplicates:Math.max(0,dedupStats.total-source.records.length),scope:'all-deduplicated',deduplication:dedupAudit(),studyLinks:source.studyLinks?{version:source.studyLinks.version,groups:source.studyLinks.groups,candidates:source.studyLinks.candidates,links:source.studyLinks.links}:null,records:records.map(r=>({...r,databases:sourceDatabases(r)}))},null,2));
   else download(name+'.ris','application/x-research-info-systems;charset=utf-8',sourceRIS(records));
   log('source-exported',{format,scope:'all-deduplicated',dedupVersion:AimstepDedup.VERSION,records:records.length});save().catch(()=>{});
   toast(records.length.toLocaleString()+' deduplicated source records exported.');

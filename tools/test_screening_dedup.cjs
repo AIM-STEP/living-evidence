@@ -81,7 +81,7 @@ vm.runInContext(slice('// Deduplication is automatic.', 'function renderSource()
  assert.equal(JSON.stringify(context.workspace),before);assert.equal(context.source.records.length,3);
  // The audit action is in the always-visible source footer, outside collapsed details.
  const footer=html.slice(html.indexOf('<div class="toolbar source-foot">'),html.indexOf('</section>',html.indexOf('<div class="toolbar source-foot">')));
- assert(footer.includes('id="export-dedup-audit"'));assert(footer.includes('Export deplication'));
+ assert(footer.includes('id="export-dedup-audit"'));assert(footer.includes('Export duplication'));
  // Possible-only records do not count as removed duplicates and cannot be exported here.
  assert.equal($('export-dedup-audit').disabled,true);$('export-dedup-audit').events.click();assert.equal(context.downloaded,undefined);
  const live=context.source,merged=D.run([batch([rec('kept',{doi:'10.1000/same'}),rec('removed',{doi:'10.1000/same'}),rec('possible',{doi:'10.1000/other'})])]);
@@ -116,7 +116,7 @@ vm.runInContext(slice('// Deduplication is automatic.', 'function renderSource()
  context.workspace.pilot={rounds:[]};context.fingerprint=v=>String(v).split('').reduce((n,c)=>Math.imul(n^c.charCodeAt(0),16777619)>>>0,2166136261).toString(16);
  vm.runInContext(slice('function pilotSample(', 'async function startPilotRound('),context);assert.equal(context.pilotSample(20,'test').length,3);
  context.stale=()=>false;vm.runInContext(slice('function readySource()', '// Records going forward'),context);assert.equal(context.readySource(),true);
- assert(html.includes('source={records,dedup,runs:'));assert(html.includes('AimstepDedup.run(prepared)'));assert(!html.includes('run(prepared,{decisions:'));
+ assert(html.includes('source={records,dedup,studyLinks,studyLinksError,runs:'));assert(html.includes('AimstepDedup.run(prepared)'));assert(!html.includes('run(prepared,{decisions:'));
  console.log('PASS: Export format menu, direct downloads, keyboard/outside dismissal, disabled state and shared Pilot dataset');count++;
  vm.runInContext(slice('function risRecords(', 'async function importFile('),context);
  const sourceRecord=rec('roundtrip',{pmid:'12345',doi:'10.1000/a'});context.sourceRecord=sourceRecord;

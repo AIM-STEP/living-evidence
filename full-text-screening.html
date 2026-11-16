@@ -291,7 +291,7 @@ th{background:#f4f4f4}
 <div class="panel-body" id="source-body">
 <div id="source-background" hidden>
 <div class="source-summary"><div><strong id="stat-sought">0</strong><span data-ui-localize>Reports sought</span></div><div><strong id="stat-retrieved">0</strong><span data-ui-localize>Full text retrieved</span></div><div><strong id="stat-missing">0</strong><span data-ui-localize>Not retrieved</span></div><div><strong id="stat-toscreen">0</strong><span data-ui-localize>To screen</span></div></div>
-<p class="hint" id="source-hint"></p><details id="retrieval-settings" hidden><summary data-ui-localize>Open-access sources and retrieval settings</summary><p class="hint" data-ui-localize>Europe PMC and PubMed Central, OpenAlex, Semantic Scholar, Crossref publisher links, Unpaywall, arXiv, and saved full-text links. The local assistant queues missing files automatically and keeps working after this page closes. Original PDFs are preferred; readable XML is retained as a fallback. Identifiers and file contents are checked. Temporary failures retry with backoff; Download retries immediately. Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent directly to these services. The local assistant uses the network of the computer running port 8765, public repositories and available Zotero attachments. If it is unavailable, retrieval falls back to this browser and its network. No AI model is used for downloading. Browser cross-origin rules and website access permissions still apply.</p><label class="label" for="oa-email" data-ui-localize>Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint" data-ui-localize>Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
+<p class="hint" id="source-hint"></p><div id="study-links" class="source-trace"></div><details id="retrieval-settings" hidden><summary data-ui-localize>Open-access sources and retrieval settings</summary><p class="hint" data-ui-localize>Europe PMC and PubMed Central, OpenAlex, Semantic Scholar, Crossref publisher links, Unpaywall, arXiv, and saved full-text links. The local assistant queues missing files automatically and keeps working after this page closes. Original PDFs are preferred; readable XML is retained as a fallback. Identifiers and file contents are checked. Temporary failures retry with backoff; Download retries immediately. Rate limits, paywalls and scanned PDFs may prevent automatic retrieval. DOI, PMID or title lookups are sent directly to these services. The local assistant uses the network of the computer running port 8765, public repositories and available Zotero attachments. If it is unavailable, retrieval falls back to this browser and its network. No AI model is used for downloading. Browser cross-origin rules and website access permissions still apply.</p><label class="label" for="oa-email" data-ui-localize>Contact email for Unpaywall (optional)</label><input class="input" id="oa-email" type="email" autocomplete="email" placeholder="name@example.org"><p class="hint" data-ui-localize>Unpaywall requires a real contact email. Leave blank to skip it. This value is sent only with retrieval requests and is not saved.</p></details><p class="hint" id="retrieval-status" role="status" aria-live="polite"></p>
 <div class="notice" id="source-notice" hidden role="status"></div>
 </div>
 <div class="source-record-list" id="doc-rows" role="list" aria-label="Reports for Full-text assess"></div>
@@ -396,6 +396,7 @@ th{background:#f4f4f4}
 <p class="notice error" id="stages-error" role="alert" hidden></p>
 <div class="toolbar stages-footer"><button type="button" class="btn small clear-action" id="reset-stages" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button type="button" class="btn small clear-action" id="save-stages" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button></div>
 </div></dialog>
+<script src="app/study-links.js?v=study-links-v1"></script>
 <script src="app/screening-stages.js?v=framework-editor-v3"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js?v=20261006-queue1"></script>
@@ -769,7 +770,7 @@ function cleanRecord(r,uid){
     authors:Array.isArray(r.authors)?r.authors.map(a=>text(a,500)):text(r.authors||'',10000).split(/;\s*/).filter(Boolean),
     year:text(r.year||r.pubYear,50),journal:text(r.journal||r.journalTitle,1000),
     doi:text(r.doi,300),pmid:text(r.pmid,100),url:text(r.url,2000),volume:text(r.volume,100),issue:text(r.issue||r.number,100),pages:text(r.pages||r.page||r.pageInfo,100),
-    provenance:Array.isArray(r.provenance)?r.provenance.slice():[]};
+    provenance:Array.isArray(r.provenance)?r.provenance.slice():[],...Object.fromEntries(['trialRegistration','registrationNumber','registryIds','studySites','interventions','recruitmentStart','recruitmentEnd'].filter(k=>r[k]!=null).map(k=>[k,structuredClone(r[k])]))};
 }
 function recordKeys(r){
   const doi=r.doi.toLowerCase().replace(/^https?:\/\/(?:dx\.)?doi\.org\//,'').replace(/^doi:\s*/,'').trim();
@@ -808,7 +809,7 @@ function resultCsv(contents,separator){
     title:get(r,'title','articletitle','documenttitle','ti','标题','题名'),
     abstract:get(r,'abstract','abstracttext','ab','摘要'),
     authors:get(r,'authors','author','authornames','af','au','作者').split(/;\s*/).filter(Boolean),
-    doi:get(r,'doi','digitalobjectidentifier','di'),pmid:get(r,'pmid','pubmedid','pm'),
+    doi:get(r,'doi','digitalobjectidentifier','di'),pmid:get(r,'pmid','pubmedid','pm'),trialRegistration:get(r,'trialregistration','registrationnumber','trialid','nct','isrctn','clinicaltrialnumber'),
     journal:get(r,'journal','journaltitle','sourcetitle','publicationtitle','so','期刊'),
     year:get(r,'year','publicationyear','pubyear','py','年份'),
     volume:get(r,'volume','vl'),issue:get(r,'issue','is'),pages:get(r,'pages','pagestart','bp'),
@@ -985,8 +986,15 @@ async function importFile(file,dbName){
 async function readHandoff(){
   try{const db=await openDB('aimstep-fulltext-input');const v=await getProject(db);db.close();return v&&Array.isArray(v.records)?v:null}catch(e){return null}
 }
-const handoffSig=h=>fingerprint([h.criteriaSig,h.records]);
+const sourceRecordSig=r=>['uid','title','abstract','authors','year','journal','doi','pmid','volume','issue','pages','url','taDecision','taSource','returnId'].map(k=>r[k]);
+const handoffSig=h=>fingerprint([h.criteriaSig,h.records.map(r=>[sourceRecordSig(r),r.registryIds,r.trialRegistration,r.registrationNumber,r.studySites,r.interventions,r.recruitmentStart,r.recruitmentEnd])]);
 let syncingSource=false;
+async function updateStudyLinks(){
+  if(!globalThis.AimstepStudyLinks||!workspace)return;
+  const documents={};for(const r of workspace.records){const doc=docCache.get(r.uid);if(doc)documents[r.uid]={...doc,hash:workspace.docs[r.uid]?.hash};else if(!hasDoc(r.uid))documents[r.uid]=null;}
+  try{const result=await AimstepStudyLinks.sync(scope,workspace.records,documents);const changed=JSON.stringify(workspace.records)!==JSON.stringify(result.records);workspace.records=result.records;workspace.studyLinks={version:result.version,groups:result.groups,candidates:result.candidates,links:result.links};indexRecords();if(changed)await save();$('study-links').innerHTML=AimstepStudyLinks.html(result);}
+  catch(e){$('study-links').textContent='Study links could not be updated. Reports and assessments are retained.';}
+}
 async function importFromScreening(){
   if(!workspace||busy||syncingSource||workspace.sourceCleared)return;
   syncingSource=true;let changed=false;
@@ -994,12 +1002,12 @@ async function importFromScreening(){
     const next=await readHandoff();if(!next||busy||workspace.sourceCleared)return;
     handoff=next;
     const signature=handoffSig(next),previous=workspace.sourceHandoffSig||handoffSig({criteriaSig:workspace.upstreamCriteriaSig||workspace.criteriaSig,records:workspace.records});
-    if(signature===previous)return;
+    if(signature===previous){if(globalThis.AimstepStudyLinks)await updateStudyLinks();return;}
     changed=true;pauseRetrieval();
     const before=workspace.records.length,criteriaChanged=workspace.criteriaSig&&workspace.criteriaSig!==next.criteriaSig&&!workspace.criteriaEdited;
     const merged=mergeLocalRecords(next.records);
     const incoming=new Map(merged.map(r=>[r.uid,r]));
-    const existingChanged=workspace.records.some(r=>incoming.has(r.uid)&&fingerprint(r)!==fingerprint(incoming.get(r.uid)));
+    const existingChanged=workspace.records.some(r=>incoming.has(r.uid)&&fingerprint(sourceRecordSig(r))!==fingerprint(sourceRecordSig(incoming.get(r.uid))));
     const pilotRemoved=workspace.pilot.rounds.some(r=>r.ids.some(id=>!incoming.has(id)));
     const removed=workspace.records.filter(r=>!incoming.has(r.uid));
     if(criteriaChanged||existingChanged||pilotRemoved){
@@ -1013,7 +1021,7 @@ async function importFromScreening(){
     if(!workspace.criteriaEdited){workspace.criteria=structuredClone(next.criteria);workspace.criteriaSig=next.criteriaSig;}
     workspace.handoffAt=next.updatedAt;workspace.sourceHandoffSig=signature;workspace.full.completedAt='';
     await ensureDocs(workspace.records.map(r=>r.uid));
-    indexRecords();log('reports-synchronized',{reports:workspace.records.length,previous:before,criteriaSig:workspace.criteriaSig});
+    if(globalThis.AimstepStudyLinks)await updateStudyLinks();indexRecords();log('reports-synchronized',{reports:workspace.records.length,previous:before,criteriaSig:workspace.criteriaSig});
     await save();render();
     showNotice('source-notice',workspace.records.length+' reports, including local imports and Title and abstract screening results.'+(next.pending?' '+next.pending+' records in the previous step still have no final decision.':'')+((criteriaChanged||existingChanged||pilotRemoved)?' Previous screening runs were archived; complete a new pilot.':''),next.pending?'warning':'success');
   }finally{syncingSource=false;if(changed&&workspace)safely(renderSource);scheduleRetrieval();}
@@ -1147,6 +1155,7 @@ async function storeText(uid,got,file){
   if(hasDoc(uid)&&workspace.docs[uid].hash!==hash)invalidateDocument(uid);
   await saveDoc({uid,kind:got.kind,source:got.source,chunks,fullText:chunks.map(c=>c.text).join(' '),pdf:file||null,evidence:null});
   workspace.docs[uid]={hash,kind:got.kind,source:got.source,chunks:chunks.length,at:now(),filename:file?.name||got.filename||''};
+  if(globalThis.AimstepStudyLinks)await updateStudyLinks();
   log('full-text-added',{recordId:uid,kind:got.kind,source:got.source,chunks:chunks.length});
 }
 const RETRIEVAL_RETRY_MS=6*60*60*1000;
@@ -1294,7 +1303,7 @@ async function removeDoc(uid){
   if(busy)return;
   if(!confirm('Remove this full text? Current results will be archived. A pilot report requires a new pilot; other reports must be screened again after replacement.'))return;
   invalidateDocument(uid);
-  await deleteKey(docStore,docKey(uid));docCache.delete(uid);delete workspace.docs[uid];log('full-text-removed',{recordId:uid});await save();render();
+  await deleteKey(docStore,docKey(uid));docCache.delete(uid);delete workspace.docs[uid];if(globalThis.AimstepStudyLinks)await updateStudyLinks();log('full-text-removed',{recordId:uid});await save();render();
 }
 async function markNotRetrievable(uid){
   if(busy)return;invalidateDocument(uid);
@@ -1425,6 +1434,7 @@ async function readReport(uid,round,signal,variant=1,calibration=null){
   const rec=recordById.get(uid),doc=await evidenceFor(uid,signal);
   if(!doc)throw new Error('No full text for this report.');
   calibration??=busy==='full'?workspace.pilot.approved?.calibration:workspace.pilot.rounds[round]?.calibration||currentCalibration(round);
+  if(globalThis.AimstepStudyLinks)await updateStudyLinks();
   const prompt=ftPrompt(rec,doc,round,variant,calibration),input=JSON.parse(prompt),selected=await resolvePilotModel(signal);
   let result;
   if(selected.provider==='typesafe')result=await typesafeRequest(selected.base,{action:'screen',...(typesafeKey?{apiKey:typesafeKey}:{}),model:workspace.screeningModel,input:{...input,record:input.report}},signal);
@@ -2184,6 +2194,7 @@ async function removeManagedItem(kind){
   try{
     if(kind==='file'){invalidateDocument(manageId);await deleteKey(docStore,docKey(manageId));docCache.delete(manageId);workspace.docs[manageId]={kind:'none',source:'Removed by reviewer',retryAt:new Date(Date.now()+RETRIEVAL_RETRY_MS).toISOString(),lookupSig:fingerprint([recordById.get(manageId).title,recordById.get(manageId).doi,recordById.get(manageId).pmid])};}
     else delete workspace.fulltextLinks?.[manageId];
+    if(globalThis.AimstepStudyLinks)await updateStudyLinks();
     log('full-text-manager-removed',{recordId:manageId,kind});await save();
   }catch(e){workspace=before;indexRecords();if(old)await saveDoc(old);publishSummary();throw e}
 }
@@ -2453,6 +2464,7 @@ async function init(){
     if(indexRecords())await save();
     // Restore original PDFs for every source record before rendering or downloading.
     await ensureDocs([...new Set([...workspace.records.map(r=>r.uid),...workspace.pilot.rounds.flatMap(r=>r.ids)])]);
+    if(globalThis.AimstepStudyLinks)await updateStudyLinks();
     handoff=await readHandoff();syncingSource=false;
     await importFromScreening();
     setInterval(()=>{if(!document.hidden){refreshSource();scheduleRetrieval();}},5000);

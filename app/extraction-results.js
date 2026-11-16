@@ -25,6 +25,7 @@ function sheets(form,reports){
    else cols.push({r});}
   const metadata=(r,key)=>{const f=form.fields.find(f=>f.baselineKey===key);return value((f?fieldValue(r,f):null)??r.metadata?.[key]);};
   const rows=[['ID',...cols.map(({r})=>value(r.metadata?.systemId))],['Author',...cols.map(({r})=>metadata(r,'firstName'))],['Year',...cols.map(({r})=>metadata(r,'year'))],['Review status',...cols.map(({r,x})=>x?.reviewStatus||r.status)],['Report',...cols.map(({r})=>r.record.title||'NR')]];
+  if(reports.some(r=>r.record.reportId))rows.splice(3,0,['Study ID',...cols.map(({r})=>(r.record.studyIds||[]).join('; '))],['Report ID',...cols.map(({r})=>r.record.reportId||'')],['Report type',...cols.map(({r})=>r.record.reportType||'')]);
   const add=(label,fn)=>rows.push([label,...cols.map(c=>value(fn(c)))]);
   if(section==='intervention'){add('Arm',c=>c.a?.label);add('Dose / regimen',c=>c.a?.dose);add('Randomised',c=>c.a?.randomised);}
   if(section==='continuous'||section==='dichotomous'){add('Outcome',c=>form.outcomes?.find(o=>o.id===c.x?.outcome||o.name===c.x?.outcome)?.name);add('Arm',c=>c.x?.arm);add('Time point',c=>c.x?.timepoint);for(const k of section==='continuous'?['mean','sd','n']:['events','total'])add(({mean:'Mean',sd:'SD',n:'N analysed',events:'Participants with event',total:'N analysed / at risk'})[k],c=>c.x?.[k]);add('Result source quotation',c=>c.x?.quote);add('Result source passage',c=>c.x?.passage);}

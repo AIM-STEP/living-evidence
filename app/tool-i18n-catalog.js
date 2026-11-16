@@ -4,7 +4,7 @@ window.AimstepToolTranslations = {
   "Save": "保存",
   "Export": "导出",
   "Screening source updated. Previous assessments were archived. Start a new pilot.": "筛选数据已更新，原有结果已归档。请开始新一轮预筛。",
-  "Export deplication": "导出重复记录",
+  "Export duplication": "导出重复记录",
   "Stop": "停止",
   "Generate": "生成",
   "Start": "开始",

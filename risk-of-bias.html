@@ -243,6 +243,7 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head"><h2 data-ui-localize>Included studies</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="import-ft" data-ui-localize>Import from local</button><input type="file" id="import-pdfs" accept=".pdf,application/pdf" multiple hidden><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Included studies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Included studies</span></button></div></div>
 <div class="panel-body" id="source-body">
+<div id="study-links" class="source-trace"></div>
 <div class="source-record-list" id="study-table" role="list" aria-label="Included studies"></div>
 
 <div class="source-summary" id="src-stats" hidden></div>
@@ -287,8 +288,9 @@ th{background:#f4f4f4}
 </main>
 <dialog id="reader" class="dialog reader-dialog" aria-labelledby="reader-title"><div class="panel-head"><h2 id="reader-title" data-ui-localize>Full text</h2><button class="btn small" type="button" id="close-reader" data-ui-localize>Close</button></div><div class="panel-body reader-body" id="reader-body"></div><iframe id="reader-pdf-frame" title="Original PDF" hidden></iframe></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
+<script src="app/study-links.js?v=study-links-v1"></script>
 <script src="app/extraction-sources.js?v=1"></script>
-<script src="app/extraction-results.js?v=1"></script>
+<script src="app/extraction-results.js?v=20261116-study-links"></script>
 <script src="app/rob-workflow.js?v=20261020-i18n"></script>
 <script src="app/extraction-form-import.js?v=4"></script>
 <script src="app/rob-outcome-sources.js?v=1"></script>
@@ -680,6 +682,12 @@ function outcomesFromCriteria(c){
   return t?[t.split(/\n|;/)[0].replace(/^(include|includes|studies reporting)\s*:?\s*/i,'').slice(0,160)]:[];
 }
 let syncingStudies=false;
+async function updateStudyLinks(){
+  if(!globalThis.AimstepStudyLinks||!ws)return;
+  const documents={};for(const r of ws.records){const doc=docCache.get(r.uid);if(doc)documents[r.uid]=doc;}
+  try{const result=await AimstepStudyLinks.sync(scope,ws.records,documents);const changed=JSON.stringify(ws.records)!==JSON.stringify(result.records);ws.records=result.records;ws.studyLinks={version:result.version,groups:result.groups,candidates:result.candidates,links:result.links};if(changed)await save();$('study-links').innerHTML=AimstepStudyLinks.html(result);}
+  catch(e){$('study-links').textContent='Study links could not be updated. Reports and extracted values are retained.';}
+}
 async function importStudies(){
   if(!ws||busy||syncingStudies)return;
   syncingStudies=true;
@@ -691,10 +699,11 @@ async function importStudies(){
     const original=new Map((full?.records||[]).map(r=>[r.uid,r]));
     const incoming=h.records.filter(r=>!(ws.deletedStudyIds||[]).includes(r.uid)).map(r=>({...original.get(r.uid),...r,sourceNumber:r.sourceNumber||full?.sourceNumbers?.byUid?.['uid:'+r.uid]}));
     const merged=AimstepExtractionSources.merge(ws.records,incoming,ws.sourceNumbers);
-    if(JSON.stringify(merged.records)===JSON.stringify(ws.records)&&h.updatedAt===ws.handoffAt)return;
+    if(JSON.stringify(merged.records)===JSON.stringify(ws.records)&&h.updatedAt===ws.handoffAt){if(globalThis.AimstepStudyLinks)await updateStudyLinks();return;}
     ws.records=merged.records;ws.sourceNumbers=merged.numbers;ws.handoffAt=h.updatedAt||now();
     ws.criteriaSig=h.criteriaSig||'';for(const r of ws.records)if(!ws.studies[r.uid]?.design)guessDesign(r);
     for(const r of ws.records){docCache.delete(r.uid);await loadDoc(r.uid);}
+    if(globalThis.AimstepStudyLinks)await updateStudyLinks();
     if(current&&!recBy(current.split('|')[0]))current=null;
     log('fulltext-synced',{studies:incoming.length});await save();render();
   }finally{syncingStudies=false;renderSource();renderStudies();}
@@ -737,7 +746,7 @@ async function importLocalPdfs(files){
         docCache.set(record.uid,doc);guessDesign(record);await save();added++;
       }catch(e){failed.push(file.name+': '+e.message);}
     }
-    renderStudies();
+    if(globalThis.AimstepStudyLinks)await updateStudyLinks();renderStudies();
     showNotice('source-notice',failed.length?failed.join('\n'):'','error');
     toast(added+' PDF'+(added===1?'':'s')+' imported.'+(duplicates?' '+duplicates+' duplicate'+(duplicates===1?'':'s')+' skipped.':''));
   }catch(e){showNotice('source-notice',e.message,'error');}
@@ -1027,7 +1036,7 @@ async function init(){
     store=await openDB('aimstep-rob');try{docStore=await openDB('aimstep-fulltext-docs')}catch(e){docStore=null}
     const saved=await getProject(store);ws=Object.assign(defaults(),saved?.state||{});if(!Object.hasOwn(ws,'selectedToolId')){ws.selectedToolId=Object.values(ws.toolChoice||{}).find(id=>TOOLS[id])||'robust';for(const [key,x] of Object.entries(ws.assess||{})){if(x.ai?.tool&&x.ai.tool!==ws.selectedToolId){log('tool-selection-migration',{key,previousAssessment:x});delete ws.assess[key];}}ws.assessmentSetupSignature=null;}ws.outcomeTimepoints=ws.outcomes.map((_,i)=>String(ws.outcomeTimepoints?.[i]||''));ws.outcomeMeta=ws.outcomes.map((_,i)=>ws.outcomeMeta?.[i]||{});ws.outcomeImports??=[];
     await importStudies();
-    await Promise.all(ws.records.map(r=>loadDoc(r.uid)));
+    await Promise.all(ws.records.map(r=>loadDoc(r.uid)));if(globalThis.AimstepStudyLinks)await updateStudyLinks();
     bind();mountAssessmentWorkflow();render();document.body.dataset.ready='true';
   }catch(e){showNotice('source-notice','The risk of bias workspace could not be opened: '+e.message,'error')}
 }
