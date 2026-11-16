@@ -61,9 +61,10 @@ test('same UID never overwrites distinct reports; invalid identifiers never caus
 // Real page functions with controlled storage/DOM, no network or real project data.
 const html=fs.readFileSync(require('node:path').join(__dirname,'../title-abstract-screening.html'),'utf8');
 function slice(a,b){const i=html.indexOf(a);assert(i>=0,a);const j=html.indexOf(b,i);assert(j>i,b);return html.slice(i,j);}
-const elements={};const $=id=>elements[id]??={value:'json',events:{},addEventListener(e,fn){this.events[e]=fn}};
+const elements={},documentEvents={};const documentMock={activeElement:null,addEventListener(e,fn){documentEvents[e]=fn}};
+const $=id=>elements[id]??={value:'json',hidden:true,disabled:false,style:{},attributes:{},offsetWidth:240,offsetHeight:140,events:{},addEventListener(e,fn){this.events[e]=fn},setAttribute(k,v){this.attributes[k]=v},focus(){documentMock.activeElement=this},getBoundingClientRect(){return {left:40,top:100,bottom:126}},contains(target){return target===this},querySelectorAll(){return []}};
 const initial=run([rec('a',{doi:'10.1000/a'}),rec('b',{doi:'10.1000/b'}),rec('c',{doi:'10.1000/c'})]);let savesFail=false,progress=true;
-const context=vm.createContext({AimstepDedup:D,AimstepDedupExport:E,AimstepExtractionResults:R,structuredClone,Map,Set,JSON,Number,$,
+const context=vm.createContext({AimstepDedup:D,AimstepDedupExport:E,AimstepExtractionResults:R,structuredClone,Map,Set,JSON,Number,$,document:documentMock,window:{innerWidth:1000,innerHeight:700,addEventListener(){}},
  source:{records:initial.records,dedup:initial,sourceSig:'source',criteriaSig:'criteria',criteria:{rows:[{}]}},workspace:{dedupDecisions:{},pilot:{old:'pilot'},full:{old:'full'}},dedupStats:{total:3},recordById:new Map(),
  busy:'',importing:false,pilotReviewSaving:false,fullReviewSaving:false,pilotReviewDrafts:new Map(),exclusionDrafts:new Map(),sourceError:'',databaseNames:{},scope:'synthetic',projectId:'synthetic',
  esc:s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'),sourceDatabases:r=>r.provenance.map(p=>p.db),now:()=> 'test',stamp:()=> 'test',
@@ -80,7 +81,7 @@ vm.runInContext(slice('// Deduplication is automatic.', 'function renderSource()
  assert.equal(JSON.stringify(context.workspace),before);assert.equal(context.source.records.length,3);
  // The audit action is in the always-visible source footer, outside collapsed details.
  const footer=html.slice(html.indexOf('<div class="toolbar source-foot">'),html.indexOf('</section>',html.indexOf('<div class="toolbar source-foot">')));
- assert(footer.includes('id="export-dedup-audit"'));assert(footer.includes('export duolications'));
+ assert(footer.includes('id="export-dedup-audit"'));assert(footer.includes('Export deplication'));
  // Possible-only records do not count as removed duplicates and cannot be exported here.
  assert.equal($('export-dedup-audit').disabled,true);$('export-dedup-audit').events.click();assert.equal(context.downloaded,undefined);
  const live=context.source,merged=D.run([batch([rec('kept',{doi:'10.1000/same'}),rec('removed',{doi:'10.1000/same'}),rec('possible',{doi:'10.1000/other'})])]);
@@ -100,13 +101,23 @@ vm.runInContext(slice('// Deduplication is automatic.', 'function renderSource()
  context.finalDecision=()=> 'no';context.workspace.full={human:{a:{decision:'no'}}};
  vm.runInContext(slice('/* Export the complete source dataset used by Pilot,','// Imports use the same isolated manual editor'),context);
  // Every format must use the same complete record set even after screening decisions exist.
- for(const format of ['json','csv','ris','bib']){$('source-format').value=format;await elements['export-source'].events.click();assert(context.downloaded[0].startsWith('deduplicated-source-records-'));const body=context.downloaded[2];if(format==='json'){const value=JSON.parse(body);assert.equal(value.records.length,3);assert.equal(value.scope,'all-deduplicated');assert(value.deduplication.possiblePairs);}else assert(body.includes('Exercise therapy for chronic pain'));}
+ const items=['ris','csv','bib','json'].map(format=>({dataset:{sourceExport:format},focus(){documentMock.activeElement=this},closest(){return this}}));
+ $('source-export-menu').querySelectorAll=()=>items;
+ const previousDownload=context.downloaded;$('export-source').events.click();assert.equal($('source-export-menu').hidden,false);assert.equal(context.downloaded,previousDownload);assert.equal($('export-source').attributes['aria-expanded'],'true');
+ const keyEvent=key=>({key,preventDefault(){}});
+ $('source-export-menu').events.keydown(keyEvent('End'));assert.equal(documentMock.activeElement,items[3]);
+ documentEvents.keydown(keyEvent('Escape'));assert.equal($('source-export-menu').hidden,true);assert.equal(documentMock.activeElement,$('export-source'));
+ for(const item of items){$('export-source').events.click();$('source-export-menu').events.click({target:item});assert.equal($('source-export-menu').hidden,true);assert(context.downloaded[0].endsWith(item.dataset.sourceExport==='bib'?'.bib':'.'+item.dataset.sourceExport));}
+ $('export-source').events.keydown(keyEvent('ArrowUp'));assert.equal(documentMock.activeElement,items[3]);documentEvents.click({target:{}});assert.equal($('source-export-menu').hidden,true);
+ $('export-source').disabled=true;$('export-source').events.click();assert.equal($('source-export-menu').hidden,true);$('export-source').disabled=false;
+ assert(!html.includes('id="source-format"'));assert(!html.includes('for="source-format"'));assert(html.includes('aria-haspopup="menu"'));
+ for(const format of ['json','csv','ris','bib']){context.exportSource(format);assert(context.downloaded[0].startsWith('deduplicated-source-records-'));const body=context.downloaded[2];if(format==='json'){const value=JSON.parse(body);assert.equal(value.records.length,3);assert.equal(value.scope,'all-deduplicated');assert(value.deduplication.possiblePairs);}else assert(body.includes('Exercise therapy for chronic pain'));}
  // Pilot samples source.records directly, not a separate/export-filtered array.
  context.workspace.pilot={rounds:[]};context.fingerprint=v=>String(v).split('').reduce((n,c)=>Math.imul(n^c.charCodeAt(0),16777619)>>>0,2166136261).toString(16);
  vm.runInContext(slice('function pilotSample(', 'async function startPilotRound('),context);assert.equal(context.pilotSample(20,'test').length,3);
  context.stale=()=>false;vm.runInContext(slice('function readySource()', '// Records going forward'),context);assert.equal(context.readySource(),true);
  assert(html.includes('source={records,dedup,runs:'));assert(html.includes('AimstepDedup.run(prepared)'));assert(!html.includes('run(prepared,{decisions:'));
- console.log('PASS: complete JSON/CSV/RIS/BibTeX source export and shared Pilot dataset');count++;
+ console.log('PASS: Export format menu, direct downloads, keyboard/outside dismissal, disabled state and shared Pilot dataset');count++;
  vm.runInContext(slice('function risRecords(', 'async function importFile('),context);
  const sourceRecord=rec('roundtrip',{pmid:'12345',doi:'10.1000/a'});context.sourceRecord=sourceRecord;
  const ris=context.sourceRIS([sourceRecord]),roundtrip=context.risRecords(ris)[0];

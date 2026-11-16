@@ -139,8 +139,8 @@ th{background:#f4f4f4}
 .criteria-origin{margin:0 0 12px}.criteria-file{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-height:30px;padding:0 4px 0 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:12px;color:var(--ink2)}.criteria-file .file-name{border:0;background:none;padding:0;color:var(--plum);font:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}.criteria-file .file-name:hover{text-decoration:underline}.criteria-file .file-meta{color:var(--muted);white-space:nowrap}.criteria-upload-error{font-size:12px;color:var(--red)}
 .pilot-steps{margin:0 0 12px;padding-left:20px;font-size:12px;color:var(--ink2);line-height:1.7}.pilot-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}.pilot-controls .label{margin:0}.pilot-controls .input{width:76px}.pilot-rounds{display:flex;flex-wrap:nowrap;gap:6px;margin-bottom:10px;overflow-x:auto;padding:2px 0;max-width:100%}.pilot-rounds .round{min-width:0;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 7px;font-size:10px;line-height:1.3;white-space:nowrap}.pilot-rounds .round b{font-size:inherit;font-weight:600}.pilot-rounds .round span{font-size:inherit}.pilot-summary{grid-template-columns:repeat(5,minmax(0,1fr))}.pilot-summary>div.alert strong{color:var(--red)}.pilot-detail{margin:8px 0}.pilot-detail .ok{color:var(--green);font-weight:700}.pilot-detail .warn{color:var(--amber);font-weight:700}.pilot-filter [aria-pressed="true"]{border-color:var(--plum);color:var(--plum);background:var(--pale)}.record.differ{border-color:#adb6e3}.badge.differ{background:#f0f3fe;color:var(--red)}.judg{font-weight:700}.judg.met{color:var(--green)}.judg.not-met{color:var(--red)}.judg.unclear{color:var(--amber)}.pilot-note{display:block;font-size:11px;font-weight:700;margin-top:8px}.pilot-note .input{margin-top:4px}
 @media(max-width:760px){.pilot-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.pilot-summary>div{border-left:0;border-top:1px solid var(--line)}}
-.export-source{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.export-source .label{margin:0;font-size:12px}#source-format,#export-source,#export-dedup-audit{box-sizing:border-box;height:26px;min-height:26px;padding:4px 8px;line-height:1.25}.select.compact{width:auto;min-height:30px;padding:3px 8px;font-size:12px}
-.source-foot{margin-top:10px}
+.export-source{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.export-source .label{margin:0;font-size:12px}#export-source,#export-dedup-audit{box-sizing:border-box;height:26px;min-height:26px;padding:4px 8px;line-height:1.25}.select.compact{width:auto;min-height:30px;padding:3px 8px;font-size:12px}
+.source-foot{margin-top:10px}.source-export-menu{position:fixed;z-index:1000;min-width:210px;max-width:calc(100vw - 24px);padding:4px;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 5px 18px #0002}.source-export-menu button{display:block;width:100%;padding:8px 10px;text-align:left;border:0;border-radius:4px;background:transparent;color:var(--ink);font:inherit;font-size:12px;cursor:pointer}.source-export-menu button:hover,.source-export-menu button:focus-visible{background:var(--pale);outline:2px solid var(--plum);outline-offset:-2px}
 .full-intro{margin:0 0 10px}.full-track{margin:12px 0 6px}.full-now{display:flex;align-items:center;gap:8px;margin:4px 0 8px;font-size:12px;color:var(--ink2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.pulse{flex:none;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}.sub-head{font-size:14px;margin:16px 0 6px}.full-feed{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:6px;background:#fff}.full-feed li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--soft);font-size:12px;min-width:0}.full-feed li:first-child{border-top:0}.feed-title{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.feed-why{flex:none;color:var(--muted);max-width:40%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.check-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}.check-head .sub-head{margin:0 8px 0 0}.check-head .label{margin:0}.check-summary .ok{color:var(--green);font-weight:700}.check-summary .warn{color:var(--red);font-weight:700}#check-more{margin-top:8px}
 .full-summary{grid-template-columns:repeat(6,minmax(0,1fr))}.full-summary>div.alert strong{color:var(--red)}.feed-pass{flex:none;font-size:11px;color:var(--muted);width:44px}.badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}.pilot-filter .count{font-weight:400;color:var(--muted);margin-left:2px}.panel.is-collapsed>.panel-footer{border-top:0}
 @media(max-width:760px){.full-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -246,7 +246,7 @@ th{background:#f4f4f4}
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
-<script defer src="app/tool-i18n-catalog.js?v=20261116-duplications"></script>
+<script defer src="app/tool-i18n-catalog.js?v=20261116-export-menu"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261021-49">
@@ -274,7 +274,7 @@ th{background:#f4f4f4}
 <details id="dedup-details" class="source-trace" hidden><summary id="dedup-details-summary">Deduplication details</summary><div id="dedup-details-body"></div></details>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col" data-ui-localize>Imported</th><th scope="col" data-ui-localize>Database</th><th scope="col" class="num-col" data-ui-localize>Records</th><th scope="col" class="num-col" data-ui-localize>Duplicates</th><th scope="col" class="del-col"><span class="sr-only" data-ui-localize>Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
-<div class="toolbar source-foot"><span class="export-source"><label class="label inline" for="source-format" data-ui-localize>Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Export all deduplicated source records" data-ui-localize>Export</button><button class="btn small" type="button" id="export-dedup-audit" title="export duolications" data-ui-localize disabled>export duolications</button></span></div>
+<div class="toolbar source-foot"><span class="export-source"><button class="btn small" id="export-source" type="button" title="Export all deduplicated source records" aria-haspopup="menu" aria-expanded="false" aria-controls="source-export-menu"><span data-ui-localize>Export</span><span aria-hidden="true"> ▾</span></button><div id="source-export-menu" class="source-export-menu" role="menu" aria-labelledby="export-source" hidden><button type="button" role="menuitem" data-source-export="ris">RIS (EndNote, Zotero, Mendeley)</button><button type="button" role="menuitem" data-source-export="csv">CSV (Excel)</button><button type="button" role="menuitem" data-source-export="bib">BibTeX</button><button type="button" role="menuitem" data-source-export="json">JSON</button></div><button class="btn small" type="button" id="export-dedup-audit" title="Export deplication" data-ui-localize disabled>Export deplication</button></span></div>
 </div>
 </section>
 </div>
@@ -738,6 +738,7 @@ function renderSource(){  // Databases of the imports in use, not every database
   }).join(''):'<tr><td colspan="5" class="empty" data-ui-localize>Nothing imported yet. Use Import from search strategy or Import from local.</td></tr>';
   renderCriteriaFile();
   $('export-source').disabled=!source.records.length;
+  if(!source.records.length)setSourceExportOpen(false);
   let warning='';
   if(sourceError)warning=sourceError;
   if(!source.records.length)warning+=(warning?'\n':'')+'No local search records found. Complete Search strategy for this project or import a results file.';
@@ -1994,8 +1995,9 @@ function sourceBibTeX(records,screening=false){
     return '@article{'+base+(n>1?String.fromCharCode(96+n):'')+',\n'+fields.filter(([,v])=>String(v||'').trim()).map(([k,v])=>'  '+k+' = {'+tex(v)+'}').join(',\n')+'\n}';
   }).join('\n\n')+'\n';
 }
-$('export-source').addEventListener('click',()=>{
-  const records=source.records,format=$('source-format').value;
+function exportSource(format){
+  if(!['ris','csv','bib','json'].includes(format))return;
+  const records=source.records;
   if(!records.length){toast('There are no source records to export.');return}
   const name='deduplicated-source-records-'+(projectId?projectId.replace(/[^\w-]+/g,'_')+'-':'')+stamp();
   if(format==='csv')download(name+'.csv','text/csv;charset=utf-8',sourceCSV(records));
@@ -2004,7 +2006,39 @@ $('export-source').addEventListener('click',()=>{
   else download(name+'.ris','application/x-research-info-systems;charset=utf-8',sourceRIS(records));
   log('source-exported',{format,scope:'all-deduplicated',dedupVersion:AimstepDedup.VERSION,records:records.length});save().catch(()=>{});
   toast(records.length.toLocaleString()+' deduplicated source records exported.');
+}
+function setSourceExportOpen(open,focusIndex=0){
+  const button=$('export-source'),menu=$('source-export-menu');
+  open=!!open&&!button.disabled&&source.records.length>0;
+  menu.hidden=!open;button.setAttribute('aria-expanded',String(open));
+  if(!open)return;
+  const rect=button.getBoundingClientRect(),width=menu.offsetWidth,height=menu.offsetHeight;
+  menu.style.left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12))+'px';
+  menu.style.top=(rect.bottom+height+4<=window.innerHeight?rect.bottom+4:Math.max(12,rect.top-height-4))+'px';
+  const items=menu.querySelectorAll('[data-source-export]');items[(focusIndex+items.length)%items.length]?.focus();
+}
+$('export-source').addEventListener('click',()=>setSourceExportOpen($('source-export-menu').hidden));
+$('export-source').addEventListener('keydown',event=>{
+  if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();setSourceExportOpen(true,event.key==='ArrowUp'?-1:0);}
 });
+$('source-export-menu').addEventListener('click',event=>{
+  const item=event.target.closest('[data-source-export]');if(!item)return;
+  setSourceExportOpen(false);$('export-source').focus();exportSource(item.dataset.sourceExport);
+});
+$('source-export-menu').addEventListener('keydown',event=>{
+  const items=[...$('source-export-menu').querySelectorAll('[data-source-export]')],index=items.indexOf(document.activeElement);
+  if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+    event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowUp'?-1:1)+items.length)%items.length;items[next]?.focus();
+  }else if(event.key==='Tab')setSourceExportOpen(false);
+});
+document.addEventListener('click',event=>{
+  if(!$('export-source').contains(event.target)&&!$('source-export-menu').contains(event.target))setSourceExportOpen(false);
+});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&!$('source-export-menu').hidden){event.preventDefault();setSourceExportOpen(false);$('export-source').focus();}
+});
+window.addEventListener('resize',()=>setSourceExportOpen(false));
+window.addEventListener('scroll',()=>setSourceExportOpen(false),true);
 // Imports use the same isolated manual editor as Full-text assess.
 let pendingCriteriaImport=null,manualEditorReady=false;
 function setCriteriaControls(disabled){for(const id of ['crit-restore','crit-import','edit-criteria','close-criteria','crit-save','crit-cancel','crit-question'])$(id).disabled=disabled;$('crit-manual-frame').inert=disabled;}
