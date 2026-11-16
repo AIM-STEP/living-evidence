@@ -83,8 +83,16 @@ def upstream(route, payload=None):
             return r.status, json.loads(r.read())
     except urllib.error.HTTPError as e:
         # Keep provider keys, paths and upstream response bodies out of public errors.
-        messages = {429: 'The model service is busy. Try again shortly.',
-                    503: 'The model service is not configured or is unavailable.'}
+        kind = 'text-generation' if payload and payload.get('provider', 'local') == 'local' else 'screening'
+        messages = {400: 'The model service rejected the request format.',
+                    401: 'The server model credentials are invalid. Contact the administrator.',
+                    403: 'The server model account cannot access this model. Contact the administrator.',
+                    404: 'The configured model or model endpoint is unavailable.',
+                    413: 'The model request is too large. Reduce the source text.',
+                    429: 'The model service is busy. Try again shortly.',
+                    502: 'The %s model is unavailable. Contact the AIM-STEP administrator.' % kind,
+                    503: 'The model service is not configured or is unavailable.',
+                    504: 'The model request timed out. Try again shortly.'}
         return e.code, {'error': messages.get(e.code, 'The model service could not complete this request.')}
     except Exception:
         return 502, {'error': 'The AIM-STEP model service is unavailable. Contact the administrator.'}

@@ -11,6 +11,22 @@
 # Run at login by ~/Library/LaunchAgents/com.aimstep.ollama-parallel.plist.
 PARALLEL=${PARALLEL:-4}
 APP=/Applications/Ollama.app/Contents/MacOS/Ollama
+# Recover the existing service when the GUI app has been removed. The pinned,
+# checksum-verified runtime lives outside the public repository; model files
+# stay in their existing directory. Keep this LaunchAgent attached to serve.
+if [[ ! -x "$APP" ]]; then
+  runtime="${0:A:h:h:h}/private/ollama-runtime/v0.30.5/ollama"
+  if [[ ! -x "$runtime" ]]; then
+    echo 'Ollama application and private recovery runtime are unavailable.' >&2
+    exit 1
+  fi
+  if curl -fsS -m 2 http://127.0.0.1:11434/api/version >/dev/null 2>&1; then
+    echo 'Ollama is already serving on the generation port.'
+    exit 0
+  fi
+  echo 'Starting the recovered Ollama runtime on the generation port.'
+  OLLAMA_HOST=127.0.0.1:11434 OLLAMA_MODELS="${OLLAMA_MODELS:-$HOME/.ollama/models}" OLLAMA_NUM_PARALLEL="$PARALLEL" OLLAMA_NO_CLOUD=1 exec "$runtime" serve
+fi
 current() {
   local pid=$(pgrep -f "Ollama.app/Contents/Resources/ollama serve" | head -1)
   [[ -n $pid ]] && ps -E -p $pid -o command= | tr ' ' '\n' | sed -n 's/^OLLAMA_NUM_PARALLEL=//p'
