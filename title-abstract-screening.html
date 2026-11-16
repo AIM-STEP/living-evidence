@@ -378,7 +378,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/screening-prompt.js?v=20261116-editor-v2"></script>
 <script src="app/screening-prompt-editor.js?v=20261116-editor-v2"></script>
-<script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js"></script><script>
+<script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js?v=20261116-clear-v1"></script><script>
 'use strict';
 (() => {
 const $=id=>document.getElementById(id);
@@ -603,7 +603,7 @@ async function loadSource({persist=true,includeReturns=true}={}){
   criteriaOrigin=upload?{kind:upload.edited?'edited':'upload',name:upload.name}:rawCriteria&&rawCriteria===live?{kind:'eligibility'}:rawCriteria?{kind:'search',name:text(draft?.criteriaSnapshot?.origin,200)}:null;
   const criteria=rawCriteria?{
     framework:text(rawCriteria.framework,100),reviewType:text(rawCriteria.reviewType,150),
-    question:text(rawCriteria.question,20000),
+    question:text(rawCriteria.question,20000),...(rawCriteria.cleared===true?{cleared:true}:{}),
     rows:(Array.isArray(rawCriteria.rows)?rawCriteria.rows:[]).map(row)
   }:null;  source={records,dedup,studyLinks,studyLinksError,runs:[...searchRuns.filter(r=>imported.has(r.id)).map(r=>({...r,kind:'search',importedAt:imported.get(r.id)})),...imports.map(r=>({id:r.id,db:r.db,startedAt:r.startedAt,downloaded:r.downloaded,added:r.added,file:r.file,status:'Imported',kind:'local',importedAt:r.startedAt}))],criteria,
     sourceSig:fingerprint([AimstepDedup.VERSION,records.map(r=>[r.uid,r.title,r.abstract,r.dedup.memberIds])]),
@@ -1940,8 +1940,8 @@ async function parseCriteriaFile(file){
   return textCriteria(content,file.name);
 }
 function validCriteriaUpload(u){
-  if(!u||typeof u!=='object'||typeof u.name!=='string'||!Array.isArray(u.snapshot?.rows)||!u.snapshot.rows.length)return null;
-  return {name:text(u.name,200),edited:!!u.edited,size:Number(u.size)||0,uploadedAt:text(u.uploadedAt,40),snapshot:{framework:text(u.snapshot.framework,100),reviewType:text(u.snapshot.reviewType,150),question:text(u.snapshot.question,20000),rows:u.snapshot.rows.slice(0,60).map(row)}};
+  if(!u||typeof u!=='object'||typeof u.name!=='string'||!Array.isArray(u.snapshot?.rows)||(!u.snapshot.rows.length&&u.cleared!==true))return null;
+  return {name:text(u.name,200),edited:!!u.edited,cleared:u.cleared===true,size:Number(u.size)||0,uploadedAt:text(u.uploadedAt,40),snapshot:{framework:text(u.snapshot.framework,100),reviewType:text(u.snapshot.reviewType,150),question:text(u.snapshot.question,20000),...(u.cleared===true?{cleared:true}:{}),rows:u.snapshot.rows.slice(0,60).map(row)}};
 }
 function screeningHasProgress(){return pilotHasProgress()||Object.keys(workspace.full?.ai||{}).length>0||Object.keys(workspace.full?.human||{}).length>0||workspace.approved.some(Boolean)||Object.keys(workspace.predictions).length||Object.keys(workspace.pilotSecondPredictions).length||Object.keys(workspace.fullPredictions).length||Object.keys(workspace.secondPredictions).length||Object.keys(workspace.reviews).length}
 function renderCriteriaFile(){
@@ -2085,7 +2085,7 @@ $('crit-cancel').addEventListener('click',closeCriteriaEditor);
 $('crit-save').addEventListener('click',saveCriteriaEdit);
 criteriaDialog.addEventListener('cancel',e=>{if(busy?.startsWith('criteria-'))e.preventDefault();});
 criteriaDialog.addEventListener('close',closeCriteriaEditor);
-window.screeningCriteriaDialog=AIMScreeningCriteriaDialog({scope,projectId,pageLink,busy:()=>!!busy||pilotReviewSaving,snapshot:()=>source.criteria,parse:parseCriteriaFile,apply:async snapshot=>{busy='criteria-save';try{await setCriteriaUpload({name:'Eligibility criteria',edited:true,uploadedAt:now(),snapshot})}finally{busy='';render()}}});
+window.screeningCriteriaDialog=AIMScreeningCriteriaDialog({scope,projectId,pageLink,busy:()=>!!busy||pilotReviewSaving,snapshot:()=>source.criteria,parse:parseCriteriaFile,apply:async snapshot=>{busy='criteria-save';try{await setCriteriaUpload({name:'Eligibility criteria',edited:true,cleared:snapshot.cleared===true,uploadedAt:now(),snapshot})}finally{busy='';render()}}});
 $('open-criteria').addEventListener('click',()=>{closeCriteriaEditor();uploadError('');renderCriteriaFile();criteriaDialog.showModal()});
 $('close-criteria').addEventListener('click',()=>{if(!busy?.startsWith('criteria-'))criteriaDialog.close()});
 criteriaDialog.addEventListener('click',event=>{if(event.target===criteriaDialog&&!busy?.startsWith('criteria-'))criteriaDialog.close()});

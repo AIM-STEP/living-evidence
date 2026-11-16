@@ -1095,6 +1095,7 @@ if(embeddedPreview){
     load(saved){stopMachineGeneration();stopManualRefinement();previewDirty=false;state={...structuredClone(initial),...structuredClone(saved)};fill();},
     read(){if(!savePreviewEdits(false))throw new Error('Could not prepare edited criteria.');return {workspace:structuredClone(state),summary:structuredClone(embeddedPreviewSummary)};},
     dirty(){return previewDirty;},
+    clear(){return clearPreviewCriteria();},
     discard(){previewDirty=false;}
   };
 }
