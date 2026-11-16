@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../title-abstract-screening.html'),'utf8');
 const clear=html.slice(html.indexOf('function clearActionsBlocked()'),html.indexOf("for(const kind of ['source','pilot','full'])$('clear-'+kind).addEventListener"));
-const calibration=html.slice(html.indexOf('function clearCalibration()'),html.indexOf('function syncSource()'));
+const calibration=html.slice(html.indexOf('function clearCalibration()'),html.indexOf('async function syncSource()'));
 function setup(){
   const nodes=new Map(),freshFull=()=>({ai:{},ai2:{},human:{}}),freshPilot=size=>({size,rounds:[],ai:{},human:{},approved:null});
   const ctx={structuredClone,Map,Set,busy:'',importing:false,pilotReviewSaving:false,fullReviewSaving:false,scope:'synthetic',confirm:()=>true,

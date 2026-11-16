@@ -3,6 +3,8 @@ window.AimstepToolTranslations = {
   "Clear": "清空",
   "Save": "保存",
   "Export": "导出",
+  "Export deduplication details": "导出去重详情",
+  "Export deduplication details (Excel)": "导出去重详情（Excel）",
   "Stop": "停止",
   "Generate": "生成",
   "Start": "开始",

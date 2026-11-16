@@ -545,3 +545,11 @@ Validation: `python3 -m unittest discover -s tools -p 'test_fulltext_assistant.p
 regressions, and `python3 tools/test_local_model_server.py`. A live retrieval of
 DOI `10.1093/pm/pnaf089` returned the original PMC PDF (2,485,544 bytes) in 6.5 s;
 this is one network measurement, not a general retrieval-rate guarantee.
+
+## Screening source: report-level deduplication v3
+
+Title/abstract imports share `app/screening-dedup.js`. Different valid DOI/PMID values and report-number/type conflicts are retained as separate records for screening. Missing fields supply no matching evidence. Metadata matches require explicit corroboration, all original records remain indexed, and group-level checks prevent contradictory transitive merges. Full abstracts participate in matching; the most informative available fields and every original member are retained with field provenance.
+
+Deduplication details is read-only. Export deduplication details produces Excel (.xlsx) with first-row column headers, Records/Matches/Summary sheets, frozen headers and filters. Long values are continued without loss on a Long text sheet. All possible duplicates proceed to screening without a review task, decision buttons or confirmation. Legacy reviewer overrides no longer affect active deduplication; they remain available in the audit. Source/version changes use the existing archive-and-restart flow. Source Export now contains the **complete deduplicated dataset**, regardless of screening decisions, in RIS/CSV/BibTeX/JSON; Pilot uses the same source array. JSON includes the deduplication audit.
+
+See [technical method and limitations](../docs/SCREENING_SOURCE_DEDUPLICATION.md). Run `node tools/test_screening_dedup.cjs` and `node tools/test_screening_dedup_export.cjs`. These are synthetic behavioral checks, not a validated claim of screening or deduplication accuracy.
