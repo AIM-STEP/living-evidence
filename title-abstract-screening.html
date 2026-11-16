@@ -246,7 +246,7 @@ th{background:#f4f4f4}
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
-<script defer src="app/tool-i18n-catalog.js?v=20261116-dedup-excel"></script>
+<script defer src="app/tool-i18n-catalog.js?v=20261116-source-sync"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261021-49">
@@ -274,7 +274,7 @@ th{background:#f4f4f4}
 <details id="dedup-details" class="source-trace" hidden><summary id="dedup-details-summary">Deduplication details</summary><div id="dedup-details-body"></div></details>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col" data-ui-localize>Imported</th><th scope="col" data-ui-localize>Database</th><th scope="col" class="num-col" data-ui-localize>Records</th><th scope="col" class="num-col" data-ui-localize>Duplicates</th><th scope="col" class="del-col"><span class="sr-only" data-ui-localize>Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
-<div class="toolbar source-foot"><button class="btn small" id="sync-source" type="button" hidden data-ui-localize>Use latest source</button><span class="export-source"><label class="label inline" for="source-format" data-ui-localize>Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Export all deduplicated source records" data-ui-localize>Export</button><button class="btn small" type="button" id="export-dedup-audit" title="Export deduplication details (Excel)" data-ui-localize disabled>Export deduplication details</button></span></div>
+<div class="toolbar source-foot"><span class="export-source"><label class="label inline" for="source-format" data-ui-localize>Format</label><select class="select compact" id="source-format" aria-label="Export format"><option value="ris">RIS (EndNote, Zotero, Mendeley)</option><option value="csv">CSV (Excel)</option><option value="bib">BibTeX</option><option value="json">JSON</option></select><button class="btn small" id="export-source" type="button" title="Export all deduplicated source records" data-ui-localize>Export</button><button class="btn small" type="button" id="export-dedup-audit" title="Export deduplication details (Excel)" data-ui-localize disabled>Export deduplication details</button></span></div>
 </div>
 </section>
 </div>
@@ -603,7 +603,8 @@ async function loadSource({persist=true,includeReturns=true}={}){
   records.forEach(r=>recordById.set(r.uid,r));
   const numbersChanged=assignSourceNumbers();
   await applyFulltextReturns(returned);
-  if(numbersChanged&&persist)await save();
+  const synchronized=persist?await syncSource():false;
+  if(numbersChanged&&persist&&!synchronized)await save();
 }
 function stale(){return !!workspace&&(workspace.sourceSig!==source.sourceSig||workspace.criteriaSig!==source.criteriaSig)}
 function screeningStagesReady(){return AimstepScreeningStages.valid(workspace?.screeningStages,source.criteria,source.criteriaSig)}
@@ -670,16 +671,16 @@ function clearCalibration(){
   log('calibration-reset',{sampleSize:workspace.sampleSize,sourceSig:workspace.sourceSig,criteriaSig:workspace.criteriaSig});
 }
 async function syncSource(){
-  if(busy||importing||pilotReviewSaving||fullReviewSaving)return;
-  if(!screeningStagesReady()){$('open-screening-criteria').click();return;}
-  if(!confirm('Use the latest source and criteria? Current pilot and main screening results will be archived and screening will restart.'))return;
-  const before=structuredClone(workspace);let failure='';busy='source-sync';
+  if(!workspace||sourceError||(workspace.sourceSig===source.sourceSig&&workspace.criteriaSig===source.criteriaSig))return false;
+  const before=structuredClone(workspace),progress=screeningHasProgress();
   try{
-    if(screeningHasProgress())(workspace.dedupArchives??=[]).push({at:now(),reason:'source-or-deduplication-version-changed',previousSourceSig:workspace.sourceSig,pilot:structuredClone(workspace.pilot),full:structuredClone(workspace.full)});
+    if(progress)(workspace.dedupArchives??=[]).push({at:now(),reason:'source-or-deduplication-version-changed',automatic:true,drafts:{pilot:[...pilotReviewDrafts],exclusions:[...exclusionDrafts]},previousSourceSig:workspace.sourceSig,previousCriteriaSig:workspace.criteriaSig,screeningStages:structuredClone(workspace.screeningStages||null),pilot:structuredClone(workspace.pilot),full:structuredClone(workspace.full)});
     workspace.sourceSig=source.sourceSig;workspace.criteriaSig=source.criteriaSig;
-    clearCalibration();await save();
-  }catch(e){workspace=before;publishSummary();failure='Could not use latest source: '+e.message;}
-  finally{busy='';render();if(failure)showNotice('source-notice',failure,'error');}
+    clearCalibration();
+    workspace.sourceUpdateNotice=progress?'Screening source updated. Previous assessments were archived. Start a new pilot.':'';
+    log('source-synchronized',{automatic:true,sourceSig:source.sourceSig,criteriaSig:source.criteriaSig,archived:progress});
+    await save();pilotReviewDrafts.clear();exclusionDrafts.clear();return true;
+  }catch(e){workspace=before;publishSummary();throw new Error('Could not update screening source: '+e.message);}
 }
 // Deduplication is automatic. Possible duplicates proceed to screening separately.
 let dedupGroupsShown=20;
@@ -742,9 +743,8 @@ function renderSource(){  // Databases of the imports in use, not every database
   if(!source.records.length)warning+=(warning?'\n':'')+'No local search records found. Complete Search strategy for this project or import a results file.';
   if(!source.criteria?.rows?.length)warning+=(warning?'\n':'')+'No operational eligibility rules found. Complete or upload criteria in the previous steps.';
   if(source.records.length>0&&source.records.length<3)warning+=(warning?'\n':'')+'At least 3 unique records are needed to begin pilot calibration.';
-  if(stale())warning+=(warning?'\n':'')+'The upstream records or criteria changed. Use latest source to restart calibration before screening.';
-  showNotice('source-notice',warning,warning?'warning':'');
-  $('sync-source').hidden=!stale();}
+  if(stale()&&!sourceError)warning+=(warning?'\n':'')+'Updating screening source. Screening will be available when the update is saved.';
+  showNotice('source-notice',warning||workspace?.sourceUpdateNotice||'',warning?'warning':'success');}
 function label(d){return d==='yes'?'Yes':d==='maybe'?'Maybe':d==='no'?'No':'Pending'}
 function colored(d){return '<span class="badge '+esc(d)+'">'+esc(label(d))+'</span>'}
 function excerpt(raw,quotes){
@@ -1099,7 +1099,7 @@ async function startPilotRound(){
   if(pilotReviewDrafts.size){showNotice('pilot-message','Save the correction you are editing before starting another round.','warning');return;}
   const previous=pilotRoundState(workspace.pilot.rounds.length-1);
   if(previous?.aiDone&&!previous.votesDone){showNotice('pilot-message','Save your review for every record before starting another round.','warning');return;}
-  await resolvePilotModel();if(busy)return;
+  await resolvePilotModel();if(busy||!readySource())return;
   const p=workspace.pilot,last=p.rounds.length-1;
   let i=last;
   if(last<0||pilotRoundState(last).revealed){
@@ -1107,7 +1107,7 @@ async function startPilotRound(){
     if(!ids.length){showNotice('pilot-message','Every record has been used in a pilot round.','warning');return}
     if(!calibrationReady()){showNotice('pilot-message','Complete the correction fields for pilot disagreements before starting another round.','warning');return;}
     const calibration=currentCalibration(p.rounds.length);
-    p.approved=null;
+    p.approved=null;workspace.sourceUpdateNotice='';
     p.rounds.push({reviewMode:PILOT_REVIEW_MODE,ids,seed,calibration,size:p.size,startedAt:now(),criteriaSig:source.criteriaSig,stages:screeningStageSig(),prompt:PILOT_PROMPT,revealedAt:''});
     i=p.rounds.length-1;pilotView=i;pilotFilter='agreed';
     log('pilot-round-started',{round:i+1,records:ids.length,seed,criteriaSig:source.criteriaSig});
@@ -1290,7 +1290,7 @@ function renderPilot(){
   const approved=pilotApprovalValid();renderPilotApproval();
   // Status lines set here are replaced or cleared here; messages from a run stay.
   const msg=$('pilot-message'),status=!screeningStagesReady()&&source.criteria?.rows?.length?'Set and save Screening criteria before starting the pilot.':p.approved&&!approved?'The criteria or calibration feedback changed. Review corrections and approve the current version.':
-    !ready?(stale()?'The records or criteria changed. Use latest source in Screening source first.':source.records.length<3?'Import at least 3 records in Screening source.':!screeningStagesReady()?'Set and save Screening criteria before starting the pilot.':'Add eligibility criteria in Screening source first.'):'';
+    !ready?(stale()?'The screening source is being updated. Please wait for it to finish.':source.records.length<3?'Import at least 3 records in Screening source.':!screeningStagesReady()?'Set and save Screening criteria before starting the pilot.':'Add eligibility criteria in Screening source first.'):'';
   if(!busy&&status){showNotice('pilot-message',status,'warning');msg.dataset.status='1'}
   else if(!busy&&msg.dataset.status){showNotice('pilot-message','');delete msg.dataset.status}
 }
@@ -1950,7 +1950,7 @@ function renderCriteriaFile(){
 function uploadError(message){const el=$('criteria-upload-error');el.textContent=message||'';el.hidden=!message}
 // Uploaded criteria take the place of those from the previous steps. Before
 // any screening, calibration simply restarts with them; once screening has
-// started, the source is marked out of date and Use latest source restarts it.
+// started, background synchronization archives the old assessments and restarts it.
 async function setCriteriaUpload(upload){
   const progress=screeningHasProgress(),before=structuredClone(workspace),oldSource=source,oldOrigin=criteriaOrigin;
   try{
@@ -1959,7 +1959,7 @@ async function setCriteriaUpload(upload){
     if(!progress){workspace.criteriaSig=source.criteriaSig;clearCalibration()}
     log(upload?'criteria-uploaded':'criteria-upload-deleted',upload?{file:upload.name,rows:upload.snapshot.rows.length}:{});
     await save();render();
-    toast(progress&&stale()?'Criteria changed. Use latest source to restart calibration with them.':upload?'Criteria saved for screening.':'Screening uses the criteria from the previous steps.');
+    toast(upload?'Criteria saved for screening.':'Screening uses the criteria from the previous steps.');
   }catch(e){workspace=before;source=oldSource;criteriaOrigin=oldOrigin;publishSummary();throw e;}
 }
 $('crit-import').addEventListener('click',()=>{if(busy||pilotReviewSaving)return;uploadError('');$('criteria-file-input').value='';$('criteria-file-input').click()});
@@ -2082,7 +2082,7 @@ $('apply-source').addEventListener('click',async()=>{  const before=new Map((wor
   const changed=JSON.stringify(next.map(x=>x.runId).sort())!==JSON.stringify([...before.keys()].sort());
   sourceDialog.close();if(!changed)return;
   workspace.importedRuns=next;await save();await loadSource();render();
-  toast(stale()?'Screening source updated. Use latest source to restart calibration with these records.':'Screening source updated.');
+  toast('Screening source updated.');
 });
 $('close-source').addEventListener('click',()=>sourceDialog.close());
 sourceDialog.addEventListener('click',event=>{if(event.target===sourceDialog)sourceDialog.close()});
@@ -2101,7 +2101,7 @@ $('source-history-rows').addEventListener('click',async event=>{
     workspace.imports=kept;
   }else{workspace.importedRuns=(workspace.importedRuns||[]).filter(x=>x.runId!==id);await save()}
   await loadSource();render();
-  toast((kind==='local'?dbn+' import deleted.':dbn+' search removed from screening.')+(stale()?' Use latest source to restart calibration with these records.':''));
+  toast(kind==='local'?dbn+' import deleted.':dbn+' search removed from screening.');
 });
 
 // Collapse / expand a panel. Remembered per browser and project; buttons in
@@ -2170,7 +2170,6 @@ $('confirm-import').addEventListener('click',async()=>{
   }catch(e){showNotice('import-message',e.message,'error')}
   finally{importing=false;$('confirm-import').disabled=false}
 });
-$('sync-source').addEventListener('click',syncSource);
 $('sample-size').addEventListener('change',()=>{
   const n=Math.max(5,Math.min(100,Math.round(Number($('sample-size').value)||20)));
   workspace.pilot.size=n;$('sample-size').value=n;save().catch(()=>{});
@@ -2406,20 +2405,17 @@ $('export-option').addEventListener('change',updateExportCount);
 $('export-results').addEventListener('click',exportResults);
 let refreshPromise=null;
 function refreshSource(){
-  if(!workspace||busy||importing||stagesDialog.open||document.visibilityState==='hidden')return Promise.resolve();
+  if(!workspace||busy||importing||pilotReviewSaving||fullReviewSaving||pilotReviewDrafts.size||exclusionDrafts.size||stagesDialog.open||document.visibilityState==='hidden')return Promise.resolve();
   if(refreshPromise)return refreshPromise;
+  let failure='';busy='source-refresh';
   refreshPromise=(async()=>{
     const before=fingerprint([source.sourceSig,source.criteriaSig,source.runs.map(r=>[r.id,r.updatedAt,r.downloaded]),source.dedup?.pairs,source.dedup?.total]);
     await loadSource();
     const after=fingerprint([source.sourceSig,source.criteriaSig,source.runs.map(r=>[r.id,r.updatedAt,r.downloaded]),source.dedup?.pairs,source.dedup?.total]);
     if(before!==after){
-      if(stale()&&!screeningHasProgress()){
-        workspace.sourceSig=source.sourceSig;workspace.criteriaSig=source.criteriaSig;
-        await save();
-      }
       render();publishSummary();
     }
-  })().catch(e=>showNotice('source-notice','Could not sync search results: '+e.message,'error')).finally(()=>{refreshPromise=null});
+  })().catch(e=>{failure='Could not sync search results: '+e.message}).finally(()=>{refreshPromise=null;busy='';render();if(failure)showNotice('source-notice',failure,'error')});
   return refreshPromise;
 }
 window.addEventListener('storage',e=>{

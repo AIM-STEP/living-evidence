@@ -65,7 +65,7 @@ const elements={};const $=id=>elements[id]??={value:'json',events:{},addEventLis
 const initial=run([rec('a',{doi:'10.1000/a'}),rec('b',{doi:'10.1000/b'}),rec('c',{doi:'10.1000/c'})]);let savesFail=false,progress=true;
 const context=vm.createContext({AimstepDedup:D,AimstepDedupExport:E,AimstepExtractionResults:R,structuredClone,Map,Set,JSON,Number,$,
  source:{records:initial.records,dedup:initial,sourceSig:'source',criteriaSig:'criteria',criteria:{rows:[{}]}},workspace:{dedupDecisions:{},pilot:{old:'pilot'},full:{old:'full'}},dedupStats:{total:3},recordById:new Map(),
- busy:'',importing:false,pilotReviewSaving:false,fullReviewSaving:false,sourceError:'',databaseNames:{},scope:'synthetic',projectId:'synthetic',
+ busy:'',importing:false,pilotReviewSaving:false,fullReviewSaving:false,pilotReviewDrafts:new Map(),exclusionDrafts:new Map(),sourceError:'',databaseNames:{},scope:'synthetic',projectId:'synthetic',
  esc:s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'),sourceDatabases:r=>r.provenance.map(p=>p.db),now:()=> 'test',stamp:()=> 'test',
  screeningHasProgress:()=>progress,confirm:()=>true,render(){},publishSummary(){},log(){},toast(){},showNotice(...args){context.notice=args},
  clearCalibration(){context.workspace.pilot={};context.workspace.full={};},save:async()=>{if(savesFail)throw Error('storage failed')},
@@ -91,7 +91,7 @@ vm.runInContext(slice('// Deduplication is automatic.', 'function renderSource()
  context.screeningStagesReady=()=>true;context.workspace.pilot={old:'pilot'};context.workspace.full={old:'full'};
  vm.runInContext(slice('async function syncSource()', '// Deduplication is automatic.'),context);
  await context.syncSource();assert.equal(context.workspace.dedupArchives.at(-1).reason,'source-or-deduplication-version-changed');
- const syncBefore=JSON.stringify(context.workspace);savesFail=true;await context.syncSource();assert.equal(JSON.stringify(context.workspace),syncBefore);savesFail=false;
+ const syncBefore=JSON.stringify(context.workspace);context.workspace.sourceSig='older';const changedBefore=JSON.stringify(context.workspace);savesFail=true;await assert.rejects(context.syncSource(),/storage failed/);assert.equal(JSON.stringify(context.workspace),changedBefore);savesFail=false;context.workspace.sourceSig=context.source.sourceSig;
  console.log('PASS: adopting a changed source archives prior screening and rolls back failed saves');count++;
 
  context.finalDecision=()=> 'no';context.workspace.full={human:{a:{decision:'no'}}};

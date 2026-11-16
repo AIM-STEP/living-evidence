@@ -161,7 +161,7 @@ Screening source 的 Deduplication details 仅展示自动合并组、依据和�
 
 成员键包含批次、原始位置、UID 与内容校验值，用于原始成员追溯和源数据变更检测。校验值为非密码学指纹，不构成防篡改保证。
 
-版本 3 不读取旧版人工去重选择来改变活动集合。旧选择仅以 `legacyReviewerDecisions` 保留在审计中。算法版本和源数据指纹变化时，已有预筛批准失效；用户通过原有 Use latest source 流程采用新集合时，先归档旧筛选结果，再重新预筛。这是源数据版本切换，不是疑似重复确认。
+版本 3 不读取旧版人工去重选择来改变活动集合。旧选择仅以 `legacyReviewerDecisions` 保留在审计中。页面加载、导入以及后台刷新时，系统自动比较记录与标准指纹；变化时先归档已有筛选结果，再采用最新集合并重置预筛批准，不再显示 Use latest source 按钮，也不要求点击同步或弹出同步确认。未变化时不重置、不重复归档。保存失败恢复旧工作区并保留错误提示，后续自动刷新可重试。已有结果被归档时只显示简短状态，新的预筛启动后状态清除。筛选或人工编辑期间暂停后台刷新；具体筛选标准仍需按原有流程保存和批准。
 
 ## 10. 输出与审计格式
 
@@ -196,6 +196,7 @@ JSON 源数据导出仍包含完整 `deduplication` 审计（包括历史数据�
 
 ```sh
 node tools/test_screening_dedup.cjs
+node tools/test_screening_source_sync.cjs
 node tools/test_screening_dedup_export.cjs
 node tools/test_screening_stages.cjs
 node tools/test_screening_stages_save.cjs
