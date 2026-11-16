@@ -271,7 +271,7 @@ th{background:#f4f4f4}
 <section class="panel">
 <div class="panel-head source-panel-head"><h2 data-ui-localize>Screening source</h2><div class="toolbar source-actions"><button class="btn small" type="button" id="choose-source" aria-haspopup="dialog" aria-controls="source-dialog" data-ui-localize>Import from search strategy</button><button class="btn small" type="button" id="open-import" aria-haspopup="dialog" aria-controls="import-dialog" data-ui-localize>Import from local</button><button class="btn small clear-action" id="clear-source" type="button" aria-label="Clear screening source" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-source" aria-expanded="true" aria-controls="source-body" title="Collapse Screening source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Screening source</span></button></div></div> <div class="panel-body" id="source-body">
 <div class="source-summary" aria-label="Screening source summary"><div><strong id="stat-dbs">0</strong><span data-ui-localize>Databases</span></div><div><strong id="stat-total">0</strong><span data-ui-localize>Records imported</span></div><div><strong id="stat-dups">0</strong><span data-ui-localize>Duplicates removed</span></div><div><strong id="stat-pending">0</strong><span data-ui-localize>To screen</span></div></div><p class="hint dedup-note" id="dedup-note" hidden role="status"></p>
-<div id="study-links" class="source-trace"></div>
+<div id="study-links" class="source-trace" hidden></div>
 <details id="dedup-details" class="source-trace" hidden><summary id="dedup-details-summary">Deduplication details</summary><div id="dedup-details-body"></div></details>
 <div class="table-wrap source-history results-like"><table aria-label="Imported search results"><thead><tr><th scope="col" class="date-col" data-ui-localize>Imported</th><th scope="col" data-ui-localize>Database</th><th scope="col" class="num-col" data-ui-localize>Records</th><th scope="col" class="num-col" data-ui-localize>Duplicates</th><th scope="col" class="del-col"><span class="sr-only" data-ui-localize>Delete</span></th></tr></thead><tbody id="source-history-rows"></tbody></table></div>
 <div class="notice warning" id="source-notice" hidden role="status"></div>
@@ -707,7 +707,7 @@ function dedupMemberHtml(member){
 }
 function renderDedupDetails(){
   const d=source.dedup,groups=(d?.groups||[]).filter(g=>g.members.length>1);
-  $('dedup-details').hidden=!source.records.length;
+  $('dedup-details').hidden=true;
   $('export-dedup-audit').disabled=!source.records.length||!AimstepDedupExport.hasDuplicates(d);
   $('dedup-details-summary').textContent='Deduplication details · '+groups.length+' merged groups';
   $('dedup-details-body').innerHTML='<p class="hint">Possible duplicates are retained as separate records and proceed to screening automatically.</p>'+
