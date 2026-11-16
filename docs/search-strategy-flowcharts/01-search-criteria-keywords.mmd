@@ -1,0 +1,17 @@
+flowchart TD
+ PRE[Eligibility当前工作区与Next交接] --> SNAP
+ UPLOAD[本地标准文件或粘贴文本] --> SNAP
+ EDIT[检索弹窗编辑当前标准<br/>Save检查并发版本后同步上游] --> SNAP
+ SNAP[统一标准快照<br/>框架、问题、领域纳排规则、其他规则及限制] --> FW[选择框架并Add criterion明确添加元素]
+ FW --> MATCH[领域名称优先匹配当前标准<br/>ID匹配作为备用]
+ MATCH --> EMPTY[新元素Keywords为空<br/>保存sourceRule、sourceExclusion及sourceOther]
+ EMPTY --> EXTRACT[AI抽取所选元素核心概念种子<br/>不是同义词扩展，不把排除实体变正向词]
+ EXTRACT --> VALID{结构有效，元素仍存在<br/>关键词、版本与标准未变化？}
+ VALID -->|是| KEY[填入Keywords<br/>保存输入、模型、理由与时间]
+ VALID -->|否或失败| RETRY[保留空白或作者已有输入<br/>提示重试，不用条件整句兜底]
+ KEY --> AUTHOR[作者可增删编辑Keywords]
+ RETRY --> AUTHOR
+ AUTHOR --> STALE[修改Keywords使扩展过期<br/>词汇与策略不能继续冒充当前版本]
+ STALE --> NEXT[图②扩展检索词]
+ NOTE[Keywords与Expanded terms分开<br/>迟到结果不能写回已删除或已改元素]
+ SOURCE[本页移除不改上游；普通同步跟踪previous<br/>初始化偏好有效上游，Next新版本可重置草稿]

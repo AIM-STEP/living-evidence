@@ -1,0 +1,22 @@
+flowchart TD
+ A[当前精确查询，非wordsChanged<br/>基本括号和引号语法合法] --> DIRECT{数据库是否direct？}
+ DIRECT -->|PubMed| PM[ESearch最多取得10000个ID<br/>EFetch每批最多200，解析XML书目摘要]
+ DIRECT -->|Europe PMC| EP[core结果与cursorMark分页<br/>每页最多200，保留原生来源ID]
+ DIRECT -->|其他11库| EXTERNAL[打开外部平台，作者复制策略<br/>选择合适集合、执行并导出]
+ EXTERNAL --> IMPORT[导入结果文件；标Imported<br/>未提供的总命中与执行query不伪造]
+ PM --> BATCH[逐批汇集total、downloaded、added<br/>query、时间、已取ID或游标、警告及来源]
+ EP --> BATCH
+ BATCH --> CLEAN[统一书目字段<br/>按DOI、PMID、数据库原生ID归并并合并来源]
+ IMPORT --> CLEAN
+ CLEAN --> DB[(IndexedDB aimstep-search-results<br/>projects按scope保存records和runs<br/>每批清洗归并后保存)]
+ DRAFT[(localStorage策略草稿、词表和模型审计)] -. 独立保存 .-> DB
+ DB --> OUT[选择批次覆盖的记录集合]
+ OUT --> FILES[RIS / CSV / 结果JSON导出]
+ DB --> BACKUP[完整工作区JSON备份<br/>策略与检索历史TXT]
+ DB --> SCREEN[Screening source按选定检索批次读取<br/>再进行报告级去重、研究关联与筛选]
+ BATCH --> STATUS{已取达到报告总命中？}
+ STATUS -->|是| COMPLETE[Complete]
+ STATUS -->|否或到用户/接口上限| PARTIAL[Partial，不冒充完整检索]
+ PM -. Stop、异常、关页 .-> PAUSE[保留已保存数据<br/>Paused / Error / Partial按条件Continue]
+ EP -. Stop、异常、关页 .-> PAUSE
+ NOTE[PubMed到10000-ID上限需分拆或导入完整结果<br/>初步ID归并不是Screening source完整去重<br/>当前浏览器保存不等于跨设备自动同步]

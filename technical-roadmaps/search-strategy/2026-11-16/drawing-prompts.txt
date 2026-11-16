@@ -1,0 +1,54 @@
+=== S1 ===
+Create a finished, accurate Chinese engineering flowchart for AIM-STEP, in the same documentation style as the earlier Screening source and Pilot/Main screening charts. Portrait 3:4, highest available resolution, white background, large crisp simplified Chinese typography, navy titles, pale teal process nodes, pale blue data stores, amber decisions/uncertainty, pale red errors. Use clearly directed arrows with concise branch labels. No photos, invented UI, decorations, illustrations or performance scores. Route each arrow only to its stated destination: do not add shortcut arrows, automatic loopbacks or unsupported branches. Fit the specified text with generous spacing and avoid intersections. This describes implemented software at commit 26bd92a, not a proposed workflow. Footer exactly: AIM-STEP · 实现 26bd92a · 2026-11-16. 标题“Search strategy ①｜标准接入与检索元素”。副标题“当前条件 → 明确选择元素 → 可编辑Keywords”.
+Top three source branches: “上一步Eligibility与Next交接” / “本地导入标准或粘贴解析” / “检索弹窗编辑当前标准”.
+Merge→“统一标准快照：框架、问题、领域、纳入/排除/其他规则、限制”.
+Side note “上游编辑：检查并发版本；Save后同步Eligibility和Search工作区；失败回滚”.
+Next “选择框架；Add criterion明确添加检索元素”→“按领域名称优先、ID备用匹配当前条件”.
+Next “新元素Keywords先为空”→“AI仅抽取该元素核心检索概念；不展开同义词”.
+Diamond “关键词输出有效且输入未改变？” YES→“填入可编辑Keywords；记录来源、模型、时间”；NO→“保留空白或人工输入；允许重试；不用整句兜底”.
+Then “作者可增删Keywords；排除规则仅用于范围解释，不作正向种子”→“进入图②：扩展检索词”.
+Side state box “Keywords与Expanded terms分开；更改Keywords使扩展过期；删除元素后迟到响应不能写回”.
+Bottom “标准移除仅影响当前Search使用；源切换或Next新版本可重置下游检索草稿。当前生成使用现有本地生成服务，不是TypeSafe筛选API。”
+Use only the source paths specified, no automatic element selection.
+
+=== S2 ===
+Create a finished, accurate Chinese engineering flowchart for AIM-STEP, in the same documentation style as the earlier Screening source and Pilot/Main screening charts. Portrait 3:4, highest available resolution, white background, large crisp simplified Chinese typography, navy titles, pale teal process nodes, pale blue data stores, amber decisions/uncertainty, pale red errors. Use clearly directed arrows with concise branch labels. No photos, invented UI, decorations, illustrations or performance scores. Route each arrow only to its stated destination: do not add shortcut arrows, automatic loopbacks or unsupported branches. Fit the specified text with generous spacing and avoid intersections. This describes implemented software at commit 26bd92a, not a proposed workflow. Footer exactly: AIM-STEP · 实现 26bd92a · 2026-11-16. 标题“Search strategy ②｜词汇扩展与外部核对”。副标题“LLM候选 → NLM MeSH → 语义复核 → 检索信号”.
+Top “所有已选元素有Keywords且种子抽取完成”→“Generate：LLM按元素生成核心实体及候选词；初始每元素≤80词；保留Keywords”.
+Next “清洗：Unicode、空白、重复；拒绝字段语法、Boolean操作符及过短截词”.
+Next “每元素最多10个实体/关键词查询NLM”→diamond “真实MeSH descriptor且首选词或entry词精确匹配？”
+YES→“保存D编号、URI、scope及entry词候选”；NO→“仍保留自由词；不标为已验证主题词”.
+Both→“候选绑定ID；LLM按原标准做相关性复核；每批≤24个、无效最多重试1次”.
+Next diamond “复核成功且有可用自由词？” YES→“保留接受词与获准主题词”；NO→“保留初始模型自由词，标复核不完整；不新增未经复核主题词”.
+Then merge→“PubMed词条命中信号：每元素最多30个；中文及超预算标未检查”.
+Side notes “零命中仍保留；外部失败标partial/unavailable；命中数不等于同义关系或召回率”.
+Final store “保存候选、接受/拒绝理由、词表来源、计数、模型、方法版本和时间”.
+Footer “进入图③生成策略；MeSH成员身份不等于语义相关；不把MeSH当Emtree；没有模型权重训练。”
+Important do not show NLM-no-match as deletion. Do not show zero hits as rejection.
+
+=== S3 ===
+Create a finished, accurate Chinese engineering flowchart for AIM-STEP, in the same documentation style as the earlier Screening source and Pilot/Main screening charts. Portrait 3:4, highest available resolution, white background, large crisp simplified Chinese typography, navy titles, pale teal process nodes, pale blue data stores, amber decisions/uncertainty, pale red errors. Use clearly directed arrows with concise branch labels. No photos, invented UI, decorations, illustrations or performance scores. Route each arrow only to its stated destination: do not add shortcut arrows, automatic loopbacks or unsupported branches. Fit the specified text with generous spacing and avoid intersections. This describes implemented software at commit 26bd92a, not a proposed workflow. Footer exactly: AIM-STEP · 实现 26bd92a · 2026-11-16. 标题“Search strategy ③｜Boolean规划与数据库编译”。副标题“AI规划AND／OR树 · 工具确定性生成数据库语法”.
+Top “全部已选元素扩展就绪＋至少一数据库＋日期有效”→“冻结当前条件、精确词表与输入hash”.
+Next “给每个自由词／MeSH／适用RCT过滤器分配唯一atom ID”→“LLM规划AND／OR树和分组理由”.
+Diamond “所有atom恰好使用一次；无未知、遗漏、重复或循环？” NO→“附校验错误重试1次；仍失败保留既有策略”；YES→“检查输入hash未变”.
+Then “按数据库确定性编译字段、短语、邻近算符、主题词及日期／语言限制”.
+Three side detail boxes “13个已配置数据库：2个可直接检索＋11个外部执行”；“普通MeSH只用于PubMed／Europe PMC／Ovid；不自动转Emtree或其他词表”；“适用的未编辑RCT设计块保留固定过滤器；不是逐词任意改写”.
+Next “保存每库可编辑策略＋Boolean树、精确词表、标准、模型与时间”.
+Next “PubMed和Europe PMC命中数探测；已有参考PMID时后台覆盖检查”→“进入图④：运行检索或打开外部平台”.
+Side caution “命中数不等于召回率；参考PMID覆盖仅针对给定参考集，不能作为独立性能验证”.
+Footer “排除标准不自动变NOT；固定设计过滤器的内部NOT例外。输入或词表改变使旧策略过期，需重新生成。当前策略生成不是让LLM直接自由编写整条查询。”
+Do not draw error branches flowing into accepted plans. Do not claim generated strategy was already searched in every database.
+
+=== S4 ===
+Create a finished, accurate Chinese engineering flowchart for AIM-STEP, in the same documentation style as the earlier Screening source and Pilot/Main screening charts. Portrait 3:4, highest available resolution, white background, large crisp simplified Chinese typography, navy titles, pale teal process nodes, pale blue data stores, amber decisions/uncertainty, pale red errors. Use clearly directed arrows with concise branch labels. No photos, invented UI, decorations, illustrations or performance scores. Route each arrow only to its stated destination: do not add shortcut arrows, automatic loopbacks or unsupported branches. Fit the specified text with generous spacing and avoid intersections. This describes implemented software at commit 26bd92a, not a proposed workflow. Footer exactly: AIM-STEP · 实现 26bd92a · 2026-11-16. 标题“Search strategy ④｜检索执行、保存与交接”。副标题“直接API检索与外部数据库执行 · 批次可追溯”.
+Top “当前可用的精确查询”→diamond“数据库执行方式”.
+LEFT “PubMed／Europe PMC：页面内直接检索”→two parallel boxes “PubMed：ESearch取ID；EFetch每批≤200；当前实现最多前10000个ID” and “Europe PMC：core结果、cursorMark分页；每页≤200”.
+Both join “逐批保存：总命中total、已取downloaded、新增added、query、时间、游标、警告与来源”.
+RIGHT “其他11库：打开外部平台；作者复制草稿、选择集合、执行并导出”→“可导入导出文件；标为Imported；未知query或总命中不伪造”.
+Both join “书目清洗；按DOI／PMID／数据库原生ID归并，合并来源”→cylinder “IndexedDB：aimstep-search-results；项目records＋runs；策略草稿另存localStorage”.
+Side red box only connected from direct retrieval: “Stop／异常／关页：保留已保存数据；Paused／Partial／Error按条件Continue”. Note “PubMed到ID上限不能假装Complete；需分拆检索或导入完整结果”.
+Bottom three outputs from saved records:
+“按选择批次导出RIS／CSV／结果JSON”；
+“完整工作区JSON备份；策略与历史TXT”；
+“Screening source按所选检索批次读取；另做报告级去重”.
+Footer “检索阶段标识符归并≠Screening source完整去重；导入文件≠已执行检索；记录与附件主要保存在当前浏览器。”
+Keep external execution separate from direct API and do not imply all 13 platforms return records automatically.

@@ -1,0 +1,20 @@
+flowchart TD
+ A[已选元素均有Keywords<br/>且种子抽取不在运行] --> GEN[Generate按元素输出核心实体与候选词<br/>初始每元素最多80词；不覆盖Keywords]
+ GEN --> CLEAN[清洗Unicode、空白和重复<br/>拒绝字段语法、Boolean操作符与过短截词]
+ CLEAN --> NLM[每元素最多10个种子查询NLM<br/>ESearch查MeSH、ESummary取词条]
+ NLM --> MATCH{descriptor、有效D编号<br/>首选词或entry词规范化精确匹配？}
+ MATCH -->|是| VOCAB[加入词条及entry候选<br/>记录D编号、URI与scope]
+ MATCH -->|否| FREE[保留自由词；不宣称已核验主题词]
+ VOCAB --> POOL[按元素绑定候选ID<br/>自由词池受120词清洗上限约束]
+ FREE --> POOL
+ POOL --> REVIEW[LLM结合原规则和scope审查候选相关性<br/>每批最多24；无效最多重试1次]
+ REVIEW --> OK{复核成功且有接受的自由词？}
+ OK -->|是| ACCEPT[采用接受的自由词与获准主题词]
+ OK -->|否| FALLBACK[保留初始模型自由词<br/>标复核不完整，不添加未复核主题词]
+ ACCEPT --> COUNT[PubMed词条命中信号<br/>每元素至多30个计数探测]
+ FALLBACK --> COUNT
+ COUNT --> ZERO[零命中不删除<br/>中文或超预算标未检查<br/>网络失败标unavailable或partial]
+ ZERO --> AUDIT[保存输入、候选、接受拒绝理由、词表来源<br/>计数结果、模型、方法版本及时间]
+ AUDIT --> NEXT[图③：按当前词表生成策略]
+ NOTE[MeSH成员身份不是语义等价证明<br/>命中数不是召回率；词表核对失败不伪造成功]
+ STOP[Clear或Stop取消生成；输入变化拒绝迟到覆盖]

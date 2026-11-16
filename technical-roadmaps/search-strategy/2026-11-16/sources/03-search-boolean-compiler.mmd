@@ -1,0 +1,19 @@
+flowchart TD
+ A[所有已选元素扩展当前且非空<br/>至少一数据库，日期限制有效] --> FREEZE[冻结标准快照、精确词表与draftHash]
+ FREEZE --> ATOM[给自由词、MeSH和适用设计过滤器<br/>分配唯一atom ID]
+ ATOM --> PLAN[LLM规划AND或OR节点、参数与理由<br/>不直接自由书写整条查询]
+ PLAN --> VALID{每个atom恰好出现一次？<br/>无未知、遗漏、重复、循环或深度超限？}
+ VALID -->|否| RETRY{已重试一次？}
+ RETRY -->|否| PLAN
+ RETRY -->|是| FAIL[保留既有策略，显示错误]
+ VALID -->|是| CURRENT{输入hash仍匹配且扩展就绪？}
+ CURRENT -->|否| FAIL
+ CURRENT -->|是| COMPILE[按目标数据库确定性编译<br/>字段、短语、邻近、主题词及日期语言限制]
+ COMPILE --> DB[13个已配置数据库<br/>2个直接检索、11个外部执行]
+ DB --> AUDIT[保存各库可编辑查询与booleanAudit<br/>树、词表、原标准、模型和时间]
+ AUDIT --> COUNT[仅PubMed及Europe PMC探测总命中数]
+ COUNT --> REF[有已保存参考PMID时<br/>后台检查该给定参考集覆盖]
+ REF --> NEXT[图④：检索执行与保存]
+ MESH[普通MeSH仅编入PubMed / Europe PMC / Ovid<br/>其他库保留自由词，不自动转为Emtree] -. 编译边界 .-> COMPILE
+ FILTER[适用且未手改的RCT设计可用固定过滤器<br/>过滤器作为不可拆atom保留内部逻辑] -. 编译边界 .-> COMPILE
+ NOTE[排除规则不自动变NOT；固定过滤器内部NOT例外<br/>命中数与给定PMID覆盖不等于独立召回率验证]

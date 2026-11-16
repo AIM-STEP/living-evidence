@@ -1,0 +1,25 @@
+flowchart TD
+ A[当前有效标准化规则或规范化草稿] --> VIEW[预览Inclusion、Exclusion、Limits、Description]
+ VIEW --> EDIT[作者编辑可见规则、主题或Description]
+ EDIT --> SIG{预览源签名仍匹配？}
+ SIG -->|否| CONCURRENT[拒绝覆盖；保留编辑供复制或重试]
+ SIG -->|是| SAVEEDIT[Save更新原字段、规范化签名<br/>及最多200条预览编辑历史]
+ VIEW --> PENDING[Pending clarification逐项问题]
+ PENDING --> CHOICE{作者选择Meets或Does not meet}
+ CHOICE --> TEXT{有可应用的具体规则？}
+ TEXT -->|否| REMINDER[只确认提醒，不凭空创建规则]
+ TEXT -->|是| SIDE{选择的方向？}
+ SIDE -->|Meets| INC[加入对应领域condition纳入规则]
+ SIDE -->|Does not meet| EXC[加入对应领域uncertain排除规则]
+ INC --> APPLY
+ EXC --> APPLY
+ REMINDER --> APPLY[记录item、选择、领域、规则和时间<br/>移出待澄清；必要时替换对应占位句]
+ APPLY --> SAVED{立即保存成功？}
+ SAVED -->|否| ROLLBACK[恢复此前选择、标准与状态<br/>保留可重试内容]
+ SAVED -->|是| FULL[完整有效规则与澄清记录]
+ SAVEEDIT --> FULL
+ FULL --> FRONT[页面隐藏已确认规则的重复展示]
+ FULL --> EXPORT[完整摘要、实际标准和Word导出<br/>继续包含已确认的规则]
+ FRONT --> NEXT[图④：保存、导出及下游交接]
+ EXPORT --> NEXT
+ NOTE[隐藏不是删除；无独立强制最终确认按钮<br/>尚有Pending不是Next导航的硬阻断] -. 阅读提示 .-> VIEW

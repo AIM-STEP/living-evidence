@@ -1,0 +1,18 @@
+flowchart TD
+ A[已编辑、生成或澄清的当前标准] --> STORE[按scope提交工作区与标准库内容快照]
+ STORE --> DB[(localStorage：aimstep-eligibility<br/>aimstep-eligibility-library)]
+ DB --> LIB[选择、更新或删除保存集<br/>标准快照不保存附件文件本体]
+ STORE --> SUMMARY[单独发布完整摘要及rowsSig<br/>aimstep-eligibility-summary]
+ STORE --> INVALID[标准签名变化时撤销<br/>后续步骤1、2、3完成标记]
+ A --> WORD[Download前先保存预览编辑]
+ WORD --> DOCX[真实DOCX<br/>Domain / Include / Exclude表<br/>Limits、Description、澄清决策]
+ A --> NEXT[Next前保存；中止生成或语音]
+ NEXT --> SAVED{保存成功？}
+ SAVED -->|否| BLOCK[阻止离开；提示保存问题]
+ SAVED -->|是| READY{模式有效且当前<br/>至少一条非空纳入规则？}
+ READY -->|是| MARK[标记步骤1完成<br/>写session交接标记]
+ MARK --> SEARCH[Search strategy读取当前标准]
+ READY -->|否| NAV[仍允许导航Search strategy<br/>不标步骤完成、不写有效交接]
+ CLEAR[Clear当前标准<br/>保留研究问题和附件，记录清空历史] --> STORE
+ NOTE[工作区与标准库成组回滚<br/>摘要是另一次写入，不宣称全部键原子提交<br/>嵌入预览隔离草稿，宿主Save后才应用]
+ LOCAL[当前浏览器存储不等于跨设备云同步]
