@@ -1,0 +1,58 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const P=require('../app/screening-prompt.js'),stages=require('../app/screening-stages.js'),calibration=require('../app/screening-calibration.js');
+const html=fs.readFileSync('title-abstract-screening.html','utf8');
+function part(a,b){const i=html.indexOf(a),j=html.indexOf(b,i);assert(i>=0&&j>i,a);return html.slice(i,j);}
+const criteria={question:'Synthetic review context',rows:[{title:'Population',condition:'Adults with condition A OR condition B',uncertain:'Children'},{title:'Intervention',condition:'Exercise AND usual care',uncertain:''}]},sig={criteriaSig:'c1',stageSig:'s1'};
+(async()=>{
+ const generated=P.resolve(criteria,null,sig);assert(generated.text.includes(criteria.rows[0].condition));assert(generated.text.includes('not exclusion evidence'));assert(generated.text.includes('exact words'));assert.equal(generated.mode,'generated');assert(generated.current);
+ const original=JSON.stringify(criteria);P.generate(criteria);assert.equal(JSON.stringify(criteria),original);
+ const custom=P.saved('Judge the age criterion carefully. Keep unreported age unclear.','edited',sig),resolved=P.resolve(criteria,custom,sig);
+ assert.equal(resolved.text,custom.text);assert(resolved.current);assert(!P.resolve(criteria,custom,{...sig,stageSig:'s2'}).current);assert.notEqual(P.resolve(criteria,custom,{...sig,stageSig:'s2'}).hash,resolved.hash);
+ assert(P.resolve(criteria,P.saved('Old generated text','generated',sig),{...sig,stageSig:'s2'}).text.includes('ACTIVE SCREENING CRITERIA'));
+ for(const [filename,contents] of [['a.txt','\uFEFFUse exact quotations.'],['a.md','# Screening\nUse exact quotations.'],['a.json',JSON.stringify(P.exportPrompt(resolved))],['a.json','{"prompt":"Screen carefully."}']])assert(P.parse(contents,filename));
+ assert.equal(P.parse(JSON.stringify(P.exportPrompt(resolved)),'saved.json'),custom.text);
+ for(const [text,name] of [['bad','file.exe'],['{bad','file.json'],['{"apiKey":"never import keys"}','file.json'],['','a.txt'],['a\0b','a.txt'],['a'.repeat(P.MAX_CHARS+1),'a.md']])assert.throws(()=>P.parse(text,name));
+ console.log('PASS generated criteria, no invented rewriting, custom/stale versions, local imports, round-trip and malformed input checks');
+ // Exercise actual prompt construction and actual request routing, not a duplicate implementation.
+ let actualPayload;
+ const c={AimstepScreeningPrompt:P,source:{criteria,criteriaSig:'c1'},workspace:{screeningPrompt:custom,screeningModel:'synthetic-jev'},activeScreeningCriteria:()=>criteria,screeningStageSig:()=> 's1',calibrationEngine:calibration,
+ currentScreeningPrompt:()=>P.resolve(criteria,c.workspace.screeningPrompt,sig),text:(v,n)=>String(v??'').slice(0,n),fingerprint:P.hash,now:()=> 'test',resolvePilotModel:async()=>({provider:'typesafe',name:'TypeSafe: synthetic-jev',base:'/backend'}),typesafeKey:'',
+ typesafeRequest:async(base,payload)=>{actualPayload=payload;return {version:'typesafe-screen-v6-prompt',model:'synthetic-jev-version',value:{criteria:criteria.rows.map(r=>({dimension:r.title,judgment:'met',quote:'Adults received exercise and usual care.',reason:'Supported.'})),decision:'include'},screeningPrompt:{version:P.VERSION,hash:resolved.hash},raw:{}};}};
+ vm.createContext(c);vm.runInContext(part('function pilotPrompt(','// A fresh random sample:'),c);
+ const record={uid:'a',title:'Synthetic trial',abstract:'Adults received exercise and usual care.'};
+ for(const variant of [1,2]){const answer=await c.screenPilotRecord(record,0,null,variant);assert.equal(actualPayload.action,'screen');assert.equal(actualPayload.model,'synthetic-jev');assert.equal(actualPayload.input.screeningPrompt.text,custom.text);assert(actualPayload.input.stagePolicy.includes(custom.text));assert.equal(answer.screeningPromptHash,resolved.hash);assert.equal(answer.promptDelivery,'structured-prompt');assert.equal(answer.decision,'yes');}
+ c.workspace.screeningPrompt={...custom,stageSig:'outdated'};await assert.rejects(c.screenPilotRecord(record,0),/criteria changed/i);
+ console.log('PASS actual two-reading requests carry the saved instructions to TypeSafe, retain exact-evidence judgments and reject stale prompts');
+ // Actual save/sync functions must archive runs and roll back failed storage.
+ let failSave=false,saves=0,currentStage='s1';const drafts=new Map();
+ const a={AimstepScreeningPrompt:P,structuredClone,source:{criteria,criteriaSig:'c1',sourceSig:'records',records:[record]},workspace:{pilot:{rounds:[{ids:['a']}],approved:{old:true}},full:{ai:{a:{decision:'no'}}},sourceSig:'records',criteriaSig:'c1'},busy:'',sourceError:'',screeningStagesReady:()=>true,screeningStageSig:()=>currentStage,activeScreeningCriteria:()=>criteria,
+ screeningHasProgress:()=>!!a.workspace.pilot.rounds.length,clearCalibration:()=>{a.workspace.pilot={rounds:[],ai:{},human:{},approved:null};a.workspace.full={ai:{}}},now:()=> 'test',log(){},save:async()=>{saves++;if(failSave)throw Error('synthetic storage failure')},loadSource:async()=>{},publishSummary(){},render(){},clearActionsBlocked:()=>false,
+ pilotReviewDrafts:drafts,pilotReviewErrors:new Map(),expandedPilotAssessments:new Set(),fullReviewErrors:new Map(),exclusionDrafts:new Map(),expandedFullAssessments:new Set(),collapsedFullAssessments:new Set(),fullNow:new Map(),fullDone:[],pilotView:-1,pilotFilter:'agreed',fullFilter:''};
+ vm.createContext(a);vm.runInContext(part('function currentScreeningPrompt()','function readySource()')+part('function resetPromptAssessmentViews()','const screeningPromptEditor='),a);
+ await a.syncPromptVersion();assert.equal(a.workspace.screeningPromptArchives.length,1);assert.equal(a.workspace.pilot.rounds.length,0);const count=saves;await a.syncPromptVersion();assert.equal(saves,count);
+ a.workspace.pilot.rounds=[{ids:['a']}];const previousHash=a.workspace.screeningPromptAppliedHash;
+ await a.saveScreeningPrompt({text:custom.text,mode:'edited'},sig);assert.equal(a.workspace.screeningPromptArchives.length,2);assert.notEqual(a.workspace.screeningPromptAppliedHash,previousHash);assert.equal(a.workspace.pilot.rounds.length,0);
+ a.workspace.pilot.rounds=[{ids:['a']}];const before=JSON.stringify(a.workspace);failSave=true;
+ await assert.rejects(a.saveScreeningPrompt({text:'New changed instructions','mode':'edited'},sig),/storage failure/);assert.equal(JSON.stringify(a.workspace),before);assert.equal(a.busy,'');
+ failSave=false;await a.saveScreeningPrompt({text:custom.text,mode:'edited'},sig);assert.equal(a.workspace.pilot.rounds.length,1,'unchanged text keeps existing runs');
+ currentStage='s2';await assert.rejects(a.saveScreeningPrompt({text:'Unreviewed upstream change',mode:'edited'},sig),/criteria changed/i);assert.equal(a.workspace.screeningPrompt.text,custom.text);
+ console.log('PASS actual sync/save archives once, clears dependent approval, preserves unchanged runs and rolls back failed saves or upstream changes');
+ // Load the actual editor with draft isolation and failed-save recovery.
+ const elements=new Map(),listeners={};const el=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',hidden:false,disabled:false,open:false,handlers:{},addEventListener(type,fn){this.handlers[type]=fn},click(){this.clicked=true},showModal(){this.open=true},close(){this.open=false;this.handlers.close?.()}});return elements.get(id)};
+ const previousGlobals={document:global.document,window:global.window,confirm:global.confirm,AimstepScreeningPrompt:global.AimstepScreeningPrompt};
+ global.document={getElementById:el};global.window={addEventListener(type,fn){listeners[type]=fn}};global.confirm=()=>true;global.AimstepScreeningPrompt=P;
+ let saved=null,failEditor=false,downloaded;const editor=require('../app/screening-prompt-editor.js').mount({blocked:()=>false,context:()=>({criteria,signatures:sig}),current:()=>P.resolve(criteria,saved,sig),notice:assert.fail,apply:async draft=>{if(failEditor)throw Error('synthetic editor failure');saved=P.saved(draft.text,draft.mode,sig,draft.filename)},download:value=>{downloaded=value}});
+ el('open-screening-prompt').handlers.click();assert(editor.isOpen());assert(el('screening-prompt-text').value.includes('Adults with condition A OR condition B'));
+ el('screening-prompt-text').value='Editable custom instructions';el('screening-prompt-text').handlers.input();assert(editor.dirty());assert.equal(saved,null);failEditor=true;await el('save-screening-prompt').handlers.click();assert.equal(saved,null);assert.equal(el('screening-prompt-text').value,'Editable custom instructions');assert.match(el('screening-prompt-error').textContent,/editor failure/);
+ failEditor=false;await el('save-screening-prompt').handlers.click();assert.equal(saved.text,'Editable custom instructions');assert(!editor.dirty());
+ await el('screening-prompt-file').handlers.change({target:{files:[{name:'custom.md',size:20,text:async()=> 'Imported guidance'}],value:'file'}});assert.equal(el('screening-prompt-text').value,'Imported guidance');assert.equal(saved.text,'Editable custom instructions');el('export-screening-prompt').handlers.click();assert.equal(P.parse(downloaded,'export.json'),'Imported guidance');await el('save-screening-prompt').handlers.click();assert.equal(saved.mode,'imported');assert.equal(saved.filename,'custom.md');
+ const oldDraft=el('screening-prompt-text').value;await el('screening-prompt-file').handlers.change({target:{files:[{name:'bad.json',size:10,text:async()=>'{invalid'}],value:'file'}});assert.equal(el('screening-prompt-text').value,oldDraft);assert(!el('screening-prompt-error').hidden);
+ el('close-screening-prompt').handlers.click();assert(!editor.isOpen());
+ Object.assign(global,previousGlobals);
+ console.log('PASS actual editor generates, imports, edits, exports and saves drafts without losing text on file or storage failure');
+ for(const script of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(script[1].trim())new vm.Script(script[1]);
+ assert(html.includes('id="open-screening-prompt"'));assert(html.includes('screening-prompt-editor.js'));
+ fs.writeFileSync('/private/tmp/aimstep-screening-prompt-request.json',JSON.stringify(actualPayload));
+ console.log('PASS page scripts parse; actual TypeSafe request fixture saved for connector verification');
+})().catch(e=>{console.error(e);process.exitCode=1});

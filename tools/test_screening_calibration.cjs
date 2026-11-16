@@ -23,7 +23,7 @@ const bounded=engine.select(many,records[0]);assert(JSON.stringify(bounded).leng
 // Actual local-model prompt contains the selected rules and the immutable version.
 const html=fs.readFileSync(path.join(__dirname,'../title-abstract-screening.html'),'utf8');
 const ctx=vm.createContext({pilotReviewSaving:false,pilotReviewDrafts:new Map(),calibrationEngine:engine,source:{criteria,criteriaSig:'sig'},workspace:{pilot},record:records[0],approved,records,JSON,
- screeningProvider:()=> 'local',stale:()=>false,pilotCriteriaSig:()=> 'criteria-prompt',
+ activeScreeningCriteria:()=>criteria,screeningStagesReady:()=>true,screeningProvider:()=> 'local',stale:()=>false,pilotCriteriaSig:()=> 'criteria-prompt',
  currentCalibration:()=>engine.build(pilot,records,criteria,'sig'),calibrationReady:()=>engine.build(pilot,records,criteria,'sig').pending.length===0,
  pilotRoundState:()=>({revealed:true,aiDone:true,votesDone:true})});
 function load(start,end){const a=html.indexOf(start),b=html.indexOf(end,a);assert(a>=0&&b>a);vm.runInContext(html.slice(a,b),ctx);}

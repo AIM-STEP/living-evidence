@@ -246,7 +246,7 @@ th{background:#f4f4f4}
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
-<script defer src="app/tool-i18n-catalog.js?v=20261116-study-links"></script>
+<script defer src="app/tool-i18n-catalog.js?v=20261116-screening-prompt"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261021-49">
@@ -280,7 +280,7 @@ th{background:#f4f4f4}
 </div>
 <div class="stack">
 <section class="panel">
-<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2 data-ui-localize>Pilot screening</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot screening works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar pilot-criteria-actions"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10v15H5V5h4m0-2h6v4H9zM8 11l1 1 2-2m2 1h3M8 16l1 1 2-2m2 1h3"/></svg>Eligibility criteria</button><button class="btn small" id="open-screening-criteria" type="button" aria-haspopup="dialog" aria-controls="screening-stages-dialog" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4"/></svg>Screening criteria</button></div></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round" data-ui-localize>Approve pilot</button><button class="btn small clear-action" id="clear-pilot" type="button" aria-label="Clear pilot screening" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Pilot screening</span></button></div></div>
+<div class="panel-head pilot-panel-head"><div class="pilot-heading"><div class="pilot-title-actions"><h2 data-ui-localize>Pilot screening</h2><button class="pilot-help-button" id="pilot-help-button" type="button" aria-label="How pilot screening works" aria-describedby="pilot-help-tooltip"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5"/><circle class="pilot-help-dot" cx="10" cy="6" r=".8"/></svg></button></div><div class="toolbar pilot-criteria-actions"><button class="btn small" id="open-criteria" type="button" aria-haspopup="dialog" aria-controls="criteria-dialog" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10v15H5V5h4m0-2h6v4H9zM8 11l1 1 2-2m2 1h3M8 16l1 1 2-2m2 1h3"/></svg>Eligibility criteria</button><button class="btn small" id="open-screening-criteria" type="button" aria-haspopup="dialog" aria-controls="screening-stages-dialog" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M16 10v4M10 17v4"/></svg>Screening criteria</button><button class="btn small" id="open-screening-prompt" type="button" aria-haspopup="dialog" aria-controls="screening-prompt-dialog" data-ui-localize>Screening prompt</button></div></div><div class="toolbar"><button class="btn small gate" id="approve-pilot" type="button" aria-pressed="false" disabled title="Available after at least one completed pilot round" data-ui-localize>Approve pilot</button><button class="btn small clear-action" id="clear-pilot" type="button" aria-label="Clear pilot screening" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="collapse-toggle" type="button" id="toggle-pilot" aria-expanded="true" aria-controls="pilot-body" title="Collapse Pilot screening"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg><span class="sr-only" data-ui-localize>Collapse Pilot screening</span></button></div></div>
 <div class="panel-body" id="pilot-body">
 <button class="btn small" type="button" id="screen-model-archives" hidden data-ui-localize>Download previous screening runs</button>
 
@@ -364,6 +364,15 @@ th{background:#f4f4f4}
 <div class="toolbar stages-footer"><button type="button" class="btn small clear-action" id="reset-stages" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button type="button" class="btn small clear-action" id="save-stages" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button></div>
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
+<dialog id="screening-prompt-dialog" class="dialog" aria-labelledby="screening-prompt-title"><div class="panel-head"><h2 id="screening-prompt-title" data-ui-localize>Screening prompt</h2><button type="button" class="source-delete" id="close-screening-prompt" aria-label="Close screening prompt">×</button></div><div class="panel-body">
+<p class="hint" data-ui-localize>The prompt is generated from the saved, enabled Screening criteria. Edit how the criteria are applied; change eligibility rules in Screening criteria. The saved prompt is sent to TypeSafe for screening.</p>
+<div class="toolbar"><button type="button" class="btn small" id="generate-screening-prompt" data-ui-localize>Generate</button><button type="button" class="btn small" id="import-screening-prompt" data-ui-localize>Import from local</button><input id="screening-prompt-file" type="file" accept=".txt,.md,.json,text/plain,text/markdown,application/json" hidden></div>
+<p class="hint" id="screening-prompt-status" role="status"></p>
+<label class="label" for="screening-prompt-text" data-ui-localize>Prompt instructions</label><textarea class="textarea" id="screening-prompt-text" rows="20" maxlength="20000" spellcheck="false" style="width:100%;font-family:ui-monospace,monospace"></textarea>
+<details><summary data-ui-localize>Execution preview</summary><pre id="screening-prompt-preview" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
+<p class="hint" data-ui-localize>Saving a changed prompt archives existing screening results and requires a new pilot. Imported or edited prompts need review after Screening criteria change. Supported files: TXT, Markdown and JSON.</p>
+<p class="notice error" id="screening-prompt-error" role="alert" hidden></p><div class="toolbar"><button type="button" class="btn small" id="export-screening-prompt" data-ui-localize>Export</button><button type="button" class="btn small" id="save-screening-prompt" data-ui-localize>Save</button></div>
+</div></dialog>
 <script src="app/study-links.js?v=study-links-v1"></script>
 <script src="app/extraction-results.js?v=20261116-study-links"></script>
 <script src="app/screening-dedup-export.js?v=duplicates-five-columns-v2"></script>
@@ -371,6 +380,8 @@ th{background:#f4f4f4}
 <script src="app/screening-stages.js?v=framework-editor-v3"></script>
 <script src="app/screening-criteria-suggestions.js?v=1"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
+<script src="app/screening-prompt.js?v=20261116-v1"></script>
+<script src="app/screening-prompt-editor.js?v=20261116-v1"></script>
 <script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js"></script><script>
 'use strict';
 (() => {
@@ -607,12 +618,17 @@ async function loadSource({persist=true,includeReturns=true}={}){
   await applyFulltextReturns(returned);
   const synchronized=persist?await syncSource():false;
   if(numbersChanged&&persist&&!synchronized)await save();
+  if(persist&&globalThis.AimstepScreeningPrompt&&screeningStagesReady()&&!sourceError)await syncPromptVersion();
 }
 function stale(){return !!workspace&&(workspace.sourceSig!==source.sourceSig||workspace.criteriaSig!==source.criteriaSig)}
 function screeningStagesReady(){return AimstepScreeningStages.valid(workspace?.screeningStages,source.criteria,source.criteriaSig)}
 function screeningStageSig(){return AimstepScreeningStages.signature(workspace?.screeningStages)}
 function activeScreeningCriteria(){return AimstepScreeningStages.active(source.criteria,workspace?.screeningStages)}
-function readySource(){return screeningStagesReady()&&!stale()&&source.records.length>=3&&!!source.criteria?.rows?.length}
+function currentScreeningPrompt(){
+  if(!globalThis.AimstepScreeningPrompt||!screeningStagesReady())return null;
+  return AimstepScreeningPrompt.resolve(activeScreeningCriteria(),workspace?.screeningPrompt,{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()});
+}
+function readySource(){return screeningStagesReady()&&!stale()&&source.records.length>=3&&!!source.criteria?.rows?.length&&(!globalThis.AimstepScreeningPrompt||currentScreeningPrompt()?.current)}
 // Records going forward (Yes and Maybe) and the criteria in use, for the
 // Full-text assess page. Written shortly after each change.
 let handoffTimer=null;
@@ -676,7 +692,7 @@ async function syncSource(){
   if(!workspace||sourceError||(workspace.sourceSig===source.sourceSig&&workspace.criteriaSig===source.criteriaSig))return false;
   const before=structuredClone(workspace),progress=screeningHasProgress();
   try{
-    if(progress)(workspace.dedupArchives??=[]).push({at:now(),reason:'source-or-deduplication-version-changed',automatic:true,drafts:{pilot:[...pilotReviewDrafts],exclusions:[...exclusionDrafts]},previousSourceSig:workspace.sourceSig,previousCriteriaSig:workspace.criteriaSig,screeningStages:structuredClone(workspace.screeningStages||null),pilot:structuredClone(workspace.pilot),full:structuredClone(workspace.full)});
+    if(progress)(workspace.dedupArchives??=[]).push({at:now(),reason:'source-or-deduplication-version-changed',automatic:true,drafts:{pilot:[...pilotReviewDrafts],exclusions:[...exclusionDrafts]},previousSourceSig:workspace.sourceSig,previousCriteriaSig:workspace.criteriaSig,screeningStages:structuredClone(workspace.screeningStages||null),screeningPrompt:structuredClone(workspace.screeningPromptSnapshot||null),pilot:structuredClone(workspace.pilot),full:structuredClone(workspace.full)});
     workspace.sourceSig=source.sourceSig;workspace.criteriaSig=source.criteriaSig;
     clearCalibration();
     workspace.sourceUpdateNotice=progress?'Screening source updated. Previous assessments were archived. Start a new pilot.':'';
@@ -833,7 +849,7 @@ function pilotMetrics(ids){
     recommended:n>0&&fn===0&&((kappa!==null&&kappa>=0.6)||po>=0.75)};
 }
 const pct=v=>v===null?'—':Math.round(v*100)+'%';
-function pilotCriteriaSig(){return fingerprint({criteriaSig:source.criteriaSig,stages:screeningStageSig(),prompt:PILOT_PROMPT})}
+function pilotCriteriaSig(){return fingerprint({criteriaSig:source.criteriaSig,stages:screeningStageSig(),prompt:PILOT_PROMPT,...(globalThis.AimstepScreeningPrompt?{screeningPrompt:currentScreeningPrompt()?.hash||''}:{})})}
 function pilotApprovalValid(){const a=workspace?.pilot?.approved,st=a?pilotRoundState(a.round):null;return screeningStagesReady()&&!pilotReviewSaving&&!pilotReviewDrafts.size&&!!a&&a.round===workspace.pilot.rounds.length-1&&!!st?.revealed&&st.aiDone&&st.votesDone&&(a.provider||'local')===screeningProvider()&&a.criteriaSig===pilotCriteriaSig()&&!!a.calibration&&a.calibration.hash===currentCalibration().hash&&calibrationReady()&&!stale()}
 function pilotHasProgress(){return !!workspace?.pilot?.rounds?.length}
 
@@ -1028,11 +1044,12 @@ $('calibration-pending').addEventListener('click',e=>{const b=e.target.closest('
 // first and the criteria in reverse order; criteria, examples and rule are the same.
 function pilotPrompt(record,round,variant=1,calibration=null){
   const c=activeScreeningCriteria(),rows=variant===2?c.rows.slice().reverse():c.rows,rec={title:record.title,abstract:record.abstract||'(no abstract available)'};
-  const feedback=calibrationEngine.select(calibration,record);
+  const feedback=calibrationEngine.select(calibration,record),compiled=globalThis.AimstepScreeningPrompt?currentScreeningPrompt():null;
+  if(compiled&&!compiled.current)throw new Error('Screening criteria changed. Review and save Screening prompt before screening.');
   return JSON.stringify({...(variant===2?{record:rec,task:'Read this record, then judge it against each criterion. Return JSON only.'}:{task:'Screen this record against each criterion. Return JSON only.'}),question:c.question||'',stagePolicy:'Use only the supplied edited screening criteria. Disabled and deleted elements must not cause exclusion, even if mentioned in the question or reviewer feedback. Interpret screening phrases semantically, not as literal keyword requirements. Synonyms joined by OR are alternatives, not cumulative requirements. Respect AND, negation, thresholds and exceptions. Missing keywords are not exclusion evidence. Missing information is not an exclusion. For an exclusion-only rule, not met means the stated exclusion applies; met means the text explicitly rules it out; otherwise unclear.',
     criteria:rows.map(r=>({dimension:r.title,inclusionRule:[r.condition,r.definition].filter(Boolean).join('\n'),exclusionRule:r.uncertain})),
     reviewerCalibration:feedback,reviewerExamples:feedback.examples,...(variant===2?{}:{record:rec}),
-    answerFormat:{criteria:rows.map(r=>({dimension:r.title,judgment:'met | not met | unclear',quote:'exact words copied from the title or abstract, or empty',reason:'one short sentence'})),decision:'include | maybe | exclude',reason:'one short sentence'}});
+    answerFormat:{criteria:rows.map(r=>({dimension:r.title,judgment:'met | not met | unclear',quote:'exact words copied from the title or abstract, or empty',reason:'one short sentence'})),decision:'include | maybe | exclude',reason:'one short sentence'},...(compiled?{screeningPrompt:{version:compiled.version,hash:compiled.hash,text:compiled.text},stagePolicy:'Only the supplied enabled structured screening criteria apply. Disabled or deleted elements, the background question and reviewer feedback cannot introduce additional criteria. Missing information is unclear, not exclusion evidence. Exclusion requires an exact quotation from this record. Use the following saved screening prompt as operational guidance, subject to those requirements and the connector output schema.\n\n'+compiled.text}:{})});
 }
 const squash=v=>String(v||'').toLowerCase().replace(/\s+/g,' ').trim();
 // The decision follows from the per-criterion judgments, not from the model's
@@ -1059,12 +1076,12 @@ function pilotDecision(value,record){
 }
 async function screenPilotRecord(record,round,signal,variant=1,calibration=null){
   const prompt=pilotPrompt(record,round,variant,calibration),selected=await resolvePilotModel(signal);
-  const feedback=JSON.parse(prompt).reviewerCalibration;
-  const trace={calibrationHash:feedback.hash,calibrationLessonIds:feedback.selectedLessonIds,calibrationTotalLessons:feedback.totalLessons};
+  const input=JSON.parse(prompt),feedback=input.reviewerCalibration;
+  const trace={calibrationHash:feedback.hash,calibrationLessonIds:feedback.selectedLessonIds,calibrationTotalLessons:feedback.totalLessons,...(input.screeningPrompt?{screeningPromptHash:input.screeningPrompt.hash,screeningPromptVersion:input.screeningPrompt.version}:{})};
   if(selected.provider==='typesafe'){
     const result=await typesafeRequest(selected.base,{action:'screen',...(typesafeKey?{apiKey:typesafeKey}:{}),model:workspace.screeningModel,input:JSON.parse(prompt)},signal);
     return {...pilotDecision(result.value,record),...trace,round,model:selected.name,resolvedModel:result.model,provider:'typesafe',
-      prompt:result.version+(variant===2?'-reading-2':''),promptHash:fingerprint([result.version,prompt]),criteriaSig:source.criteriaSig,stageSig:screeningStageSig(),at:now(),raw:JSON.stringify(result.raw),usage:result.usage};
+      prompt:result.version+(variant===2?'-reading-2':''),promptHash:fingerprint([result.version,prompt]),criteriaSig:source.criteriaSig,stageSig:screeningStageSig(),at:now(),raw:JSON.stringify(result.raw),usage:result.usage,...(input.screeningPrompt?{promptDelivery:result.screeningPrompt?.hash===input.screeningPrompt.hash?'structured-prompt':'stage-policy'}:{})};
   }
   const {value,raw,model}=await pilotModelJSON([{role:'system',content:pilotSystem},{role:'user',content:prompt}],pilotSchema,signal);
   return {...pilotDecision(value,record),...trace,round,model,provider:'local',prompt:PILOT_PROMPT+(variant===2?'-reading-2':''),promptHash:fingerprint([pilotSystem,prompt]),criteriaSig:source.criteriaSig,stageSig:screeningStageSig(),at:now(),raw};
@@ -1075,11 +1092,16 @@ function pilotSample(size,seed){
   const used=new Set(workspace.pilot.rounds.flatMap(r=>r.ids));
   return source.records.filter(r=>!used.has(r.uid)).map(r=>[parseInt(fingerprint(seed+'|'+r.uid),16),r.uid]).sort((a,b)=>a[0]-b[0]||a[1].localeCompare(b[1])).slice(0,size).map(x=>x[1]);
 }
+let pilotStarting=false;
 async function startPilotRound(){
-  if(busy||pilotReviewSaving||stale()||!readySource())return;
+  if(pilotStarting||busy||pilotReviewSaving||stale()||!readySource())return;
+  pilotStarting=true;$('run-pilot').disabled=true;
+  try{
   if(pilotReviewDrafts.size){showNotice('pilot-message','Save the correction you are editing before starting another round.','warning');return;}
   const previous=pilotRoundState(workspace.pilot.rounds.length-1);
   if(previous?.aiDone&&!previous.votesDone){showNotice('pilot-message','Save your review for every record before starting another round.','warning');return;}
+  if(globalThis.AimstepScreeningPrompt)await syncPromptVersion();
+  if(busy||pilotReviewSaving||stale()||!readySource())return;
   await resolvePilotModel();if(busy||!readySource())return;
   const p=workspace.pilot,last=p.rounds.length-1;
   let i=last;
@@ -1089,7 +1111,7 @@ async function startPilotRound(){
     if(!calibrationReady()){showNotice('pilot-message','Complete the correction fields for pilot disagreements before starting another round.','warning');return;}
     const calibration=currentCalibration(p.rounds.length);
     p.approved=null;workspace.sourceUpdateNotice='';
-    p.rounds.push({reviewMode:PILOT_REVIEW_MODE,ids,seed,calibration,size:p.size,startedAt:now(),criteriaSig:source.criteriaSig,stages:screeningStageSig(),prompt:PILOT_PROMPT,revealedAt:''});
+    p.rounds.push({reviewMode:PILOT_REVIEW_MODE,ids,seed,calibration,size:p.size,startedAt:now(),criteriaSig:source.criteriaSig,stages:screeningStageSig(),prompt:PILOT_PROMPT,...(globalThis.AimstepScreeningPrompt?{screeningPromptHash:currentScreeningPrompt()?.hash}:{}),revealedAt:''});
     i=p.rounds.length-1;pilotView=i;pilotFilter='agreed';
     log('pilot-round-started',{round:i+1,records:ids.length,seed,criteriaSig:source.criteriaSig});
     await save();
@@ -1114,6 +1136,7 @@ async function startPilotRound(){
     if(e.name==='AbortError')showNotice('pilot-message','Stopped. Records already screened are saved; click Resume to continue.','warning');
     else{log('model-error',{stage:'pilot',round:i+1,message:text(e.message,500)});await save().catch(()=>{});showNotice('pilot-message',e.message,'error')}
   }finally{busy='';controller=null;await revealIfReady(i);render()}
+  }finally{pilotStarting=false;render()}
 }
 async function revealIfReady(i){
   const st=pilotRoundState(i);if(!st||st.revealed||!st.aiDone||!st.votesDone)return;
@@ -1170,7 +1193,7 @@ async function approvePilotRound(){
     (workspace.modelArchives??=[]).push({at:now(),reason:'calibration changed',provider:screeningProvider(),model:p.approved?.model||'',pilot:structuredClone(p),full:structuredClone(workspace.full)});
     workspace.full=newFull();
   }
-  p.approved={round:i,at:now(),calibration,provider:screeningProvider(),criteriaSig:pilotCriteriaSig(),model:st.ids.map(id=>p.ai[id]?.model).find(Boolean)||'',prompt:PILOT_PROMPT,metrics:m,recommendedMet:m.recommended};
+  p.approved={round:i,at:now(),calibration,provider:screeningProvider(),criteriaSig:pilotCriteriaSig(),model:st.ids.map(id=>p.ai[id]?.model).find(Boolean)||'',prompt:PILOT_PROMPT,...(globalThis.AimstepScreeningPrompt?{screeningPromptHash:currentScreeningPrompt()?.hash}:{}),metrics:m,recommendedMet:m.recommended};
   log('pilot-approved',{round:i+1,calibrationHash:calibration.hash,lessons:calibration.lessons.length,model:p.approved.model,agreement:m.agreement,kappa:m.kappa,falseExclusions:m.fn,recommendedMet:m.recommended});
   await save();
   showNotice('pilot-message','Pilot approved. Formal screening is unlocked.','success');render();
@@ -1249,10 +1272,11 @@ function renderPilot(){
   $('sample-size').value=p.size;
   const resume=lastSt&&!lastSt.aiDone;
   $('run-pilot').textContent='Round '+(resume?last+1:last+2);
-  $('run-pilot').disabled=!ready||!!busy||pilotReviewSaving||!!pilotReviewDrafts.size||(!!lastSt&&!lastSt.revealed&&lastSt.aiDone);
+  $('run-pilot').disabled=!ready||!!busy||(globalThis.AimstepScreeningPrompt&&pilotStarting)||pilotReviewSaving||!!pilotReviewDrafts.size||(!!lastSt&&!lastSt.revealed&&lastSt.aiDone);
   $('run-pilot').title=lastSt&&!lastSt.revealed&&lastSt.aiDone?'Save your review for every record in this round first.':'';
   $('stop-pilot').hidden=busy!=='pilot';
   $('reset-calibration').disabled=!!busy||pilotReviewSaving||!p.rounds.length;
+  if(globalThis.AimstepScreeningPrompt)$('open-screening-prompt').disabled=!!busy||pilotReviewSaving||!screeningStagesReady();
   const shown=st?.revealed;
   $('pilot-detail').textContent=pilotReviewDrafts.size?'Save your correction to complete this review.':shown?'Accuracy is the proportion of AI decisions you marked Agree in this round.':st?'Review each AI decision. Agree saves immediately; Mistake requires a reason and Save.':'Start a round to let the AI assess a random sample against your eligibility criteria.';
   $('pilot-filter').hidden=!shown;
@@ -1270,7 +1294,7 @@ function renderPilot(){
   renderCalibration();
   const approved=pilotApprovalValid();renderPilotApproval();
   // Status lines set here are replaced or cleared here; messages from a run stay.
-  const msg=$('pilot-message'),status=!screeningStagesReady()&&source.criteria?.rows?.length?'Set and save Screening criteria before starting the pilot.':p.approved&&!approved?'The criteria or calibration feedback changed. Review corrections and approve the current version.':
+  const msg=$('pilot-message'),status=globalThis.AimstepScreeningPrompt&&screeningStagesReady()&&!currentScreeningPrompt()?.current?'Screening criteria changed. Review and save Screening prompt before screening.':!screeningStagesReady()&&source.criteria?.rows?.length?'Set and save Screening criteria before starting the pilot.':p.approved&&!approved?'The criteria or calibration feedback changed. Review corrections and approve the current version.':
     !ready?(stale()?'The screening source is being updated. Please wait for it to finish.':source.records.length<3?'Import at least 3 records in Screening source.':!screeningStagesReady()?'Set and save Screening criteria before starting the pilot.':'Add eligibility criteria in Screening source first.'):'';
   if(!busy&&status){showNotice('pilot-message',status,'warning');msg.dataset.status='1'}
   else if(!busy&&msg.dataset.status){showNotice('pilot-message','');delete msg.dataset.status}
@@ -1532,7 +1556,7 @@ function exportResults(){
   if(!records.length){toast('No records with this decision yet.');return}
   if(format==='csv')downloadCSV(records,option);
   else if(format==='bib')download('title-abstract-'+option+'-'+stamp()+'.bib','application/x-bibtex;charset=utf-8',sourceBibTeX(records,true));
-  else if(format==='json')download('title-abstract-'+option+'-'+stamp()+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-title-abstract-results/v1',project:projectId,option,exportedAt:now(),model:workspace.pilot?.approved?.model||'',calibration:workspace.pilot?.approved?.calibration||null,screeningStages:workspace.screeningStages||null,records:records.map(r=>({...r,databases:sourceDatabases(r),finalDecision:finalDecision(r.uid),exclusionReason:exclusionDetails(r.uid).reason,exclusionDetails:exclusionDetails(r.uid),decisionSource:decisionSource(r.uid),conflict:isConflict(r.uid),aiPass1:fullAI(r.uid)||null,aiPass2:fullAI2(r.uid)||null,human:workspace.full.human[r.uid]||null,pilotVote:pilotVoteOf(r.uid)}))},null,2));
+  else if(format==='json')download('title-abstract-'+option+'-'+stamp()+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-title-abstract-results/v1',project:projectId,option,exportedAt:now(),model:workspace.pilot?.approved?.model||'',calibration:workspace.pilot?.approved?.calibration||null,screeningStages:workspace.screeningStages||null,screeningPrompt:workspace.screeningPromptSnapshot||null,screeningPromptArchives:workspace.screeningPromptArchives||[],records:records.map(r=>({...r,databases:sourceDatabases(r),finalDecision:finalDecision(r.uid),exclusionReason:exclusionDetails(r.uid).reason,exclusionDetails:exclusionDetails(r.uid),decisionSource:decisionSource(r.uid),conflict:isConflict(r.uid),aiPass1:fullAI(r.uid)||null,aiPass2:fullAI2(r.uid)||null,human:workspace.full.human[r.uid]||null,pilotVote:pilotVoteOf(r.uid)}))},null,2));
   else downloadRIS(records,option,format==='revman'?'revman':'ris');
   log('results-exported',{option,format,records:records.length});save().catch(()=>{});
   toast(records.length.toLocaleString()+' '+option+' records exported.');
@@ -1982,7 +2006,7 @@ function exportSource(format){
   const name='deduplicated-source-records-'+(projectId?projectId.replace(/[^\w-]+/g,'_')+'-':'')+stamp();
   if(format==='csv')download(name+'.csv','text/csv;charset=utf-8',sourceCSV(records));
   else if(format==='bib')download(name+'.bib','application/x-bibtex;charset=utf-8',sourceBibTeX(records));
-  else if(format==='json')download(name+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-deduplicated-records/v1',project:projectId,exportedAt:now(),imported:dedupStats.total,duplicates:Math.max(0,dedupStats.total-source.records.length),scope:'all-deduplicated',deduplication:dedupAudit(),studyLinks:source.studyLinks?{version:source.studyLinks.version,groups:source.studyLinks.groups,candidates:source.studyLinks.candidates,links:source.studyLinks.links}:null,records:records.map(r=>({...r,databases:sourceDatabases(r)}))},null,2));
+  else if(format==='json')download(name+'.json','application/json;charset=utf-8',JSON.stringify({format:'aimstep-deduplicated-records/v1',project:projectId,exportedAt:now(),imported:dedupStats.total,duplicates:Math.max(0,dedupStats.total-source.records.length),scope:'all-deduplicated',deduplication:dedupAudit(),screeningPrompt:workspace.screeningPromptSnapshot||null,screeningPromptArchives:workspace.screeningPromptArchives||[],studyLinks:source.studyLinks?{version:source.studyLinks.version,groups:source.studyLinks.groups,candidates:source.studyLinks.candidates,links:source.studyLinks.links}:null,records:records.map(r=>({...r,databases:sourceDatabases(r)}))},null,2));
   else download(name+'.ris','application/x-research-info-systems;charset=utf-8',sourceRIS(records));
   log('source-exported',{format,scope:'all-deduplicated',dedupVersion:AimstepDedup.VERSION,records:records.length});save().catch(()=>{});
   toast(records.length.toLocaleString()+' deduplicated source records exported.');
@@ -2324,10 +2348,11 @@ async function saveStageSettings(){
   const previous=structuredClone(workspace);
   stagesSaving=true;busy='stage-settings';$('save-stages').disabled=true;$('reset-stages').disabled=true;$('stages-items').inert=true;
   try{
-    if(hasResults)(workspace.screeningStageArchives??=[]).push({at:now(),reason:'screening-criteria-edited',settings:previous.screeningStages||null,criteriaSnapshot:previous.screeningStages?.criteriaSnapshot||structuredClone(source.criteria),criteriaSig:previous.criteriaSig,records:structuredClone(source.records),pilot:previous.pilot,full:previous.full});
+    if(hasResults)(workspace.screeningStageArchives??=[]).push({at:now(),reason:'screening-criteria-edited',settings:previous.screeningStages||null,criteriaSnapshot:previous.screeningStages?.criteriaSnapshot||structuredClone(source.criteria),criteriaSig:previous.criteriaSig,screeningPrompt:previous.screeningPromptSnapshot||null,records:structuredClone(source.records),pilot:previous.pilot,full:previous.full});
     workspace.screeningStages=next;
     if(!workspace.screeningStagesInitial)workspace.screeningStagesInitial=structuredClone(next);
     clearCalibration();workspace.sourceSig=source.sourceSig;workspace.criteriaSig=source.criteriaSig;
+    if(globalThis.AimstepScreeningPrompt){const prompt=currentScreeningPrompt();if(prompt?.current){workspace.screeningPromptAppliedHash=prompt.hash;workspace.screeningPromptSnapshot=structuredClone(prompt);}}
     log('screening-stages-saved',{signature:screeningStageSig(),elements:next.elements});
     await save();
     pilotReviewDrafts.clear();pilotReviewErrors.clear();expandedPilotAssessments.clear();fullReviewErrors.clear();exclusionDrafts.clear();expandedFullAssessments.clear();collapsedFullAssessments.clear();fullNow.clear();fullDone.length=0;pilotView=-1;pilotFilter='agreed';fullFilter='';
@@ -2337,7 +2362,51 @@ async function saveStageSettings(){
   finally{stagesSaving=false;busy='';$('save-stages').disabled=false;$('reset-stages').disabled=false;$('stages-items').inert=false;render();}
 }
 $('save-stages').addEventListener('click',saveStageSettings);
-function clearActionsBlocked(){return !workspace||!!busy||importing||pilotReviewSaving||fullReviewSaving}
+function resetPromptAssessmentViews(){
+  pilotReviewDrafts.clear();pilotReviewErrors.clear();expandedPilotAssessments.clear();fullReviewErrors.clear();exclusionDrafts.clear();expandedFullAssessments.clear();collapsedFullAssessments.clear();fullNow.clear();fullDone.length=0;pilotView=-1;pilotFilter='agreed';fullFilter='';
+}
+function archiveForPrompt(previous,reason){
+  if(!screeningHasProgress())return false;
+  (workspace.screeningPromptArchives??=[]).push({at:now(),reason,sourceSig:previous.sourceSig,criteriaSig:previous.criteriaSig,screeningStages:previous.screeningStages||null,prompt:previous.screeningPromptSnapshot||previous.screeningPrompt||null,records:structuredClone(source.records),pilot:previous.pilot,full:previous.full});
+  clearCalibration();return true;
+}
+async function syncPromptVersion(){
+  const prompt=currentScreeningPrompt();
+  if(!prompt?.current||workspace.screeningPromptAppliedHash===prompt.hash)return false;
+  const previous=structuredClone(workspace);
+  try{
+    const archived=archiveForPrompt(previous,'screening-prompt-version-changed');
+    workspace.screeningPromptAppliedHash=prompt.hash;workspace.screeningPromptSnapshot=structuredClone(prompt);
+    if(archived)workspace.sourceUpdateNotice='Screening prompt changed. Previous assessments were archived. Start a new pilot.';
+    log('screening-prompt-synchronized',{hash:prompt.hash,archived});await save();
+    if(archived)resetPromptAssessmentViews();return true;
+  }catch(e){workspace=previous;publishSummary();throw e;}
+}
+async function saveScreeningPrompt(draft,base){
+  if(clearActionsBlocked())throw Error('Wait for the current operation to finish.');
+  busy='prompt-settings';
+  try{
+    await loadSource();if(sourceError)throw Error(sourceError);
+    if(!screeningStagesReady()||base.criteriaSig!==source.criteriaSig||base.stageSig!==screeningStageSig())throw Error('Screening criteria changed. Export your draft if needed, then reopen the prompt to review the current criteria.');
+    const previous=structuredClone(workspace),next=AimstepScreeningPrompt.saved(draft.text,draft.mode,base,draft.filename);
+    try{
+      const old=currentScreeningPrompt();workspace.screeningPrompt=next;const prompt=currentScreeningPrompt();
+      const changed=!old?.current||old.hash!==prompt.hash,archived=changed&&archiveForPrompt(previous,'screening-prompt-edited');
+      workspace.screeningPromptAppliedHash=prompt.hash;workspace.screeningPromptSnapshot=structuredClone(prompt);
+      if(archived)workspace.sourceUpdateNotice='Screening prompt changed. Previous assessments were archived. Start a new pilot.';
+      log('screening-prompt-saved',{hash:prompt.hash,mode:next.mode,filename:next.filename,archived});await save();
+      if(archived)resetPromptAssessmentViews();
+    }catch(e){workspace=previous;publishSummary();throw e;}
+  }finally{busy='';render();}
+}
+const screeningPromptEditor=globalThis.AimstepScreeningPrompt&&globalThis.AimstepScreeningPromptEditor?AimstepScreeningPromptEditor.mount({
+  blocked:clearActionsBlocked,
+  context:()=>{if(!screeningStagesReady())throw Error('Save Screening criteria before generating a screening prompt.');return {criteria:activeScreeningCriteria(),signatures:{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()}};},
+  current:currentScreeningPrompt,apply:saveScreeningPrompt,
+  notice:message=>showNotice('pilot-message',message,'warning'),
+  download:contents=>download('screening-prompt-'+stamp()+'.json','application/json;charset=utf-8',contents)
+}):null;
+function clearActionsBlocked(){return !workspace||!!busy||(globalThis.AimstepScreeningPrompt&&pilotStarting)||importing||pilotReviewSaving||fullReviewSaving}
 function renderClearActions(){
   const blocked=clearActionsBlocked();
   for(const kind of ['source','pilot','full'])$('clear-'+kind).disabled=blocked;
@@ -2419,7 +2488,7 @@ $('export-option').addEventListener('change',updateExportCount);
 $('export-results').addEventListener('click',exportResults);
 let refreshPromise=null;
 function refreshSource(){
-  if(!workspace||busy||importing||pilotReviewSaving||fullReviewSaving||pilotReviewDrafts.size||exclusionDrafts.size||stagesDialog.open||document.visibilityState==='hidden')return Promise.resolve();
+  if(!workspace||busy||importing||pilotReviewSaving||fullReviewSaving||pilotReviewDrafts.size||exclusionDrafts.size||stagesDialog.open||(globalThis.AimstepScreeningPrompt&&(pilotStarting||screeningPromptEditor?.isOpen()))||document.visibilityState==='hidden')return Promise.resolve();
   if(refreshPromise)return refreshPromise;
   let failure='';busy='source-refresh';
   refreshPromise=(async()=>{

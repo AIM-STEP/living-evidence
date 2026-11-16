@@ -31,6 +31,47 @@ class TypeSafeTest(unittest.TestCase):
         with patch.object(ts,'request',side_effect=fake):
             return ts.screen(self.payload)
 
+    def test_saved_prompt_reaches_both_model_stages(self):
+        self.payload['input']['screeningPrompt'] = {
+            'version': 'screening-prompt-v1', 'hash': '1234abcd',
+            'text': 'Use the saved operational instructions; retain ambiguous ages.'}
+        bodies = []
+
+        def fake(path, key, body):
+            bodies.append(copy.deepcopy(body))
+            self.assertEqual(body['state']['screeningPrompt'], self.payload['input']['screeningPrompt'])
+            self.assertIn('state.screeningPrompt.text', body['questions']['c0']['instructions'])
+            self.assertIn('structured criteria', body['questions']['c0']['instructions'])
+            choices = body['questions']['c0']['criteria']
+            return {'model': 'synthetic-jev', 'answers': {'c0': answer('not_met' if len(bodies) == 1 else 's1', choices)}}
+
+        with patch.object(ts, 'request', side_effect=fake):
+            result = ts.screen(self.payload)
+        self.assertEqual(len(bodies), 2)
+        self.assertEqual(result['screeningPrompt']['hash'], '1234abcd')
+        self.assertEqual(result['value']['decision'], 'exclude')
+        self.assertEqual(result['value']['criteria'][0]['quote'], 'Participants were children.')
+
+    def test_bad_prompt_is_rejected_before_network_calls(self):
+        good = {'version': 'screening-prompt-v1', 'hash': '1234abcd', 'text': 'Saved instructions'}
+        for prompt in ['not an object', {**good, 'text': ''}, {**good, 'text': 'x' * 20001},
+                       {**good, 'hash': 'untrusted-version'}, {**good, 'version': 'unsupported'},
+                       {**good, 'text': 'bad\0text'}]:
+            with self.subTest(prompt_type=type(prompt).__name__):
+                payload = copy.deepcopy(self.payload)
+                payload['input']['screeningPrompt'] = prompt
+                with patch.object(ts, 'request') as request:
+                    with self.assertRaises(ValueError):
+                        ts.screen(payload)
+                    request.assert_not_called()
+
+    def test_saved_prompt_cannot_manufacture_missing_exclusion_evidence(self):
+        self.payload['input']['screeningPrompt'] = {
+            'version': 'screening-prompt-v1', 'hash': '1234abcd', 'text': 'Screen the current report.'}
+        result = self.run_screen(evidence='none')
+        self.assertEqual(result['value']['decision'], 'maybe')
+        self.assertEqual(result['value']['criteria'][0]['judgment'], 'unclear')
+
     def test_server_key_rotation_and_public_model_response(self):
         import tempfile
         from pathlib import Path

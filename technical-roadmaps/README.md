@@ -7,6 +7,7 @@
 | 模块 | 日期 | 内容 | 在线查看 |
 |---|---|---|---|
 | [Screening source](screening-source/2026-11-16/README.md) | 2026-11-16 | 完整数据流、报告级去重、同研究多报告关联、同步导出及 Pilot 交接 | [打开四张图](https://aimsetp.com/screening-source-flowcharts.html) |
+| [Pilot screening / Screening prompt](pilot-screening/2026-11-16/README.md) | 2026-11-16 | 自动生成、编辑、本地导入、TypeSafe执行、人工反馈及版本控制 | [技术说明](../docs/PILOT_SCREENING_PROMPT.md) |
 
 ## 归档约定
 

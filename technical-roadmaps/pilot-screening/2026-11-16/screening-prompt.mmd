@@ -1,0 +1,10 @@
+flowchart TD
+  A[已保存并启用的 Screening criteria] --> B[自动编译 Prompt]
+  B --> C[生成 / 编辑 / 本地导入草稿]
+  C --> D[Save：绑定标准版本及 Prompt 指纹]
+  D --> E[每篇报告附加标题摘要和已确认的相关纠错反馈]
+  E --> F[TypeSafe：逐条件结构化判断]
+  F --> G[TypeSafe：选择真实来源证据片段]
+  G --> H[本工具校验条件名称和原文引文并汇总决定]
+  H --> I[Pilot 人工评价与纠错]
+  I --> E

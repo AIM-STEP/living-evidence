@@ -6,7 +6,7 @@ const elements={};function $(id){return elements[id]??={value:'',textContent:'',
 const pilot={size:20,rounds:[{ids:['r'],revealedAt:'done',criteriaSig:'criteria'}],ai:{r:{decision:'no',model:'test-model',criteria:[]}},human:{r:{decision:'yes',calibrationCriterion:'Population',note:'Adults satisfy the population criterion.'}},approved:null};
 const source={criteriaSig:'criteria',criteria:{rows:[{title:'Population',condition:'Adults'}]},records:[rec]};
 let calls=0,asked=0;
-const ctx=vm.createContext({$,AimstepCalibration:engine,AbortController,structuredClone,JSON,
+const ctx=vm.createContext({$,activeScreeningCriteria:()=>source.criteria,AimstepCalibration:engine,AbortController,structuredClone,JSON,
  PILOT_REVIEW_MODE:'ai-first-v1',pilotAIOutcome:a=>a.decision==='no'?'no':'yes',pilotReviewSaving:false,pilotReviewDrafts:new Map(),workspace:{pilot,full:{ai:{},ai2:{},human:{}}},source,recordById:new Map([['r',rec]]),busy:'',controller:null,
  text:(x,n)=>String(x??'').slice(0,n),esc:x=>String(x??''),now:()=> 'time',stale:()=>false,
  render(){},renderFull(){},renderPilot(){},save:async()=>{},log(){},download(){},stamp:()=> 'test',projectId:'test',showNotice(){},
