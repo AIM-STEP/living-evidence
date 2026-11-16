@@ -1,0 +1,25 @@
+flowchart TB
+    A["Import from search strategy<br/>选择检索批次"] --> DB[("aimstep-search-results<br/>当前项目检索记录及来源")]
+    B["Import from local<br/>单文件 ≤ 80 MB"] --> F["解析 RIS / NBIB / CSV / TSV / JSON / 文本<br/>文本按内容识别 MEDLINE、WoS、EndNote 等"]
+    F --> V{"结构可解析且有有效记录？"}
+    V -- 否 --> E["提示错误；中止本次导入<br/>保留现有数据"]
+    V -- 是 --> L[("aimstep-screen-imports<br/>原始导入批次、文件名、时间与来源")]
+    DB --> C["cleanRecord 统一字段<br/>UID、标题、摘要、作者、年份、期刊、DOI、PMID、卷期页码、来源"]
+    L --> C
+    FT["全文评估退回的报告（如有）"] -. "既有回流通道" .-> C
+    C --> S["保留至少有标题、DOI、PMID之一的记录<br/>批次按导入时间及批次键排序"]
+    S --> D["报告级去重 report-dedup-v3<br/>候选分块 → 比较 → 冲突保护 → 跨组全对校验"]
+    D --> M["确认同一报告的重复记录<br/>组内保留一条筛选记录；原始成员留存审计"]
+    D --> P["疑似重复或证据不足<br/>全部分别保留；无需人工确认"]
+    M --> U["完整保留记录集合"]
+    P --> U
+    U --> R["研究与报告关联 study-links-v1<br/>共享 Study ID；每篇报告独立 Report ID<br/>不删除同研究的不同报告"]
+    R --> SRC[("source.records<br/>唯一活动源数据集")]
+    SRC --> EXP["Export 下拉菜单<br/>RIS / CSV / BibTeX / JSON<br/>导出完整源集合，不随筛选决定缩小"]
+    SRC --> PILOT["内部直接供 Pilot screening 抽样<br/>逐篇报告筛选；无需再次导入"]
+    D -. "原始成员、匹配理由、分数、字段来源" .-> AUD[("后台去重审计")]
+    AUD --> HAS{"实际移除重复记录数 > 0？"}
+    HAS -- 是 --> XLSX["Export duplication → Excel .xlsx<br/>仅被移除成员；单表 Duplications<br/>ID号 / 标题 / 作者 / 年份 / 重复理由"]
+    HAS -- 否 --> DIS["Export duplication 按钮禁用<br/>不生成空文件"]
+    NOTE["浏览器后台自动处理；不调用大模型<br/>页面不显示 Study and report links 或 Deduplication details<br/>有效导入数 = 保留数 + 移除重复数"]
+

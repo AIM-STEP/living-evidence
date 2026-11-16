@@ -1,0 +1,26 @@
+flowchart TB
+    IN["报告级去重后全部保留报告<br/>加上同项目已知关联证据"] --> RID["每篇报告生成独立 Report ID<br/>R-UID确定性指纹；原 UID 继续索引筛选结果"]
+    RID --> REG["提取本研究注册声明<br/>结构化注册字段或标题摘要中的明确注册语境<br/>当前支持 NCT / ISRCTN"]
+    RID --> DOI["提取明确报告关系声明<br/>follow-up / secondary analysis / extension of …<br/>reported / published / described in DOI"]
+    REG --> OWN{"同一注册号且属于本研究？"}
+    OWN -- 是 --> SREG["共享 Study ID<br/>S-NCT… / S-ISRCTN…"]
+    OWN -- 否 --> WEAK["仅保存候选或保持独立<br/>普通提及、他人试验、综述引用不足以关联"]
+    DOI --> TARGET{"DOI 唯一指向已知报告？"}
+    TARGET -- 否 --> ALONE["不凭此建立关联；保留报告"]
+    TARGET -- 是 --> CONFLICT{"待连接分量包含多个不同注册号？"}
+    CONFLICT -- 是 --> CAND["注册冲突候选<br/>不自动连接"]
+    CONFLICT -- 否 --> LINK["建立明确报告连接<br/>共享研究标识"]
+    RID --> COHORT["弱证据候选<br/>同号提及但缺少本研究证据；或<br/>共享作者 + 标题Dice≥0.45 + 地点/干预/招募期支持"]
+    COHORT --> WEAK
+    SREG --> KEEP["保留每篇报告 UID、Report ID、Study IDs<br/>报告类型、原文证据、来源与相关报告书目"]
+    LINK --> KEEP
+    WEAK --> KEEP
+    CAND --> KEEP
+    ALONE --> KEEP
+    MULTI["一篇报告涉及多项试验：多个 Study ID<br/>不能用这篇报告把两个试验合成一个"] -.-> KEEP
+    SINGLE["证据不足时各自形成暂定独立组<br/>暂定 Study ID 可随新证据更新"] -.-> KEEP
+    KEEP --> DB[("IndexedDB：aimstep-study-links<br/>projects 按项目 scope 隔离<br/>保存书目、特征、证据片段与内容指纹")]
+    DB --> OUT["同一个 source.records<br/>报告条数保持不变；逐篇进入 Pilot 与正式筛选"]
+    FT["后续全文阶段<br/>新增全文：补充关联证据<br/>移除全文：撤回该全文的证据"] -. "跨阶段证据更新" .-> RID
+    NOTE["研究关联不增加 Duplicates removed<br/>建议主报告不自动决定结局取值<br/>候选无需用户确认；页面不渲染关联详情<br/>当前为确定性规则，不使用训练模型"]
+

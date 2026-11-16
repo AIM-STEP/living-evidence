@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Screening source 技术流程图 · AIM-STEP</title>
+<style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f5f7fb;color:#142b48;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}main{max-width:1160px;margin:auto;padding:28px 20px 64px}h1{margin:0;font-size:clamp(24px,4vw,34px)}h2{margin:0;font-size:22px}p{margin:8px 0 16px}a{color:#125b9b;text-underline-offset:3px}a:focus-visible{outline:3px solid #168d78;outline-offset:4px}nav,.actions{display:flex;gap:12px 18px;flex-wrap:wrap}.download{display:inline-block;padding:9px 16px;background:#163e65;color:white;border-radius:5px;text-decoration:none;margin:0 0 16px}.intro{color:#42566e}.diagram{scroll-margin-top:20px;margin:30px 0 42px}.diagram>p{margin:4px 0 10px}.actions{margin:0 0 12px}.image-link{display:block;background:white;border:1px solid #d7e0ea;border-radius:6px;overflow:hidden}.image-link img{display:block;width:100%;height:auto}.note{padding-top:16px;border-top:1px solid #d7e0ea;color:#42566e}footer{font-size:14px;color:#42566e}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media(max-width:600px){main{padding:20px 12px 40px}.actions{gap:10px 16px}h2{font-size:20px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Screening source 技术流程图</h1>
+<p class="intro">四张图按①至④阅读。点击图片或“打开原图”查看完整 PNG；手机可双指放大，电脑可在原图页面点击图片放大。</p>
+<a class="download" href="docs/screening-source-flowcharts/screening-source-flowcharts.zip" download>下载全部图片与可编辑源码（ZIP）</a>
+<nav aria-label="流程图目录">
+<a href="#overview">① 完整数据流</a><a href="#deduplication">② 去重算法</a><a href="#study-links">③ 研究关联</a><a href="#handoff">④ 同步与导出</a>
+</nav>
+<section class="diagram" id="overview" aria-labelledby="overview-title">
+<h2 id="overview-title">① 完整数据流</h2>
+<p>导入、清洗、报告级去重、研究关联、导出与 Pilot 入口。</p>
+<div class="actions"><a href="docs/screening-source-flowcharts/01-overview.png" target="_blank" rel="noopener">打开原图</a><a href="docs/screening-source-flowcharts/01-overview.png" download>下载 PNG</a><a href="docs/screening-source-flowcharts/01-overview.mmd" download>下载可编辑流程源码</a></div>
+<a class="image-link" href="docs/screening-source-flowcharts/01-overview.png" target="_blank" rel="noopener" aria-label="打开完整数据流原图"><img src="docs/screening-source-flowcharts/01-overview.png" width="1086" height="1448" alt="完整数据流：检索结果和本地文件合流，清洗后去重，保留疑似记录，建立研究关联，再供导出和Pilot使用。" fetchpriority="high"></a>
+</section>
+<section class="diagram" id="deduplication" aria-labelledby="deduplication-title">
+<h2 id="deduplication-title">② 报告级去重算法</h2>
+<p>候选分块、相似度、冲突保护、R1–R4 条件、跨组检查及字段来源。</p>
+<div class="actions"><a href="docs/screening-source-flowcharts/02-report-deduplication-v2.png" target="_blank" rel="noopener">打开原图</a><a href="docs/screening-source-flowcharts/02-report-deduplication-v2.png" download>下载 PNG</a><a href="docs/screening-source-flowcharts/02-report-deduplication.mmd" download>下载可编辑流程源码</a></div>
+<a class="image-link" href="docs/screening-source-flowcharts/02-report-deduplication-v2.png" target="_blank" rel="noopener" aria-label="打开报告级去重算法原图"><img src="docs/screening-source-flowcharts/02-report-deduplication-v2.png" width="1086" height="1448" alt="报告级去重算法：候选比较、标识符和出版信息冲突保护、自动重复规则、跨组全对校验与保留疑似记录。" loading="lazy"></a>
+</section>
+<section class="diagram" id="study-links" aria-labelledby="study-links-title">
+<h2 id="study-links-title">③ 同一研究多报告关联</h2>
+<p>注册号、明确 DOI 报告关系、弱证据候选、Study ID 与 Report ID。</p>
+<div class="actions"><a href="docs/screening-source-flowcharts/03-study-report-linkage.png" target="_blank" rel="noopener">打开原图</a><a href="docs/screening-source-flowcharts/03-study-report-linkage.png" download>下载 PNG</a><a href="docs/screening-source-flowcharts/03-study-report-linkage.mmd" download>下载可编辑流程源码</a></div>
+<a class="image-link" href="docs/screening-source-flowcharts/03-study-report-linkage.png" target="_blank" rel="noopener" aria-label="打开同一研究多报告关联原图"><img src="docs/screening-source-flowcharts/03-study-report-linkage.png" width="1086" height="1448" alt="研究关联：明确注册声明和报告关系可共享研究标识，弱证据仅作候选；每篇报告保留独立身份，分别筛选。" loading="lazy"></a>
+</section>
+<section class="diagram" id="handoff" aria-labelledby="handoff-title">
+<h2 id="handoff-title">④ 同步、导出与 Pilot 交接</h2>
+<p>后台刷新、旧结果归档、失败回滚、导出条件与 Pilot 抽样。</p>
+<div class="actions"><a href="docs/screening-source-flowcharts/04-sync-export-pilot.png" target="_blank" rel="noopener">打开原图</a><a href="docs/screening-source-flowcharts/04-sync-export-pilot.png" download>下载 PNG</a><a href="docs/screening-source-flowcharts/04-sync-export-pilot.mmd" download>下载可编辑流程源码</a></div>
+<a class="image-link" href="docs/screening-source-flowcharts/04-sync-export-pilot.png" target="_blank" rel="noopener" aria-label="打开同步导出与Pilot交接原图"><img src="docs/screening-source-flowcharts/04-sync-export-pilot.png" width="1086" height="1448" alt="后台同步先检查是否允许刷新，源变化时归档并重置依赖结果；统一源数据集供四种格式导出、重复记录Excel和Pilot抽样。" loading="lazy"></a>
+</section>
+<p class="note">图中“后台”指浏览器端自动处理。疑似重复全部保留，同一研究的不同报告分别筛选。阈值对应当前工程规则，尚未经过独立真实文献基准标定。</p>
+<footer>依据实现版本 c02eceb · 2026-11-16 · 图片由本会话内置图像生成工具绘制 · <a href="#">返回顶部</a></footer>
+</main>
+</body>
+</html>
