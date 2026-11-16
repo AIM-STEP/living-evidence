@@ -49,6 +49,11 @@ function parse(contents,name){
  return validate(text);
 }
 function exportPrompt(prompt){return {format:FORMAT,version:VERSION,text:prompt.text,mode:prompt.mode,criteriaSig:prompt.criteriaSig,stageSig:prompt.stageSig,hash:prompt.hash};}
-const api={VERSION,FORMAT,MAX_CHARS,MAX_BYTES,hash,rows,generate,validate,resolve,saved,parse,exportPrompt};
+function exportFile(prompt,format){
+ if(!['txt','md','json'].includes(format))throw Error('Choose TXT, Markdown, or JSON.');
+ const text=validate(prompt.text);
+ return {extension:format,mime:format==='json'?'application/json;charset=utf-8':format==='md'?'text/markdown;charset=utf-8':'text/plain;charset=utf-8',contents:format==='json'?JSON.stringify(exportPrompt({...prompt,text}),null,2):text+'\n'};
+}
+const api={VERSION,FORMAT,MAX_CHARS,MAX_BYTES,hash,rows,generate,validate,resolve,saved,parse,exportPrompt,exportFile};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepScreeningPrompt=api;
 })(globalThis);

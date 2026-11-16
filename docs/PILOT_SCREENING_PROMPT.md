@@ -7,12 +7,12 @@
 Pilot screening 标题旁依次提供 Eligibility criteria、Screening criteria、Screening prompt。
 
 1. 先保存 Screening criteria，保留本阶段需要判断的元素。
-2. 打开 Screening prompt。默认从当前已启用的条件自动生成，包含研究问题背景、逐项条件、判断问题、缺失信息处理、原文证据、总体决定和纠错反馈规则。
+2. 首次打开 Screening prompt，编辑区为空，Save 与 Export 暂不可用。点击 Generate 才显示根据当前已启用条件生成的文本，包含研究问题背景、逐项条件、缺失信息处理、原文证据和纠错规则；也可直接输入或本地导入。已显式保存的内容重新打开时保留。
 3. 可直接编辑文本，或点击 Import from local 导入 `.txt`、`.md`、`.json`。JSON 支持字符串，或含 `text`、`prompt`、`instructions` 字符串字段的对象；本工具导出的 JSON 可往返导入。文件最多 1 MB，提示词最多 20,000 字符。
-4. Generate 将草稿恢复为根据当前标准生成的版本；Export 导出当前草稿为 JSON，尚未保存的草稿不会自动生效。
+4. Generate 将草稿恢复为根据当前标准生成的版本。点击 Export 打开 TXT / Markdown / JSON 格式菜单，选定后下载当前草稿；TXT 与 Markdown 保留提示词正文，JSON 另外携带版本及标准指纹。尚未保存的草稿不会自动生效。
 5. Save 保存并应用当前文本。修改了实际指令时，旧 Pilot 和正式筛选结果归档，批准失效，需要重新预筛。保存本身不会调用模型或自动开始筛选。
 
-关闭或离开页面前，未保存修改会提示保留或放弃；解析或保存失败不会清空草稿。原始记录、已归档结果继续保留。
+弹窗不显示生成原理说明、Execution preview 或归档机制长说明，这些机制继续在后台执行并记录。关闭或离开页面前，未保存修改会提示保留或放弃；解析或保存失败不会清空草稿。原始记录、已归档结果继续保留。
 
 ## 生成策略与研究依据
 
@@ -72,6 +72,6 @@ node tools/test_screening_source_sync.cjs
 cd tools && python3 -B -m unittest test_typesafe_model.py
 ```
 
-新增检查执行实际页面函数及编辑器：生成、导入、导出往返、草稿隔离、失败回滚、标准并发变化、两种阅读顺序的 TypeSafe 请求，以及 Pilot → 人工评价 → 批准 → 编辑 Prompt → 归档并重新预筛。Python 检查验证两阶段请求均携带 Prompt、非法输入不发请求、无有效排除引文时保留记录。模型调用均由合成结果模拟，没有以真实账户进行付费筛选或据此声称性能。
+新增检查执行实际页面函数及编辑器：初始空白与显式生成、导入、三种格式导出往返、菜单键盘与外部关闭、草稿隔离、失败回滚、标准并发变化、两种阅读顺序的 TypeSafe 请求，以及 Pilot → 人工评价 → 批准 → 编辑 Prompt → 归档并重新预筛。Python 检查验证两阶段请求均携带 Prompt、非法输入不发请求、无有效排除引文时保留记录。模型调用均由合成结果模拟，没有以真实账户进行付费筛选或据此声称性能。
 
 旧 `test_pilot_ai_review.cjs` 仍缺少现有 `AIMScreeningCriteriaDialog` 测试替身，在修改前的 HEAD 页面也失败；新增完整页面工作流检查覆盖本次 Prompt 与 Pilot 集成。本环境此前没有可用的交互浏览器，视觉操作验收须与函数及部署文件核验区分。

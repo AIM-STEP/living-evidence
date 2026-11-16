@@ -364,13 +364,10 @@ th{background:#f4f4f4}
 </div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <dialog id="screening-prompt-dialog" class="dialog" aria-labelledby="screening-prompt-title"><div class="panel-head"><h2 id="screening-prompt-title" data-ui-localize>Screening prompt</h2><button type="button" class="source-delete" id="close-screening-prompt" aria-label="Close screening prompt">×</button></div><div class="panel-body">
-<p class="hint" data-ui-localize>The prompt is generated from the saved, enabled Screening criteria. Edit how the criteria are applied; change eligibility rules in Screening criteria. The saved prompt is sent to TypeSafe for screening.</p>
 <div class="toolbar"><button type="button" class="btn small" id="generate-screening-prompt" data-ui-localize>Generate</button><button type="button" class="btn small" id="import-screening-prompt" data-ui-localize>Import from local</button><input id="screening-prompt-file" type="file" accept=".txt,.md,.json,text/plain,text/markdown,application/json" hidden></div>
-<p class="hint" id="screening-prompt-status" role="status"></p>
+<p class="hint" id="screening-prompt-status" role="status" hidden></p>
 <label class="label" for="screening-prompt-text" data-ui-localize>Prompt instructions</label><textarea class="textarea" id="screening-prompt-text" rows="20" maxlength="20000" spellcheck="false" style="width:100%;font-family:ui-monospace,monospace"></textarea>
-<details><summary data-ui-localize>Execution preview</summary><pre id="screening-prompt-preview" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
-<p class="hint" data-ui-localize>Saving a changed prompt archives existing screening results and requires a new pilot. Imported or edited prompts need review after Screening criteria change. Supported files: TXT, Markdown and JSON.</p>
-<p class="notice error" id="screening-prompt-error" role="alert" hidden></p><div class="toolbar"><button type="button" class="btn small" id="export-screening-prompt" data-ui-localize>Export</button><button type="button" class="btn small" id="save-screening-prompt" data-ui-localize>Save</button></div>
+<p class="notice error" id="screening-prompt-error" role="alert" hidden></p><div class="toolbar"><button type="button" class="btn small" id="export-screening-prompt" aria-haspopup="menu" aria-expanded="false" aria-controls="screening-prompt-export-menu" disabled><span data-ui-localize>Export</span><span aria-hidden="true"> ▾</span></button><div id="screening-prompt-export-menu" class="source-export-menu" role="menu" aria-labelledby="export-screening-prompt" hidden><button type="button" role="menuitem" data-prompt-export="txt">TXT (.txt)</button><button type="button" role="menuitem" data-prompt-export="md">Markdown (.md)</button><button type="button" role="menuitem" data-prompt-export="json">JSON (.json)</button></div><button type="button" class="btn small" id="save-screening-prompt" data-ui-localize disabled>Save</button></div>
 </div></dialog>
 <script src="app/study-links.js?v=study-links-v1"></script>
 <script src="app/extraction-results.js?v=20261116-study-links"></script>
@@ -379,8 +376,8 @@ th{background:#f4f4f4}
 <script src="app/screening-stages.js?v=framework-editor-v3"></script>
 <script src="app/screening-criteria-suggestions.js?v=1"></script>
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
-<script src="app/screening-prompt.js?v=20261116-v1"></script>
-<script src="app/screening-prompt-editor.js?v=20261116-v1"></script>
+<script src="app/screening-prompt.js?v=20261116-editor-v2"></script>
+<script src="app/screening-prompt-editor.js?v=20261116-editor-v2"></script>
 <script src="app/search-criteria-editor.js"></script><script src="app/screening-criteria-dialog.js"></script><script>
 'use strict';
 (() => {
@@ -2401,9 +2398,9 @@ async function saveScreeningPrompt(draft,base){
 const screeningPromptEditor=globalThis.AimstepScreeningPrompt&&globalThis.AimstepScreeningPromptEditor?AimstepScreeningPromptEditor.mount({
   blocked:clearActionsBlocked,
   context:()=>{if(!screeningStagesReady())throw Error('Save Screening criteria before generating a screening prompt.');return {criteria:activeScreeningCriteria(),signatures:{criteriaSig:source.criteriaSig,stageSig:screeningStageSig()}};},
-  current:currentScreeningPrompt,apply:saveScreeningPrompt,
+  current:currentScreeningPrompt,saved:()=>workspace.screeningPrompt||null,apply:saveScreeningPrompt,
   notice:message=>showNotice('pilot-message',message,'warning'),
-  download:contents=>download('screening-prompt-'+stamp()+'.json','application/json;charset=utf-8',contents)
+  download:file=>download('screening-prompt-'+stamp()+'.'+file.extension,file.mime,file.contents)
 }):null;
 function clearActionsBlocked(){return !workspace||!!busy||(globalThis.AimstepScreeningPrompt&&pilotStarting)||importing||pilotReviewSaving||fullReviewSaving}
 function renderClearActions(){
