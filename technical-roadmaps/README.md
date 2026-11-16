@@ -7,7 +7,8 @@
 | 模块 | 日期 | 内容 | 在线查看 |
 |---|---|---|---|
 | [Screening source](screening-source/2026-11-16/README.md) | 2026-11-16 | 完整数据流、报告级去重、同研究多报告关联、同步导出及 Pilot 交接 | [打开四张图](https://aimsetp.com/screening-source-flowcharts.html) |
-| [Pilot screening / Screening prompt](pilot-screening/2026-11-16/README.md) | 2026-11-16 | 自动生成、编辑、本地导入、TypeSafe执行、人工反馈及版本控制 | [技术说明](../docs/PILOT_SCREENING_PROMPT.md) |
+| [Pilot screening](pilot-screening/2026-11-16/README.md) | 2026-11-16 | 配置与 Prompt、抽样与执行、反馈学习与批准；三张详细图 | [打开图 1–3](https://aimsetp.com/pilot-main-screening-flowcharts.html#01-pilot-configuration) |
+| [Main screening](main-screening/2026-11-16/README.md) | 2026-11-16 | 双次判断、人工复核、结果汇总、导出与全文交接；三张详细图 | [打开图 4–6](https://aimsetp.com/pilot-main-screening-flowcharts.html#04-main-two-readings) |
 
 ## 归档约定
 

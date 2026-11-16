@@ -1,0 +1,60 @@
+{
+  "sourceCommit": "80a1ab3c68621d64292567e881f1d0c47de89f39",
+  "date": "2026-11-16",
+  "charts": [
+    {
+      "module": "pilot-screening",
+      "stem": "01-pilot-configuration",
+      "title": "配置与 Prompt",
+      "description": "当前标准、独立编辑、AI 四部分起草、保存与版本保护。",
+      "archive": "technical-roadmaps/pilot-screening/2026-11-16",
+      "reviewedRevision": 1,
+      "imageGenerator": "built-in imagegen"
+    },
+    {
+      "module": "pilot-screening",
+      "stem": "02-pilot-execution",
+      "title": "抽样与模型执行",
+      "description": "不重复抽样、本轮冻结、TypeSafe 两阶段调用、三分类证据门控与续跑。",
+      "archive": "technical-roadmaps/pilot-screening/2026-11-16",
+      "reviewedRevision": 2,
+      "imageGenerator": "built-in imagegen"
+    },
+    {
+      "module": "pilot-screening",
+      "stem": "03-pilot-feedback-approval",
+      "title": "反馈学习与批准",
+      "description": "人工纠错、完整 Prompt 补充、相关示例、三分类统计、批准和正式筛选入口。",
+      "archive": "technical-roadmaps/pilot-screening/2026-11-16",
+      "reviewedRevision": 2,
+      "imageGenerator": "built-in imagegen"
+    },
+    {
+      "module": "main-screening",
+      "stem": "04-main-two-readings",
+      "title": "双次判断与证据汇总",
+      "description": "有效 Pilot 评价继承、同一模型两次阅读、逐条件归一化与冲突判定。",
+      "archive": "technical-roadmaps/main-screening/2026-11-16",
+      "reviewedRevision": 2,
+      "imageGenerator": "built-in imagegen"
+    },
+    {
+      "module": "main-screening",
+      "stem": "05-main-review-summary",
+      "title": "人工复核与结果汇总",
+      "description": "冲突处理、Maybe 保留、有效人工决定优先级、分类浏览与完成条件。",
+      "archive": "technical-roadmaps/main-screening/2026-11-16",
+      "reviewedRevision": 1,
+      "imageGenerator": "built-in imagegen"
+    },
+    {
+      "module": "main-screening",
+      "stem": "06-main-export-handoff",
+      "title": "导出、全文交接与版本保护",
+      "description": "继续评估集合、排除集合、导出证据、IndexedDB 内部交接及归档保护。",
+      "archive": "technical-roadmaps/main-screening/2026-11-16",
+      "reviewedRevision": 1,
+      "imageGenerator": "built-in imagegen"
+    }
+  ]
+}

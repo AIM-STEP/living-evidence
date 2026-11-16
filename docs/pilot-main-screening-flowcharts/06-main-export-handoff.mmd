@@ -1,0 +1,25 @@
+flowchart TD
+  A[当前逐报告最终决定] --> DEC{最终决定是什么？}
+  DEC -->|Include或Maybe| FWD[继续评估集合<br/>两类合并供include导出及全文输入<br/>保留原始三分类标记]
+  DEC -->|Exclude| EXCLUDE[排除集合<br/>不传入全文输入]
+  DEC -->|未决定或未解决Conflict| PENDING[保持pending<br/>暂不进入上述两个导出集合]
+  FWD --> FORMATS[本地导出<br/>CSV / RIS / RevMan兼容RIS<br/>BibTeX / JSON]
+  EXCLUDE --> FORMATS
+  FORMATS --> CSV[CSV：书目、最终决定、来源<br/>排除理由、条件与证据<br/>AI两读、人工、Prompt及反馈指纹]
+  FORMATS --> BIB[RIS、RevMan兼容RIS、BibTeX<br/>书目信息及可用排除说明]
+  FORMATS --> JSON[JSON：报告及逐篇评估<br/>基础Prompt、批准反馈、阶段配置<br/>Prompt归档及判断策略归档]
+  FWD --> HANDOFF[状态更新后约800ms去抖交接<br/>不需要导出本地文件再导入]
+  HANDOFF --> FIELDS[UID、标题摘要、书目、数据库<br/>Report与Study标识、taDecision、taSource<br/>全文退回returnId、pending和完成标记]
+  HANDOFF --> CRITERIA{有当前Eligibility条件？}
+  CRITERIA -->|是| ORIGINAL[交接原上游Eligibility标准]
+  CRITERIA -->|否| MANUAL[交接有效的手动Screening criteria]
+  FIELDS --> DB[(IndexedDB aimstep-fulltext-input<br/>projects对象仓库，按项目scope隔离)]
+  ORIGINAL --> DB
+  MANUAL --> DB
+  DB --> FULLTEXT[Full-text assess读取<br/>可区分尚在筛选与已完成]
+  CHANGE[源、标准、Prompt、模型<br/>或判断策略发生影响结果的变化] --> ARCHIVE[按对应路径归档旧评估与快照<br/>重置依赖结果、撤销Pilot批准]
+  ARCHIVE --> SAVE{归档与重置保存成功？}
+  SAVE -->|否| ROLLBACK[恢复旧工作区并提示重试]
+  SAVE -->|是| NEW[重新Pilot及所需正式筛选<br/>相同标准的Prompt编辑保留确认反馈<br/>源或标准变更、Pilot清空则重置反馈]
+  NEW --> A
+  NOTE[记录、上传全文和交接集合主要保存在当前浏览器<br/>不等于云端跨设备自动同步<br/>source Export仍导出去重后的完整源集合]

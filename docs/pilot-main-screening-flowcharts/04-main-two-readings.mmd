@@ -1,0 +1,30 @@
+flowchart TD
+  A[开始 Main screening] --> GATE{源准备完成且Pilot批准当前有效？<br/>标准、Prompt、模型、反馈版本匹配？}
+  GATE -->|否| WAIT[返回Pilot补齐、复核或重新批准]
+  GATE -->|是| SPLIT{报告已有有效Pilot人工评价？}
+  SPLIT -->|是| INHERIT[继承人工Include / Maybe / Exclude<br/>不再进入正式AI任务]
+  SPLIT -->|否| QUEUE[仅为缺失结果生成任务<br/>每篇最多两次阅读；TypeSafe任务串行]
+  QUEUE --> ONE[阅读1：先条件后报告<br/>启用条件按原顺序]
+  QUEUE --> TWO[阅读2：先报告后条件<br/>同一启用条件逆序]
+  FROZEN[同一选定TypeSafe模型<br/>同一标准、基础Prompt<br/>同一已批准反馈快照] --> ONE
+  FROZEN --> TWO
+  ONE --> API1[每次阅读：systemone逐条件分类<br/>必要时再选择原文证据片段]
+  TWO --> API2[每次阅读：systemone逐条件分类<br/>必要时再选择原文证据片段]
+  API1 --> VERIFY[分别校验当前条件和本篇引文<br/>met及not met均须有有效原文证据<br/>缺失、伪造或遗漏→unclear；未知条件忽略]
+  API2 --> VERIFY
+  VERIFY --> STORE[逐阅读保存条件、证据、模型<br/>criteriaSig / stageSig / Prompt与反馈hash]
+  STORE --> COMPLETE{两次阅读均有有效结果？}
+  COMPLETE -->|否| PENDING[仍待完成；Stop或失败后Resume补缺]
+  COMPLETE -->|是| UNMET{至少一个有证据not met？}
+  UNMET -->|是| UNCONTESTED{存在某个不满足条件<br/>没有有证据met的直接反证？}
+  UNCONTESTED -->|是| NO[Exclude<br/>另次unclear或无证据met不能推翻]
+  UNCONTESTED -->|否| CONFLICT[Conflict：每个排除条件都有直接矛盾<br/>不生成最终决定，等待人工处理]
+  UNMET -->|否| ALL{两次均全部条件有证据met？}
+  ALL -->|是| YES[Include]
+  ALL -->|否| MAYBE[Maybe]
+  INHERIT --> FINAL[按图⑤的人工优先级汇总]
+  NO --> FINAL
+  YES --> FINAL
+  MAYBE --> FINAL
+  CONFLICT --> HUMAN[进入Conflicts列表：图⑤]
+  NOTE[这是同一模型的两种阅读顺序<br/>不是两个独立模型或独立审稿人]

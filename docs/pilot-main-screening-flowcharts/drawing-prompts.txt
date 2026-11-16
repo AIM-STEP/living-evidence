@@ -1,0 +1,101 @@
+=== 图1 ===
+Create a finished Chinese technical flowchart for the AIM-STEP software, matching a coherent series of engineering documentation charts. Portrait 3:4, high resolution, flat white background, generous spacing and crisp legible simplified Chinese text. Dark navy headings, muted teal process rectangles, pale blue data stores, amber decision/uncertainty branches, pale red errors. Clear arrowheads, labeled branch arrows, no crossing arrows, rounded process rectangles and decision diamonds. No photos, mascots, invented UI, logos, charts of performance or decorative illustrations. This describes implemented code at commit 80a1ab3, 2026-11-16, not a proposed workflow. Render identifiers and numbers verbatim. Keep text large by using two main columns or horizontal bands; preserve the logic over ornament. Footer: AIM-STEP · 实现 80a1ab3 · 2026-11-16. 图① 标题：Pilot screening｜配置与 Prompt。副标题：当前标准 → AI 起草 → 保存执行版本。
+Use numbered stages:
+1 输入：“Screening source：去重后报告” and “当前 Eligibility criteria（可为空）”.
+2 “Screening criteria：手动编辑或导入；保留启用的纳排条件”. Note “无 Eligibility 仍可编辑；禁用或删除条件不参与判断”.
+3 Diamond “已有有效、已保存的 Screening criteria？” NO→“可编辑 Prompt；不能 Generate 或开始筛选”. YES→“Generate：AI 理解当前启用条件”.
+The AI drafting box labeled “现有生成服务 / gemma4:31b-it-q8_0”; it is not the TypeSafe screening model. Input arrow only from saved enabled Screening criteria. Note “不读取历史标准、旧 Prompt 或文献样本”.
+4 Large four-row box “1 Role：角色；2 Screening rules：原始规则＋AI解释；3 How to use rules：条件应用；4 Assessment：判断与证据说明”.
+5 Alternate path “手动编辑 / 本地导入 TXT、MD、JSON” merges with AI draft into “本次草稿”. Small note “每次打开编辑区为空；打开不会删除后台保存版”.
+6 “Save：绑定 criteriaSig / stageSig / Prompt hash”→“当前有效执行 Prompt”.
+Separate branch “草稿 Export：TXT / Markdown / JSON”.
+Error branch from Generate “空标准 / AI失败 / 标准并发变化 → 保留草稿并报错；不填旧内容”.
+Final handoff box “Pilot：标准有效＋Prompt已保存且当前＋源已同步＋报告≥3”.
+Bottom note “Prompt 或标准变更：旧结果归档，重新预筛；Clear持久清空；保存失败回滚。在线登录及AI授权另行校验。”
+
+=== 图2 ===
+Create a finished Chinese technical flowchart for the AIM-STEP software, matching a coherent series of engineering documentation charts. Portrait 3:4, high resolution, flat white background, generous spacing and crisp legible simplified Chinese text. Dark navy headings, muted teal process rectangles, pale blue data stores, amber decision/uncertainty branches, pale red errors. Clear arrowheads, labeled branch arrows, no crossing arrows, rounded process rectangles and decision diamonds. No photos, mascots, invented UI, logos, charts of performance or decorative illustrations. This describes implemented code at commit 80a1ab3, 2026-11-16, not a proposed workflow. Render identifiers and numbers verbatim. Keep text large by using two main columns or horizontal bands; preserve the logic over ornament. Footer: AIM-STEP · 实现 80a1ab3 · 2026-11-16. 图② 标题：Pilot screening｜抽样与模型执行。副标题：固定本轮版本 · 单次阅读 · 原文证据校验。
+Top “检查准备状态：有效标准、当前已保存Prompt、同步后的源、报告≥3、TypeSafe模型可用”.
+Decision “有未完成轮次？” yes→“Resume：只补缺失AI结果”；no→“新轮次：排除所有前轮已抽UID”.
+Next “记录 seed → 确定性打散 → 取样本量” note “默认20；可设5–100；不足时取剩余报告”.
+Next “冻结本轮：标准＋基础Prompt＋之前已完成轮次反馈；记录指纹” note “本轮标签不用于本轮”.
+Main vertical pipeline:
+“逐篇单次阅读 / TypeSafe任务串行”→“组装请求：标题摘要＋启用条件＋Prompt＋反馈补充”→“TypeSafe /v1/systemone：逐条件 met / not_met / unclear”→“如有明确判断及来源片段：第二次调用选择真实证据片段”→“本工具校验：条件有效；引文确在本篇标题摘要中”.
+Three branch row from validation: “任一有证据 not met → Exclude”；“全部有证据 met → Include”；“其余 → Maybe”. small note “缺项或无有效引文→unclear；未知条件忽略；重复矛盾→unclear”.
+All join cylinder “逐篇保存：原始回答、逐条件证据、模型、指纹、反馈版本与时间”.
+Then “本轮AI完成 → 逐篇 Agree / Mistake（详见图③）”.
+Side error loop “Stop / 网络或无效回答：保留已保存结果，Resume补缺；保存失败显示错误”.
+Footer strip “标题摘要不足时保持Maybe；不能把Maybe转成Include。Prompt生成服务与TypeSafe筛选服务分开。”
+
+=== 图3 ===
+Create a finished Chinese technical flowchart for the AIM-STEP software, matching a coherent series of engineering documentation charts. Portrait 3:4, high resolution, flat white background, generous spacing and crisp legible simplified Chinese text. Dark navy headings, muted teal process rectangles, pale blue data stores, amber decision/uncertainty branches, pale red errors. Clear arrowheads, labeled branch arrows, no crossing arrows, rounded process rectangles and decision diamonds. No photos, mascots, invented UI, logos, charts of performance or decorative illustrations. This describes implemented code at commit 80a1ab3, 2026-11-16, not a proposed workflow. Render identifiers and numbers verbatim. Keep text large by using two main columns or horizontal bands; preserve the logic over ornament. Footer: AIM-STEP · 实现 80a1ab3 · 2026-11-16. 图③ 标题：Pilot screening｜反馈学习与批准。副标题：人工确认 → Prompt补充 → 下一轮与正式筛选。
+Draw three numbered horizontal zones with a clear feedback loop.
+1.“本轮AI全部完成：Include / Maybe / Exclude”→diamond“逐篇人工评价”.
+Branch Agree→“立即保存原三分类；Maybe仍为Maybe”.
+Branch Mistake→“选择不同的纠正判断＋填写理由＋Save”. Note “AI为Maybe时不默认翻转；无理由或未保存则保留草稿”.
+Both merge→diamond“本轮每篇评价已保存？” NO loops back to reviewer; YES→“构建当前标准下的已确认反馈记忆”. Error sidebox “保存失败：恢复原评价、批准和轮次；保留草稿”.
+2. Split memory into “所有独立纠错 → 完整Prompt补充；重复合并，保留来源ID与轮次；≤24000字符，超限报错不丢弃” and “Agree及Mistake → 相关判例；最多12条规则＋4例；选择体积≤20000字符”.
+Both arrows into “基础Prompt＋完整纠错补充＋相关示例 → 真实模型请求的stagePolicy与state”.
+Side constraint “上下文学习，不训练模型权重；不得覆盖当前条件或复制其他报告事实”.
+3. Decision “继续下一轮 / 人工批准”. Next round→“新样本、冻结之前反馈；撤销旧批准” dashed loop to 图②.
+Approve→“校验：最新轮完整、无草稿、无待补纠错；源、标准、Prompt、模型均有效”→“保存批准：模型＋Prompt指纹＋冻结反馈hash”→“解锁Main screening”.
+Metrics sidebox from memory: “三分类准确率／一致率／kappa；转入全文召回率及95%区间另算；建议仅供参考，不自动批准”.
+Footer strip “后续评价或配置变化使批准失效；一轮反馈从后续轮次开始生效，不回填本轮结果。”
+
+=== 图4 ===
+Create a finished Chinese technical flowchart for the AIM-STEP software, matching a coherent series of engineering documentation charts. Portrait 3:4, high resolution, flat white background, generous spacing and crisp legible simplified Chinese text. Dark navy headings, muted teal process rectangles, pale blue data stores, amber decision/uncertainty branches, pale red errors. Clear arrowheads, labeled branch arrows, no crossing arrows, rounded process rectangles and decision diamonds. No photos, mascots, invented UI, logos, charts of performance or decorative illustrations. This describes implemented code at commit 80a1ab3, 2026-11-16, not a proposed workflow. Render identifiers and numbers verbatim. Keep text large by using two main columns or horizontal bands; preserve the logic over ornament. Footer: AIM-STEP · 实现 80a1ab3 · 2026-11-16. 图④ 标题：Main screening｜双次判断与证据汇总。副标题：同一模型两种阅读顺序 · 按条件与原文证据汇总。
+Top “检查：源就绪＋Pilot批准有效＋标准、Prompt、模型、反馈版本匹配”.
+Diamond “已有有效Pilot人工评价？” YES→side “继承Include / Maybe / Exclude；不再生成正式AI任务”. NO→“只补缺失阅读；每篇最多两次阅读；任务串行”.
+Two symmetrical columns:
+“阅读1：先条件、后报告；条件原顺序”
+“阅读2：先报告、后条件；条件逆序”.
+Shared box feeding both “同一TypeSafe模型＋同一标准、基础Prompt＋同一已批准反馈快照”.
+Each column one box “逐条件分类 → 必要时选择原文证据”.
+Join “分别校验：met和not met均须本篇引文；无有效证据或缺项→unclear；未知条件忽略”.
+Next “逐阅读保存结果、模型、证据、Prompt及反馈指纹”. Side “Stop或失败保留已保存结果；Resume只补缺”.
+Next diamond “两次有效阅读都完成？” NO→“待完成”. YES→diamond“存在有证据not met？”
+YES→diamond“至少一个排除条件没有有证据met的直接反证？” YES→“Exclude：另次unclear或无证据met不能推翻”. NO→“Conflict：等待人工；无最终决定”.
+NO (no supported not met)→diamond“两次均全部条件有证据met？” YES→“Include”；NO→“Maybe”.
+All outcomes arrow to “图⑤：人工优先级与分类汇总”; Conflict separately arrow “图⑤：Conflicts人工处理”.
+Footer strip “两次阅读来自同一选定模型，不代表两名独立审稿人；存在一个未被反证的明确不满足条件即可排除。”
+
+=== 图5 ===
+Create a finished Chinese technical flowchart for the AIM-STEP software, matching a coherent series of engineering documentation charts. Portrait 3:4, high resolution, flat white background, generous spacing and crisp legible simplified Chinese text. Dark navy headings, muted teal process rectangles, pale blue data stores, amber decision/uncertainty branches, pale red errors. Clear arrowheads, labeled branch arrows, no crossing arrows, rounded process rectangles and decision diamonds. No photos, mascots, invented UI, logos, charts of performance or decorative illustrations. This describes implemented code at commit 80a1ab3, 2026-11-16, not a proposed workflow. Render identifiers and numbers verbatim. Keep text large by using two main columns or horizontal bands; preserve the logic over ornament. Footer: AIM-STEP · 实现 80a1ab3 · 2026-11-16. 图⑤ 标题：Main screening｜人工复核与结果汇总。副标题：冲突必须处理 · Maybe保留 · 人工决定优先。
+Top “分类浏览：Yes / Maybe / No / Conflicts / Check”.
+Three parallel branches:
+“未解决Conflict”→“查看标题摘要＋两读条件与引文”→“人工Yes或No；No必须填排除理由”→“保存人工决定与时间”.
+“Maybe”→“默认保持Maybe；继续全文评估；不强制人工二选一”.
+“Include或Exclude”→“保留AI结果；可展开复核”.
+All join large priority box “最终决定：①Main人工复核 ＞ ②有效Pilot人工评价 ＞ ③两次AI汇总”.
+Side red box for human save “失败：恢复原决定和完成状态；保留理由草稿供重试”.
+Next counts box exact “Yes、Maybe、No分别计数；done = Yes + Maybe + No；pending = 全部报告数 − done；forward = Yes + Maybe”.
+Then diamond “pending=0；非Pilot报告两读完整；当前要求的Check全部保存？” YES→“标记完成，记录时间 → 图⑥ 导出与全文交接”；NO→“补缺、解决冲突或完成Check”.
+Side policy panel “当前默认：check=unresolved；Check集合为空；冲突单列处理，Maybe不强制Check”.
+Small separate panel “后台兼容审计：sample最多300条AI排除；exclusions及uncertain当前均返回AI排除集合；不是当前前台开关”.
+Footer strip “人工复核目前提供Yes／No；Main人工修改不会自动作为Pilot反馈；AI Maybe不被自动转换成Include。”
+
+=== 图6 ===
+Create a finished Chinese technical flowchart for the AIM-STEP software, matching a coherent series of engineering documentation charts. Portrait 3:4, high resolution, flat white background, generous spacing and crisp legible simplified Chinese text. Dark navy headings, muted teal process rectangles, pale blue data stores, amber decision/uncertainty branches, pale red errors. Clear arrowheads, labeled branch arrows, no crossing arrows, rounded process rectangles and decision diamonds. No photos, mascots, invented UI, logos, charts of performance or decorative illustrations. This describes implemented code at commit 80a1ab3, 2026-11-16, not a proposed workflow. Render identifiers and numbers verbatim. Keep text large by using two main columns or horizontal bands; preserve the logic over ornament. Footer: AIM-STEP · 实现 80a1ab3 · 2026-11-16. 图⑥ 标题：Main screening｜导出、交接与版本保护。副标题：最终三分类 → 本地导出与全文输入。
+Use two main columns “A 导出与内部交接” and “B 变更与保存保护”.
+A starts “当前最终决定”.
+Three branch boxes “Include＋Maybe：继续评估集合，保留各自标签”；“Exclude：排除集合”；“未决定／未解决Conflict：pending，暂不进入两类导出”.
+Include+Maybe and Exclude feed “本地导出：CSV / RIS / RevMan兼容RIS / BibTeX / JSON”.
+Small adjacent detail panels:
+“CSV：书目、最终决定、排除理由、条件及证据、AI两读、人工、Prompt和反馈指纹”.
+“JSON：逐篇评估、基础Prompt、批准反馈、阶段配置、归档”.
+Include+Maybe separately feed “状态更新后约800ms内部交接；不用用户再次导入”→cylinder “IndexedDB：aimstep-fulltext-input；按项目scope隔离”→“Full-text assess读取”.
+An input to cylinder “书目与UID、Report／Study标识、taDecision／taSource、returnId、pending及完成标记”.
+Another input “全文标准：有Eligibility用当前上游标准；无则用有效手动Screening criteria”.
+B starts “源、标准、Prompt、模型或判断策略发生影响结果的变化”→“按对应路径归档旧结果与快照；重置依赖结果及Pilot批准”→diamond“保存成功？”
+NO→“恢复旧工作区，提示重试”. YES→“重新Pilot及所需正式筛选”.
+Note “同标准Prompt编辑保留已确认反馈；源／标准变化或Pilot清空重置活动反馈”.
+Footer strip “数据与全文交接主要保存在当前浏览器，不等于跨设备云同步；Screening source的Export仍导出完整去重源集合。”
+
+=== 图2校正 ===
+Edit this technical flowchart. Preserve every Chinese and English label, all numbers, typography, layout, colors, sizes and footer. Correct only two arrow-routing errors: (1) The left 'Resume：只补缺失AI结果' box must bypass BOTH the seed/sampling box and the frozen-round box. Remove its existing connector that merges into sampling; draw a clean connector down the left margin directly into '组装请求：标题摘要＋启用条件＋Prompt＋反馈补充'. The new-round right branch alone continues to seed/sampling and frozen-round. Resume uses the previously saved sample and frozen snapshot. (2) Remove the red arrow from the right Stop/error box into the saved-results cylinder, leaving the error box as a terminal explanatory side note. A failed request must not appear as a successful saved result. Preserve all other arrows and text exactly. Do not add new text or alter the count of nodes.
+
+=== 图3校正 ===
+Preserve the entire flowchart exactly: text, numbers, nodes, layout, typography, colors and footer. Correct one connector only: REMOVE the long dashed green connector that starts from the bottom '解锁Main screening' box and runs left into '图②（下一轮）'. Approval unlocks Main screening; it must not automatically return to the next pilot round. KEEP the separate dashed arrow from '新样本、冻结之前反馈；撤销旧批准' down to '图②（下一轮）'. Do not change any labels or add nodes.
+
+=== 图4校正 ===
+Preserve all text, all diamonds and boxes, typography, colors, spacing and the footer exactly. Correct two arrow routes only. (1) At the bottom left, REMOVE the connector from 'Exclude：另次unclear或无证据met不能推翻' into '图⑤：Conflicts人工处理'. Exclude is NOT a conflict. Route that Exclude box directly into the bottom-right blue '图⑤：人工优先级与分类汇总' box, using a clean lower-margin path. KEEP the red Conflict box connected to the blue Conflicts人工处理 box; only Conflict should enter it. (2) Add a clear right-margin connector from the upper-right '继承Include / Maybe / Exclude；不再生成正式AI任务' box directly down into '图⑤：人工优先级与分类汇总', bypassing all formal AI steps. Do not let either new path cross decision nodes or text. Keep other connectors unchanged.

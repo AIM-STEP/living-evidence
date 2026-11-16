@@ -1,0 +1,25 @@
+flowchart TD
+  A[Screening source 的去重后报告] --> READY
+  E[当前 Eligibility criteria<br/>允许为空，不回填历史标准] --> C
+  C[Screening criteria<br/>手动编辑、导入；保存启用条件] --> V{有效且已保存的<br/>Screening criteria？}
+  V -->|否| EDIT[仍可编辑或导入 Prompt<br/>不能 Generate 或启动筛选]
+  V -->|是| GEN[Generate：AI 理解当前启用条件<br/>现有本地生成服务 gemma4:31b-it-q8_0]
+  GEN --> INPUT[生成输入仅包含当前条件<br/>稳定ID、名称、纳入与排除文字]
+  INPUT --> FOUR[四部分草稿<br/>Role / Screening rules<br/>How to use rules / Assessment instructions]
+  FOUR --> CHECK{JSON与逐条件ID完整？<br/>段落及长度有效？版本未变？}
+  CHECK -->|否| FAIL[报错并保留草稿<br/>不使用固定模板或历史内容兜底]
+  CHECK -->|是| DRAFT[本次编辑草稿<br/>原始规则保留＋AI语义解释]
+  LOCAL[手动输入或本地导入<br/>TXT / Markdown / JSON] --> DRAFT
+  EDIT --> LOCAL
+  DRAFT --> EX[Export 下拉<br/>TXT / Markdown / JSON]
+  DRAFT --> SAVE[Save：绑定 criteriaSig、stageSig<br/>保存 Prompt 文本、来源、hash]
+  SAVE --> CHANGE{实际指令发生变化且<br/>已有筛选结果？}
+  CHANGE -->|是| ARCHIVE[归档旧 Pilot、正式筛选及批准<br/>同标准的已确认反馈记忆保留]
+  CHANGE -->|否| ACTIVE
+  ARCHIVE --> ACTIVE[当前已保存、版本有效的基础Prompt]
+  ACTIVE --> READY{启动条件<br/>标准有效、Prompt当前、源已同步<br/>报告总数至少3、TypeSafe可用}
+  READY -->|满足| P[进入 Pilot 抽样与执行：图②]
+  READY -->|不满足| WAIT[等待补齐条件；不发筛选请求]
+  CLEAR[Clear：持久删除当前保存Prompt<br/>打开弹窗本身不删除后台保存版] --> LOCK[没有明确重新保存前禁止筛选]
+  SAVE -. 保存失败 .-> ROLLBACK[恢复原工作区；本次草稿可重试]
+  NOTE[每次打开编辑区为空<br/>禁用、删除的条件不进入实际筛选]

@@ -1,0 +1,51 @@
+=== 图4 ===
+Create a finished Chinese technical flowchart for the AIM-STEP software, matching a coherent series of engineering documentation charts. Portrait 3:4, high resolution, flat white background, generous spacing and crisp legible simplified Chinese text. Dark navy headings, muted teal process rectangles, pale blue data stores, amber decision/uncertainty branches, pale red errors. Clear arrowheads, labeled branch arrows, no crossing arrows, rounded process rectangles and decision diamonds. No photos, mascots, invented UI, logos, charts of performance or decorative illustrations. This describes implemented code at commit 80a1ab3, 2026-11-16, not a proposed workflow. Render identifiers and numbers verbatim. Keep text large by using two main columns or horizontal bands; preserve the logic over ornament. Footer: AIM-STEP · 实现 80a1ab3 · 2026-11-16. 图④ 标题：Main screening｜双次判断与证据汇总。副标题：同一模型两种阅读顺序 · 按条件与原文证据汇总。
+Top “检查：源就绪＋Pilot批准有效＋标准、Prompt、模型、反馈版本匹配”.
+Diamond “已有有效Pilot人工评价？” YES→side “继承Include / Maybe / Exclude；不再生成正式AI任务”. NO→“只补缺失阅读；每篇最多两次阅读；任务串行”.
+Two symmetrical columns:
+“阅读1：先条件、后报告；条件原顺序”
+“阅读2：先报告、后条件；条件逆序”.
+Shared box feeding both “同一TypeSafe模型＋同一标准、基础Prompt＋同一已批准反馈快照”.
+Each column one box “逐条件分类 → 必要时选择原文证据”.
+Join “分别校验：met和not met均须本篇引文；无有效证据或缺项→unclear；未知条件忽略”.
+Next “逐阅读保存结果、模型、证据、Prompt及反馈指纹”. Side “Stop或失败保留已保存结果；Resume只补缺”.
+Next diamond “两次有效阅读都完成？” NO→“待完成”. YES→diamond“存在有证据not met？”
+YES→diamond“至少一个排除条件没有有证据met的直接反证？” YES→“Exclude：另次unclear或无证据met不能推翻”. NO→“Conflict：等待人工；无最终决定”.
+NO (no supported not met)→diamond“两次均全部条件有证据met？” YES→“Include”；NO→“Maybe”.
+All outcomes arrow to “图⑤：人工优先级与分类汇总”; Conflict separately arrow “图⑤：Conflicts人工处理”.
+Footer strip “两次阅读来自同一选定模型，不代表两名独立审稿人；存在一个未被反证的明确不满足条件即可排除。”
+
+=== 图5 ===
+Create a finished Chinese technical flowchart for the AIM-STEP software, matching a coherent series of engineering documentation charts. Portrait 3:4, high resolution, flat white background, generous spacing and crisp legible simplified Chinese text. Dark navy headings, muted teal process rectangles, pale blue data stores, amber decision/uncertainty branches, pale red errors. Clear arrowheads, labeled branch arrows, no crossing arrows, rounded process rectangles and decision diamonds. No photos, mascots, invented UI, logos, charts of performance or decorative illustrations. This describes implemented code at commit 80a1ab3, 2026-11-16, not a proposed workflow. Render identifiers and numbers verbatim. Keep text large by using two main columns or horizontal bands; preserve the logic over ornament. Footer: AIM-STEP · 实现 80a1ab3 · 2026-11-16. 图⑤ 标题：Main screening｜人工复核与结果汇总。副标题：冲突必须处理 · Maybe保留 · 人工决定优先。
+Top “分类浏览：Yes / Maybe / No / Conflicts / Check”.
+Three parallel branches:
+“未解决Conflict”→“查看标题摘要＋两读条件与引文”→“人工Yes或No；No必须填排除理由”→“保存人工决定与时间”.
+“Maybe”→“默认保持Maybe；继续全文评估；不强制人工二选一”.
+“Include或Exclude”→“保留AI结果；可展开复核”.
+All join large priority box “最终决定：①Main人工复核 ＞ ②有效Pilot人工评价 ＞ ③两次AI汇总”.
+Side red box for human save “失败：恢复原决定和完成状态；保留理由草稿供重试”.
+Next counts box exact “Yes、Maybe、No分别计数；done = Yes + Maybe + No；pending = 全部报告数 − done；forward = Yes + Maybe”.
+Then diamond “pending=0；非Pilot报告两读完整；当前要求的Check全部保存？” YES→“标记完成，记录时间 → 图⑥ 导出与全文交接”；NO→“补缺、解决冲突或完成Check”.
+Side policy panel “当前默认：check=unresolved；Check集合为空；冲突单列处理，Maybe不强制Check”.
+Small separate panel “后台兼容审计：sample最多300条AI排除；exclusions及uncertain当前均返回AI排除集合；不是当前前台开关”.
+Footer strip “人工复核目前提供Yes／No；Main人工修改不会自动作为Pilot反馈；AI Maybe不被自动转换成Include。”
+
+=== 图6 ===
+Create a finished Chinese technical flowchart for the AIM-STEP software, matching a coherent series of engineering documentation charts. Portrait 3:4, high resolution, flat white background, generous spacing and crisp legible simplified Chinese text. Dark navy headings, muted teal process rectangles, pale blue data stores, amber decision/uncertainty branches, pale red errors. Clear arrowheads, labeled branch arrows, no crossing arrows, rounded process rectangles and decision diamonds. No photos, mascots, invented UI, logos, charts of performance or decorative illustrations. This describes implemented code at commit 80a1ab3, 2026-11-16, not a proposed workflow. Render identifiers and numbers verbatim. Keep text large by using two main columns or horizontal bands; preserve the logic over ornament. Footer: AIM-STEP · 实现 80a1ab3 · 2026-11-16. 图⑥ 标题：Main screening｜导出、交接与版本保护。副标题：最终三分类 → 本地导出与全文输入。
+Use two main columns “A 导出与内部交接” and “B 变更与保存保护”.
+A starts “当前最终决定”.
+Three branch boxes “Include＋Maybe：继续评估集合，保留各自标签”；“Exclude：排除集合”；“未决定／未解决Conflict：pending，暂不进入两类导出”.
+Include+Maybe and Exclude feed “本地导出：CSV / RIS / RevMan兼容RIS / BibTeX / JSON”.
+Small adjacent detail panels:
+“CSV：书目、最终决定、排除理由、条件及证据、AI两读、人工、Prompt和反馈指纹”.
+“JSON：逐篇评估、基础Prompt、批准反馈、阶段配置、归档”.
+Include+Maybe separately feed “状态更新后约800ms内部交接；不用用户再次导入”→cylinder “IndexedDB：aimstep-fulltext-input；按项目scope隔离”→“Full-text assess读取”.
+An input to cylinder “书目与UID、Report／Study标识、taDecision／taSource、returnId、pending及完成标记”.
+Another input “全文标准：有Eligibility用当前上游标准；无则用有效手动Screening criteria”.
+B starts “源、标准、Prompt、模型或判断策略发生影响结果的变化”→“按对应路径归档旧结果与快照；重置依赖结果及Pilot批准”→diamond“保存成功？”
+NO→“恢复旧工作区，提示重试”. YES→“重新Pilot及所需正式筛选”.
+Note “同标准Prompt编辑保留已确认反馈；源／标准变化或Pilot清空重置活动反馈”.
+Footer strip “数据与全文交接主要保存在当前浏览器，不等于跨设备云同步；Screening source的Export仍导出完整去重源集合。”
+
+=== 图4校正 ===
+Preserve all text, all diamonds and boxes, typography, colors, spacing and the footer exactly. Correct two arrow routes only. (1) At the bottom left, REMOVE the connector from 'Exclude：另次unclear或无证据met不能推翻' into '图⑤：Conflicts人工处理'. Exclude is NOT a conflict. Route that Exclude box directly into the bottom-right blue '图⑤：人工优先级与分类汇总' box, using a clean lower-margin path. KEEP the red Conflict box connected to the blue Conflicts人工处理 box; only Conflict should enter it. (2) Add a clear right-margin connector from the upper-right '继承Include / Maybe / Exclude；不再生成正式AI任务' box directly down into '图⑤：人工优先级与分类汇总', bypassing all formal AI steps. Do not let either new path cross decision nodes or text. Keep other connectors unchanged.

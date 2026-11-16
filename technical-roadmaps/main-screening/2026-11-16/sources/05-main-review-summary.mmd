@@ -1,0 +1,22 @@
+flowchart TD
+  A[逐报告AI汇总＋Pilot人工评价] --> CATEGORY[分类浏览：Yes / Maybe / No<br/>Conflicts / Check；可展开证据]
+  CATEGORY --> CONFLICT{是否未解决的真实冲突？}
+  CONFLICT -->|是| REVIEW[人工阅读标题摘要与两次证据<br/>选择Yes或No；No必须填排除理由]
+  CONFLICT -->|否| MAYBE{AI结果为Maybe？}
+  MAYBE -->|是| FORWARD[默认保留Maybe并进入全文<br/>不强制人工二选一]
+  MAYBE -->|否| AI[保留有证据的AI Include或Exclude]
+  REVIEW --> SAVE{保存成功？}
+  SAVE -->|否| RETRY[恢复原人工决定及完成状态<br/>保留理由草稿供重试]
+  SAVE -->|是| HUMAN[记录人工决定、排除理由、时间]
+  HUMAN --> PRIORITY
+  FORWARD --> PRIORITY
+  AI --> PRIORITY
+  PRIORITY[最终决定优先级<br/>1 Main人工复核<br/>2 有效Pilot人工评价<br/>3 两次AI阅读汇总]
+  PRIORITY --> COUNTS[Yes、Maybe、No分别计数<br/>done＝Yes＋Maybe＋No<br/>pending＝全部报告数－done<br/>forward＝Yes＋Maybe]
+  COUNTS --> FINISHED{pending为0；非Pilot报告两读完整<br/>当前要求的Check全部保存？}
+  FINISHED -->|是| COMPLETE[记录完成时间，标记筛选完成]
+  FINISHED -->|否| REMAIN[继续补缺、解决冲突或完成当前Check]
+  COMPLETE --> OUT[导出与全文交接：图⑥]
+  DEFAULT[默认check=unresolved<br/>checkIds返回空集合<br/>冲突单独处理；Maybe无需强制Check] -. 策略 .-> CATEGORY
+  LEGACY[后台兼容策略，不是当前前台开关<br/>sample：两读完成后取至多300条AI排除<br/>exclusions及uncertain：当前均返回AI排除集合] -. 可选历史策略 .-> CATEGORY
+  NOTE[Main人工复核当前只提供Yes/No<br/>人工决定可覆盖AI；它不会自动成为Pilot反馈]

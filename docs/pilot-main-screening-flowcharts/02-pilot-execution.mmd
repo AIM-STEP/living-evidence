@@ -1,0 +1,31 @@
+flowchart TD
+  A[源与Prompt准备完成] --> GUARD{无忙碌任务、无未保存纠错<br/>前轮已完成全部人工评价？}
+  GUARD -->|否| WAIT[先完成或保存已有工作]
+  GUARD -->|是| MODEL[发现并校验 TypeSafe 模型<br/>筛选不回退到本地生成模型]
+  MODEL --> RESUME{已有未完成轮次？}
+  RESUME -->|是| MISSING[沿用本轮样本与反馈快照<br/>只运行缺失的AI结果]
+  RESUME -->|否| POOL[候选集＝source.records<br/>减去所有前轮已抽样UID]
+  POOL --> HAS{仍有未抽报告？}
+  HAS -->|否| END[提示所有报告已用于Pilot<br/>不重复抽样]
+  HAS -->|是| SEED[保存 seed<br/>按 fingerprint of seed与UID 排序]
+  SEED --> SAMPLE[取样本量：默认20、可设5–100<br/>不足时取全部剩余报告]
+  SAMPLE --> FREEZE[冻结本轮标准、Prompt与先前反馈<br/>本轮标签不用于本轮；新轮撤销批准]
+  FREEZE --> MISSING
+  MISSING --> REQUEST[逐篇一次阅读；TypeSafe任务并发1<br/>标题摘要＋启用条件＋基础Prompt<br/>＋完整纠错补充＋相关示例]
+  REQUEST --> CLASS[TypeSafe 第一次 systemone<br/>逐条件 met / not_met / unclear]
+  CLASS --> EVIDENCE{有明确判断且有来源片段？}
+  EVIDENCE -->|是| QUOTE[第二次 systemone<br/>从本篇真实片段中选择支持证据或none]
+  EVIDENCE -->|否| VERIFY
+  QUOTE --> VERIFY[本工具归一化条件与判断<br/>只接受当前条件和本篇标题摘要引文]
+  VERIFY --> RULES[缺项或无有效引文：unclear<br/>未知条件忽略；有证据重复矛盾：unclear]
+  RULES --> DEC{逐条件重新汇总<br/>不直接采纳模型overall决定}
+  DEC -->|任一有证据not met| NO[Exclude]
+  DEC -->|全部有证据met| YES[Include]
+  DEC -->|其余| MAYBE[Maybe；绝不转换为Include]
+  NO --> STORE
+  YES --> STORE
+  MAYBE --> STORE[逐篇保存AI结果、模型与解析模型<br/>证据、原始回答、Prompt和反馈指纹、时间]
+  STORE --> ALL{本轮AI均完成？}
+  ALL -->|否| REQUEST
+  ALL -->|是| REVIEW[进入 Agree / Mistake 人工反馈：图③]
+  REQUEST -. Stop、请求失败、无效回答 .-> RETRY[保留已保存结果；缺失结果可Resume]

@@ -1,0 +1,28 @@
+flowchart TD
+  A[本轮AI全部完成<br/>Include / Maybe / Exclude] --> REVIEW{逐篇人工评价}
+  REVIEW -->|Agree| AGREE[立即保存原有三分类判断<br/>Maybe仍为Maybe]
+  REVIEW -->|Mistake| FIX[选择一个不同的纠正判断<br/>填写理由并Save；AI为Maybe不默认翻转]
+  FIX --> VALID{选择、理由和AI版本有效？}
+  VALID -->|否| DRAFT[保留草稿和错误提示<br/>不学习、不批准、不开始下一轮]
+  VALID -->|是| SAVE[保存纠正判断、理由、时间<br/>以及所评价AI结果的指纹]
+  AGREE --> DONE
+  SAVE --> DONE{本轮每篇评价已保存？}
+  SAVE -. 保存失败 .-> ROLLBACK[恢复原评价、批准和轮次状态<br/>保留本次草稿供重试]
+  DONE -->|否| REVIEW
+  DONE -->|是| MEMORY[构建已确认反馈记忆<br/>只收当前标准下有效完整轮次]
+  MEMORY --> METRICS[三分类准确率、一致率、kappa<br/>另算转入全文召回率及95%区间]
+  MEMORY --> SUPPLEMENT[所有独立纠错加入Prompt补充<br/>重复说明合并；保留来源ID与轮次]
+  MEMORY --> SELECT[按当前报告相关性选择<br/>最多12条规则、4个示例；选择体积≤20000字符]
+  SUPPLEMENT --> LIMIT{补充文字≤24000字符？}
+  LIMIT -->|否| LONG[明确报错要求整理说明<br/>不静默丢弃旧纠错]
+  LIMIT -->|是| CONTEXT[基础Prompt＋完整纠错补充<br/>＋相关示例进入真实stagePolicy与state]
+  SELECT --> CONTEXT
+  CONTEXT --> NEXT{继续下一轮或批准？}
+  NEXT -->|下一轮| ROUND[新抽样；冻结前轮反馈<br/>新轮撤销批准；返回图②]
+  NEXT -->|人工批准| GATE{最新轮完整、无草稿、无待补纠错<br/>源、标准、Prompt和模型当前有效？}
+  GATE -->|否| LOCK[保持正式筛选锁定]
+  GATE -->|是| APPROVE[保存批准：轮次、模型、标准及Prompt指纹<br/>冻结完整反馈快照及其hash]
+  APPROVE --> MAIN[解锁 Main screening：图④]
+  METRICS -. 仅提示，不自动批准 .-> GATE
+  SAFE[上下文学习，不修改模型权重<br/>反馈不得新增或覆盖筛选条件<br/>不复制其他报告事实、引文或决定] -. 约束 .-> CONTEXT
+  CHANGE[后续评价、模型、标准、Prompt或源变更] --> INVALID[相关批准失效；按变更路径归档或重置]
