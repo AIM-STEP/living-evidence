@@ -183,6 +183,18 @@ body.project-create-mode .workflow-column .pw-create-title { font-size: 22px; li
 .workspace-setup-link { font-size: 14px; line-height: 1.5; min-height: 40px; gap: 10px; }
 .workspace-setup-status { flex-shrink: 0; }
 .workspace-steps { gap: 12px; margin-top: 20px; }
+/* Project navigation enters the tool directly; no expandable task panels. */
+.workflow-column .project-tool-list { display: grid; gap: 0; border: 1px solid var(--dashboard-border); border-radius: 0 0 8px 8px; overflow: hidden; }
+.workflow-column .project-tool-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 18px; column-gap: 10px; row-gap: 3px; align-items: center; min-width: 0; padding: 12px 16px; color: var(--dashboard-ink); background: #fff; text-decoration: none; }
+.project-tool-row + .project-tool-row { border-top: 1px solid var(--dashboard-border); }
+.workflow-column .project-tool-row:hover { background: #f3f6ff; text-decoration: none; }
+.project-tool-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; }
+.project-tool-row .workspace-setup-status { grid-column: 1; grid-row: 1 / span 2; }
+.project-tool-row[data-completed="true"] .workspace-setup-status { background: var(--brand); color: #fff; border-color: var(--brand); }
+.project-tool-row[data-completed="true"] .workspace-setup-status svg { visibility: visible; }
+.project-tool-row .workspace-step-name { grid-column: 2; grid-row: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; font-weight: 500; }
+.workflow-column .project-tool-row .project-task-status { grid-column: 2; grid-row: 2; max-width: none; margin: 0; text-align: left; font-size: 12px; line-height: 1.5; color: var(--dashboard-muted); font-variant-numeric: tabular-nums; }
+.project-tool-arrow { grid-column: 3; grid-row: 1 / span 2; color: var(--brand); }
 .workspace-accordion { border-color: var(--dashboard-border); border-radius: 8px; }
 .workflow-column .workspace-accordion summary { min-height: 60px; padding: 16px; gap: 12px; flex-wrap: wrap; font-size: 15px; line-height: 1.5; font-weight: 500; }
 .workspace-step-name { color: var(--dashboard-ink); }

@@ -1,6 +1,6 @@
 # Project-scoped tools (2026-11-17)
 
-All ten tools belong to a registered project. The project summary offers an action and a saved-work status for Eligibility criteria, Search strategy, Title and abstract screening, Full-text assess, Extraction, Risk of bias, Analysis, Certainty of evidence, Proposal and Evidencebank.
+All ten tools belong to a registered project. The project navigation presents a flat list of direct tool links and saved-work statuses for Eligibility criteria, Search strategy, Title and abstract screening, Full-text assess, Extraction, Risk of bias, Analysis, Certainty of evidence, Proposal and Evidencebank.
 
 ## Entry and registration
 
@@ -14,11 +14,13 @@ All ten tools belong to a registered project. The project summary offers an acti
 
 No project completion counter or preceding tool unlocks another tool. All ten project actions and the tool selector remain available in any order. Existing direct imports and manual editors remain available. Tool-local input validation still applies: an analysis needs data, screening needs records and saved rules, and a formal AI screening run retains its own Pilot approval checks. Those checks do not require a different tool to be completed.
 
-The project overview's `n/10` counts tools with saved work, not completed research tasks. Detailed labels give actual available counts and draft states. Opening a page alone does not mark a research task complete.
+The project overview's `n/10` counts tools with saved work, not completed research tasks. Each tool row shows its name and a compact status. Expanded descriptions, dashboards and tables have been removed from project navigation. Clicking the tool name, status or arrow directly enters its project-scoped operation page; there is no intermediate expanded panel. Opening a page alone does not mark a research task complete.
+
+While project navigation is visible, progress refreshes every two seconds and after saved-work events (coalesced for 100 ms). The current label stays visible while it refreshes. Storage scans pause while a tool operation page is visible; that page keeps its native live progress. Returning from the project list to the same mounted tool does not reload its iframe or restart its task. Refreshing progress does not start model calls.
 
 ## Status and storage
 
-`app/project-task-status.js` reads the selected project's existing localStorage summaries and IndexedDB records. Counts cover saved criteria, search results/runs, screened/pending reports and unresolved conflicts, full-text decisions, confirmed extraction reports, confirmed risk-of-bias assessments, saved analysis runs, certainty assessments and writing drafts. Extraction rows come from saved report data. Corrupt or unreadable storage is reported rather than presented as an empty task; absent task data means Not started.
+`app/project-task-status.js` reads the selected project's existing localStorage summaries and IndexedDB records. Counts cover saved criteria, search results/runs, screened/pending reports and unresolved conflicts, full-text decisions, confirmed extraction reports, confirmed risk-of-bias assessments, saved analysis runs, certainty assessments and writing drafts. Corrupt or unreadable storage is reported rather than presented as an empty task; absent task data means Not started.
 
 IndexedDB reads use readonly transactions. Opening the project overview does not create missing databases, initialise other tasks, call models or alter saved decisions. Concurrent reads are shared; a response for a previously selected project cannot replace the current project's summary. These statuses describe data available in the current browser, consistent with the tools' existing storage; this change does not add cross-device result synchronisation.
 
@@ -34,6 +36,6 @@ NODE_PATH=<directory containing jsdom> node tools/test_project_task_routing.cjs
 node tools/test_project_task_status.cjs
 ```
 
-The checks execute the actual ten tool preview/startup scripts, shell router and project creation controller in isolated synthetic DOMs, and verify registry waits/recovery, nested editors, safe registration returns, free tool order, task counts, scoped URLs, legacy aliases, data isolation, readonly storage and failure reporting. Existing navigation, project menu, screening conflict/export, prompt/clear/source, full-text AI review, eligibility editor, extraction, risk-of-bias, analysis, proposal creation and certainty checks were also run.
+The checks execute the actual ten tool preview/startup scripts, shell router and project creation controller in isolated synthetic DOMs, and verify registry waits/recovery, nested editors, safe registration returns, free tool order, task counts, scoped URLs, legacy aliases, data isolation, readonly storage and failure reporting. Additional checks cover all ten direct tool-name destinations, absence of expanded navigation content, periodic and save-event progress updates, paused hidden-list scans and preservation of the running tool frame. Existing navigation, project menu, screening conflict/export, prompt/clear/source, full-text AI review, eligibility editor, extraction, risk-of-bias, analysis, proposal creation and certainty checks were also run.
 
 Browser connection was unavailable in this environment; no live visual or real-account interaction verification is claimed. Two older suites (`test_protocol_imports.cjs`, `test_eligibility_confirmed_rules.cjs`) still have assertion failures, reproduced with the unchanged pre-update runtime sources: imported analysis state `failed` vs `pending`, and an outdated literal `Description` heading assertion. They are not used as passing checks for this release.

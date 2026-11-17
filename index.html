@@ -1713,7 +1713,7 @@ body.project-page-mode .toolset-layout { display: none; }
 
 </style>
   <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-  <link rel="stylesheet" href="app/dashboard.css?v=20261021-54">
+  <link rel="stylesheet" href="app/dashboard.css?v=20261117-project-tools-direct-1">
 <script src="app/project-task-status.js?v=20261117-projects-1"></script>
 <script defer src="app/header-navigation.js?v=20261021-47"></script>
 <link rel="stylesheet" href="app/progress-display.css?v=20261021-1">
@@ -2027,126 +2027,73 @@ body.project-page-mode .toolset-layout { display: none; }
               </div>
             </header>
             <section class="workspace-topbar" aria-labelledby="workspace-title">
-              <div class="workspace-heading">
-                <h2 id="workspace-title" data-i18n="workspace_setup">Project tools</h2>
-              </div>
-              <div class="workspace-controls">
-                <div class="workspace-progress-group">
-                  <div class="workspace-progressbar" role="progressbar" aria-label="Tools with saved work" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><span></span></div>
-                  <span class="workspace-progress-label" title="Tools with saved work">0/10</span>
-                </div>
-                <button type="button" class="workspace-setup-button" id="workspace-setup-button" data-i18n="workspace_setup_button">Tools</button>
-                <button type="button" class="workspace-toggle" id="workspace-toggle" aria-expanded="true" aria-controls="workspace-setup-overview" aria-label="Collapse project tools">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                </button>
+              <h2 id="workspace-title" data-i18n="workspace_setup">Project tools</h2>
+              <div class="workspace-progress-group">
+                <div class="workspace-progressbar" role="progressbar" aria-label="Tools with saved work" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><span></span></div>
+                <span class="workspace-progress-label" title="Tools with saved work">0/10</span>
               </div>
             </section>
-            <div class="workspace-setup-overview" id="workspace-setup-overview">
-              <p class="workspace-setup-intro" data-i18n="workspace_setup_intro">Use any tool in any order. Each task belongs to this project.</p>
-              <ol class="workspace-setup-links">
-                <li><a class="workspace-setup-link" href="#tool-eligibility" data-workspace-step="1" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="Not completed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span data-i18n="t1_t">Eligibility criteria</span></a></li>
-                <li><a class="workspace-setup-link" href="#tool-search" data-workspace-step="2" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="Not completed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span data-i18n="t2_t">Search strategy</span></a></li>
-                <li><a class="workspace-setup-link" href="#tool-title-abstract" data-workspace-step="3" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="Not completed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span data-i18n="t3_t">Title and abstract screening</span></a></li>
-                <li><a class="workspace-setup-link" href="#tool-full-text" data-workspace-step="4" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="Not completed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span data-i18n="t4_t">Full-text assess</span></a></li>
-                <li><a class="workspace-setup-link" href="#tool-extraction" data-workspace-step="5" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="Not completed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span data-i18n="t5_t">Extraction</span></a></li>
-                <li><a class="workspace-setup-link" href="#tool-risk-bias" data-workspace-step="6" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="Not completed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span data-i18n="t6_t">Risk of bias assessment</span></a></li>
-                <li><a class="workspace-setup-link" href="#tool-analysis" data-workspace-step="7" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="Not completed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span data-i18n="t7_t">Analysis</span></a></li>
-                <li><a class="workspace-setup-link" href="#tool-certainty" data-workspace-step="8" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="Not completed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span data-i18n="t8_t">Certainty of evidence</span></a></li>
-                <li><a class="workspace-setup-link" href="#tool-proposal" data-workspace-step="9" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span data-i18n="nav_proposal">Proposal</span></a></li>
-                <li><a class="workspace-setup-link" href="#tool-evidencebank" data-workspace-step="10" data-completed="false"><span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span><span>Evidencebank</span></a></li>
-              </ol>
-            </div>
-            <div class="workspace-steps" id="workspace-steps">
-              <details class="workspace-accordion" id="tool-eligibility">
-                <summary><span class="workspace-step-name" data-i18n="t1_t">Eligibility criteria</span><span class="project-task-status" data-task-status="eligibility.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
-                <div class="workspace-panel"><p data-i18n="t1_d">AI-assisted, structured inclusion and exclusion criteria, with PICO, PEO, SPIDER and other frameworks</p><a class="btn btn-primary workspace-open-eligibility" data-workspace-tool="eligibility" href="eligibility.html" data-i18n="open_eligibility">Build eligibility criteria →</a></div>
-              </details>
-              <details class="workspace-accordion" id="tool-search">
-                <summary><span class="workspace-step-name" data-i18n="t2_t">Search strategy</span><span class="workspace-summary-metrics"><span data-i18n="search_database_count">0 databases</span><span data-i18n="search_record_count">0 records</span></span><span class="project-task-status" data-task-status="search-strategy.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
-                <div class="workspace-panel">
-                  <div class="workspace-search-summary">
-                    <div class="workspace-search-stat"><span data-i18n="search_database_label">Databases searched</span><strong>0</strong></div>
-                    <div class="workspace-search-stat"><span data-i18n="search_last_run">Last search</span><strong>—</strong></div>
-                    <div class="workspace-search-stat"><span data-i18n="search_records_found">Records found</span><strong>0</strong></div>
-                  </div>
-                  <table class="workspace-data-table">
-                    <thead><tr><th data-i18n="search_table_database">Database</th><th data-i18n="search_table_date">Search date</th><th data-i18n="search_table_results">Results</th></tr></thead>
-                    <tbody><tr><td class="workspace-data-empty" colspan="3" data-i18n="search_empty">Search runs will appear here.</td></tr></tbody>
-                  </table>
-                  <a class="btn btn-primary workspace-open-eligibility" data-workspace-tool="search" href="search-strategy.html">Build search strategy →</a>
-                </div>
-              </details>
-              <details class="workspace-accordion" id="tool-title-abstract" open>
-                <summary><span class="workspace-step-name" data-i18n="t3_t">Title and abstract screening</span><span class="workspace-summary-metrics"><span data-i18n="screen_irrelevant">0 irrelevant</span><span data-i18n="screen_to_screen">0 studies to screen</span></span><span class="project-task-status" data-task-status="title-abstract-screening.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
-                <div class="workspace-panel">
-                  <div class="workspace-dashboard">
-                    <div class="workspace-dashboard-main">
-                      <h3>Screening progress</h3>
-                      <div class="workspace-progress-track" role="progressbar" aria-label="Title and abstract screening progress" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><span></span></div>
-                      <div class="workspace-stats">
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span>Screened</span></div>
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span>Disagreements</span></div>
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span>Human reviewed</span></div>
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span>Pending</span></div>
-                      </div>
-                      <div class="workspace-team-note">AI-assisted screening with reviewer correction</div>
-                    </div>
-                    <div class="workspace-dashboard-side">
-                      <div class="workspace-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zM23 10a2 2 0 0 0-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10a2 2 0 0 0 2 2h9a2 2 0 0 0 1.84-1.22l3.02-7.05c.09-.23.14-.48.14-.73v-2z" /></svg></div>
-                      <h3>No screening activity yet</h3>
-                      <p>Import records or use this project’s search results.</p>
-                    </div>
-                  </div>
-                  <p style="margin-top:16px"><a class="btn btn-primary" data-workspace-tool="screen" href="title-abstract-screening.html">Open title and abstract screening →</a></p>
-                </div>
-              </details>
-              <details class="workspace-accordion" id="tool-full-text" open>
-                <summary><span class="workspace-step-name" data-i18n="t4_t">Full-text assess</span><span class="workspace-summary-metrics"><span data-i18n="fulltext_excluded">0 excluded</span><span data-i18n="fulltext_to_screen">0 studies to screen</span></span><span class="project-task-status" data-task-status="full-text-screening.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
-                <div class="workspace-panel">
-                  <div class="workspace-dashboard">
-                    <div class="workspace-dashboard-main">
-                      <h3 data-i18n="dashboard_team_progress">Team progress</h3>
-                      <div class="workspace-progress-track" role="progressbar" aria-label="Full-text assess progress" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><span></span></div>
-                      <div class="workspace-stats">
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="fulltext_decided">Decided</span></div>
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="fulltext_conflicts">Conflicts open</span></div>
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="fulltext_awaiting">Awaiting classification</span></div>
-                        <div class="workspace-stat"><strong>0</strong><span class="workspace-stat-dot"></span><span data-i18n="fulltext_pending">To screen</span></div>
-                      </div>
-                      
-                    </div>
-                    <div class="workspace-dashboard-side">
-                      <div class="workspace-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zM23 10a2 2 0 0 0-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10a2 2 0 0 0 2 2h9a2 2 0 0 0 1.84-1.22l3.02-7.05c.09-.23.14-.48.14-.73v-2z" /></svg></div>
-                      <h3 data-i18n="fulltext_no_activity">No full-text reviews yet</h3>
-                      <p data-i18n="fulltext_import_prompt">Studies selected for full-text review will appear here.</p>
-                    </div>
-                  </div>
-                  <p style="margin-top:16px"><a class="btn btn-primary" data-workspace-tool="fulltext" href="full-text-screening.html">Open Full-text assess →</a></p>
-                </div>
-              </details>
-              <details class="workspace-accordion" id="tool-extraction">
-                <summary><span class="workspace-step-name" data-i18n="t5_t">Extraction</span><span class="workspace-summary-metrics"><span data-i18n="extracted_count">0 extracted</span><span data-i18n="studies_to_extract">0 studies to extract</span></span><span class="project-task-status" data-task-status="extraction.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
-                <div class="workspace-panel">
-                  <table class="workspace-data-table">
-                    <thead><tr><th data-i18n="extraction_study">Study</th><th data-i18n="extraction_status">Status</th><th data-i18n="extraction_assigned">Assigned to</th></tr></thead>
-                    <tbody><tr><td class="workspace-data-empty" colspan="3" data-i18n="extraction_empty">Studies ready for extraction will appear here.</td></tr></tbody>
-                  </table>
-                <p><a class="btn btn-primary" data-workspace-tool="extract" href="extraction.html" data-i18n="workspace_open_tool">Open tool →</a></p></div>
-              </details>
-              <details class="workspace-accordion" id="tool-risk-bias">
-                <summary><span class="workspace-step-name" data-i18n="t6_t">Risk of bias assessment</span><span class="project-task-status" data-task-status="risk-of-bias.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
-                <div class="workspace-panel"><p data-i18n="t6_d">Traceable risk-of-bias assessment, with support for re-assessment</p><p><a class="btn btn-primary" data-workspace-tool="rob" href="risk-of-bias.html" data-i18n="workspace_open_tool">Open tool →</a></p></div>
-              </details>
-              <details class="workspace-accordion" id="tool-analysis">
-                <summary><span class="workspace-step-name" data-i18n="t7_t">Analysis</span><span class="project-task-status" data-task-status="analysis.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
-                <div class="workspace-panel"><p data-i18n="t7_d">Multidimensional analysis and visualisation with an integrated R Shiny app</p><p><a class="btn btn-primary" data-workspace-tool="nma" href="analysis.html" data-i18n="workspace_open_tool">Open tool →</a></p></div>
-              </details>
-              <details class="workspace-accordion" id="tool-certainty">
-                <summary><span class="workspace-step-name" data-i18n="t8_t">Certainty of evidence</span><span class="project-task-status" data-task-status="certainty-of-evidence.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
-                <div class="workspace-panel"><p data-i18n="t8_d">Certainty-of-evidence grading for evidence-based medicine, with support for re-assessment</p><p><a class="btn btn-primary" data-workspace-tool="grade" href="certainty-of-evidence.html" data-i18n="workspace_open_tool">Open tool →</a></p></div>
-              </details>
-              <details class="workspace-accordion" id="tool-proposal"><summary><span class="workspace-step-name" data-i18n="nav_proposal">Proposal</span><span class="project-task-status" data-task-status="build-protocol.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary><div class="workspace-panel"><a class="btn btn-primary" data-workspace-tool="protocol" href="build-protocol.html" data-i18n="workspace_open_tool">Open Proposal →</a></div></details>
-              <details class="workspace-accordion" id="tool-evidencebank"><summary><span class="workspace-step-name">Evidencebank</span><span class="project-task-status" data-task-status="drafting-manuscript.html" role="status">Not started</span><svg class="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></summary><div class="workspace-panel"><a class="btn btn-primary" data-workspace-tool="manuscript" href="drafting-manuscript.html" data-i18n="workspace_open_tool">Open Evidencebank →</a></div></details>
+            <div class="project-tool-list" id="workspace-steps">
+              <a class="project-tool-row" id="tool-eligibility" data-workspace-tool="eligibility" data-workspace-step="1" data-completed="false" href="eligibility.html" aria-describedby="task-status-eligibility">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name" data-i18n="t1_t">Eligibility criteria</span>
+                <span class="project-task-status" id="task-status-eligibility" data-task-status="eligibility.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="project-tool-row" id="tool-search" data-workspace-tool="search" data-workspace-step="2" data-completed="false" href="search-strategy.html" aria-describedby="task-status-search">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name" data-i18n="t2_t">Search strategy</span>
+                <span class="project-task-status" id="task-status-search" data-task-status="search-strategy.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="project-tool-row" id="tool-title-abstract" data-workspace-tool="screen" data-workspace-step="3" data-completed="false" href="title-abstract-screening.html" aria-describedby="task-status-screen">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name" data-i18n="t3_t">Title and abstract screening</span>
+                <span class="project-task-status" id="task-status-screen" data-task-status="title-abstract-screening.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="project-tool-row" id="tool-full-text" data-workspace-tool="fulltext" data-workspace-step="4" data-completed="false" href="full-text-screening.html" aria-describedby="task-status-fulltext">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name" data-i18n="t4_t">Full-text assess</span>
+                <span class="project-task-status" id="task-status-fulltext" data-task-status="full-text-screening.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="project-tool-row" id="tool-extraction" data-workspace-tool="extract" data-workspace-step="5" data-completed="false" href="extraction.html" aria-describedby="task-status-extract">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name" data-i18n="t5_t">Extraction</span>
+                <span class="project-task-status" id="task-status-extract" data-task-status="extraction.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="project-tool-row" id="tool-risk-bias" data-workspace-tool="rob" data-workspace-step="6" data-completed="false" href="risk-of-bias.html" aria-describedby="task-status-rob">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name" data-i18n="t6_t">Risk of bias assessment</span>
+                <span class="project-task-status" id="task-status-rob" data-task-status="risk-of-bias.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="project-tool-row" id="tool-analysis" data-workspace-tool="nma" data-workspace-step="7" data-completed="false" href="analysis.html" aria-describedby="task-status-nma">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name" data-i18n="t7_t">Analysis</span>
+                <span class="project-task-status" id="task-status-nma" data-task-status="analysis.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="project-tool-row" id="tool-certainty" data-workspace-tool="grade" data-workspace-step="8" data-completed="false" href="certainty-of-evidence.html" aria-describedby="task-status-grade">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name" data-i18n="t8_t">Certainty of evidence</span>
+                <span class="project-task-status" id="task-status-grade" data-task-status="certainty-of-evidence.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="project-tool-row" id="tool-proposal" data-workspace-tool="protocol" data-workspace-step="9" data-completed="false" href="build-protocol.html" aria-describedby="task-status-protocol">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name" data-i18n="nav_proposal">Proposal</span>
+                <span class="project-task-status" id="task-status-protocol" data-task-status="build-protocol.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="project-tool-row" id="tool-evidencebank" data-workspace-tool="manuscript" data-workspace-step="10" data-completed="false" href="drafting-manuscript.html" aria-describedby="task-status-manuscript">
+                <span class="workspace-setup-status" role="img" aria-label="No saved work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>
+                <span class="workspace-step-name">Evidencebank</span>
+                <span class="project-task-status" id="task-status-manuscript" data-task-status="drafting-manuscript.html" role="status">Not started</span>
+                <span class="project-tool-arrow" aria-hidden="true">→</span>
+              </a>
             </div>
           </div>
         </section>
@@ -3367,9 +3314,6 @@ body.project-page-mode .toolset-layout { display: none; }
         var list = document.getElementById("pw-list");
         var page = document.getElementById("project-workspace");
         var steps = document.getElementById("workspace-steps");
-        var setupOverview = document.getElementById("workspace-setup-overview");
-        var setupButton = document.getElementById("workspace-setup-button");
-        var toggleButton = document.getElementById("workspace-toggle");
         var otherPage = document.getElementById("project-page");
         var frame = document.getElementById("project-page-frame");
         var defaultFrame = frame, proposalFrames = new Map();
@@ -3398,8 +3342,8 @@ body.project-page-mode .toolset-layout { display: none; }
           setView(target ? 'page' : 'project', target, true);
           refreshProject();
         });
-        var setupLinks = Array.from(document.querySelectorAll(".workspace-setup-link[data-workspace-step]"));
-        if (!list || !page || !steps || !setupOverview || !setupButton || !toggleButton) return;
+        var setupLinks = Array.from(document.querySelectorAll(".project-tool-row[data-workspace-step]"));
+        if (!list || !page || !steps) return;
 
         function readContext() {
           try {
@@ -3486,9 +3430,6 @@ body.project-page-mode .toolset-layout { display: none; }
             if (activeProject) target.searchParams.set('projectId', activeProject.id);
             document.querySelectorAll('[data-workspace-tool="' + key + '"]').forEach(function (link) { link.href = routeUrl('page', target).href; });
           });
-          renderSearchSummary();
-          renderScreenSummary();
-          renderFulltextSummary();
         }
         var taskSummaryVersion = 0, taskRead = null;
         async function renderTaskStatuses() {
@@ -3498,7 +3439,12 @@ body.project-page-mode .toolset-layout { display: none; }
           var version = ++taskSummaryVersion, id = activeProject && activeProject.id;
           var labels = document.querySelectorAll('[data-task-status]');
           var zh = window.AIMSTEP.lang() === 'zh';
-          labels.forEach(function (el) { el.textContent = id ? (zh ? '正在读取…' : 'Loading…') : (zh ? '尚未开始' : 'Not started'); });
+          labels.forEach(function (el) {
+            if (el.dataset.statusProject !== (id || '')) {
+              el.textContent = id ? (zh ? '正在读取…' : 'Loading…') : (zh ? '尚未开始' : 'Not started');
+              el.dataset.statusProject = id || '';
+            }
+          });
           var progress = document.querySelector('.workspace-progressbar'), progressLabel = document.querySelector('.workspace-progress-label');
           if (!id) { progress.setAttribute('aria-valuenow','0'); progress.querySelector('span').style.width = '0%'; progressLabel.textContent = '0/10'; }
           if (!id || !window.AIMSTEPProjectTasks) return;
@@ -3521,124 +3467,21 @@ body.project-page-mode .toolset-layout { display: none; }
             var affected = {eligibility:'eligibility.html',search:'search-strategy.html',searchDraft:'search-strategy.html',searchResults:'search-strategy.html',screen:'title-abstract-screening.html',screenState:'title-abstract-screening.html',full:'full-text-screening.html',fullState:'full-text-screening.html',extraction:'extraction.html',rob:'risk-of-bias.html',analysis:'analysis.html',coe:'certainty-of-evidence.html',coeState:'certainty-of-evidence.html',protocol:'build-protocol.html',manuscript:'drafting-manuscript.html'};
             labels.forEach(function (el) {
               var file = el.dataset.taskStatus;
-              el.textContent = snapshot.errors.some(function (key) { return affected[key] === file; }) ? (zh ? '读取失败，请重新打开工具检查' : 'Could not read saved task') : values[file].label;
-            });
-            var x = snapshot.data.extraction;
-            var extracted = document.querySelectorAll('#tool-extraction .workspace-summary-metrics span');
-            if (extracted[0]) extracted[0].textContent = Object.values(x?.studies || {}).filter(function (study) { return study.done; }).length + (zh ? ' 篇已确认' : ' confirmed');
-            if (extracted[1]) extracted[1].textContent = (x?.records?.length || 0) + (zh ? ' 篇报告' : ' reports');
-            var table = document.querySelector('#tool-extraction tbody');
-            table.replaceChildren();
-            var reports = x?.records || [];
-            if (!reports.length) {
-              var row = document.createElement('tr'), cell = document.createElement('td');
-              cell.colSpan = 3; cell.className = 'workspace-data-empty';
-              cell.textContent = zh ? '本项目尚无待提取报告。' : 'No reports imported in this project.';
-              row.appendChild(cell); table.appendChild(row);
-            } else reports.slice(0,20).forEach(function (report) {
-              var row = document.createElement('tr'), study = x?.studies?.[report.uid];
-              [report.title || report.uid, study?.done ? (zh ? '已确认' : 'Confirmed') : study ? (zh ? '进行中' : 'In progress') : (zh ? '尚未开始' : 'Not started'), study?.done?.by || '—'].forEach(function (value) {
-                var cell = document.createElement('td'); cell.textContent = value; row.appendChild(cell);
-              });
-              table.appendChild(row);
+              var label = snapshot.errors.some(function (key) { return affected[key] === file; }) ? (zh ? '读取失败，请重新打开工具检查' : 'Could not read saved task') : values[file].label;
+              if (el.textContent !== label) el.textContent = label;
             });
           } catch (_) {
             if (version === taskSummaryVersion) labels.forEach(function (el) { el.textContent = zh ? '读取失败，请重试' : 'Could not read saved task'; });
           }
         }
-        function renderFulltextSummary() {
-          var section = document.getElementById("tool-full-text");
-          if (!section) return;
-          var data = null;
-          try { data = activeProject ? JSON.parse(localStorage.getItem("aimstep-fulltext-summary:" + activeProject.id) || "null") : null; } catch (e) {}
-          var zh = window.AIMSTEP.lang() === "zh";
-          var n = function (k) { return Math.max(0, Number(data && data[k]) || 0); };
-          var assessed = n("assessed"), decided = n("decided");
-          var metrics = section.querySelectorAll(".workspace-summary-metrics span");
-          if (metrics[0]) metrics[0].textContent = n("exclude").toLocaleString() + (zh ? " 篇已排除" : " excluded");
-          if (metrics[1]) metrics[1].textContent = n("pending").toLocaleString() + (zh ? " 篇待筛选研究" : " studies to screen");
-          var track = section.querySelector(".workspace-progress-track");
-          if (track) {
-            track.setAttribute("aria-valuemax", String(assessed));
-            track.setAttribute("aria-valuenow", String(decided));
-            track.querySelector("span").style.width = (assessed ? Math.round(decided / assessed * 100) : 0) + "%";
-          }
-          var values = section.querySelectorAll(".workspace-stat strong");
-          [decided, n("conflicts") - n("conflictsResolved"), n("unclear"), n("pending")].forEach(function (number, i) {
-            if (values[i]) values[i].textContent = Math.max(0, number).toLocaleString();
-          });
-          var side = section.querySelector(".workspace-dashboard-side");
-          if (side && data && n("sought")) {
-            side.querySelector("h3").textContent = zh ? "全文评估正在进行" : "Full-text assess in progress";
-            side.querySelector("p").textContent = zh
-              ? n("sought") + " 篇报告，" + n("retrieved") + " 篇已获取全文，" + n("include") + " 篇纳入。"
-              : n("sought") + " reports, " + n("retrieved") + " full texts retrieved, " + n("include") + " included.";
-          }
+        var taskRefreshTimer = null;
+        function scheduleTaskStatusRefresh() {
+          if (taskRefreshTimer !== null) return;
+          taskRefreshTimer = setTimeout(function () { taskRefreshTimer = null; renderTaskStatuses(); }, 100);
         }
-        function renderScreenSummary() {
-          var section = document.getElementById("tool-title-abstract");
-          if (!section) return;
-          var data = null;
-          try { data = activeProject ? JSON.parse(localStorage.getItem("aimstep-screen-summary:" + activeProject.id) || "null") : null; } catch (e) {}
-          var zh = window.AIMSTEP.lang() === "zh";
-          var total = Math.max(0, Number(data && data.sourceCount) || 0);
-          var screened = Math.max(0, Number(data && data.screened) || 0);
-          var pending = Math.max(0, Number(data && data.pending) || 0);
-          var excluded = Math.max(0, Number(data && data.no) || 0);
-          var conflicts = Math.max(0, Number(data && data.conflictsPending != null ? data.conflictsPending : (Number(data && data.conflicts) || 0) - (Number(data && data.conflictsResolved) || 0)) || 0);
-          var human = Math.max(0, Number(data && data.humanReviewed) || 0);
-          var metrics = section.querySelectorAll(".workspace-summary-metrics span");
-          if (metrics[0]) metrics[0].textContent = excluded.toLocaleString() + (zh ? " 条排除" : " excluded");
-          if (metrics[1]) metrics[1].textContent = pending.toLocaleString() + (zh ? " 条待筛选" : " to screen");
-          var track = section.querySelector(".workspace-progress-track");
-          if (track) {
-            track.setAttribute("aria-valuemax", String(total));
-            track.setAttribute("aria-valuenow", String(screened));
-            track.querySelector("span").style.width = (total ? Math.round(screened / total * 100) : 0) + "%";
-          }
-          var values = section.querySelectorAll(".workspace-stat strong");
-          [screened, conflicts, human, pending].forEach(function (number, i) {
-            if (values[i]) values[i].textContent = number.toLocaleString();
-          });
-          var side = section.querySelector(".workspace-dashboard-side");
-          if (side) {
-            side.querySelector("h3").textContent = screened ? (zh ? "筛选正在进行" : "Screening in progress") : (zh ? "尚无筛选活动" : "No screening activity yet");
-            side.querySelector("p").textContent = screened
-              ? (zh ? "打开筛选工具查看人工修正和模型依据。" : "Open screening to review decisions and model evidence.")
-              : (zh ? "导入文献或使用本项目的检索结果开始筛选。" : "Import records or use this project’s search results to begin screening.");
-          }
-        }
-        function renderSearchSummary() {
-          var section = document.getElementById("tool-search");
-          if (!section) return;
-          var summary = null;
-          try { summary = activeProject ? JSON.parse(localStorage.getItem("aimstep-search-summary:" + activeProject.id) || "null") : null; } catch (e) {}
-          var count = Number(summary && summary.unique) || 0;
-          var databases = Number(summary && summary.databases) || 0;
-          var zh = window.AIMSTEP.lang() === "zh";
-          var metrics = section.querySelectorAll(".workspace-summary-metrics span");
-          if (metrics[0]) metrics[0].textContent = databases + (zh ? " 个数据库" : " databases");
-          if (metrics[1]) metrics[1].textContent = count.toLocaleString() + (zh ? " 条记录" : " records");
-          var values = section.querySelectorAll(".workspace-search-stat strong");
-          if (values[0]) values[0].textContent = String(databases);
-          if (values[1]) values[1].textContent = summary && summary.lastRun ? new Date(summary.lastRun).toLocaleString() : "—";
-          if (values[2]) values[2].textContent = count.toLocaleString();
-          var body = section.querySelector("tbody");
-          body.replaceChildren();
-          var history = summary && Array.isArray(summary.runs) ? summary.runs : [];
-          if (!history.length) {
-            var emptyRow = document.createElement("tr"), emptyCell = document.createElement("td");
-            emptyCell.colSpan = 3; emptyCell.className = "workspace-data-empty";
-            emptyCell.textContent = zh ? "检索记录将显示在这里。" : "Search runs will appear here.";
-            emptyRow.appendChild(emptyCell); body.appendChild(emptyRow);
-          } else history.slice(0, 20).forEach(function (run) {
-            var row = document.createElement("tr");
-            [run.label || run.db, run.date ? new Date(run.date).toLocaleString() : "—", (Number(run.downloaded) || 0).toLocaleString() + " · " + run.status].forEach(function (value) {
-              var cell = document.createElement("td"); cell.textContent = value; row.appendChild(cell);
-            });
-            body.appendChild(row);
-          });
-        }
+        function renderFulltextSummary() { scheduleTaskStatusRefresh(); }
+        function renderScreenSummary() { scheduleTaskStatusRefresh(); }
+        function renderSearchSummary() { scheduleTaskStatusRefresh(); }
         function setupStorageKey(id) { return "aimstep-setup-completed:" + encodeURIComponent(id); }
         function completedSteps() {
           if (!activeProject) return [];
@@ -3717,7 +3560,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh internal tool documents without changing public links.
-            if (frameTarget.pathname.endsWith(".html")) frameTarget.searchParams.set("appVersion", "20261117-projects-1");
+            if (frameTarget.pathname.endsWith(".html")) frameTarget.searchParams.set("appVersion", "20261117-project-tools-direct-1");
             // Keep proposal documents mounted so in-flight generation survives tool navigation.
             var selectedFrame = defaultFrame;
             if (/\/build-protocol\.html$/i.test(frameTarget.pathname)) {
@@ -3819,7 +3662,7 @@ body.project-page-mode .toolset-layout { display: none; }
         function followLink(event) {
           if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
           var link = event.target.closest && event.target.closest("a[href]");
-          if (!link || link.matches(".pw-open, .workspace-setup-link") || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
+          if (!link || link.matches(".pw-open") || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
           if (link.getAttribute("href").charAt(0) === "#") return;
           var target = sitePage(link.href);
           if (!target) return;
@@ -3909,10 +3752,8 @@ body.project-page-mode .toolset-layout { display: none; }
           setView(collapse ? "toolset" : "project", null, true);
         }
         function openStep(step) {
-          var panel = steps.querySelector("details.workspace-accordion:nth-child(" + step + ")");
-          if (!panel) return;
-          panel.open = true;
-          panel.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Legacy step shortcuts now enter the tool instead of opening a panel.
+          steps.querySelector('[data-workspace-step="' + step + '"]')?.click();
         }
         list.addEventListener("click", function (event) {
           var link = event.target.closest(".pw-open");
@@ -3922,16 +3763,6 @@ body.project-page-mode .toolset-layout { display: none; }
           event.stopImmediatePropagation();
           toggleProjectSummary(link, card);
         }, true);
-        setupLinks.forEach(function (link) {
-          link.addEventListener("click", function (event) { event.preventDefault(); openStep(Number(link.dataset.workspaceStep)); });
-        });
-        setupButton.addEventListener("click", function () { setupOverview.hidden = false; setupOverview.scrollIntoView({behavior:"smooth",block:"nearest"}); });
-        toggleButton.addEventListener("click", function () {
-          var expanded = toggleButton.getAttribute("aria-expanded") === "true";
-          setupOverview.hidden = expanded;
-          toggleButton.setAttribute("aria-expanded", expanded ? "false" : "true");
-          toggleButton.setAttribute("aria-label", window.AIMSTEP.t(expanded ? "workspace_expand" : "workspace_collapse"));
-        });
         document.addEventListener("aimstep:project-deleted", function (event) {
           if (!activeProject || activeProject.id !== event.detail.projectId) return;
           activeProject = null;
@@ -3954,16 +3785,25 @@ body.project-page-mode .toolset-layout { display: none; }
           if (!document.body.classList.contains("project-page-mode")) document.title = "AIM-STEP | " + window.AIMSTEP.t("tk_title");
         });
         window.addEventListener("storage", function (event) {
-          if (activeProject && event.key?.endsWith(':' + activeProject.id)) renderTaskStatuses();
+          if (activeProject && (!event.key || event.key.endsWith(':' + activeProject.id))) scheduleTaskStatusRefresh();
           if (activeProject && event.key === setupStorageKey(activeProject.id)) renderSetupStatus();
           if (event.key === "aimstep-search-summary:" + (activeProject ? activeProject.id : "default")) renderSearchSummary();
           if (event.key === "aimstep-screen-summary:" + (activeProject ? activeProject.id : "default")) renderScreenSummary();
           if (event.key === "aimstep-fulltext-summary:" + (activeProject ? activeProject.id : "default")) renderFulltextSummary();
         });
         window.addEventListener("aimstep:search-updated", renderSearchSummary);
-        window.addEventListener("aimstep:screening-updated", function () { renderScreenSummary(); renderTaskStatuses(); });
+        window.addEventListener("aimstep:screening-updated", renderScreenSummary);
         document.addEventListener('aimstep:project-registry', refreshProject);
         window.addEventListener('focus', function () { if (!document.body.classList.contains('project-page-mode')) refreshProject(); });
+        // IndexedDB writes do not emit storage events; refresh visible project
+        // navigation every two seconds without starting or restarting any task.
+        var taskStatusPoll = setInterval(function () {
+          if (document.visibilityState !== 'hidden' && !page.hidden && activeProject) renderTaskStatuses();
+        }, 2000);
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState !== 'hidden' && !page.hidden) renderTaskStatuses();
+        });
+        window.addEventListener('pagehide', function () { clearTimeout(taskRefreshTimer); taskRefreshTimer = null; });
         window.addEventListener("popstate", restoreRoute);
         new MutationObserver(refreshProject).observe(list, { childList: true, subtree: true });
         new ResizeObserver(function () {
