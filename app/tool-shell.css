@@ -46,7 +46,8 @@ body.tool-page {
 .tool-page .preview-body { padding: 20px; }
 .tool-page .preview-actions { padding: 0 20px 20px; }
 .tool-page h1 { font-size: 24px; line-height: 1.35; font-weight: 600; letter-spacing: -.02em; }
-.tool-page h2, .tool-page .section h2, .tool-page .criteria-heading h2 { font-size: 18px; line-height: 1.4; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+.tool-page h2, .tool-page .section h2, .tool-page .criteria-heading h2, .tool-page .generation-method-label { font-size: 18px; line-height: 1.4; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+.tool-page .generation-method-label { margin-bottom: 14px; }
 .tool-page h3 { font-size: 15px; line-height: 1.5; font-weight: 600; }
 .tool-page .label, .tool-page .field-label, .tool-page .subheading { font-size: 14px; line-height: 1.5; font-weight: 500; }
 .tool-page .hint, .tool-page .empty, .tool-page .notice, .tool-page .footnote, .tool-page .muted { font-size: 13px; line-height: 1.65; }
