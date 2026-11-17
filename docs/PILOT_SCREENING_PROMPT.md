@@ -87,6 +87,12 @@ Pilot 显示并保存 Include、Maybe、Exclude。Agree 保留原判断；Mistak
 
 真实 API 合成样本测试：使用现有 TypeSafe 服务请求 `jev-latest`，实际返回 `jev-1.14.0`，连接器为 `typesafe-screen-v5`。儿童人群不符、系统综述及非随机研究为 Exclude；明确的成人 RCT 为 Include；缺少人群和设计信息为 Maybe。五条记录仅验证链路和这些边界案例，不是实际综述性能评估。
 
+## Main screening 冲突复核与 Export（2026-11-17）
+
+Main screening 继续处理其他文献时，已完成两次有效 AI 阅读或已有有效 Pilot 人工评价的报告仍可用 Yes/No 人工复核；源或标准变更、其他设置操作、未完成评估的报告及重叠人工保存仍受保护。No 要求排除理由。AI 刷新列表时保留正在编辑的理由、焦点和光标；成功保存清除对应已保存草稿，失败恢复原人工决定并保留重试内容，且不覆盖同期完成的 AI 阅读。页面 Conflicts 数字与队列只显示未解决项；保存后的记录进入 Yes 或 No 分类，完整 AI 分歧仍保留审计。后台 summary 保留 conflicts 总数和 conflictsResolved，并另提供 conflictsPending。
+
+Main 的 Export 按钮打开格式菜单，直接选择 RIS、RevMan 兼容 RIS、CSV、BibTeX 或 JSON 下载，不再显示独立 Format 选择框。Records 的 Include/Exclude 范围选择保留；Include 仍包含 Yes 和 Maybe，未解决冲突不进入两类结果集合。菜单支持方向键、Home/End、Escape、Tab 和外部点击关闭；空集合禁用 Export。此更新不改变判断策略版本、不归档或重筛已有评估，也不启动额外模型调用。
+
 ## 版本与保存保护
 
 - Prompt 绑定 `criteriaSig`、`stageSig` 及模块版本；指纹是确定性变化标识，不是密码学真实性验证。
@@ -100,6 +106,8 @@ Pilot 显示并保存 Include、Maybe、Exclude。Agree 保留原判断；Mistak
 ## 验证
 
 ```sh
+node tools/test_main_conflict_review.cjs
+node tools/test_main_export_menu.cjs
 node tools/test_screening_decisions.cjs
 node tools/test_screening_workflow.cjs
 node tools/test_screening_prompt.cjs

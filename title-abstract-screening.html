@@ -304,7 +304,7 @@ th{background:#f4f4f4}
 <div id="full-feed-wrap" hidden><h3 class="sub-head" data-ui-localize>Latest AI readings</h3><ol class="full-feed" id="full-feed"></ol></div>
 <div class="pilot-list" id="check-list" hidden></div>
 </div>
-<div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option" data-ui-localize>Records</label><select class="select compact" id="export-option"><option value="include" data-ui-localize>Include (Yes and Maybe)</option><option value="exclude" data-ui-localize>Exclude (No)</option></select><label class="label inline" for="export-format" data-ui-localize>Format</label><select class="select compact" id="export-format"><option value="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</option><option value="revman">RevMan (RIS)</option><option value="csv">CSV (Excel, with screening decisions)</option><option value="bib">BibTeX</option><option value="json">JSON (with screening decisions)</option></select><button class="btn small" type="button" id="export-results" data-ui-localize>Export</button><span class="hint" id="export-count" role="status" aria-live="polite"></span></div></div>
+<div class="panel-footer toolbar between"><div class="export-results"><label class="label inline" for="export-option" data-ui-localize>Records</label><select class="select compact" id="export-option"><option value="include" data-ui-localize>Include (Yes and Maybe)</option><option value="exclude" data-ui-localize>Exclude (No)</option></select><button class="btn small" type="button" id="export-results" aria-haspopup="menu" aria-expanded="false" aria-controls="results-export-menu"><span data-ui-localize>Export</span><span aria-hidden="true"> ▾</span></button><div id="results-export-menu" class="source-export-menu" role="menu" aria-labelledby="export-results" hidden><button type="button" role="menuitem" data-results-export="ris">RIS (EndNote, Zotero, Mendeley, RefWorks)</button><button type="button" role="menuitem" data-results-export="revman">RevMan (RIS)</button><button type="button" role="menuitem" data-results-export="csv">CSV (Excel, with screening decisions)</button><button type="button" role="menuitem" data-results-export="bib">BibTeX</button><button type="button" role="menuitem" data-results-export="json">JSON (with screening decisions)</button></div><span class="hint" id="export-count" role="status" aria-live="polite"></span></div></div>
 </section>
 </div>
 </div>
@@ -1414,7 +1414,7 @@ function summary(){
   const queue=checkIds(),checked=queue.filter(id=>workspace.full.human[id]).length,conflicts=conflictIds(),resolved=conflicts.filter(id=>workspace.full.human[id]).length;
   const done=yes+maybe+no,pending=source.records.length-done;
   return {version:3,projectId,sourceCount:source.records.length,screened:done,done,yes,maybe,no,pending,forward:yes+maybe,
-    conflicts:conflicts.length,conflictsResolved:resolved,humanCheck:queue.length,humanChecked:checked,humanReviewed:human,aiScreened:ai,model:workspace.pilot?.approved?.model||'',
+    conflicts:conflicts.length,conflictsResolved:resolved,conflictsPending:conflicts.length-resolved,humanCheck:queue.length,humanChecked:checked,humanReviewed:human,aiScreened:ai,model:workspace.pilot?.approved?.model||'',
     completed:!!workspace.full.completedAt&&source.records.length>0&&!pending&&checked===queue.length,updatedAt:now()};
 }
 function maybeComplete(){
@@ -1464,9 +1464,15 @@ async function runFull(){
     else{log('model-error',{stage:'full',message:text(e.message,500)});showNotice('full-message',e.message,'error')}
   }finally{busy='';controller=null;fullNow.clear();await save().catch(()=>{});render()}
 }
+// Finished records can be reviewed while other Main readings continue. Changes
+// to the source/settings and records without complete assessments remain locked.
+function canReviewFullRecord(id){
+  return recordById.has(id)&&screeningStagesReady()&&!stale()&&!importing&&!fullReviewSaving&&(!busy||busy==='full')&&!!(pilotVoteOf(id)||(fullAI(id)&&fullAI2(id)));
+}
 async function castFullVote(id,decision){
-  if(!recordById.has(id)||!['yes','no'].includes(decision)||stale()||busy||fullReviewSaving)return;
+  if(!['yes','no'].includes(decision)||!canReviewFullRecord(id))return;
   const prev=workspace.full.human[id],prior=prev?structuredClone(prev):null,previousCompletion=workspace.full.completedAt;
+  const draftKey='full|'+id,draftAtSave=exclusionDrafts.get(draftKey);
   const exclusionReason=decision==='no'?reviewerExclusionReason(id,'full',prev||pilotVoteOf(id)):'';
   if(decision==='no'&&!exclusionReason){fullReviewErrors.set(id,'Enter an exclusion reason before choosing No.');renderFull();return;}
   fullReviewSaving=true;fullReviewErrors.delete(id);
@@ -1474,9 +1480,10 @@ async function castFullVote(id,decision){
   try{
     log(isConflict(id)?'conflict-resolved':'human-check',{recordId:id,decision,previous:prev?.decision||'',pass1:fullAI(id)?.decision||'',pass2:fullAI2(id)?.decision||''});
     maybeComplete();await save();
+    if(exclusionDrafts.get(draftKey)===draftAtSave)exclusionDrafts.delete(draftKey);
   }catch(e){
     if(prior)workspace.full.human[id]=prior;else delete workspace.full.human[id];
-    workspace.full.completedAt=previousCompletion;publishSummary();
+    workspace.full.completedAt=previousCompletion;maybeComplete();publishSummary();
     fullReviewErrors.set(id,'Could not save: '+e.message+'. Please retry.');
   }finally{fullReviewSaving=false;render();}
 }
@@ -1487,7 +1494,7 @@ function aiDetails(a){
 // Every category uses the pilot record layout, including records assessed in the pilot.
 function fullCategoryIds(category){
   if(['yes','maybe','no'].includes(category))return source.records.filter(r=>finalDecision(r.uid)===category).map(r=>r.uid);
-  const ids=category==='conflicts'?conflictIds():category==='check'?checkIds():[];
+  const ids=category==='conflicts'?conflictIds().filter(id=>!workspace.full.human[id]):category==='check'?checkIds():[];
   return ids.slice().sort((a,b)=>!!workspace.full.human[a]-!!workspace.full.human[b]);
 }
 function fullCard(id){
@@ -1498,7 +1505,7 @@ function fullCard(id){
   const assessmentId='full-assessment-'+encodeURIComponent(id),collapsed=collapsedFullAssessments.has(id)||(!!h&&!expandedFullAssessments.has(id));
   const outcome=pv?pilotAIOutcome(pilot):aiPair(id),names={yes:'Include',no:'Exclude',maybe:'Unclear',conflict:'Conflicting assessments'};
   const assessment='<div class="audit"><strong>AI decision: '+esc(names[outcome]||'Pending')+'</strong>'+readings.map((x,i)=>(readings.length>1?'<p class="hint">AI pass '+(i+1)+' · '+esc(label(x.decision))+'</p>':'')+aiDetails(x)).join('')+'</div>';
-  const canReview=!busy&&!stale()&&!fullReviewSaving;
+  const canReview=canReviewFullRecord(id);
   return '<article class="record'+(conflict&&!h?' differ':'')+'"><div class="record-head"><div><div class="source-record-number">'+esc(recordHeadingMeta(rec))+'</div><h3>'+excerpt(rec.title,quotes)+'</h3><div class="meta">'+esc([rec.authors.slice(0,3).join(', '),rec.year,rec.journal,rec.doi?'DOI: '+rec.doi:''].filter(Boolean).join(' · '))+'</div></div><button class="badge pilot-review-toggle" type="button" data-toggle-full-assessment="'+esc(id)+'" aria-expanded="'+!collapsed+'" aria-controls="'+esc(assessmentId)+'">'+(h?'Assessed: '+esc(label(h.decision)):conflict?'Conflict':'AI assessed')+'<span class="review-chevron" aria-hidden="true">⌄</span></button></div>'+
     abstractBlock(id,rec.abstract,quotes,true)+'<div id="'+esc(assessmentId)+'" data-full-assessment'+(collapsed?' hidden':'')+'>'+assessment+'</div>'+exclusionReasonField(id,'full',h)+
     '<div class="decision-buttons" role="group" aria-label="Your decision">'+['yes','no'].map(d=>'<button type="button" class="vote '+d+(h?.decision===d?' selected':'')+'" data-fvote="'+d+'" data-id="'+esc(id)+'" aria-pressed="'+(h?.decision===d)+'"'+(canReview?'':' disabled')+'>'+label(d)+'</button>').join('')+'</div>'+
@@ -1510,7 +1517,8 @@ function renderFull(){
   const s=summary(),valid=approvalsValid()&&!stale(),share=s.sourceCount?Math.floor(s.done/s.sourceCount*100):0,calls=remainingCalls();
   $('full-screened').textContent=s.done.toLocaleString()+' / '+s.sourceCount.toLocaleString();
   $('full-yes').textContent=s.yes.toLocaleString();$('full-maybe').textContent=s.maybe.toLocaleString();$('full-no').textContent=s.no.toLocaleString();
-  $('full-conflicts').textContent=s.conflicts.toLocaleString();
+  $('full-conflicts').textContent=s.conflictsPending.toLocaleString();
+  $('full-conflicts').title=s.conflictsPending+' unresolved; '+s.conflictsResolved+' resolved';
   $('full-conflicts').parentElement.classList.toggle('alert',s.conflicts>s.conflictsResolved);
   $('full-check').textContent=s.humanCheck.toLocaleString();
   $('screening-progress-percent').parentElement.style.setProperty('--screening-progress',share+'%');$('screening-progress-percent').textContent=share+'%';$('team-bar').style.width=share+'%';$('team-track').setAttribute('aria-valuenow',String(share));
@@ -1537,8 +1545,10 @@ function renderFull(){
     const selected=button.dataset.fullCategory===fullFilter;
     button.setAttribute('aria-pressed',String(selected));button.setAttribute('aria-expanded',String(selected));
   });
+  const active=document.activeElement,focus=active?.matches?.('[data-exclusion-stage="full"][data-exclusion-id]')?{id:active.dataset.exclusionId,start:active.selectionStart,end:active.selectionEnd}:null;
   $('check-list').hidden=!fullFilter;
-  $('check-list').innerHTML=!fullFilter?'':list.slice(0,fullShown).map(fullCard).join('')+(list.length>fullShown?'<button class="btn small" type="button" id="check-more">Show '+Math.min(20,list.length-fullShown)+' more</button>':'')+(!list.length?'<p class="hint" data-ui-localize>No records in this category.</p>':'');
+  $('check-list').innerHTML=!fullFilter?'':list.slice(0,fullShown).map(fullCard).join('')+(list.length>fullShown?'<button class="btn small" type="button" id="check-more">Show '+Math.min(20,list.length-fullShown)+' more</button>':'')+(!list.length?'<p class="hint" data-ui-localize>'+(fullFilter==='conflicts'?'No unresolved conflicts. Reviewed records appear under Yes or No.':'No records in this category.')+'</p>':'');
+  if(focus){const input=$('check-list').querySelector('[data-exclusion-stage="full"][data-exclusion-id="'+CSS.escape(focus.id)+'"]');input?.focus({preventScroll:true});if(input&&focus.start!==null)input.setSelectionRange(focus.start,focus.end);}
   updateExportCount();
   // The end-of-run message follows conflicts and Human check as they progress.
   const endMsg=$('full-message').textContent;
@@ -1590,9 +1600,11 @@ function updateExportCount(){
   const n=selectedExportRecords().length,pending=summary().pending;
   $('export-count').textContent=n.toLocaleString()+' record'+(n===1?'':'s')+(pending?' · '+pending.toLocaleString()+' still without a decision':'');
   $('export-results').disabled=!n;
+  if(!n)setResultsExportOpen(false);
 }
-function exportResults(){
-  const option=$('export-option').value==='exclude'?'exclude':'include',format=$('export-format').value,records=selectedExportRecords();
+function exportResults(format='ris'){
+  if(!['ris','revman','csv','bib','json'].includes(format))return;
+  const option=$('export-option').value==='exclude'?'exclude':'include',records=selectedExportRecords();
   if(!records.length){toast('No records with this decision yet.');return}
   if(format==='csv')downloadCSV(records,option);
   else if(format==='bib')download('title-abstract-'+option+'-'+stamp()+'.bib','application/x-bibtex;charset=utf-8',sourceBibTeX(records,true));
@@ -2569,8 +2581,39 @@ $('check-list').addEventListener('click',e=>{
   const button=e.target.closest('[data-fvote]');if(button){castFullVote(button.dataset.id,button.dataset.fvote);return;}
   if(e.target.id==='check-more'){fullShown+=20;renderFull();}
 });
-$('export-option').addEventListener('change',updateExportCount);
-$('export-results').addEventListener('click',exportResults);
+function setResultsExportOpen(open,focusIndex=0){
+  const button=$('export-results'),menu=$('results-export-menu');
+  open=!!open&&!button.disabled&&selectedExportRecords().length>0;
+  menu.hidden=!open;button.setAttribute('aria-expanded',String(open));
+  if(!open)return;
+  const rect=button.getBoundingClientRect(),width=menu.offsetWidth,height=menu.offsetHeight;
+  menu.style.left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12))+'px';
+  menu.style.top=(rect.bottom+height+4<=window.innerHeight?rect.bottom+4:Math.max(12,rect.top-height-4))+'px';
+  const items=menu.querySelectorAll('[data-results-export]');items[(focusIndex+items.length)%items.length]?.focus();
+}
+$('export-option').addEventListener('change',()=>{setResultsExportOpen(false);updateExportCount()});
+$('export-results').addEventListener('click',()=>setResultsExportOpen($('results-export-menu').hidden));
+$('export-results').addEventListener('keydown',event=>{
+  if(['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();setResultsExportOpen(true,event.key==='ArrowUp'?-1:0);}
+});
+$('results-export-menu').addEventListener('click',event=>{
+  const item=event.target.closest('[data-results-export]');if(!item)return;
+  setResultsExportOpen(false);$('export-results').focus();exportResults(item.dataset.resultsExport);
+});
+$('results-export-menu').addEventListener('keydown',event=>{
+  const items=[...$('results-export-menu').querySelectorAll('[data-results-export]')],index=items.indexOf(document.activeElement);
+  if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+    event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowUp'?-1:1)+items.length)%items.length;items[next]?.focus();
+  }else if(event.key==='Tab')setResultsExportOpen(false);
+});
+document.addEventListener('click',event=>{
+  if(!$('export-results').contains(event.target)&&!$('results-export-menu').contains(event.target))setResultsExportOpen(false);
+});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&!$('results-export-menu').hidden){event.preventDefault();setResultsExportOpen(false);$('export-results').focus();}
+});
+window.addEventListener('resize',()=>setResultsExportOpen(false));
+window.addEventListener('scroll',()=>setResultsExportOpen(false),true);
 let refreshPromise=null;
 function refreshSource(){
   if(!workspace||busy||importing||pilotReviewSaving||fullReviewSaving||pilotReviewDrafts.size||exclusionDrafts.size||stagesDialog.open||window.screeningCriteriaDialog?.active||(globalThis.AimstepScreeningPrompt&&(pilotStarting||screeningPromptEditor?.isOpen()))||document.visibilityState==='hidden')return Promise.resolve();

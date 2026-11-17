@@ -61,7 +61,7 @@ ctx.workspace.full.human={};
 // Every result format carries the actionable exclusion reason and original evidence.
 $('export-option').value='exclude';
 for(const format of ['csv','ris','revman','bib','json']){
- $('export-format').value=format;evaluate('exportResults()');assert(output,format);
+ ctx.exportChoice=format;evaluate('exportResults(exportChoice)');assert(output,format);
  assert.match(output[2],/Population not met/,format);assert.match(output[2],/Children only\./,format);
  if(format==='csv'){assert.match(output[2],/Exclusion reason/);assert.match(output[2],/Exclusion evidence/);}
  if(format==='json'){assert.equal(JSON.parse(output[2]).records[0].exclusionDetails.source,'AI');}
