@@ -54,6 +54,17 @@ button, input, select, textarea { font-family: inherit; }
   font-size: 14px; font-weight: 500; line-height: 1.4;
 }
 .lang:hover, .login:hover:not(:disabled) { background: #f3f6fc; border-color: #b9c7e2; }
+.header-actions .lang, .header-actions .login {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.header-actions .lang:hover, .header-actions .login:hover:not(:disabled) {
+  border: 0;
+  background: transparent;
+  color: var(--brand-text);
+}
 .toolset-layout {
   grid-template-columns: clamp(320px, 31vw, 510px) minmax(380px, 1fr) clamp(210px, 17vw, 280px);
   gap: 24px; padding: 32px 0 56px;
