@@ -59,7 +59,8 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
   const label=t.d.querySelector('[data-task-status="search-strategy.html"]');assert.match(label.textContent,/12 records/);
   const conflict=t.d.querySelector('[data-task-status="title-abstract-screening.html"]');assert.match(conflict.textContent,/2 unresolved conflicts/);
   assert.equal(t.d.querySelector('.header-products,#toolset-trigger,#toolset'),null,'global Toolset and writing entries are removed');
-  assert.deepEqual([...t.d.querySelectorAll('.project-tool-row .workspace-step-name')].slice(0,2).map(el=>el.textContent),['Proposal','Report']);
+  assert.equal(t.d.querySelector('.project-tool-row:first-child .workspace-step-name').textContent,'Proposal');
+  assert.equal(t.d.querySelector('.project-tool-row:last-child .workspace-step-name').textContent,'Report');
   assert.match(t.d.querySelector('[data-task-status="build-protocol.html"]').textContent,/Draft saved/);
   assert.equal(JSON.parse(t.w.localStorage.getItem('aimstep-protocol:A')).text,'Existing writing draft');
   // A later tool can be opened before the earlier tools contain any work.

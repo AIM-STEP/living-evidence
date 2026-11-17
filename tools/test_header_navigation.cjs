@@ -7,8 +7,8 @@ assert(d.querySelector('.site-header .brand'));assert(d.querySelector('#lang-tog
 const project=d.getElementById('project-workspace');assert(project.hidden,'writing entries are not visible before selecting a project');
 const links=[...project.querySelectorAll('[data-workspace-tool]')];
 assert.equal(links.length,10);
-assert.deepEqual(links.slice(0,2).map(link=>link.querySelector('.workspace-step-name').textContent),['Proposal','Report']);
-assert.deepEqual(links.slice(2).map(link=>link.getAttribute('href')),['eligibility.html','search-strategy.html','title-abstract-screening.html','full-text-screening.html','extraction.html','risk-of-bias.html','analysis.html','certainty-of-evidence.html']);
+assert.equal(links[0].querySelector('.workspace-step-name').textContent,'Proposal');assert.equal(links.at(-1).querySelector('.workspace-step-name').textContent,'Report');
+assert.deepEqual(links.slice(1,-1).map(link=>link.getAttribute('href')),['eligibility.html','search-strategy.html','title-abstract-screening.html','full-text-screening.html','extraction.html','risk-of-bias.html','analysis.html','certainty-of-evidence.html']);
 assert.equal(d.querySelector('.project-tool-row .workspace-step-name').textContent,'Proposal');
 assert.equal(project.textContent.includes('Evidencebank'),false);dom.window.close();
-console.log('PASS global Toolset/writing menus removed, account controls retained, project-only Proposal and Report precede the eight workflow tools');
+console.log('PASS global Toolset/writing menus removed, account controls retained, project-only Proposal, eight workflow tools and Report in the requested order');
