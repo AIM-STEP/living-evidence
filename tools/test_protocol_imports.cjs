@@ -16,6 +16,7 @@ function setup(saved,options={}){
  Object.defineProperty(E.prototype,'id',{get(){return this._id;},set(value){this._id=value;nodes.set(value,this);}});
  E.prototype.toggleAttribute=function(key,value){const enabled=value??!Object.hasOwn(this.attrs,key);if(enabled)this.setAttribute(key,'');else this.removeAttribute(key);if(key==='hidden')this.hidden=enabled;return enabled;};
  context.URL=PreviewURL;context.Blob=Blob;context.AimstepDefinitionWord=require('../app/extraction-definition-word.js');context.window.AimstepProposalFiles=fileStore;context.window.AimstepProtocolGeneration=generation;context.window.AimstepProtocolManual=manual;context.window.AimstepProtocolCore={...protocolCore,...context.window.AimstepProtocolCore};
+ context.window.AIMSTEPProjectAccess={run:fn=>fn()};
  vm.runInNewContext(code,context);return {get,data,originals,urls,revoked,fail:()=>{fail=true},state:()=>JSON.parse(data.get('aimstep-protocol:test'))};
 }
 const flush=()=>new Promise(resolve=>setImmediate(resolve));

@@ -5,9 +5,10 @@ const storage=new Map(),elements=new Map(),documentEvents=new Map();
 function el(id){if(!elements.has(id))elements.set(id,{value:'',hidden:false,innerHTML:'',textContent:'',options:[{value:'Systematic Review'}],classList:{add(){},remove(){},toggle(){}},handlers:{},addEventListener(k,f){this.handlers[k]=f},setAttribute(){},getAttribute(){return null},querySelectorAll(){return []},focus(){}});return elements.get(id);}
 const ctx={console,URL,URLSearchParams,AbortController,structuredClone,TextEncoder,Blob,setTimeout(){},clearTimeout(){},navigator:{},
  localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},sessionStorage:{getItem(){return null}},
- location:{search:'',href:'http://127.0.0.1:8765/eligibility.html',pathname:'/eligibility.html'},document:{getElementById:el,querySelectorAll(){return []},addEventListener(type,handler){documentEvents.set(type,handler)}},window:{addEventListener(){}}};
+ location:{search:'?projectId=synthetic-project',href:'http://127.0.0.1:8765/eligibility.html?projectId=synthetic-project',pathname:'/eligibility.html'},document:{getElementById:el,querySelectorAll(){return []},addEventListener(type,handler){documentEvents.set(type,handler)}},window:{addEventListener(){}}};
 const code=source.replace('// Reuse this exact manual editor',`globalThis.criteriaTest={get:()=>state,set:s=>{previewDirty=false;state=s;fill()},pending:currentPending,generate:generateFinalCriteria,export:criteriaWordFile,savePreviewEdits,clearPreviewCriteria,dirty(){previewDirty=true},normalized:standardizedCriteria,exportState:()=>({dirty:previewDirty}),save,renderCards,updateVisibleRule};\n// Reuse this exact manual editor`);
-vm.runInNewContext(code,ctx);const api=ctx.criteriaTest;
+ctx.window.AIMSTEPProjectAccess={run:fn=>fn()};
+ vm.runInNewContext(code,ctx);const api=ctx.criteriaTest;
 function setup(mode){const state=api.get();Object.assign(state,{activeGenerator:mode,generationMethodChoice:mode,framework:'Other',finalCriteria:null,resolvedPending:[],pendingDecisions:{},manualRefinement:null,machineRefinement:null,criteria:[{title:'Population',condition:'Adults.\nDefine the age threshold',uncertain:'Children',definition:''},{title:'Study design',condition:'Randomized trials',uncertain:'',definition:'Define the excluded study designs'}]});state.machineCriteria=structuredClone(state.criteria);state.machineRun={question:'Synthetic question',reviewType:'Systematic Review',sourceRevision:0};state.machineSourceRevision=0;state.question='Synthetic question';api.set(state);return state;}
 function docXml(){const bytes=Buffer.from(api.export());let offset=0;while(bytes.readUInt32LE(offset)===0x04034b50){const size=bytes.readUInt32LE(offset+18),n=bytes.readUInt16LE(offset+26),extra=bytes.readUInt16LE(offset+28),name=bytes.subarray(offset+30,offset+30+n).toString();const start=offset+30+n+extra;if(name==='word/document.xml')return bytes.subarray(start,start+size).toString();offset=start+size;}throw Error('Missing Word document XML');}
 
@@ -25,19 +26,19 @@ for(const mode of ['manual','machine']){
  assert.match(el('preview').innerHTML,/contenteditable="plaintext-only"/);
  edit([node(0,'include',0,'Participants with active Fibromyalgia.\nParticipants taking stable medication.'),node(0,'exclude',0,'Pregnant participants.')]);
  assert.equal(api.savePreviewEdits(),true);
- let saved=JSON.parse(storage.get('aimstep-eligibility:default'));
+ let saved=JSON.parse(storage.get('aimstep-eligibility:synthetic-project'));
  const rows=mode==='machine'?saved.machineCriteria:saved.criteria;
  assert.match(rows[0].condition,/active Fibromyalgia/);assert.match(rows[0].condition,/Adults aged 21/);
  assert.match(rows[0].uncertain,/Pregnant/);
  assert(!el('preview').innerHTML.includes('Adults aged 21'));assert(!el('preview').innerHTML.includes('Case reports'));
  assert.match(docXml(),/active Fibromyalgia/);assert.match(docXml(),/Adults aged 21/);assert.match(docXml(),/Case reports/);
- const shared=JSON.parse(storage.get('aimstep-eligibility-summary:default'));assert(shared.includes.some(r=>r.text.includes('active Fibromyalgia')));
+ const shared=JSON.parse(storage.get('aimstep-eligibility-summary:synthetic-project'));assert(shared.includes.some(r=>r.text.includes('active Fibromyalgia')));
  api.set(saved);assert.match(el('preview').innerHTML,/active Fibromyalgia/);
  // A failed storage write keeps the persisted/source criteria and editable draft intact.
- const prior=JSON.stringify(api.get()),persisted=storage.get('aimstep-eligibility:default');
+ const prior=JSON.stringify(api.get()),persisted=storage.get('aimstep-eligibility:synthetic-project');
  edit([node(0,'include',0,'Synthetic replacement that must not be lost.')]);
  const write=ctx.localStorage.setItem;ctx.localStorage.setItem=()=>{throw Error('Synthetic quota failure')};
- assert.equal(api.savePreviewEdits(),false);assert.equal(JSON.stringify(api.get()),prior);assert.equal(storage.get('aimstep-eligibility:default'),persisted);assert.equal(api.exportState().dirty,true);
+ assert.equal(api.savePreviewEdits(),false);assert.equal(JSON.stringify(api.get()),prior);assert.equal(storage.get('aimstep-eligibility:synthetic-project'),persisted);assert.equal(api.exportState().dirty,true);
  ctx.localStorage.setItem=write;assert.equal(api.savePreviewEdits(),true);assert.match(docXml(),/Synthetic replacement/);
  // Edited text must be escaped on rerender, never inserted as markup.
  edit([node(0,'include',0,'<img src=x onerror=alert(1)> Synthetic text.')]);assert.equal(api.savePreviewEdits(),true);assert(!el('preview').innerHTML.includes('<img'));assert.match(el('preview').innerHTML,/&lt;img/);
@@ -75,9 +76,9 @@ for(const mode of ['manual','machine']){
  ctx.localStorage.setItem=write;
  edit([node(0,'include',0,'Unsaved change to discard only after confirmation.')]);
  assert.equal(api.clearPreviewCriteria(),true);assert.equal(api.exportState().dirty,false);
- const saved=JSON.parse(storage.get('aimstep-eligibility:default'));
+ const saved=JSON.parse(storage.get('aimstep-eligibility:synthetic-project'));
  assert.equal((mode==='machine'?saved.machineCriteria:saved.criteria).length,0);assert.equal(saved.question,'Synthetic question');assert(saved.criteriaClearHistory.at(-1).rows.length>0);
- assert.equal(storage.has('aimstep-eligibility-summary:default'),false);
+ assert.equal(storage.has('aimstep-eligibility-summary:synthetic-project'),false);
  api.set(saved);assert.equal(el('save-criteria').hidden,true);assert.equal(el('clear-criteria').hidden,true);
 }
 state=setup('machine');
@@ -88,7 +89,8 @@ assert(html.indexOf('id="save-criteria"')<html.indexOf('id="download"'));assert(
 console.log('PASS: editable criteria save/export/handoff/reload, hidden rules, failed-save retry, escaped text and filtered-domain mapping');
 
 // Search embeds the actual preview; raw input and polished display must not diverge.
-const previewContext={...ctx,location:{...ctx.location,search:'?embedded=search-criteria-preview'},document:{...ctx.document,documentElement:{classList:{add(){}}}},window:{addEventListener(){}}};
+const previewContext={...ctx,location:{...ctx.location,search:'?projectId=synthetic-project&embedded=search-criteria-preview'},document:{...ctx.document,documentElement:{classList:{add(){}}}},window:{addEventListener(){}}};
+previewContext.window.AIMSTEPProjectAccess={run:fn=>fn()};
 vm.runInNewContext(source,previewContext);
 const embedded=previewContext.window.aimstepCriteriaPreview;
 for(const mode of ['manual','machine']){

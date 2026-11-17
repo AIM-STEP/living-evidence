@@ -1,9 +1,10 @@
+window.AIMSTEPProjectAccess?.run(function(){
 /* Project-scoped Analysis: import → AI review → two confirmations → computation. */
 (async function(){
 'use strict';
 const C=AimstepAnalysisCore,AI=AimstepAnalysisAI,O=AimstepAnalysisOutput,I=AimstepExtractionFormImport,R=AimstepExtractionResults;
 const $=id=>document.getElementById(id),esc=O.esc,now=()=>new Date().toISOString(),uuid=()=>crypto.randomUUID();
-const params=new URLSearchParams(location.search),projectId=params.get('projectId')||params.get('project')||'',scope=projectId||'default';
+const params=new URLSearchParams(location.search),projectId=params.get('projectId')||params.get('project')||'',scope=projectId;
 const link=(file,view)=>{const u=new URL(file,location.href);if(projectId)u.searchParams.set('projectId',projectId);if(view)u.searchParams.set('view',view);return u.href;};
 for(const [selector,file,view] of [['[data-home]','index.html'],['[data-workflow]','index.html','project'],['[data-toolset]','index.html','toolset'],['[data-prev]','risk-of-bias.html'],['[data-next]','certainty-of-evidence.html']])document.querySelectorAll(selector).forEach(a=>a.href=link(file,view));
 try{const p=JSON.parse(sessionStorage.getItem('aimstep-active-project'));if(p?.id===projectId&&p.name){$('project-name').textContent=p.name;$('project-name').href=link('index.html','project');$('project-name').hidden=false;}}catch(_){}
@@ -110,3 +111,5 @@ try{
  $('requirements-input').value=ws.requirements;bind();render();if(currentRun())setProgress(100,'Saved analysis loaded.');document.body.dataset.ready='true';
 }catch(e){status('analysis-status','Could not load the Analysis workspace: '+e.message);document.querySelectorAll('button').forEach(b=>b.disabled=true);}
 })();
+
+});

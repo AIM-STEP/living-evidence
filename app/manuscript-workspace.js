@@ -1,6 +1,7 @@
+window.AIMSTEPProjectAccess?.run(function(){
 (async()=>{
 'use strict';
-const C=AimstepManuscriptCore,$=id=>document.getElementById(id),p=new URLSearchParams(location.search),scope=p.get('projectId')||p.get('project')||'default';
+const C=AimstepManuscriptCore,$=id=>document.getElementById(id),p=new URLSearchParams(location.search),scope=p.get('projectId')||p.get('project')||'';
 let state={text:'',instructions:'',issues:[],history:[],confirmedAt:null},db,controller=null,saveChain=Promise.resolve(),loaded=false;
 for(const a of document.querySelectorAll('[data-project-link]')){const u=new URL(a.getAttribute('href'),location.href);if(scope!=='default')u.searchParams.set('projectId',scope);a.href=u.href;}
 const icons={save:'M19 21H5V3h12l4 4v14ZM7 3v6h10V3M7 21v-8h10v8',export:'M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5',clear:'M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6'};
@@ -55,3 +56,5 @@ $('export-manuscript').onclick=async()=>{if(state.confirmedAt&&state.sourceHash)
 lock(true);$('stop-manuscript').hidden=true;
 try{db=await open('aimstep-manuscript',true);const saved=await read('aimstep-manuscript');if(saved?.state)state={...state,...saved.state};else{const legacy=ls('aimstep-writing:manuscript');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}loaded=true;render();const materials=(await collect()).sources;showSources(materials);if(state.confirmedAt&&state.sourceHash&&C.fingerprint(materials)!==state.sourceHash){state.confirmedAt=null;await persist();status('Project materials changed. Review or regenerate this draft before confirming.');}else status(state.confirmedAt?'Confirmed version saved.':'');lock(false);}catch(e){status('Could not load project materials: '+e.message,true);$('export-manuscript').disabled=false;}
 })();
+
+});

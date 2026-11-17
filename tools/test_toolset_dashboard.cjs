@@ -26,7 +26,7 @@ function setup(query = '') {
   const toolNav = element(); toolNav.dataset.pageHref = 'workflow.html';
   const env = {URL, URLSearchParams, console, location: new URL('https://aimsetp.com/index.html' + query),
     home: new URL('https://aimsetp.com/index.html'), projectRoute: '/workflow/project',
-    activeProject: {id: 'synthetic-dashboard', name: 'Synthetic dashboard'},
+    toolFiles:Object.keys(routeWindow.AIMSTEP_ROUTES),pendingTool:"",renderTaskStatuses(){},activeProject: {id: 'synthetic-dashboard', name: 'Synthetic dashboard'},
     page: element(), otherPage: element(), toolset: element(), frame: element(),
     document: {title:'', body:{classList:{toggle(k,v){if(v)classes.add(k);else classes.delete(k);}}},
       getElementById(id) {return nodes[id];}, querySelectorAll() {return [];},createElement(){return element();}},
@@ -56,7 +56,7 @@ for (const query of ['', '?view=toolset', '?view=project&projectId=synthetic-das
   const {env,nodes,classes}=setup();
   env.setView('new-project',null,true);
   assert(classes.has('project-create-mode'));
-  env.setView('page',new URL('https://aimsetp.com/extraction.html'),true);
+  env.setView('page',new URL('https://aimsetp.com/extraction.html?projectId=synthetic-dashboard'),true);
   assert(classes.has('project-page-mode'));
   assert(!classes.has('toolset-mode'));
   assert(!classes.has('project-create-mode'));
@@ -133,18 +133,18 @@ console.log('PASS: all ten clean tool routes, static reload entries, legacy link
 {
  const {env}=setup('?projectId=legacy-project');env.restoreRoute();
  assert.equal(new URL(env.history.url).pathname,'/');
- assert.equal(new URL(env.history.url).search,'');
+ assert.equal(new URL(env.history.url).search,'?view=project&projectId=legacy-project');
  assert.equal(env.history.state.projectId,'legacy-project');
  assert.equal(env.history.state.view,'project');
  env.location=new URL(env.history.url);env.restoreRoute();
  assert.equal(env.activeProject.id,'legacy-project');
  assert.equal(env.page.hidden,false);
  env.setView('page',new URL('https://aimsetp.com/eligibility.html?projectId=legacy-project&appVersion=old&lang=zh'),true);
- assert.equal(env.history.url,'/eligibility/?lang=zh');
+ assert.equal(env.history.url,'/eligibility/?projectId=legacy-project&lang=zh');
  assert.equal(new URL(env.frame.src).searchParams.get('projectId'),'legacy-project');
  env.setView('toolset',null,true);
  assert.equal(env.history.url,'/');
  env.location=new URL('https://aimsetp.com/');env.restoreRoute();
  assert.equal(env.page.hidden,true);
 }
-console.log('PASS: clean public URLs retain private project context and history view');
+console.log('PASS: explicit project URLs survive refresh and history without an implicit active-project fallback');

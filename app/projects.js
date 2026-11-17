@@ -109,8 +109,8 @@ export function initProjects(options) {
     row.className = "pw-banner-actions";
     const go = document.createElement("a");
     go.className = "btn btn-primary";
-    go.href = "eligibility.html?project=" + encodeURIComponent(project.id);
-    go.textContent = t("pw_open_eligibility");
+    go.href = "index.html?view=project&projectId=" + encodeURIComponent(project.id);
+    go.textContent = A().lang() === 'zh' ? '打开项目 →' : 'Open project →';
     row.appendChild(go);
 
     const dismiss = document.createElement("button");
@@ -165,7 +165,7 @@ export function initProjects(options) {
 
     const open = document.createElement("a");
     open.className = "pw-open";
-    open.href = "eligibility.html?project=" + encodeURIComponent(p.id);
+    open.href = "index.html?view=project&projectId=" + encodeURIComponent(p.id);
     open.textContent = t("pw_open");
     card.appendChild(open);
     return card;
@@ -202,6 +202,10 @@ export function initProjects(options) {
     if (view === "list") renderList();
     if (els.status && els.status.dataset.key) setStatus(els.status.dataset.key, els.status.dataset.extra);
     if (els.submit) els.submit.textContent = saving ? t("pw_saving") : t("pw_create");
+    // The tool gate waits for a settled registry, never a cached active-project id.
+    Promise.resolve().then(() => {
+      if (typeof CustomEvent === 'function') document.dispatchEvent(new CustomEvent('aimstep:project-registry'));
+    });
   }
 
   /* ----------------------------------------------------------------- form */
@@ -346,7 +350,11 @@ export function initProjects(options) {
         // Banner first, then the refresh. Their order does not matter any
         // more — that is the point of keeping them apart.
         showBanner({ id: pid, name: payload.name });
-        return load();
+        return load().then(() => {
+          if (!loadError && projects?.some(project => project.id === pid)) {
+            document.dispatchEvent(new CustomEvent('aimstep:project-created', {detail:{projectId:pid,projectName:payload.name}}));
+          }
+        });
       })
       .catch(err => {
         const key = explainError(err, user);

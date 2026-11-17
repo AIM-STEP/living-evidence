@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="app/project-access.js?v=20261117-projects-1"></script>
 <script src="app/secure-origin.js?v=20261020-1"></script>
 <script src="app/online-model.js?v=online-auth-v2"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -89,7 +90,7 @@
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261021-49">
-<script defer src="app/tool-shell.js?v=20261021-54"></script>
+<script defer src="app/tool-shell.js?v=20261117-projects-1"></script>
 <link rel="stylesheet" href="app/progress-display.css?v=20261021-1">
 <script src="app/progress-display.js?v=20261021-1" defer></script>
   <link rel="icon" type="image/svg+xml" href="assets/achieve-pig-favicon.svg?v=20261022-11">
@@ -109,8 +110,10 @@
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div id="criteria-progress" class="criteria-progress" role="progressbar" aria-label="Criteria generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="criteria-progress-track"><div class="criteria-progress-fill"></div></div><span class="criteria-progress-percent">0%</span></div></div><div class="preview-body" id="preview"></div><div class="preview-actions"><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div></div></section><section class="panel your-criteria-column" aria-labelledby="your-criteria-heading"><div class="criteria-heading"><h2 id="your-criteria-heading" data-ui-localize>Your eligibility criteria</h2></div><div class="criteria-library-body"><p class="hint" id="criteria-library-empty" data-ui-localize>No saved eligibility criteria yet.</p><ul id="criteria-library-list" aria-label="Saved eligibility criteria" data-ui-preserve></ul></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app/eligibility-library.js?v=20261021-1"></script>
 <script>
+window.AIMSTEPProjectAccess?.run(function(){
+
 (function(){
-const params=new URLSearchParams(location.search),projectId=params.get('projectId')||params.get('project')||'',contextKey='aimstep-active-project',key='aimstep-eligibility:'+ (projectId||'default'),completionKey=projectId?'aimstep-setup-completed:'+encodeURIComponent(projectId):'',modelSettingsKey='aimstep-screen-settings:'+(projectId||'default'),modelTokenKey=slot=>'aimstep-screen-token:'+slot+':'+(projectId||'default');
+const params=new URLSearchParams(location.search),projectId=params.get('projectId')||params.get('project')||'',contextKey='aimstep-active-project',key='aimstep-eligibility:'+ (projectId),completionKey=projectId?'aimstep-setup-completed:'+encodeURIComponent(projectId):'',modelSettingsKey='aimstep-screen-settings:'+(projectId),modelTokenKey=slot=>'aimstep-screen-token:'+slot+':'+(projectId);
 const embeddedManual=params.get('embedded')==='fulltext-criteria';
 const embeddedPreview=params.get('embedded')==='search-criteria-preview';
 let embeddedPreviewSummary=null;
@@ -158,7 +161,7 @@ function save(options={}){
   if(embeddedManual||embeddedPreview){renderPreview();return true;}
   let previous=null,saved=true;
   try{previous=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
-  try{if(window.AimstepEligibilityLibrary){const result=window.AimstepEligibilityLibrary.commit(localStorage,projectId||'default',state,options);state.criteriaLibraryId=result.criteriaLibraryId;}else localStorage.setItem(key,JSON.stringify(state));}catch(e){saved=false}
+  try{if(window.AimstepEligibilityLibrary){const result=window.AimstepEligibilityLibrary.commit(localStorage,projectId,state,options);state.criteriaLibraryId=result.criteriaLibraryId;}else localStorage.setItem(key,JSON.stringify(state));}catch(e){saved=false}
   if(saved&&previous&&completionKey&&criteriaSignature(previous)!==criteriaSignature(state)){
     try{const done=JSON.parse(localStorage.getItem(completionKey)||'[]');if(Array.isArray(done))localStorage.setItem(completionKey,JSON.stringify(done.filter(step=>![1,2,3].includes(Number(step)))))}catch(e){}
   }
@@ -796,7 +799,7 @@ function manuscriptDraft(rows,exclusions,limits){
 // The summary exactly as shown below, for Title and abstract screening to
 // display the same criteria. rowsSig ties it to the rows those criteria came
 // from, so a later edit made elsewhere is never shown with an old summary.
-const summaryKey='aimstep-eligibility-summary:'+(projectId||'default');
+const summaryKey='aimstep-eligibility-summary:'+(projectId);
 function summaryRowsSig(rows){let h=2166136261;for(const c of JSON.stringify((rows||[]).map(r=>[String(r.title||''),String(r.condition||''),String(r.uncertain||''),String(r.definition||'')])))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0).toString(16)}
 function shareSummary(data){if(embeddedPreview){embeddedPreviewSummary=data?{version:1,savedAt:new Date().toISOString(),...data}:null;return}if(embeddedManual)return;try{if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
 let previewDirty=false,previewBase=null;
@@ -914,7 +917,7 @@ function renderCriteriaLibrary(){
  if(embeddedManual||embeddedPreview||!window.AimstepEligibilityLibrary)return;
  const list=$('criteria-library-list'),empty=$('criteria-library-empty');if(!list||!empty)return;
  try{
-  const library=window.AimstepEligibilityLibrary.read(localStorage,projectId||'default');empty.hidden=!!library.entries.length;
+  const library=window.AimstepEligibilityLibrary.read(localStorage,projectId);empty.hidden=!!library.entries.length;
   list.replaceChildren(...library.entries.map(entry=>{
    const row=document.createElement('li'),open=document.createElement('button'),title=document.createElement('span'),date=document.createElement('time'),close=document.createElement('button');
    open.type=close.type='button';open.className='criteria-library-open';close.className='criteria-library-delete';title.className='criteria-library-title';title.textContent=entry.title;title.title=entry.title;
@@ -928,7 +931,7 @@ function selectCriteriaSet(id){
  if(previewDirty&&!savePreviewEdits(false))return;
  const before=structuredClone(state),priorAttachments=attachedFiles.slice();
  try{
-  const entry=window.AimstepEligibilityLibrary.read(localStorage,projectId||'default').entries.find(entry=>entry.id===id);if(!entry)return;
+  const entry=window.AimstepEligibilityLibrary.read(localStorage,projectId).entries.find(entry=>entry.id===id);if(!entry)return;
   stopMachineGeneration();stopManualRefinement();abortVoiceInput();attachedFiles.length=0;renderAttachments();
   state={...state,...structuredClone(entry.snapshot),criteriaLibraryId:entry.id};syncProposalCriteria();previewDirty=false;previewBase=null;fill();
   if(!save())throw Error('Could not open these criteria on this device.');
@@ -938,12 +941,12 @@ function selectCriteriaSet(id){
 function deleteCriteriaSet(id){
  if(previewDirty&&!savePreviewEdits(false))return;
  try{
-  const result=window.AimstepEligibilityLibrary.remove(localStorage,projectId||'default',id,state);
+  const result=window.AimstepEligibilityLibrary.remove(localStorage,projectId,id,state);
   if(result.active){stopMachineGeneration();stopManualRefinement();abortVoiceInput();state=result.state;previewDirty=false;previewBase=null;fill();}
   renderCriteriaLibrary();toast('Eligibility criteria deleted.');
  }catch(error){toast('Could not delete these criteria. Your saved copy has been kept.');}
 }
-window.addEventListener('storage',event=>{if(event.key==='aimstep-eligibility-library:'+(projectId||'default'))renderCriteriaLibrary();});
+window.addEventListener('storage',event=>{if(event.key==='aimstep-eligibility-library:'+(projectId))renderCriteriaLibrary();});
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';const reviewOption=[...$('review-type').options].find(option=>option.value.toLowerCase()===String(state.reviewType||'Systematic Review').toLowerCase());$('review-type').value=reviewOption?reviewOption.value:'Systematic Review';document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});
 $('generation-method').addEventListener('change',()=>{stopMachineGeneration();stopManualRefinement();abortVoiceInput();setMachineStatus('');setManualStatus('');const mode=$('generation-method').value;syncProposalCriteria();state.generationMethodChoice=mode;state.activeGenerator=mode;state.generationMode=mode==='machine'?'machine':mode==='manual'?'manual':'';$('machine-generate-panel').hidden=mode!=='machine';$('manual-generate-panel').hidden=mode!=='manual';renderPreview();save()});
@@ -995,7 +998,7 @@ function saveBeforeToolNavigation(event){
       if(parent!==window&&parent.location.origin===location.origin)parent.AIMSTEP?.setSetupStepCompleted?.(1,true);
     }catch(e){}
   }
-  try{sessionStorage.setItem('aimstep-eligibility-handoff:'+(projectId||'default'),String(Date.now()))}catch(e){}
+  try{sessionStorage.setItem('aimstep-eligibility-handoff:'+(projectId),String(Date.now()))}catch(e){}
 }
 $('next-search-strategy').addEventListener('click',saveBeforeToolNavigation);
 document.addEventListener('aimstep:before-tool-navigation',saveBeforeToolNavigation);
@@ -1124,7 +1127,7 @@ if(embeddedManual){
   };
   window.aimstepManualEditor.load();
 }else{
- if(!embeddedPreview&&window.AimstepEligibilityLibrary){try{const saved=window.AimstepEligibilityLibrary.commit(localStorage,projectId||'default',state);state.criteriaLibraryId=saved.criteriaLibraryId;}catch(error){toast('Could not save the criteria list on this device.');}}
+ if(!embeddedPreview&&window.AimstepEligibilityLibrary){try{const saved=window.AimstepEligibilityLibrary.commit(localStorage,projectId,state);state.criteriaLibraryId=saved.criteriaLibraryId;}catch(error){toast('Could not save the criteria list on this device.');}}
  fill();renderCriteriaLibrary();
 }
 })();
@@ -1133,7 +1136,7 @@ if(embeddedManual){
 // Next or Download stay visible. Remembered per browser, page and project.
 (()=>{
   if(['fulltext-criteria','search-criteria-preview'].includes(new URLSearchParams(location.search).get('embedded')))return;
-  const q=new URLSearchParams(location.search),pid=q.get('projectId')||q.get('project')||'default',page=(location.pathname.split('/').pop()||'page').replace(/\.html$/,'');
+  const q=new URLSearchParams(location.search),pid=q.get('projectId')||q.get('project')||'',page=(location.pathname.split('/').pop()||'page').replace(/\.html$/,'');
   const icon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg>';
   document.querySelectorAll('.editor > .section, aside .panel').forEach(box=>{
     const head=[...box.children].find(el=>el.matches('.section-head,.panel-head,.criteria-heading'));
@@ -1150,5 +1153,7 @@ if(embeddedManual){
     btn.addEventListener('click',()=>{const c=!box.classList.contains('is-collapsed');set(c);try{localStorage.setItem(key,c?'1':'0')}catch(e){}});
   });
 })();
+
+});
 </script>
 </body></html>

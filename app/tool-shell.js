@@ -32,7 +32,7 @@
   const next = nav.querySelector('[data-flow-next]');
   const picker = nav.querySelector('[data-flow-picker]');
   const label = nav.querySelector('[data-flow-label]');
-  const projects = destination('index.html?view=toolset');
+  const projects = destination(projectId ? 'index.html?view=project' : 'index.html?view=toolset');
   home.href = projects;
   if (previous && index) previous.href = destination(steps[index - 1][0]);
   else if (previous) {

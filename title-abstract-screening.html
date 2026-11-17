@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="app/project-access.js?v=20261117-projects-1"></script>
 <script src="app/secure-origin.js?v=20261020-1"></script>
 <script src="app/online-model.js?v=online-auth-v2"></script>
 <meta charset="utf-8">
@@ -249,7 +250,7 @@ th{background:#f4f4f4}
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261021-49">
-<script defer src="app/tool-shell.js?v=20261021-54"></script>
+<script defer src="app/tool-shell.js?v=20261117-projects-1"></script>
 <link rel="stylesheet" href="app/progress-display.css?v=20261021-1">
 <script src="app/progress-display.js?v=20261021-1" defer></script>
   <link rel="icon" type="image/svg+xml" href="assets/achieve-pig-favicon.svg?v=20261022-11">
@@ -379,6 +380,8 @@ th{background:#f4f4f4}
 <script src="app/screening-prompt.js?v=20261116-ai-four-sections-v2"></script>
 <script src="app/screening-prompt-editor.js?v=20261116-ai-four-sections-v1"></script>
 <script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-current-only-v2"></script><script>
+window.AIMSTEPProjectAccess?.run(function(){
+
 'use strict';
 (() => {
 const $=id=>document.getElementById(id);
@@ -387,7 +390,7 @@ const text=(value,max=20000)=>String(value??'').slice(0,max);
 const now=()=>new Date().toISOString();
 const params=new URLSearchParams(location.search);
 const projectId=params.get('projectId')||params.get('project')||'';
-const scope=projectId||'default';
+const scope=projectId;
 const workspaceKey='aimstep-screen-summary:'+scope;
 const searchKey='aimstep-search-strategy:'+scope;
 const searchSummaryKey='aimstep-search-summary:'+scope;
@@ -2682,6 +2685,8 @@ async function init(){
 }
 init();
 })();
+
+});
 </script>
 </body>
 </html>

@@ -1,6 +1,7 @@
+window.AIMSTEPProjectAccess?.run(function(){
 (()=>{
 'use strict';
-const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'default',key='aimstep-protocol:'+scope;
+const C=window.AimstepProtocolCore,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),scope=params.get('projectId')||params.get('project')||'',key='aimstep-protocol:'+scope;
 const M=window.AimstepProtocolManual,manualControls=new Map(),manualWrappers=new Map(),manualSections=new Map(),manualFeedback=new Map();
 let manualFormReady=false;
 let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null,previewFileId=null;
@@ -83,7 +84,7 @@ function manualCriteriaLink(){
  return url.href;
 }
 function savedManualCriteria(){
- const target=new URL(manualCriteriaLink()).searchParams.get('projectId')||'default';
+ const target=new URL(manualCriteriaLink()).searchParams.get('projectId')||'';
  const empty={includes:[],exclusions:[]};
  try{
   if(projectDeleted(target))return empty;
@@ -441,7 +442,7 @@ $('protocol-file').onchange=()=>{
  });
 };
 async function collectProposalInput(signal){
- const target=new URL(manualCriteriaLink()).searchParams.get('projectId')||'default';
+ const target=new URL(manualCriteriaLink()).searchParams.get('projectId')||'';
  if(projectDeleted(target))throw Error('This project was deleted. Select an existing project before generating.');
  const context=await window.AimstepProposalContext.collect(target,{signal});
  const input={form:M.snapshot(state.manualProtocolInputs),eligibilityPreview:savedManualCriteria(),project:context,uploadedProposals:state.imports.filter(file=>file.kind!=='generated').map(file=>({name:file.name,text:file.text||''}))};
@@ -528,3 +529,5 @@ const completedCriteria=state.imports.filter(file=>file.criteriaProjectId).sort(
 if(completedCriteria)activateCriteriaProject(completedCriteria.criteriaProjectId);
 if(state.importAnalysis?.status==='pending'&&state.importText&&state.text===state.importText)void analyzeImportedInBackground();
 })();
+
+});

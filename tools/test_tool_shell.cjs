@@ -10,6 +10,7 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
  for(const page of pages) {
   const group=writing.includes(page)?writing:workflow,index=group.indexOf(page);
   const dom=new JSDOM(read(page+'.html'),{url:'https://aimsetp.com/'+page+'.html?projectId=synthetic%20project',runScripts:'outside-only'}),w=dom.window,d=w.document;
+  const observers=[],NativeObserver=w.MutationObserver;w.MutationObserver=class extends NativeObserver{constructor(fn){super(fn);observers.push(this);}};
   const nav=d.querySelector('.tool-flow');
   assert(nav,page+' navigation');assert.equal(d.querySelector('.crumb'),null,page+' breadcrumb removed');
   assert.equal(d.querySelector('header nav'),null,page+' duplicate header menu removed');
@@ -47,15 +48,16 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(w.localStorage.getItem('synthetic-original'),'unchanged');
   if(studyField)assert.equal(studyField.value,'Synthetic original research text');
   console.log('PASS:',page,'project context, adjacent steps, jumps, cancellation, locale and original data');
-  w.close();
+  observers.forEach(observer=>observer.disconnect());await tick();w.close();
  }
  for(const alias of ['project','id']){
   const dom=new JSDOM(read('search-strategy.html'),{url:'https://aimsetp.com/search-strategy.html?'+alias+'=legacy-project',runScripts:'outside-only'});
+  const observers=[],NativeObserver=dom.window.MutationObserver;dom.window.MutationObserver=class extends NativeObserver{constructor(fn){super(fn);observers.push(this);}};
   dom.window.eval(read('app/tool-shell.js'));
-  assert.equal(new URL(dom.window.document.querySelector('[data-flow-next]').href).searchParams.get('projectId'),'legacy-project');dom.window.close();
+  assert.equal(new URL(dom.window.document.querySelector('[data-flow-next]').href).searchParams.get('projectId'),'legacy-project');observers.forEach(observer=>observer.disconnect());await tick();dom.window.close();
  }
  const home=new JSDOM(read('index.html')).window.document;
  assert.deepEqual([...home.querySelectorAll('#toolset [data-tool]')].map(a=>a.getAttribute('href').replace('.html','')),workflow,'homepage and navigation order match');
- assert.deepEqual([...home.querySelectorAll('#writing-tools [data-tool]')].map(a=>a.getAttribute('href').replace('.html','')),writing);
+ assert.deepEqual([...home.querySelectorAll('.product-nav-link[data-tool]')].map(a=>a.getAttribute('href').replace('.html','')),writing);
  console.log('PASS: legacy project aliases, eight workflow steps and two writing tools');
 })().catch(e=>{console.error(e);process.exitCode=1;});

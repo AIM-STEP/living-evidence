@@ -1,9 +1,10 @@
+window.AIMSTEPProjectAccess?.run(function(){
 
 'use strict';
 (() => {
 const $=id=>document.getElementById(id), U=AimstepCoeUnits;
 const fieldKey=(rec,no)=>U.key(rec,BYNO[no]);
-const params=new URLSearchParams(location.search),projectId=params.get('projectId')||params.get('project')||'',scope=projectId||'default';
+const params=new URLSearchParams(location.search),projectId=params.get('projectId')||params.get('project')||'',scope=projectId;
 let project=null;try{project=JSON.parse(sessionStorage.getItem('aimstep-active-project')||'null')}catch(e){}
 function pageLink(file,view){const u=new URL(file,location.href);if(projectId)u.searchParams.set('projectId',projectId);if(view)u.searchParams.set('view',view);return u.href}
 document.querySelectorAll('[data-home]').forEach(a=>a.href=pageLink('index.html'));
@@ -1089,3 +1090,5 @@ function bindUnits(){
 load();bind();bindUnits();render();
 window.addEventListener('storage',e=>{if(e.key===storeKey){load();render()}});
 })();
+
+});
