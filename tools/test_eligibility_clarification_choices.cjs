@@ -33,7 +33,7 @@ for(const mode of ['manual','machine']){
  assert.equal(api.recordPendingChoice(items[1],'fails'),false,'Repeated clicks cannot duplicate a saved decision');
  assert.equal(api.get().finalCriteria.decisions.length,2);
 }
-// Concrete legacy draft text is applied and retained in the Word file, hidden on page.
+// Concrete legacy draft text is applied and retained in the Word file, visible on page.
 let state=setup('machine'),item=api.pending()[0];state.pendingDecisions[item]={domain:'Population',text:'Adults aged 21 or older'};
-assert.equal(api.recordPendingChoice(item,'meets'),true);assert.match(docXml(),/Adults aged 21 or older/);assert(!el('preview').innerHTML.includes('Adults aged 21 or older'));
-console.log('PASS: numbered clarification icons, immediate scoped persistence, hidden selections, Word decisions, failed-save retry and duplicate-click protection');
+assert.equal(api.recordPendingChoice(item,'meets'),true);assert.match(docXml(),/Adults aged 21 or older/);assert(el('preview').innerHTML.includes('Adults aged 21 or older'));
+console.log('PASS: numbered clarification icons, immediate scoped persistence, visible confirmed rules, Word decisions, failed-save retry and duplicate-click protection');

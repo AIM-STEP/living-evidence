@@ -19,18 +19,18 @@ function edit(nodes,textNodes=[]){
 const node=(index,kind,position,text)=>({dataset:{criteriaRow:String(index),criteriaKind:kind,criteriaRule:String(position)},innerText:text});
 for(const mode of ['manual','machine']){
  let state=setup(mode);
- // Generate confirmed hidden rules first, then edit visible criteria only.
+ // Confirmed rules remain in the same editable preview as generated rules.
  for(const item of api.pending())state.pendingDecisions[item]=item.startsWith('Population')?{decision:'meets',domain:'Population',text:'Adults aged 21 or older'}:{decision:'fails',domain:'Study design',text:'Case reports'};
  api.generate();
  const before=structuredClone(api.get());
  assert.match(el('preview').innerHTML,/contenteditable="plaintext-only"/);
- edit([node(0,'include',0,'Participants with active Fibromyalgia.\nParticipants taking stable medication.'),node(0,'exclude',0,'Pregnant participants.')]);
+ edit([node(0,'include',0,'Participants with active Fibromyalgia.\nParticipants taking stable medication.\nAdults aged 21 or older.'),node(0,'exclude',0,'Pregnant participants.')]);
  assert.equal(api.savePreviewEdits(),true);
  let saved=JSON.parse(storage.get('aimstep-eligibility:synthetic-project'));
  const rows=mode==='machine'?saved.machineCriteria:saved.criteria;
  assert.match(rows[0].condition,/active Fibromyalgia/);assert.match(rows[0].condition,/Adults aged 21/);
  assert.match(rows[0].uncertain,/Pregnant/);
- assert(!el('preview').innerHTML.includes('Adults aged 21'));assert(!el('preview').innerHTML.includes('Case reports'));
+ assert(el('preview').innerHTML.includes('Adults aged 21'));assert(el('preview').innerHTML.includes('Case reports'));
  assert.match(docXml(),/active Fibromyalgia/);assert.match(docXml(),/Adults aged 21/);assert.match(docXml(),/Case reports/);
  const shared=JSON.parse(storage.get('aimstep-eligibility-summary:synthetic-project'));assert(shared.includes.some(r=>r.text.includes('active Fibromyalgia')));
  api.set(saved);assert.match(el('preview').innerHTML,/active Fibromyalgia/);
@@ -43,9 +43,9 @@ for(const mode of ['manual','machine']){
  // Edited text must be escaped on rerender, never inserted as markup.
  edit([node(0,'include',0,'<img src=x onerror=alert(1)> Synthetic text.')]);assert.equal(api.savePreviewEdits(),true);assert(!el('preview').innerHTML.includes('<img'));assert.match(el('preview').innerHTML,/&lt;img/);
 }
-// Hidden-only domains must not shift the source row edited in the next visible domain.
+// Confirmed-only domains stay visible; editing the next domain uses its actual index.
 let state=setup('machine');state.machineCriteria.unshift({title:'Other',condition:'Hidden custom rule.',uncertain:'',definition:''});state.finalCriteria={decisions:[{domain:'Other',decision:'meets',rule:'Hidden custom rule.'}]};api.set(state);
-edit([node(0,'include',0,'Visible population update.')]);assert.equal(api.savePreviewEdits(),true);
+assert.match(el('preview').innerHTML,/Hidden custom rule/);edit([node(1,'include',0,'Visible population update.')]);assert.equal(api.savePreviewEdits(),true);
 assert.equal(api.get().machineCriteria[0].condition,'Hidden custom rule.');assert.match(api.get().machineCriteria[1].condition,/Visible population update/);
 
 // Topic/paragraph edits are persisted and exported; Next also commits pending edits.
@@ -86,7 +86,7 @@ state=setup('machine');
 edit([node(0,'include',0,'Stale preview text.')]);api.get().machineCriteria[0].condition='New source criterion.';
 assert.equal(api.savePreviewEdits(),false);assert.equal(api.get().machineCriteria[0].condition,'New source criterion.');
 assert(html.indexOf('id="save-criteria"')<html.indexOf('id="download"'));assert(!html.includes('Download criteria'));assert(html.indexOf('id="download"')<html.indexOf('id="clear-criteria"'));assert(!/<h3(?:\s[^>]*)?>Inclusion criteria<\/h3>/.test(html));assert.match(html,/<h3(?:\s[^>]*)?>Inclusion<\/h3>/);
-console.log('PASS: editable criteria save/export/handoff/reload, hidden rules, failed-save retry, escaped text and filtered-domain mapping');
+console.log('PASS: editable criteria save/export/handoff/reload, visible confirmed rules, failed-save retry, escaped text and complete-domain mapping');
 
 // Search embeds the actual preview; raw input and polished display must not diverge.
 const previewContext={...ctx,location:{...ctx.location,search:'?projectId=synthetic-project&embedded=search-criteria-preview'},document:{...ctx.document,documentElement:{classList:{add(){}}}},window:{addEventListener(){}}};

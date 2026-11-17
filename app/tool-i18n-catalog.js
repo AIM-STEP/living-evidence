@@ -788,6 +788,7 @@ window.AimstepToolTranslations = {
   "Use": "使用",
   "Ignore": "忽略",
   "Reviewed": "已核对",
+  "Automatic check notes": "自动检查记录",
   "View explanations": "查看解释",
   "Waiting for the AI assessment.": "等待 AI 评估。",
   "What GRADE guidance says": "GRADE 指南说明",

@@ -46,7 +46,7 @@
     }
     return out;
   }
-  function differences(candidate,sources,complete=false){
+  function differences(candidate,sources,complete=false,atomic=false){
     const original=sources.map(clean).join(' '),known=constraints(original),issues=[];
     for(const c of constraints(candidate)){
       if(!known.some(k=>k.value===c.value&&k.operator===c.operator&&k.unit===c.unit&&k.anchor===c.anchor&&(!k.role||!c.role||k.role===c.role)))issues.push('a threshold, comparison direction, unit, time anchor or scope differs from the source');
@@ -59,7 +59,7 @@
     // Removing an alternative is unsafe. More nuanced logic is checked in the separate review pass.
     if(hasOr(original)!==hasOr(candidate))issues.push('an alternative was added or removed');
     const hasAnd=value=>/\band\b|并且|以及|且(?=[\u3400-\u9fff])/i.test(value);
-    if(hasAnd(original)&&!hasAnd(candidate))issues.push('a required combination may have been removed');
+    if(!atomic&&hasAnd(original)&&!hasAnd(candidate))issues.push('a required combination may have been removed');
     const negated=value=>/\b(?:not|without|never|no)\b|无既往|未接受|不伴|没有/i.test(value.replace(/\b(?:no (?:more|less|fewer)|not (?:more|less)) than\b/gi,''));
     if(!/\b(?:include|exclude|eligible|eligibility)\b/i.test(original)&&negated(original)!==negated(candidate))issues.push('negation differs from the source');
     if(/\b(?:except|unless)\b|除外|除非|但不包括/i.test(original)&&!/\b(?:except|unless|exception)\b|除外|除非|但不包括/i.test(candidate))issues.push('an exception may have been removed');
@@ -70,10 +70,35 @@
     for(const item of Array.isArray(response?.items)?response.items:[]){
       if(!ids.includes(item?.id))continue;
       if(result.has(item.id))duplicates.add(item.id);
-      result.set(item.id,{status:['supported','contradicted','uncertain'].includes(item.status)?item.status:'uncertain',reason:clean(item.reason).slice(0,400)});
+      const reason=clean(item.reason).slice(0,400),issueType=['none','source_conflict','unsupported_rewrite','missing_scope','optional_detail'].includes(item.issueType)?item.issueType:/\b(?:sources|source requirements|original requirements)\b.{0,30}\b(?:conflict|contradict each other)|\bconflicting (?:source|original) (?:requirements|criteria)\b/i.test(reason)?'source_conflict':'unclassified';
+      result.set(item.id,{status:['supported','contradicted','uncertain'].includes(item.status)?item.status:'uncertain',reason,issueType});
     }
     for(const id of ids)if(!result.has(id)||duplicates.has(id))result.set(id,{status:'uncertain',reason:'The review did not return one unambiguous assessment.'});
     return result;
+  }
+  // Read-time policy also applies to saved v2 drafts; diagnostics stay in the audit.
+  function decisions(refinement){
+    const details=(refinement?.clarifications||[]).map(detail=>{
+      if(detail.kind==='review'&&/Verify the conflicting rule|proposed as both inclusion and exclusion/i.test(detail.item||''))return {...detail,kind:'question',priority:'source-conflict',required:true,domain:detail.item.split(':')[0],text:''};
+      return detail;
+    }),rows=refinement?.rows||[];
+    const conflictDomains=new Set(details.filter(detail=>detail.priority==='source-conflict').map(detail=>detail.domain));
+    const images=details.filter(detail=>detail.kind==='proposal'&&(detail.evidence||[]).some(source=>source.verification==='visual-review-required'));
+    const eligible=details.filter(detail=>{
+      if(detail.required===true||detail.priority==='source-conflict')return true;
+      if(images.includes(detail))return true;
+      if(detail.kind!=='question')return false;
+      if(detail.priority==='optional'||/^Other: Clarify\b/i.test(detail.item||''))return false;
+      const core=/^(Population|Intervention|Exposure|Concept|Phenomenon of Interest): Specify\b/i.test(detail.item||'');
+      if(core)return !conflictDomains.has(detail.domain)&&!rows.some(row=>row.dimension===detail.domain&&row.include?.length)&&!images.some(image=>image.domain===detail.domain);
+      return /^Other: Specify\b/i.test(detail.item||'')&&!rows.some(row=>row.include?.length);
+    });
+    const hasCore=eligible.some(detail=>detail.kind==='question'&&detail.domain!=='Other'),seen=new Set();
+    return eligible.filter(detail=>{
+      if(hasCore&&/^Other: Specify\b/i.test(detail.item||''))return false;
+      const key=detail.kind==='question'?detail.domain+' / '+(detail.priority==='source-conflict'?'conflict':'scope'):detail.item;
+      if(seen.has(key))return false;seen.add(key);return true;
+    });
   }
   function batches(items,maxCharacters=8000,maxItems=8){
     const result=[];let batch=[],size=0;
@@ -97,5 +122,5 @@
       return {id:source.id||'D'+String(index+1).padStart(3,'0'),name:source.name,page:source.page||null,kind:source.kind||'text',verification:source.verification||'original-text',text:source.text||'',sha256};
     }));
   }
-  return {VERSION,clean,segments,constraints,differences,reviewMap,batches,hashText,manifest};
+  return {VERSION,clean,segments,constraints,differences,reviewMap,decisions,batches,hashText,manifest};
 });

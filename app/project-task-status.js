@@ -1,9 +1,9 @@
 /* Read-only, project-specific task summaries. Opening a summary never starts work. */
 (function (root, factory) {
-  const api = factory(typeof module === 'object' && module.exports ? require('./eligibility-library.js') : root.AimstepEligibilityLibrary);
+  const api = factory(typeof module === 'object' && module.exports ? require('./eligibility-library.js') : root.AimstepEligibilityLibrary, typeof module === 'object' && module.exports ? require('./criteria-grounding.js') : root.AIMSTEPCriteriaGrounding);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.AIMSTEPProjectTasks = api;
-})(typeof window === 'object' ? window : globalThis, function (eligibility) {
+})(typeof window === 'object' ? window : globalThis, function (eligibility, grounding) {
   'use strict';
   const files = ['eligibility.html','search-strategy.html','title-abstract-screening.html','full-text-screening.html','extraction.html','risk-of-bias.html','analysis.html','certainty-of-evidence.html','build-protocol.html','drafting-manuscript.html'];
   const count = value => Array.isArray(value) ? value.length : 0;
@@ -18,7 +18,8 @@
     // Reuse the criteria library's placeholder exclusion, including legacy sets.
     const criteria = rows.filter(row => eligibility?.hasRules({...e,generationMethodChoice:e.generationMethodChoice ?? 'legacy',criteria:[row],machineCriteria:[row]})).length;
     const refinement = e?.activeGenerator === 'machine' ? e.machineRefinement : e?.manualRefinement;
-    const unresolved = refinement?.audit ? (refinement.uncertainties || []).filter(item => !(e.resolvedPending || []).includes(item)).length : 0;
+    const reviewPending = grounding && refinement?.clarifications ? grounding.decisions(refinement).map(detail => detail.item) : refinement?.uncertainties || [];
+    const unresolved = refinement?.audit ? reviewPending.filter(item => !(e.resolvedPending || []).includes(item)).length : 0;
     put(files[0], criteria || text(e?.question) || unresolved, criteria + words(' criteria saved', ' 项标准已保存') + (unresolved ? ' · ' + unresolved + words(' pending clarifications', ' 项待澄清') : ''), criteria > 0 && !unresolved);
     const s = data.search, search = data.searchResults;
     const found = search ? count(search.records) : num(s?.unique);

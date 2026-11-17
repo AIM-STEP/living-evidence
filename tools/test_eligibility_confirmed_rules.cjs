@@ -15,14 +15,14 @@ for(const mode of ['manual','machine']){
  const state=setup(mode),pending=api.pending();assert.equal(pending.length,2);assert.match(el('preview').innerHTML,/Pending clarification/);
  for(const item of pending)state.pendingDecisions[item]=item.startsWith('Population')?{decision:'meets',domain:'Population',text:'Adults aged 21 or older'}:{decision:'fails',domain:'Study design',text:'Case reports'};
  api.generate();
- assert.match(el('preview').innerHTML,/<h3(?:\s[^>]*)?>Description<\/h3>/);assert(!el('preview').innerHTML.includes('Pending clarification'));assert(!el('preview').innerHTML.includes('Adults aged 21'));assert(!el('preview').innerHTML.includes('Case reports'));assert(!el('criteria-list').innerHTML.includes('Adults aged 21'));assert(!el('criteria-list').innerHTML.includes('Case reports'));
+ assert.match(el('preview').innerHTML,/<h3(?:\s[^>]*)?>Description<\/h3>/);assert(!el('preview').innerHTML.includes('Pending clarification'));assert(el('preview').innerHTML.includes('Adults aged 21'));assert(el('preview').innerHTML.includes('Case reports'));if(mode==='manual'){assert(el('criteria-list').innerHTML.includes('Adults aged 21'));assert(el('criteria-list').innerHTML.includes('Case reports'));}
  assert.match(el('preview').innerHTML,/Adults\./);assert.match(el('preview').innerHTML,/Randomized trials/);
  const xml=docXml();assert.match(xml,/Adults aged 21 or older/);assert.match(xml,/Case reports/);
  const shared=JSON.parse(storage.get('aimstep-eligibility-summary:synthetic-project'));assert(shared.includes.some(r=>r.text.includes('Adults aged 21')));assert(shared.exclusions.some(r=>r.text.includes('Case reports')));
- // Editing a visible field must not erase its hidden, confirmed rule.
- const row=(mode==='manual'?state.criteria:state.machineCriteria)[0];api.updateVisibleRule(row,'condition','Participants with chronic pain');api.save();assert.match(docXml(),/Adults aged 21 or older/);assert.match(docXml(),/Participants with chronic pain/);
- // Saved state keeps the same presentation/export separation on refresh.
- api.set(JSON.parse(storage.get('aimstep-eligibility:synthetic-project')));assert(!el('preview').innerHTML.includes('Adults aged 21'));assert.match(docXml(),/Adults aged 21 or older/);
+ // Confirmed rules are ordinary editable criteria; replacing one must not resurrect its old text.
+ const row=(mode==='manual'?state.criteria:state.machineCriteria)[0];api.updateVisibleRule(row,'condition','Participants with chronic pain');api.save();assert.equal(row.condition,'Participants with chronic pain');assert(!el('preview').innerHTML.includes('Adults aged 21'));assert.match(docXml(),/Participants with chronic pain/);
+ // Refresh preserves the current criteria and the historical author decision separately.
+ api.set(JSON.parse(storage.get('aimstep-eligibility:synthetic-project')));assert(!el('preview').innerHTML.includes('Adults aged 21'));assert(el('preview').innerHTML.includes('Participants with chronic pain'));assert(api.get().finalCriteria.decisions.some(d=>d.rule.includes('21')));
 }
 assert(!html.includes('Back: Toolset'));
-console.log('PASS: manual/machine confirmations hidden from page, retained in DOCX and handoff, preserved on visible edits and reload');
+console.log('PASS: manual/machine confirmations visible immediately in criteria and Description, retained in export/handoff, editable and restored on reload');
