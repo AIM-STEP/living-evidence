@@ -428,5 +428,5 @@ body .workflow-column { padding: 32px; border-radius: 16px; box-shadow: 0 4px 20
   .site-header .header-products, .site-header .header-actions { align-self: end; }
   .site-header .product-nav-trigger,
   .site-header .header-actions .lang,
-  .site-header .header-actions .login { align-items: flex-end; padding-block: 0; }
+  .site-header .header-actions .login { align-items: flex-end; padding-block: 0; position: relative; top: 4px; }
 }
