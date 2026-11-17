@@ -334,7 +334,6 @@ body .header-inner, body.has-active-project .header-inner { grid-template-column
 .product-nav-trigger { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-weight: 600; color: var(--dashboard-ink); cursor: pointer; }
 .product-nav-label { display: inline-flex; align-items: center; gap: 6px; line-height: 24px; }
 .product-nav-icon { display: block; flex: 0 0 16px; width: 16px; height: 16px; }
-.product-nav-label > [data-i18n] { transform: translateY(1px); }
 .product-nav-trigger:hover, .product-nav-trigger[aria-expanded="true"] { background: #eef2ff; color: #3454d1; }
 .site-header { position: sticky; z-index: 50; }
 .product-dropdown { position: absolute; top: 100%; right: 24px; width: min(640px, calc(100vw - 48px)); padding: 12px; border: 1px solid var(--dashboard-border); border-top: 3px solid #4d6bfe; border-radius: 0 0 14px 14px; background: #fff; box-shadow: 0 18px 40px #24334820; max-height: calc(100dvh - 110px); overflow-y: auto; }
@@ -422,10 +421,43 @@ body .workflow-column { padding: 32px; border-radius: 16px; box-shadow: 0 4px 20
 .workflow-column #project-workspace { min-height: 0; margin: 0; padding: 0; background: transparent; }
 .workflow-column #project-workspace > .container { padding: 0; }
 .workflow-column #project-workspace .project-tool-list { border-radius: 0 0 8px 8px; margin-bottom: 6px; }
-/* Align the desktop controls with the tagline, below the brand-name row. */
+/* One type scale, control height and spacing for the Toolset header row. */
+body .header-inner, body.has-active-project .header-inner { column-gap: 16px; }
+.site-header .header-products, .site-header .header-actions { gap: 16px; margin: 0; }
+.site-header .product-nav-trigger,
+.site-header .header-products .product-nav-link,
+.site-header .header-actions .lang,
+.site-header .header-actions .login {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; height: 44px; padding: 10px 12px;
+  font-family: var(--dashboard-font); font-size: 14px; font-weight: 500;
+  line-height: 24px; letter-spacing: 0; color: var(--dashboard-ink);
+  white-space: nowrap;
+}
+.site-header .product-nav-label { line-height: inherit; }
+.site-header .header-actions svg { flex: 0 0 16px; width: 16px; height: 16px; }
+.site-header .product-nav-trigger:hover,
+.site-header .product-nav-trigger[aria-expanded="true"],
+.site-header .header-products .product-nav-link:hover,
+.site-header .header-products .product-nav-link[aria-current="page"],
+.site-header .header-actions .lang:hover,
+.site-header .header-actions .login:hover:not(:disabled) { color: var(--brand-text); }
 @media (min-width: 1101px) {
   .site-header .header-products, .site-header .header-actions { align-self: end; }
+}
+@media (max-width: 1100px) {
+  body .header-inner, body.has-active-project .header-inner {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "brand brand" "nav lang";
+  }
+  .site-header .header-products, .site-header .header-actions { align-self: center; }
+  .site-header .header-actions { justify-self: start; }
+}
+@media (max-width: 600px) {
+  body .header-inner, body.has-active-project .header-inner { column-gap: 8px; }
+  .site-header .header-products, .site-header .header-actions { gap: 8px; }
   .site-header .product-nav-trigger,
+  .site-header .header-products .product-nav-link,
   .site-header .header-actions .lang,
-  .site-header .header-actions .login { align-items: flex-end; padding-block: 0; position: relative; top: 4px; }
+  .site-header .header-actions .login { padding-inline: 8px; }
 }
