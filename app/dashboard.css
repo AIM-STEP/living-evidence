@@ -332,6 +332,8 @@ body .header-inner, body.has-active-project .header-inner { grid-template-column
 .header-products { grid-area: nav; display: flex; align-items: center; gap: 12px; position: static; }
 .product-nav-item { position: static; }
 .product-nav-trigger { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-weight: 600; color: var(--dashboard-ink); cursor: pointer; }
+.product-nav-label { display: inline-flex; align-items: center; gap: 6px; line-height: 24px; }
+.product-nav-icon { display: block; flex: 0 0 16px; width: 16px; height: 16px; }
 .product-nav-trigger:hover, .product-nav-trigger[aria-expanded="true"] { background: #eef2ff; color: #3454d1; }
 .product-nav-arrow { color: #8996ad; font-size: 18px; font-weight: 400; line-height: 1; }
 .product-nav-arrow::after { content: '→'; }
