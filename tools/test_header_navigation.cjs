@@ -1,14 +1,20 @@
-/* Global tool navigation is removed; writing and workflow actions live in projects. */
+/* The original eight-tool dropdown stays global; writing entries stay project-scoped. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{JSDOM}=require('jsdom');
-const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),dom=new JSDOM(html,{runScripts:'outside-only'}),d=dom.window.document;
-assert.equal(d.querySelector('.header-products,#toolset-trigger,#toolset-dropdown,#toolset'),null);
+const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),dom=new JSDOM(html,{runScripts:'outside-only'}),w=dom.window,d=w.document;
+const expected=['eligibility.html','search-strategy.html','title-abstract-screening.html','full-text-screening.html','extraction.html','risk-of-bias.html','analysis.html','certainty-of-evidence.html'];
+const menu=d.getElementById('toolset'),trigger=d.getElementById('toolset-trigger'),panel=d.getElementById('toolset-dropdown'),item=trigger.closest('.product-nav-item');
+assert(menu&&trigger&&panel);assert.equal(d.querySelector('.header-brand').nextElementSibling,d.querySelector('.header-products'),'Toolset remains between branding and account controls');
+assert.deepEqual([...menu.querySelectorAll('a[data-tool]')].map(a=>a.getAttribute('href')),expected);assert.equal(menu.querySelectorAll('.tool-icon svg').length,8);
 assert.equal(d.querySelector('.site-header a[href="build-protocol.html"],.site-header a[href="drafting-manuscript.html"]'),null);
-assert(d.querySelector('.site-header .brand'));assert(d.querySelector('#lang-toggle'));assert(d.querySelector('#login-btn'));
-const project=d.getElementById('project-workspace');assert(project.hidden,'writing entries are not visible before selecting a project');
-const links=[...project.querySelectorAll('[data-workspace-tool]')];
-assert.equal(links.length,10);
-assert.equal(links[0].querySelector('.workspace-step-name').textContent,'Proposal');assert.equal(links.at(-1).querySelector('.workspace-step-name').textContent,'Report');
-assert.deepEqual(links.slice(1,-1).map(link=>link.getAttribute('href')),['eligibility.html','search-strategy.html','title-abstract-screening.html','full-text-screening.html','extraction.html','risk-of-bias.html','analysis.html','certainty-of-evidence.html']);
-assert.equal(d.querySelector('.project-tool-row .workspace-step-name').textContent,'Proposal');
-assert.equal(project.textContent.includes('Evidencebank'),false);dom.window.close();
-console.log('PASS global Toolset/writing menus removed, account controls retained, project-only Proposal, eight workflow tools and Report in the requested order');
+assert(d.querySelector('#lang-toggle'));assert(d.querySelector('#login-btn'));
+const project=d.getElementById('project-workspace');assert(project.hidden,'writing entries stay hidden before project selection');
+const links=[...project.querySelectorAll('[data-workspace-tool]')];assert.equal(links.length,10);assert.equal(links[0].querySelector('.workspace-step-name').textContent,'Proposal');assert.equal(links.at(-1).querySelector('.workspace-step-name').textContent,'Report');assert.deepEqual(links.slice(1,-1).map(link=>link.getAttribute('href')),expected);
+const timers=new Map();let timer=0;w.setTimeout=fn=>{timers.set(++timer,fn);return timer;};w.clearTimeout=id=>timers.delete(id);
+w.eval(fs.readFileSync(path.join(root,'app/header-navigation.js'),'utf8'));
+item.dispatchEvent(new w.Event('pointerenter'));assert.equal(panel.hidden,false);item.dispatchEvent(new w.Event('pointerleave'));item.dispatchEvent(new w.Event('pointerenter'));assert.equal(timers.size,0,'crossing hover gap does not close menu');
+d.body.dispatchEvent(new w.Event('pointerdown',{bubbles:true}));assert(panel.hidden);trigger.click();assert(!panel.hidden);
+trigger.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true}));assert.equal(d.activeElement,menu.querySelector('a'));
+item.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));assert(panel.hidden);assert.equal(d.activeElement,trigger);
+const touch=new w.Event('pointerenter');Object.defineProperty(touch,'pointerType',{value:'touch'});item.dispatchEvent(touch);assert(panel.hidden);trigger.click();assert(!panel.hidden);
+d.addEventListener('click',event=>event.preventDefault());menu.querySelector('a').click();assert(panel.hidden);
+w.close();console.log('PASS original Toolset position, eight ordered tools/icons, hover/touch/keyboard/dismissal, and project-only Proposal/Report with plain completion count');

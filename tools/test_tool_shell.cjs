@@ -57,7 +57,8 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(new URL(dom.window.document.querySelector('[data-flow-next]').href).searchParams.get('projectId'),'legacy-project');observers.forEach(observer=>observer.disconnect());await tick();dom.window.close();
  }
  const home=new JSDOM(read('index.html')).window.document;
- assert.equal(home.querySelector('.header-products,#toolset'),null);
+ assert.equal(home.querySelectorAll('#toolset [data-tool]').length,8);
+ assert.deepEqual([...home.querySelectorAll('#toolset a[data-tool]')].map(a=>a.getAttribute('href').replace('.html','')),workflow);
  assert.deepEqual([...home.querySelectorAll('#workspace-steps [data-workspace-tool]')].map(a=>a.getAttribute('href').replace('.html','')),[writing[0],...workflow,writing[1]]);
  for(const registered of [false,true]){
   const dom=new JSDOM(read('search-strategy.html'),{url:'https://aimsetp.com/search-strategy.html'+(registered?'?projectId=registered-project':''),runScripts:'outside-only'}),w=dom.window;

@@ -59,14 +59,16 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
 
   const label=t.d.querySelector('[data-task-status="search-strategy.html"]');assert.match(label.textContent,/12 records/);
   const conflict=t.d.querySelector('[data-task-status="title-abstract-screening.html"]');assert.match(conflict.textContent,/2 unresolved conflicts/);
-  assert.equal(t.d.querySelector('.header-products,#toolset-trigger,#toolset'),null,'global Toolset and writing entries are removed');
+  assert(t.d.querySelector('#toolset-trigger'),'the original Toolset dropdown is restored');
+  assert.equal(t.d.querySelectorAll('#toolset [data-tool]').length,8);
+  assert.equal(t.d.querySelector('.site-header a[href="build-protocol.html"],.site-header a[href="drafting-manuscript.html"]'),null,'writing entries stay project-only');
   assert.equal(t.d.querySelector('.project-tool-row:first-child .workspace-step-name').textContent,'Proposal');
   assert.equal(t.d.querySelector('.project-tool-row:last-child .workspace-step-name').textContent,'Report');
   assert.match(t.d.querySelector('[data-task-status="build-protocol.html"]').textContent,/Draft saved/);
   assert.equal(JSON.parse(t.w.localStorage.getItem('aimstep-protocol:A')).text,'Existing writing draft');
   // A later tool can be opened before the earlier tools contain any work.
   click(t.w,'[data-workspace-tool="grade"]');assert.equal(new URL(t.d.querySelector('#project-page iframe:not([hidden])').src).pathname,'/certainty-of-evidence.html');assert.equal(new URL(t.w.location.href).searchParams.get('projectId'),'A');
-  click(t.w,'.site-header .brand');assert(t.d.getElementById('project-page').hidden);
+  click(t.w,'#toolset [data-tool="nma"]');assert.equal(new URL(t.d.querySelector('#project-page iframe:not([hidden])').src).searchParams.has('projectId'),false,'global Toolset entry remains an empty unscoped tool');
   click(t.w,'.pw-card:nth-of-type(2) .pw-open');await tick();assert.match(label.textContent,/71 records/);assert.equal(conflict.textContent,'Not started','project B does not inherit project A conflicts');
   click(t.w,'[data-workspace-tool="extract"]');assert.equal(new URL(t.d.querySelector('#project-page iframe:not([hidden])').src).searchParams.get('projectId'),'B');
   assert.equal(t.errors.length,0,t.errors.map(e=>e.message).join('\n'));await tick();t.w.close();
@@ -131,7 +133,7 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
  {
   const t=setup('',[]);await tick();
   assert.equal(t.d.getElementById('project-workspace').hidden,true,'before project registration both writing actions remain hidden');
-  assert.equal(t.d.querySelector('.site-header a[href*="build-protocol"],.site-header a[href*="drafting-manuscript"],#toolset-trigger'),null);
+  assert.equal(t.d.querySelector('.site-header a[href*="build-protocol"],.site-header a[href*="drafting-manuscript"]'),null);
   assert.equal(JSON.parse(t.w.localStorage.getItem('aimstep-protocol:A')).text,'Existing writing draft','hidden writing data is retained');
   assert.equal(t.created(),0,'viewing the homepage never creates a project automatically');
   assert.equal(t.errors.length,0);await tick();t.w.close();
