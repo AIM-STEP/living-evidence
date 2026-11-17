@@ -5,6 +5,7 @@ function setup(){
  const link=()=>({attrs:{},setAttribute(k,v){this.attrs[k]=v;}});
  const cards=['A','B'].map(id=>{const open=link();return {dataset:{projectId:id},hidden:false,title:'Project '+id,querySelector:()=>open,link:open};});
  const classes=new Set(),name={textContent:''},env={expandedProjectId:null,activeProject:null,page:{hidden:true},list:{querySelectorAll:()=>cards},document:{body:{classList:{toggle(k,v){if(v)classes.add(k);else classes.delete(k);}}},getElementById:()=>name},currentProjectId:(link,card)=>card.dataset.projectId,currentProjectName:card=>card.title};
+ env.placeProjectTools=(selected,visible)=>{name.textContent=visible?selected.title:'';};
  env.rememberProject=(id,title)=>{env.activeProject={id,name:title};env.dataOwner=id;};
  env.setView=view=>{env.expandedProjectId=view==='project'?env.activeProject.id:null;env.renderProjectSummary();};
  vm.createContext(env);vm.runInContext(source('renderProjectSummary','refreshProject')+source('toggleProjectSummary','openStep'),env);
