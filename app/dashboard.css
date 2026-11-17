@@ -422,3 +422,10 @@ body .workflow-column { padding: 32px; border-radius: 16px; box-shadow: 0 4px 20
 .workflow-column #project-workspace { min-height: 0; margin: 0; padding: 0; background: transparent; }
 .workflow-column #project-workspace > .container { padding: 0; }
 .workflow-column #project-workspace .project-tool-list { border-radius: 0 0 8px 8px; margin-bottom: 6px; }
+/* Align the desktop controls with the tagline, below the brand-name row. */
+@media (min-width: 1101px) {
+  .site-header .header-products, .site-header .header-actions { align-self: end; }
+  .site-header .product-nav-trigger,
+  .site-header .header-actions .lang,
+  .site-header .header-actions .login { align-items: flex-end; padding-block: 0; }
+}
