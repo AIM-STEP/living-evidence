@@ -418,9 +418,7 @@ body .workflow-column { padding: 32px; border-radius: 16px; box-shadow: 0 4px 20
 /* One project name, its progress, then its project tools. */
 #projects .project-name-progress-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-width: 0; order: 0; position: relative; z-index: 2; pointer-events: none; }
 #projects .project-name-progress-row .pw-card-title { flex: 0 1 auto; min-width: 0; }
-#projects .project-name-progress-row .workspace-progress-group { flex: 1 1 140px; min-width: 100px; gap: 7px; }
-#projects .project-name-progress-row .workspace-progressbar { flex: 1 1 auto; min-width: 0; width: 100%; }
-#projects .project-name-progress-row .workspace-progress-label { font-size: 12px; }
+#projects .project-name-progress-row .project-completion-count { flex: 0 0 auto; color: var(--dashboard-muted); font-size: 13px; font-weight: 500; line-height: 1.5; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .workflow-column #project-workspace { min-height: 0; margin: 0; padding: 0; background: transparent; }
 .workflow-column #project-workspace > .container { padding: 0; }
 .workflow-column #project-workspace .project-tool-list { border-radius: 0 0 8px 8px; margin-bottom: 6px; }

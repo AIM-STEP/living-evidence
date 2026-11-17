@@ -51,10 +51,11 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
   assert.equal(t.d.querySelector('#workspace-summary-title,#workspace-summary-project,#workspace-title'),null,'duplicate headings and project name are removed');
   const card=t.d.querySelector('.pw-card:first-child'),nameRow=card.querySelector('.project-name-progress-row');
   assert(nameRow);assert.equal(nameRow.querySelector('.pw-card-title').textContent,'Alpha');
-  assert.equal(nameRow.querySelector('.workspace-progressbar').getAttribute('aria-valuemax'),'10');
-  assert.equal(nameRow.querySelector('.workspace-progress-label').textContent,'3/10');
+  assert.equal(nameRow.querySelector('.workspace-progressbar,[role="progressbar"]'),null);
+  assert.equal(nameRow.querySelector('.project-completion-count').textContent,'2/10');
+  assert.equal(t.d.querySelector('[data-workspace-tool="screen"]').dataset.completed,'false','partial screening is not a completed tool');
   assert.equal(card.nextElementSibling,t.d.getElementById('project-workspace'),'writing and workflow rows sit immediately beneath their project');
-  assert.equal(t.d.querySelectorAll('.workspace-progress-group').length,1);
+  assert.equal(t.d.querySelectorAll('.project-completion-count').length,1);
 
   const label=t.d.querySelector('[data-task-status="search-strategy.html"]');assert.match(label.textContent,/12 records/);
   const conflict=t.d.querySelector('[data-task-status="title-abstract-screening.html"]');assert.match(conflict.textContent,/2 unresolved conflicts/);
@@ -115,15 +116,15 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
   const search=t.d.getElementById('pw-search');search.value='Alpha';search.dispatchEvent(new t.w.Event('input'));await tick();
   assert.equal(t.d.querySelector('.pw-card:nth-of-type(1)').hidden,false,'progress fraction does not pollute project title search');
   search.value='';search.dispatchEvent(new t.w.Event('input'));click(t.w,'.pw-card:nth-of-type(2) .pw-open');await tick();
-  assert.equal(progress.previousElementSibling.textContent,'Beta');assert.equal(progress.querySelector('.workspace-progress-label').textContent,'1/10');
+  assert.equal(progress.previousElementSibling.textContent,'Beta');assert.equal(progress.textContent,'1/10');
   assert.equal(t.d.getElementById('project-workspace').previousElementSibling.querySelector('.pw-card-title').textContent,'Beta');
   assert.equal(t.d.querySelectorAll('.project-name-progress-row .pw-card-title').length,2);
-  assert.equal(t.d.querySelectorAll('.workspace-progress-group').length,1,'a single progress bar follows the selected project');
+  assert.equal(t.d.querySelectorAll('.project-completion-count').length,1,'a single completed-tools counter follows the selected project');
   click(t.w,'.pw-card:nth-of-type(2) .pw-open');await tick();assert.equal(progress.hidden,true);assert.equal(t.d.getElementById('project-workspace').hidden,true);
   click(t.w,'.pw-card:nth-of-type(1) .pw-open');await tick();
   // The project registry can replace its list after a load or account refresh.
   await t.w.AIMSTEP.projectController.load();await tick();await tick();
-  assert.equal(t.d.getElementById('project-task-progress'),progress,'list reload reattaches the existing progress widget');
+  assert.equal(t.d.getElementById('project-task-progress'),progress,'list reload reattaches the existing completion counter');
   assert.equal(t.d.getElementById('project-workspace').previousElementSibling.querySelector('.pw-card-title').textContent,'Alpha');
   assert.equal(t.errors.length,0,t.errors.map(e=>e.message).join('\n'));await tick();t.w.close();
  }
@@ -135,6 +136,20 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
   assert.equal(t.created(),0,'viewing the homepage never creates a project automatically');
   assert.equal(t.errors.length,0);await tick();t.w.close();
  }
- console.log('PASS one project name with inline 10-tool progress, immediate tool placement, title search, project switching, collapse and registry reload');
+ {
+  const t=setup('?view=project&projectId=A');await tick();const counter=t.d.getElementById('project-task-progress'),poll=t.polls.find(p=>p.delay===2000);
+  assert.equal(counter.textContent,'2/10');
+  click(t.w,'[data-workspace-tool="eligibility"]');click(t.w,'.pw-card:first-child .pw-open');await tick();assert.equal(counter.textContent,'2/10','visiting a tool does not increment completion');
+  t.w.localStorage.setItem('aimstep-screen-summary:A',JSON.stringify({sourceCount:924,screened:924,pending:0,conflictsPending:0,humanCheck:2,humanChecked:2,completed:true}));poll.fn();await tick();assert.equal(counter.textContent,'3/10','a saved fully reviewed screening result increments the counter');
+  t.w.localStorage.setItem('aimstep-screen-summary:A',JSON.stringify({sourceCount:924,screened:923,pending:1,conflictsPending:0,completed:false}));poll.fn();await tick();assert.equal(counter.textContent,'2/10','reopened or incomplete screening is not completed');
+  t.w.localStorage.setItem('aimstep-protocol:A',JSON.stringify({text:'',manualProtocolInputs:{reviewTitle:'Configuration only'}}));poll.fn();await tick();assert.equal(counter.textContent,'1/10','clearing the proposal output removes its completed count');
+  t.w.AIMSTEPProjectTasks={...tasks,collect:async()=>({data:{protocol:{text:'Unverified proposal'}},errors:['protocol']})};poll.fn();await tick();assert.equal(counter.textContent,'0/10','an unreadable task is never counted as completed');
+  t.w.AIMSTEPProjectTasks={...tasks,collect:async()=>{throw Error('Storage unavailable');}};poll.fn();await tick();assert.equal(counter.textContent,'—/10','a failed read does not present a false completion count');
+  const observers=[],NativeObserver=t.w.MutationObserver;t.w.MutationObserver=class extends NativeObserver{constructor(fn){super(fn);observers.push(this);}};t.w.requestAnimationFrame=()=>0;t.w.eval(read('app/progress-display.js'));
+  assert.equal(t.d.querySelector('#project-task-progress.unified-progress,#project-task-progress .unified-progress'),null,'the shared progress decorator leaves the plain counter unchanged');
+  observers.forEach(observer=>observer.disconnect());
+  assert.equal(t.errors.length,0);await tick();t.w.close();
+ }
+ console.log('PASS one project name with inline completed-tools counter, immediate tool placement, title search, project switching, collapse and registry reload');
  console.log('PASS flat tool-name navigation, all ten direct destinations, two-second progress refresh, save-event updates and preserved running tool frames');
 })().catch(e=>{console.error(e);process.exitCode=1});
