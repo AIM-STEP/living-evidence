@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "status": "Synthetic regression cases, not an expert-validated clinical benchmark",
+  "development": [
+    {"id":"dev-age", "domain":"Population", "source":"Adults aged at least 18 years.", "accept":"Adults aged 18 years or older.", "reject":"Adults aged at most 18 years."},
+    {"id":"dev-followup", "domain":"Outcomes", "source":"Follow-up of at least 12 months.", "accept":"Follow-up of at least 12 months.", "reject":"Follow-up of at least 12 weeks."}
+  ],
+  "test": [
+    {"id":"hypertension-age", "domain":"Population", "source":"Adults aged at least 21 years with hypertension.", "accept":"Adults aged 21 years or older with hypertension.", "reject":"Adults aged at most 21 years with hypertension."},
+    {"id":"diabetes-followup", "domain":"Outcomes", "source":"Follow-up of at least 24 months for adults with diabetes.", "accept":"Follow-up of at least 24 months for adults with diabetes.", "reject":"Follow-up of at least 24 weeks for adults with diabetes."},
+    {"id":"drug-dose", "domain":"Intervention", "source":"A dose of no more than 5 mg.", "accept":"A dose of at most 5 mg.", "reject":"A dose of at least 5 mg."},
+    {"id":"drug-unit", "domain":"Intervention", "source":"A dose of 10 mg.", "accept":"A dose of 10 mg.", "reject":"A dose of 10 g."},
+    {"id":"rehabilitation-strict-bound", "domain":"Population", "source":"Participants aged greater than 65 years.", "accept":"Participants aged greater than 65 years.", "reject":"Participants aged at least 65 years."},
+    {"id":"design-alternative", "domain":"Study design", "source":"Randomized trials or prospective cohort studies.", "accept":"Randomized trials or prospective cohort studies.", "reject":"Randomized trials and prospective cohort studies."},
+    {"id":"combination-intervention", "domain":"Intervention", "source":"Exercise and cognitive behavioural therapy.", "accept":"Exercise and cognitive behavioural therapy.", "reject":"Exercise or cognitive behavioural therapy."},
+    {"id":"qualitative-negation", "domain":"Population", "source":"Healthcare workers without prior training.", "accept":"Healthcare workers without prior training.", "reject":"Healthcare workers with prior training."},
+    {"id":"scoping-exception", "domain":"Context", "source":"Community settings except residential care.", "accept":"Community settings except residential care.", "reject":"Community settings including residential care."},
+    {"id":"unsupported-cutoff", "domain":"Population", "source":"Adults with fibromyalgia.", "accept":"Adults with fibromyalgia.", "reject":"Adults aged at least 18 years with fibromyalgia."},
+    {"id":"chinese-duration", "domain":"Outcomes", "source":"随访至少12个月。", "accept":"Follow-up of at least 12 months.", "reject":"Follow-up of at most 12 weeks."},
+    {"id":"same-numbers-wrong-scope", "domain":"Population", "source":"Age of at least 18 years and follow-up of at least 12 years.", "accept":"Age of at least 18 years and follow-up of at least 12 years.", "reject":"Age of at least 12 years and follow-up of at least 18 years."}
+  ]
+}

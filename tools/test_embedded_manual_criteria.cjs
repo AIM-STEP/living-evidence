@@ -6,7 +6,7 @@ function el(id){if(!elements.has(id))elements.set(id,{value:'',hidden:false,text
 const storage={getItem(k){reads.push(k);return null},setItem(k,v){writes.push([k,v])},removeItem(k){writes.push([k,null])}};
 const ctx={console,URL,URLSearchParams,AbortController,DOMException,structuredClone,TextEncoder,TextDecoder,Blob,Map,Set,setTimeout(){},clearTimeout(){},navigator:{},localStorage:storage,sessionStorage:storage,
  location:{search:'?embedded=fulltext-criteria&projectId=synthetic',href:'http://127.0.0.1:8765/eligibility.html?embedded=fulltext-criteria&projectId=synthetic',pathname:'/eligibility.html'},
- document:{getElementById:el,querySelectorAll(){return []},addEventListener(){},documentElement:{classList:{add(){}}}},window:{addEventListener(){}}};
+ document:{getElementById:el,querySelectorAll(){return []},addEventListener(){},documentElement:{classList:{add(){}}}},window:{AIMSTEPProjectAccess:{run:fn=>fn()},addEventListener(){}}};
 vm.runInNewContext(code.replace('// Reuse this exact manual editor', 'globalThis.testManual={state:()=>state,signature:manualSourceSignature,persistQuietly,save,setBusy(){manualRefinementController=new AbortController()}};\n// Reuse this exact manual editor'),ctx);
 const editor=ctx.window.aimstepManualEditor;
 assert(editor);assert.equal(el('manual-generate-panel').hidden,false);
@@ -25,7 +25,7 @@ assert.match(html,/embedded-manual \.manual-limits-heading/);
 ctx.testManual.persistQuietly();ctx.testManual.save();
 assert.deepEqual(writes,[],'Draft editing/preview must never modify upstream criteria, summary or completion flags');assert(!reads.some(k=>k==='aimstep-eligibility:synthetic'),'Embedded editor must not load upstream saved state');
 editor.load(upstream);assert.equal(editor.read().rows[0].condition,'Adults','Discarded draft is not restored');
-const standalone={...ctx,location:{...ctx.location,search:'?projectId=synthetic'},window:{addEventListener(){}}};
+const standalone={...ctx,location:{...ctx.location,search:'?projectId=synthetic'},window:{AIMSTEPProjectAccess:{run:fn=>fn()},addEventListener(){}}};
 vm.runInNewContext(code,standalone);
 assert.equal(standalone.window.aimstepManualEditor,undefined);assert(writes.some(([key])=>key==='aimstep-eligibility-summary:synthetic'),'Standalone preview keeps its original sharing behavior');
 console.log('PASS: direct live criteria preview, no limits or standardization dependency, escaped input, isolated drafts and standalone compatibility');

@@ -23,9 +23,10 @@ function setup(storage=new Map()){
    autoCriteriaPipeline=async(model,input,signature)=>{
     if(fail)throw Error('Synthetic generation failure');
     return {signature,generatedAt:'2026-11-17T00:00:00Z',reviewTopic:'Synthetic review',manuscriptParagraph:'Adults are eligible.',uncertainties:[],trace:[],
-     rows:input.criteria.map(row=>({dimension:row.dimension,include:[row.eligibilityRule],exclude:row.exclusionRule?[row.exclusionRule]:[]}))};
+     rows:input.criteria.map(row=>({dimension:row.dimension,include:input.originalSources?(row.dimension==='Population'?['Adults']:[]):[row.eligibilityRule],exclude:row.exclusionRule?[row.exclusionRule]:[]}))};
    };
   }};\n// Reuse this exact manual editor`);
+ ctx.window.AIMSTEPCriteriaGrounding=require('../app/criteria-grounding.js');
  vm.runInNewContext(code,ctx);
  const select=el('generation-method');
  return {ctx,storage,el,api:ctx.methodTest,select,

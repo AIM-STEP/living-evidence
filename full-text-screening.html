@@ -402,7 +402,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js?v=20261006-queue1"></script>
 <script src="app/fulltext-assistant.js?v=20261006-queue1"></script>
-<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261116-current-only-v2"></script><script>
+<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261117-grounding-1"></script><script>
 window.AIMSTEPProjectAccess?.run(function(){
 
 'use strict';
@@ -2073,7 +2073,7 @@ function loadManualCriteriaEditor(snapshot){
   manualEditorReady=false;manualEditorDraft=structuredClone(snapshot||{});
   manualEditorDraft.framework||=inferFramework(manualEditorDraft.rows||[]);
   const frame=$('crit-manual-frame');frame.hidden=true;$('crit-editor-loading').hidden=false;
-  const url=new URL('eligibility.html',location.href);url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261006-direct');
+  const url=new URL('eligibility.html',location.href);url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261117-grounding-1');
   if(projectId)url.searchParams.set('projectId',projectId);
   frame.src=url.href;
 }

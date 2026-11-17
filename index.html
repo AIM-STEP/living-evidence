@@ -1715,7 +1715,7 @@ body.project-page-mode .toolset-layout { display: none; }
   <link rel="stylesheet" href="app/theme.css?v=20261022-3">
   <link rel="stylesheet" href="app/dashboard.css?v=20261117-header-unified-1">
 <script src="app/eligibility-library.js?v=20261021-1"></script>
-<script src="app/project-task-status.js?v=20261117-completed-tools-1"></script>
+<script src="app/project-task-status.js?v=20261117-criteria-grounding-1"></script>
 <script defer src="app/header-navigation.js?v=20261021-47"></script>
 <link rel="stylesheet" href="app/progress-display.css?v=20261021-1">
 <script src="app/progress-display.js?v=20261021-1" defer></script>
@@ -3559,7 +3559,7 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh internal tool documents without changing public links.
-            if (frameTarget.pathname.endsWith(".html")) frameTarget.searchParams.set("appVersion", frameTarget.pathname.endsWith("/eligibility.html") ? "20261117-eligibility-method-lock-1" : "20261117-project-writing-1");
+            if (frameTarget.pathname.endsWith(".html")) frameTarget.searchParams.set("appVersion", "20261117-criteria-grounding-1");
             // Keep proposal documents mounted so in-flight generation survives tool navigation.
             var selectedFrame = defaultFrame;
             if (/\/build-protocol\.html$/i.test(frameTarget.pathname)) {

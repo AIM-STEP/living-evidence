@@ -786,6 +786,8 @@ window.AimstepToolTranslations = {
   "Treatment (as reported)": "干预措施（按原文报告）",
   "Unverified": "未经核验",
   "Use": "使用",
+  "Ignore": "忽略",
+  "Reviewed": "已核对",
   "View explanations": "查看解释",
   "Waiting for the AI assessment.": "等待 AI 评估。",
   "What GRADE guidance says": "GRADE 指南说明",

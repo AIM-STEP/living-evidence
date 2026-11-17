@@ -17,7 +17,9 @@
     const rows = e && (!Object.hasOwn(e,'generationMethodChoice') || e.generationMethodChoice) ? (e.activeGenerator === 'machine' ? e.machineCriteria : e.criteria) || [] : [];
     // Reuse the criteria library's placeholder exclusion, including legacy sets.
     const criteria = rows.filter(row => eligibility?.hasRules({...e,generationMethodChoice:e.generationMethodChoice ?? 'legacy',criteria:[row],machineCriteria:[row]})).length;
-    put(files[0], criteria || text(e?.question), criteria + words(' criteria saved', ' 项标准已保存'), criteria > 0);
+    const refinement = e?.activeGenerator === 'machine' ? e.machineRefinement : e?.manualRefinement;
+    const unresolved = refinement?.audit ? (refinement.uncertainties || []).filter(item => !(e.resolvedPending || []).includes(item)).length : 0;
+    put(files[0], criteria || text(e?.question) || unresolved, criteria + words(' criteria saved', ' 项标准已保存') + (unresolved ? ' · ' + unresolved + words(' pending clarifications', ' 项待澄清') : ''), criteria > 0 && !unresolved);
     const s = data.search, search = data.searchResults;
     const found = search ? count(search.records) : num(s?.unique);
     const runs = search ? count(search.runs) : count(s?.runs);
