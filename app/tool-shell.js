@@ -16,11 +16,12 @@
     ['drafting-manuscript.html', 'Report', '报告']
   ];
   const url = new URL(location.href);
-  const steps = writing.some(step => url.pathname.endsWith('/' + step[0])) ? writing : workflow;
-  const allTools = [...workflow, ...writing];
-  const index = steps.findIndex(step => url.pathname.endsWith('/' + step[0]));
+  const allTools = [writing[0], ...workflow, writing[1]];
+  const current = allTools.find(step => url.pathname.endsWith('/' + step[0]));
+  let steps = workflow;
+  let index = steps.indexOf(current);
   const nav = document.querySelector('.tool-flow');
-  if (index < 0 || !nav) return;
+  if (!current || !nav) return;
   const projectId = url.searchParams.get('projectId') || url.searchParams.get('project') || url.searchParams.get('id') || '';
   let projectReady = false;
   function destination(file) {
@@ -35,13 +36,18 @@
   const label = nav.querySelector('[data-flow-label]');
   const projects = destination(projectId ? 'index.html?view=project' : 'index.html?view=toolset');
   home.href = projects;
-  if (previous && index) previous.href = destination(steps[index - 1][0]);
-  else if (previous) {
-    previous.removeAttribute('href');
-    previous.setAttribute('aria-disabled', 'true');
-    previous.setAttribute('tabindex', '-1');
+  function setLink(link, href) {
+    if (!link) return;
+    if (href) {
+      link.href = href;
+      link.removeAttribute('aria-disabled');
+      link.removeAttribute('tabindex');
+    } else {
+      link.removeAttribute('href');
+      link.setAttribute('aria-disabled', 'true');
+      link.setAttribute('tabindex', '-1');
+    }
   }
-  if (next) next.href = index < steps.length - 1 ? destination(steps[index + 1][0]) : projects;
   // The real next anchor is kept in place, including Eligibility's save handler.
   // Jumping to another tool uses an anchor too, so the dashboard iframe router
   // can intercept it and keep its history and selected project in sync.
@@ -51,13 +57,13 @@
   jump.tabIndex = -1;
   nav.appendChild(jump);
   picker.addEventListener('change', () => {
-    const selected = allTools.find(step => step[0] === picker.value);
-    if (selected && selected !== steps[index]) {
+    const selected = steps.find(step => step[0] === picker.value);
+    if (selected && selected !== current) {
       if (selected === steps[index + 1] && next) next.click();
       else if (selected === steps[index - 1] && previous) previous.click();
       else { jump.href = destination(selected[0]); jump.click(); }
     }
-    picker.value = steps[index][0];
+    picker.value = current[0];
   });
   nav.addEventListener('click', event => {
     const link = event.target.closest('a');
@@ -67,14 +73,18 @@
     if (!document.dispatchEvent(before)) event.preventDefault();
   });
   function renderLanguage() {
+    steps = projectReady ? allTools : workflow;
+    index = steps.indexOf(current);
+    setLink(previous, index > 0 ? destination(steps[index - 1][0]) : null);
+    setLink(next, index < 0 ? null : index < steps.length - 1 ? destination(steps[index + 1][0]) : projects);
     const chinese = window.AIMSTEP?.lang() === 'zh' || document.documentElement.lang === 'zh-CN';
     const titleIndex = chinese ? 2 : 1;
     nav.setAttribute('aria-label', chinese ? '工具导航' : 'Tools navigation');
     home.textContent = chinese ? '返回项目' : 'Projects';
     if (previous) previous.textContent = chinese ? '上一步' : 'Previous';
     if (next) next.textContent = index === steps.length - 1 ? (chinese ? '返回项目' : 'Back to projects') : (chinese ? '下一步' : 'Next');
-    if (previous) previous.title = index ? (chinese ? '上一步：' : 'Previous: ') + steps[index - 1][titleIndex] : (chinese ? '当前为第一步' : 'This is the first step');
-    if (next) next.title = index < steps.length - 1 ? (chinese ? '下一步：' : 'Next: ') + steps[index + 1][titleIndex] : home.textContent;
+    if (previous) previous.title = index > 0 ? (chinese ? '上一步：' : 'Previous: ') + steps[index - 1][titleIndex] : (chinese ? '当前为第一步' : 'This is the first step');
+    if (next) next.title = index >= 0 && index < steps.length - 1 ? (chinese ? '下一步：' : 'Next: ') + steps[index + 1][titleIndex] : home.textContent;
     label.textContent = chinese ? '选择工具' : 'Choose a tool';
     const group = document.createElement('optgroup');
     group.label = chinese ? '工具' : 'Tools';
@@ -82,9 +92,9 @@
       const option = document.createElement('option');
       option.value = step[0]; option.textContent = step[titleIndex]; return option;
     };
-    group.append(...workflow.map(optionFor));
-    picker.replaceChildren(group, ...(projectReady ? writing.map(optionFor) : []));
-    picker.value = steps[index][0];
+    group.append(...steps.map(optionFor));
+    picker.replaceChildren(group);
+    picker.value = current[0];
   }
   document.addEventListener('aimstep:lang', renderLanguage);
   renderLanguage();

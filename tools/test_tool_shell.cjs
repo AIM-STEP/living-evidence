@@ -5,10 +5,11 @@ const root=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f
 const pages=['eligibility','search-strategy','build-protocol','title-abstract-screening','full-text-screening','extraction','risk-of-bias','analysis','certainty-of-evidence','drafting-manuscript'];
 const workflow=pages.filter(page=>!['build-protocol','drafting-manuscript'].includes(page));
 const writing=['build-protocol','drafting-manuscript'];
+const projectOrder=[writing[0],...workflow,writing[1]];
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 (async()=>{
  for(const page of pages) {
-  const group=writing.includes(page)?writing:workflow,index=group.indexOf(page);
+  const group=projectOrder,index=group.indexOf(page);
   const dom=new JSDOM(read(page+'.html'),{url:'https://aimsetp.com/'+page+'.html?projectId=synthetic%20project',runScripts:'outside-only'}),w=dom.window,d=w.document;
   const observers=[],NativeObserver=w.MutationObserver;w.MutationObserver=class extends NativeObserver{constructor(fn){super(fn);observers.push(this);}};
   const nav=d.querySelector('.tool-flow');
@@ -19,6 +20,7 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(d.querySelectorAll('script[src^="app/tool-shell.js"]').length,1);
   const ids=[...d.querySelectorAll('[id]')].map(el=>el.id);assert.equal(new Set(ids).size,ids.length,page+' unique IDs');
   const fallbackNames=[...nav.querySelectorAll('option')].map(option=>option.textContent);
+  assert.deepEqual([...nav.querySelectorAll('option')].map(option=>option.value),projectOrder.map(file=>file+'.html'),page+' static picker follows project order');
   fallbackNames.forEach(name=>assert.doesNotMatch(name,/^\d/,page+' fallback has no number prefix'));
   const studyField=d.querySelector('textarea');if(studyField)studyField.value='Synthetic original research text';
   w.localStorage.setItem('aimstep-lang','zh');w.localStorage.setItem('synthetic-original','unchanged');
@@ -29,12 +31,14 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   const next=nav.querySelector('[data-flow-next]'),prev=nav.querySelector('[data-flow-previous]'),picker=nav.querySelector('select');
   const checkProject=link=>assert.equal(new URL(link.href).searchParams.get('projectId'),'synthetic project');
   assert.equal(picker.options.length,10);assert.equal(picker.value,page+'.html');
+  assert.deepEqual([...picker.options].map(option=>option.value),projectOrder.map(file=>file+'.html'),page+' registered picker follows project order');
   [...picker.options].forEach(option=>assert.doesNotMatch(option.textContent,/^\d/,page+' Chinese has no number prefix'));
   assert.match(picker.selectedOptions[0].textContent,/[\u4e00-\u9fff]/,page+' translated step');
   assert.equal(nav.querySelector('[data-flow-position]'),null,'step fraction is removed');
-  if(writing.includes(page)){assert.equal(next,null);assert.equal(prev,null);}else{assert.equal(new URL(next.href).pathname,'/'+(index===group.length-1?'index':group[index+1])+'.html');checkProject(next);}
-  if(!writing.includes(page)&&index) { assert.equal(new URL(prev.href).pathname,'/'+group[index-1]+'.html');checkProject(prev); }
-  else if(!writing.includes(page)) { assert.equal(prev.hasAttribute('href'),false);assert.equal(prev.getAttribute('aria-disabled'),'true'); }
+  assert.equal(new URL(next.href).pathname,'/'+(index===group.length-1?'index':group[index+1])+'.html');checkProject(next);
+  assert.equal(next.getAttribute('aria-disabled'),null,page+' next enabled after registry resolves');
+  if(index) { assert.equal(new URL(prev.href).pathname,'/'+group[index-1]+'.html');checkProject(prev);assert.equal(prev.getAttribute('aria-disabled'),null);assert.equal(prev.getAttribute('tabindex'),null); }
+  else { assert.equal(prev.hasAttribute('href'),false);assert.equal(prev.getAttribute('aria-disabled'),'true'); }
   checkProject(nav.querySelector('[data-flow-home]'));
   const destinations=[];
   d.addEventListener('click',event=>{const a=event.target.closest('a[href]');if(a&&!event.defaultPrevented){destinations.push(a.href);event.preventDefault();}});
@@ -42,6 +46,12 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   if(page==='eligibility')assert.equal(savedByOriginalNext,1,'existing next/save handler retained');
   picker.value=(writing.includes(page)?workflow[0]:writing[0])+'.html';picker.dispatchEvent(new w.Event('change'));
   assert.equal(new URL(destinations.at(-1)).pathname,'/'+(writing.includes(page)?workflow[0]:writing[0])+'.html');assert.equal(picker.value,page+'.html');
+  for(const target of projectOrder.filter(target=>target!==page)){
+   picker.value=target+'.html';picker.dispatchEvent(new w.Event('change'));
+   assert.equal(new URL(destinations.at(-1)).pathname,'/'+target+'.html',page+' can jump directly to '+target);
+   assert.equal(new URL(destinations.at(-1)).searchParams.get('projectId'),'synthetic project');
+   assert.equal(picker.value,page+'.html');
+  }
   let before=0;d.addEventListener('aimstep:before-tool-navigation',e=>{before++;e.preventDefault();});
   const prior=destinations.length;nav.querySelector('[data-flow-home]').click();assert.equal(before,1);assert.equal(destinations.length,prior,'failed-save cancellation respected');
   w.AIMSTEP.setLanguage('en');assert.deepEqual([...picker.options].map(option=>option.textContent),fallbackNames);if(prev)assert.equal(prev.textContent,'Previous');
@@ -65,9 +75,10 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   const observers=[],NativeObserver=w.MutationObserver;w.MutationObserver=class extends NativeObserver{constructor(fn){super(fn);observers.push(this);}};
   w.AIMSTEPProjectAccess={ready:async()=>registered};w.eval(read('app/tool-shell.js'));await tick();
   const values=[...w.document.querySelector('[data-flow-picker]').options].map(o=>o.value);
+  assert.deepEqual(values,(registered?projectOrder:workflow).map(file=>file+'.html'));
   assert.equal(values.includes('build-protocol.html'),registered);assert.equal(values.includes('drafting-manuscript.html'),registered);
   if(registered)assert.equal(w.document.querySelector('option[value="drafting-manuscript.html"]').textContent,'Report');
   observers.forEach(observer=>observer.disconnect());await tick();w.close();
  }
- console.log('PASS: legacy project aliases, eight workflow steps and two writing tools');
+ console.log('PASS: legacy project aliases, project-ordered ten tools and eight-tool unscoped previews');
 })().catch(e=>{console.error(e);process.exitCode=1;});
