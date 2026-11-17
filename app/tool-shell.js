@@ -13,7 +13,7 @@
   ];
   const writing = [
     ['build-protocol.html', 'Proposal', '方案'],
-    ['drafting-manuscript.html', 'Evidencebank', '证据库']
+    ['drafting-manuscript.html', 'Report', '报告']
   ];
   const url = new URL(location.href);
   const steps = writing.some(step => url.pathname.endsWith('/' + step[0])) ? writing : workflow;
@@ -22,6 +22,7 @@
   const nav = document.querySelector('.tool-flow');
   if (index < 0 || !nav) return;
   const projectId = url.searchParams.get('projectId') || url.searchParams.get('project') || url.searchParams.get('id') || '';
+  let projectReady = false;
   function destination(file) {
     const target = new URL(file, url);
     if (projectId) target.searchParams.set('projectId', projectId);
@@ -76,17 +77,21 @@
     if (next) next.title = index < steps.length - 1 ? (chinese ? '下一步：' : 'Next: ') + steps[index + 1][titleIndex] : home.textContent;
     label.textContent = chinese ? '选择工具' : 'Choose a tool';
     const group = document.createElement('optgroup');
-    group.label = chinese ? '工具集' : 'Toolset';
+    group.label = chinese ? '工具' : 'Tools';
     const optionFor = step => {
       const option = document.createElement('option');
       option.value = step[0]; option.textContent = step[titleIndex]; return option;
     };
     group.append(...workflow.map(optionFor));
-    picker.replaceChildren(group, ...writing.map(optionFor));
+    picker.replaceChildren(group, ...(projectReady ? writing.map(optionFor) : []));
     picker.value = steps[index][0];
   }
   document.addEventListener('aimstep:lang', renderLanguage);
   renderLanguage();
+  window.AIMSTEPProjectAccess?.ready().then(allowed => {
+    projectReady = allowed;
+    renderLanguage();
+  });
 })();
 
 /* Keep status text intact for localisation and accessibility; only its dots animate. */

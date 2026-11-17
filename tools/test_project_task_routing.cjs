@@ -45,23 +45,26 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
  {
   const t=setup('?view=project&projectId=A');await tick();
   for(const link of t.d.querySelectorAll('[data-workspace-tool]'))assert.equal(new URL(link.href).searchParams.get('projectId'),'A');
-  assert.equal(t.d.querySelectorAll('[data-task-status]').length,8);
+  assert.equal(t.d.querySelectorAll('[data-task-status]').length,10);
   assert.equal(t.d.querySelectorAll('#project-workspace details,#project-workspace .workspace-panel,#project-workspace table').length,0,'navigation has no expandable task content');
-  assert.equal(t.d.querySelectorAll('#workspace-steps > a.project-tool-row').length,8);
+  assert.equal(t.d.querySelectorAll('#workspace-steps > a.project-tool-row').length,10);
   assert.equal(t.d.querySelector('#workspace-summary-title,#workspace-summary-project,#workspace-title'),null,'duplicate headings and project name are removed');
   const card=t.d.querySelector('.pw-card:first-child'),nameRow=card.querySelector('.project-name-progress-row');
   assert(nameRow);assert.equal(nameRow.querySelector('.pw-card-title').textContent,'Alpha');
-  assert.equal(nameRow.querySelector('.workspace-progressbar').getAttribute('aria-valuemax'),'8');
-  assert.equal(nameRow.querySelector('.workspace-progress-label').textContent,'2/8');
-  assert.equal(card.nextElementSibling,t.d.getElementById('project-workspace'),'eight tool rows sit immediately beneath their project');
+  assert.equal(nameRow.querySelector('.workspace-progressbar').getAttribute('aria-valuemax'),'10');
+  assert.equal(nameRow.querySelector('.workspace-progress-label').textContent,'3/10');
+  assert.equal(card.nextElementSibling,t.d.getElementById('project-workspace'),'writing and workflow rows sit immediately beneath their project');
   assert.equal(t.d.querySelectorAll('.workspace-progress-group').length,1);
 
   const label=t.d.querySelector('[data-task-status="search-strategy.html"]');assert.match(label.textContent,/12 records/);
   const conflict=t.d.querySelector('[data-task-status="title-abstract-screening.html"]');assert.match(conflict.textContent,/2 unresolved conflicts/);
-  for(const link of t.d.querySelectorAll('.header-products a[data-tool]'))assert.equal(new URL(link.href).searchParams.has('projectId'),false,'global tools browse empty');
+  assert.equal(t.d.querySelector('.header-products,#toolset-trigger,#toolset'),null,'global Toolset and writing entries are removed');
+  assert.deepEqual([...t.d.querySelectorAll('.project-tool-row .workspace-step-name')].slice(0,2).map(el=>el.textContent),['Proposal','Report']);
+  assert.match(t.d.querySelector('[data-task-status="build-protocol.html"]').textContent,/Draft saved/);
+  assert.equal(JSON.parse(t.w.localStorage.getItem('aimstep-protocol:A')).text,'Existing writing draft');
   // A later tool can be opened before the earlier tools contain any work.
   click(t.w,'[data-workspace-tool="grade"]');assert.equal(new URL(t.d.querySelector('#project-page iframe:not([hidden])').src).pathname,'/certainty-of-evidence.html');assert.equal(new URL(t.w.location.href).searchParams.get('projectId'),'A');
-  click(t.w,'.header-products a[data-tool="nma"]');assert.equal(new URL(t.d.querySelector('#project-page iframe:not([hidden])').src).searchParams.has('projectId'),false);
+  click(t.w,'.site-header .brand');assert(t.d.getElementById('project-page').hidden);
   click(t.w,'.pw-card:nth-of-type(2) .pw-open');await tick();assert.match(label.textContent,/71 records/);assert.equal(conflict.textContent,'Not started','project B does not inherit project A conflicts');
   click(t.w,'[data-workspace-tool="extract"]');assert.equal(new URL(t.d.querySelector('#project-page iframe:not([hidden])').src).searchParams.get('projectId'),'B');
   assert.equal(t.errors.length,0,t.errors.map(e=>e.message).join('\n'));await tick();t.w.close();
@@ -80,7 +83,7 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
   delayed.A[0]({data:{search:{unique:12}},errors:[]});await tick();assert.match(label.textContent,/71 records/,'late project A cannot overwrite selected project B');
   assert.equal(t.errors.length,0);await tick();t.w.close();
  }
- console.log('PASS eight project workflow actions/statuses, free tool order, explicit project URLs, global blank navigation, project isolation and safe return destinations');
+ console.log('PASS Proposal/Report and eight workflow actions/statuses, free tool order, explicit project URLs, global blank navigation, project isolation and safe return destinations');
  {
   const t=setup('?view=project&projectId=A');await tick();
   const tools=[...t.d.querySelectorAll('.project-tool-row')].map(a=>({key:a.dataset.workspaceTool,file:new URL(a.href).pathname}));
@@ -111,7 +114,7 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
   const search=t.d.getElementById('pw-search');search.value='Alpha';search.dispatchEvent(new t.w.Event('input'));await tick();
   assert.equal(t.d.querySelector('.pw-card:nth-of-type(1)').hidden,false,'progress fraction does not pollute project title search');
   search.value='';search.dispatchEvent(new t.w.Event('input'));click(t.w,'.pw-card:nth-of-type(2) .pw-open');await tick();
-  assert.equal(progress.previousElementSibling.textContent,'Beta');assert.equal(progress.querySelector('.workspace-progress-label').textContent,'1/8');
+  assert.equal(progress.previousElementSibling.textContent,'Beta');assert.equal(progress.querySelector('.workspace-progress-label').textContent,'1/10');
   assert.equal(t.d.getElementById('project-workspace').previousElementSibling.querySelector('.pw-card-title').textContent,'Beta');
   assert.equal(t.d.querySelectorAll('.project-name-progress-row .pw-card-title').length,2);
   assert.equal(t.d.querySelectorAll('.workspace-progress-group').length,1,'a single progress bar follows the selected project');
@@ -123,6 +126,14 @@ function click(w,selector){const el=w.document.querySelector(selector);assert(el
   assert.equal(t.d.getElementById('project-workspace').previousElementSibling.querySelector('.pw-card-title').textContent,'Alpha');
   assert.equal(t.errors.length,0,t.errors.map(e=>e.message).join('\n'));await tick();t.w.close();
  }
- console.log('PASS one project name with inline 8-tool progress, immediate tool placement, title search, project switching, collapse and registry reload');
- console.log('PASS flat tool-name navigation, all eight direct destinations, two-second progress refresh, save-event updates and preserved running tool frames');
+ {
+  const t=setup('',[]);await tick();
+  assert.equal(t.d.getElementById('project-workspace').hidden,true,'before project registration both writing actions remain hidden');
+  assert.equal(t.d.querySelector('.site-header a[href*="build-protocol"],.site-header a[href*="drafting-manuscript"],#toolset-trigger'),null);
+  assert.equal(JSON.parse(t.w.localStorage.getItem('aimstep-protocol:A')).text,'Existing writing draft','hidden writing data is retained');
+  assert.equal(t.created(),0,'viewing the homepage never creates a project automatically');
+  assert.equal(t.errors.length,0);await tick();t.w.close();
+ }
+ console.log('PASS one project name with inline 10-tool progress, immediate tool placement, title search, project switching, collapse and registry reload');
+ console.log('PASS flat tool-name navigation, all ten direct destinations, two-second progress refresh, save-event updates and preserved running tool frames');
 })().catch(e=>{console.error(e);process.exitCode=1});

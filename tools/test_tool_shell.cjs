@@ -25,7 +25,7 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   w.eval(read('app/tool-i18n-catalog.js'));w.eval(read('app/tool-i18n.js'));await tick();
   let savedByOriginalNext=0;
   if(page==='eligibility')d.getElementById('next-search-strategy').addEventListener('click',()=>savedByOriginalNext++);
-  w.eval(read('app/tool-shell.js'));
+  w.AIMSTEPProjectAccess={ready:async()=>true};w.eval(read('app/tool-shell.js'));await tick();
   const next=nav.querySelector('[data-flow-next]'),prev=nav.querySelector('[data-flow-previous]'),picker=nav.querySelector('select');
   const checkProject=link=>assert.equal(new URL(link.href).searchParams.get('projectId'),'synthetic project');
   assert.equal(picker.options.length,10);assert.equal(picker.value,page+'.html');
@@ -57,7 +57,16 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(new URL(dom.window.document.querySelector('[data-flow-next]').href).searchParams.get('projectId'),'legacy-project');observers.forEach(observer=>observer.disconnect());await tick();dom.window.close();
  }
  const home=new JSDOM(read('index.html')).window.document;
- assert.deepEqual([...home.querySelectorAll('#toolset [data-tool]')].map(a=>a.getAttribute('href').replace('.html','')),workflow,'homepage and navigation order match');
- assert.deepEqual([...home.querySelectorAll('.product-nav-link[data-tool]')].map(a=>a.getAttribute('href').replace('.html','')),writing);
+ assert.equal(home.querySelector('.header-products,#toolset'),null);
+ assert.deepEqual([...home.querySelectorAll('#workspace-steps [data-workspace-tool]')].map(a=>a.getAttribute('href').replace('.html','')),[...writing,...workflow]);
+ for(const registered of [false,true]){
+  const dom=new JSDOM(read('search-strategy.html'),{url:'https://aimsetp.com/search-strategy.html'+(registered?'?projectId=registered-project':''),runScripts:'outside-only'}),w=dom.window;
+  const observers=[],NativeObserver=w.MutationObserver;w.MutationObserver=class extends NativeObserver{constructor(fn){super(fn);observers.push(this);}};
+  w.AIMSTEPProjectAccess={ready:async()=>registered};w.eval(read('app/tool-shell.js'));await tick();
+  const values=[...w.document.querySelector('[data-flow-picker]').options].map(o=>o.value);
+  assert.equal(values.includes('build-protocol.html'),registered);assert.equal(values.includes('drafting-manuscript.html'),registered);
+  if(registered)assert.equal(w.document.querySelector('option[value="drafting-manuscript.html"]').textContent,'Report');
+  observers.forEach(observer=>observer.disconnect());await tick();w.close();
+ }
  console.log('PASS: legacy project aliases, eight workflow steps and two writing tools');
 })().catch(e=>{console.error(e);process.exitCode=1;});

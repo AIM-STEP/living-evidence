@@ -47,7 +47,6 @@ for (const query of ['', '?view=toolset', '?view=project&projectId=synthetic-das
   const {env,nodes,classes,toolNav} = setup(query);
   env.restoreRoute();
   assert(classes.has('toolset-mode'), query);
-  assert.equal(env.toolset.hidden,false,query);
   assert.equal(env.otherPage.hidden,true,query);
   assert.equal(env.page.hidden,!query.includes('view=project'),query);
   assert.equal(nodes['pw-form'].hidden,!query.includes('new-project'),query);
@@ -62,14 +61,11 @@ for (const query of ['', '?view=toolset', '?view=project&projectId=synthetic-das
   assert(!classes.has('project-create-mode'));
   assert(nodes['pw-form'].hidden);
   assert.equal(new URL(env.frame.src).searchParams.get('projectId'),'synthetic-dashboard');
-  assert(!env.toolset.hidden); // Header tools remain available while a tool document is open.
   env.setView('toolset',null,true);
-  assert(!env.toolset.hidden);
   assert(env.otherPage.hidden);
   assert.equal(new URL(env.history.url,'https://aimsetp.com').search,'');
   assert.equal(env.history.state.projectId,'synthetic-dashboard');
   env.setView('page',new URL('https://aimsetp.com/workflow.html'),false);
-  assert(!env.toolset.hidden);
   assert(!classes.has('project-page-mode'));
 }
 {
@@ -87,7 +83,6 @@ console.log('PASS: home, Toolset, project selection, create/back/forward, full-p
   const {env}=setup('?view=toolset');
   env.activeProject=null;
   env.restoreRoute();
-  assert(!env.toolset.hidden);
   assert(env.page.hidden);
   env.setView('page',new URL('https://aimsetp.com/analysis.html'),false);
   assert(!env.otherPage.hidden);
