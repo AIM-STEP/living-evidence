@@ -118,6 +118,7 @@ for (const [file,slug] of Object.entries(routeWindow.AIMSTEP_ROUTES)) {
  assert.equal(destination.searchParams.get('page'),file);
  assert.equal(destination.searchParams.get('lang'),'zh');
  assert.equal(destination.hash,'#saved');
+ if(file==='eligibility.html')assert.equal(destination.searchParams.get('appVersion'),new URL(env.frame.src).searchParams.get('appVersion'),'Tool entry and iframe must use the same eligibility release');
  const old=setup('?view=page&page='+file+'&project=legacy-project&lang=zh');old.env.restoreRoute();
  assert.equal(new URL(old.env.history.url).pathname,'/'+slug+'/');
  assert.equal(new URL(old.env.frame.src).searchParams.get('project'),'legacy-project');
@@ -137,6 +138,7 @@ console.log('PASS: all ten clean tool routes, static reload entries, legacy link
  env.setView('page',new URL('https://aimsetp.com/eligibility.html?projectId=legacy-project&appVersion=old&lang=zh'),true);
  assert.equal(env.history.url,'/eligibility/?projectId=legacy-project&lang=zh');
  assert.equal(new URL(env.frame.src).searchParams.get('projectId'),'legacy-project');
+ assert.notEqual(new URL(env.frame.src).searchParams.get('appVersion'),'old','Old tool versions must be replaced');
  env.setView('toolset',null,true);
  assert.equal(env.history.url,'/');
  env.location=new URL('https://aimsetp.com/');env.restoreRoute();
