@@ -1,3 +1,5 @@
+> Production frontend update: the established English interface has been restored. The technical workspace and its DOM test have been removed. The new methodology runs through the headless adapter behind the existing Generate and confirmation flow. Current regression and integration results are in [classic-frontend-tests.json](classic-frontend-tests.json); the workspace DOM result below is a historical development record, not the current production interface. No new live-model accuracy claim is made for this frontend change.
+
 # 本次纳排模块验收记录（2026-11-18）
 
 本目录仅包含开发者合成的输入，不包含用户项目资料或密钥。程序规则验证、模拟模型交互和真实模型观察分别记录；这里没有独立专家标注的临床准确率。

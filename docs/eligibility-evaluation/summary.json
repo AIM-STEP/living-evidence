@@ -12,7 +12,8 @@
   "dom_integration": {
     "passed": true,
     "model": "simulated",
-    "browser_rendering_verified": false
+    "browser_rendering_verified": false,
+    "historical_removed_workspace": true
   },
   "legacy_regression_suites": {
     "passed": 16,
@@ -43,5 +44,8 @@
   ],
   "independent_expert_adjudication": false,
   "development_failures_preserved": true,
-  "overall_model_accuracy_claim": null
+  "overall_model_accuracy_claim": null,
+  "production_frontend": "Established English interface",
+  "technical_workbench_removed": true,
+  "current_frontend_validation": "classic-frontend-tests.json"
 }

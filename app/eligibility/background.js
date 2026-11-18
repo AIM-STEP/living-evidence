@@ -1,0 +1,71 @@
+/* Headless adapter: use the versioned eligibility engine behind the established UI. */
+(function(root,factory){const api=factory(root,typeof module==='object'&&module.exports?require('./domain.js'):root.AIMSTEPEligibilityDomain,typeof module==='object'&&module.exports?require('./engine.js'):root.AIMSTEPEligibilityEngine,typeof module==='object'&&module.exports?require('./model.js'):root.AIMSTEPEligibilityModel);if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSTEPEligibilityBackground=api;})(typeof window==='object'?window:globalThis,function(root,D,E,M){
+'use strict';
+const clone=D.clone;
+const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope'};
+const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
+function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
+function optionLabel(option){
+ if(!option)return 'Confirm';
+ if(option.label&&/^[\x00-\x7F]*$/.test(option.label))return option.label;
+ const names={unrestricted:'No age restriction',defer:'Keep pending',ignore:'Keep the existing scope',keep:'Keep the previous decision',replace:'Use the revised decision',focus:'Review focus only',eligibility:'Eligibility requirement',any_of:'Any condition',all_of:'All conditions',systematic_review:'Systematic reviews',review:'Systematic reviews and other reviews',pico:'PICO',pico_qualitative:'PICo'};
+ return names[option.option_id]||option.updates?.[0]?.normalized_text||option.option_id;
+}
+function issueText(issue,project){
+ const elements=issue.element_ids.map(id=>project.elements.find(e=>e.element_id===id)).filter(Boolean),names=elements.map(e=>e.normalized_text).filter(Boolean).join('; '),domain=label(elements[0]?.dimension_id);
+ if(issue.trigger_rule_id==='population_age_boundary')return 'What age boundary defines older participants in this review?';
+ if(issue.trigger_rule_id==='between_question_relation')return 'Should studies satisfy any subquestion or all subquestions?';
+ if(issue.reason_code==='CONFLICTING_REQUIREMENTS')return 'Which requirement should apply to '+domain.toLowerCase()+'?';
+ if(issue.reason_code==='FRAMEWORK_AMBIGUITY')return issue.trigger_rule_id.startsWith('custom_definition:')?'What does this custom framework field mean?':'Which question framework should be used?';
+ if(issue.reason_code==='UNCLEAR_LOGIC')return 'Should these conditions be satisfied together or as alternatives?';
+ if(issue.reason_code==='MISSING_REQUIRED_DECISION')return elements.length?'What '+domain.toLowerCase()+' scope should apply to this review?':'What population or core concept should this review cover?';
+ if(issue.reason_code==='UNRESOLVED_ROLE')return 'Should this information define eligibility or only the review focus?';
+ return 'How should this requirement define eligibility'+(names?': '+names:'')+'?';
+}
+function projectToClassic(project){
+ const output=E.render_output(project),rows=[];
+ const add=criterion=>{const dimension=label(criterion.dimension_id);let row=rows.find(row=>row.dimension===dimension);if(!row){row={dimension,include:[],exclude:[]};rows.push(row);}row[criterion.disposition].push(criterion.text);};
+ if(output.questions.length>1){const parts=output.questions.map(q=>q.logic_text?q.display_number+': '+q.logic_text:'').filter(Boolean);if(parts.length)rows.push({dimension:'Other',include:[parts.join(project.question_relation==='any_of'?' OR ':' AND ')],exclude:[]});}
+ else for(const q of output.questions){const compound=D.treeHas(q.logic?.include,'any_of')||D.treeHas(q.logic?.include,'not')||q.include.some(c=>c.exceptions?.length||c.scope_conditions?.length);if(compound&&q.logic?.include)rows.push({dimension:'Other',include:[E.expression_text(q.logic.include,project.criteria,'en')],exclude:[]});else q.include.forEach(add);q.exclude.forEach(add);}
+ const confirmations=project.issues.filter(issue=>issue.status==='open'&&issue.blocking).map(issue=>({item:issueText(issue,project),kind:'proposal',type:'source-ambiguity',domain:label(project.elements.find(e=>e.element_id===issue.element_ids[0])?.dimension_id),text:issueText(issue,project),side:'include',status:'suggested',backgroundIssue:true,issue_id:issue.issue_id,options:issue.options.map(option=>({label:optionLabel(option),option_id:option.option_id})),evidence:issue.element_ids.flatMap(id=>(project.elements.find(e=>e.element_id===id)?.source_refs||[]).map(ref=>({quote:ref.quote,source_id:ref.source_id,source_revision:ref.source_revision})))}));
+ return {framework:output.questions.length===1?output.questions[0].framework_mapping?.display_name||'Other':'Other',rows,reviewTopic:output.questions.map(q=>q.objective).join(' '),topicStyle:'sentence-v3',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
+}
+async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
+ if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');
+ const base=baseURL||new URL('.',root.location.href).href,version='20261118-classic-en-1';
+ const configs=await Promise.all([frameworkConfig||root.fetch(new URL('config/eligibility-frameworks.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load framework definitions.');return r.json();}),profileConfig||root.fetch(new URL('config/eligibility-review-profiles.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load review profiles.');return r.json();})]);
+ const keys={project:'aimstep-eligibility-v3:'+projectId,legacy:'aimstep-eligibility:'+projectId,library:'aimstep-eligibility-library:'+projectId,summary:'aimstep-eligibility-summary:'+projectId};
+ const read=key=>JSON.parse(storage.getItem(key)||'null');
+ function current(){const saved=read(keys.project);if(saved&&(saved.schema_version!==3||saved.project_id!==projectId))D.fail('INVALID_PROJECT','background','The saved methodology record is invalid; it has been preserved.');return saved||E.create_project(projectId);}
+ function staged(project,expectedRevision,expectedSignature){return {project,expectedRevision,expectedSignature,classic:projectToClassic(project)};}
+ function validate(stage){const saved=read(keys.project);if((saved?.revision??0)!==stage.expectedRevision||signature(read(keys.legacy))!==stage.expectedSignature)D.fail('VERSION_CONFLICT','background','The criteria changed while this request was running. Your newer edits have been kept.');}
+ function transaction(stage,writeLegacy){validate(stage);const names=Object.values(keys),before=names.map(key=>storage.getItem(key));try{const result=writeLegacy();stage.project.last_published_legacy_signature=signature(read(keys.legacy));storage.setItem(keys.project,JSON.stringify(stage.project));return result;}catch(error){names.forEach((key,i)=>{try{before[i]==null?storage.removeItem(key):storage.setItem(key,before[i]);}catch(_){}});throw error;}}
+ async function generate({legacy,question,reviewType,sources=[],modelClient,signal,onProgress}){
+  const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs),methods={'Systematic Review':'systematic_review','Scoping Review':'scoping_review','Umbrella Review':'umbrella_review'};
+  const raw=question||sources.map(source=>source.text).join('\n\n');
+  let project=E.save_input(saved,{research_question:raw,review_method:methods[reviewType]||null,output_language:'en',legacy_archive:legacy},{base_revision:revision},env).state;
+  for(const [index,source]of sources.entries()){if(source.name==='Question / voice input'&&source.text===question)continue;const questions=project.questions.filter(q=>q.active!==false),stored=E.addSource(project,'user_input',source.text,questions.map(q=>q.question_id),'classic_document:'+index,{input_kind:'original_document',name:source.name,page:source.page||null,verification:source.verification||'original-text'});for(const q of questions)q.imported_source_refs=[...(q.imported_source_refs||[]),E.ref(stored)];}
+  if(saved.classic_author_source_ref){const ref=saved.classic_author_source_ref;for(const q of project.questions.filter(q=>q.active!==false))if(!q.additional_source_refs.some(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision))q.additional_source_refs.push(clone(ref));}
+  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');return staged(project,revision,expected);
+ }
+ async function decide({issue_id,option_id,answer_text,modelClient,signal}){
+  const project=current(),issue=project.issues.find(issue=>issue.issue_id===issue_id&&issue.status==='open');if(!issue)D.fail('ISSUE_NOT_FOUND','background','This clarification has already changed. Reload the saved criteria.');
+  const expected=signature(read(keys.legacy));let request;
+  if(option_id)request={base_revision:project.revision,request_id:D.id('answer'),answers:[{issue_id,option_id,answer_text:answer_text||optionLabel(issue.options.find(o=>o.option_id===option_id))}]};
+  else request=await M.parse_answers(project,answer_text,[issue_id],modelClient,{signal});
+  return staged(E.apply_decisions(project,request,E.environment(...configs)).state,project.revision,expected);
+ }
+ function recordEdit(previous,next){
+  const saved=read(keys.project);if(!saved||signature(previous)===signature(next))return null;
+  const scope=value=>({question:value.question,framework:value.framework,rows:clone((value.activeGenerator==='machine'?value.machineCriteria:value.criteria)||[]),topic:(value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement)?.reviewTopic,paragraph:(value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement)?.manuscriptParagraph});
+  const rowsChanged=JSON.stringify(previous.activeGenerator==='machine'?previous.machineCriteria:previous.criteria)!==JSON.stringify(next.activeGenerator==='machine'?next.machineCriteria:next.criteria),decisionId=D.id('decision');
+  const project=clone(saved),source=E.addSource(project,'human_answer',JSON.stringify({question:next.question,framework:next.framework,rows:next.activeGenerator==='machine'?next.machineCriteria:next.criteria,topic:(next.activeGenerator==='machine'?next.machineRefinement:next.manualRefinement)?.reviewTopic}),project.questions.filter(q=>q.active!==false).map(q=>q.question_id),null,{input_kind:'classic_author_revision',...(rowsChanged?{legacy_decision_id:decisionId}:{})});if(rowsChanged)project.classic_author_source_ref=E.ref(source);
+  project.revision++;project.updated_at=D.now();project.status='input_saved';project.validation={valid:false,errors:[],blocking_issues:[],reason:'Author revised the established editor. The prior structured snapshot is retained for traceability; reanalysis must not overwrite these edits.'};
+  project.decisions.push({decision_id:decisionId,source_ref:E.ref(source),issue_ids:[],answer_text:source.original_text,action:'classic_author_revision',revision:project.revision,at:project.updated_at,changes:[{old:scope(previous),new:scope(next)}]});project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'classic_author_revision',at:project.updated_at,changes:[{source_ref:E.ref(source)}]});
+  project.criteria=[];project.logic={questions:{},relation:project.question_relation};project.issues=[];project.elements.forEach(e=>e.active=false);next.eligibility_v3_revision=project.revision;next.eligibilityV3Snapshot={...next.eligibilityV3Snapshot,status:'input_saved',revision:project.revision,validation:clone(project.validation)};
+  return {project,expectedRevision:saved.revision,expectedSignature:signature(previous)};
+ }
+ return {generate,decide,validate,transaction,recordEdit,current,projectToClassic,keys};
+}
+return {create,projectToClassic,signature,issueText,optionLabel};
+});

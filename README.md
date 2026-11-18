@@ -16,6 +16,6 @@ Title/abstract screening and Full-text assess connect automatically through the 
 
 ### Eligibility criteria v3
 
-Research-question extraction, necessary clarification, traceable inclusion/exclusion clauses, revisions and exports use the existing HTML/JavaScript application and local model backend. Run `python3 tools/local_model_server.py`, open the homepage and select a registered project's Eligibility criteria tool.
+The established English interface is retained. Research-question extraction, necessary clarification, traceable inclusion/exclusion clauses and revisions run as background methodology through the existing HTML/JavaScript application and model backend. Run `python3 tools/local_model_server.py`, open the homepage and select a registered project's Eligibility criteria tool.
 
 See [the technical specification](docs/eligibility-spec.md), [implementation and startup instructions](docs/eligibility-implementation.md), and [program/real-model evaluation records](docs/eligibility-evaluation/README.md). Program fixtures and real model observations are reported separately.

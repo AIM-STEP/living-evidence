@@ -69,10 +69,10 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261118-spec-v3-1"></script>
+<script src="app/criteria-grounding.js?v=20261118-classic-en-1"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
-<script defer src="app/tool-i18n-catalog.js?v=20261118-spec-v3-1"></script>
+<script defer src="app/tool-i18n-catalog.js?v=20261118-classic-en-1"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261117-eligibility-heading-1">
@@ -93,21 +93,17 @@
 <div class="section" id="manual-generate-panel" hidden><div class="section-head" data-collapse-name="Manual generate"><div class="manual-actions"><button class="btn criteria-action" id="manual-generate" type="button" aria-label="Clear all entered eligibility content" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker" data-ui-localize>＋ Add criterion</button></div></div><label class="field-label" data-ui-localize>Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden data-ui-localize><strong data-ui-localize>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other" data-ui-localize>Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading manual-limits-heading" style="margin-top:18px" data-ui-localize>Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label" data-ui-localize>Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date" data-ui-localize>Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date" data-ui-localize>End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language" data-ui-localize>Language</label><select id="language" class="select"><option value="" data-ui-localize>Select language</option><option value="Chinese" data-ui-localize>Chinese</option><option value="English" data-ui-localize>English</option></select></div><div><label class="field-label" for="limits-other" data-ui-localize>Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div class="manual-refine-controls"><button class="btn btn-primary" id="refine-manual" type="button" data-ui-localize>Generate</button></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div id="criteria-progress" class="criteria-progress" role="progressbar" aria-label="Criteria generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="criteria-progress-track"><div class="criteria-progress-fill"></div></div><span class="criteria-progress-percent">0%</span></div></div><div class="preview-body" id="preview"></div><div class="preview-actions"><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="app/eligibility-library.js?v=20261118-spec-v3-1"></script>
-<link rel="stylesheet" href="app/eligibility/workspace.css?v=20261118-spec-v3-1">
-<script src="app/eligibility/registries.js?v=20261118-spec-v3-1"></script>
-<script src="app/eligibility/domain.js?v=20261118-spec-v3-1"></script>
-<script src="app/eligibility/engine.js?v=20261118-spec-v3-1"></script>
-<script src="app/eligibility/model.js?v=20261118-spec-v3-1"></script>
-<script src="app/eligibility/workspace.js?v=20261118-spec-v3-1"></script>
+<script src="app/eligibility-library.js?v=20261118-classic-en-1"></script>
+<script src="app/eligibility/registries.js?v=20261118-classic-en-1"></script>
+<script src="app/eligibility/domain.js?v=20261118-classic-en-1"></script>
+<script src="app/eligibility/engine.js?v=20261118-classic-en-1"></script>
+<script src="app/eligibility/model.js?v=20261118-classic-en-1"></script>
+<script src="app/eligibility/background.js?v=20261118-classic-en-1"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
 (function(){
 const params=new URLSearchParams(location.search),projectId=params.get('projectId')||params.get('project')||'',contextKey='aimstep-active-project',key='aimstep-eligibility:'+ (projectId),completionKey=projectId?'aimstep-setup-completed:'+encodeURIComponent(projectId):'',modelSettingsKey='aimstep-screen-settings:'+(projectId),modelTokenKey=slot=>'aimstep-screen-token:'+slot+':'+(projectId);
-if(!params.has('embedded')&&params.get('legacy')!=='1'&&window.AIMSTEPEligibilityWorkspace){
-  window.AIMSTEPEligibilityWorkspace.mount({container:document.querySelector('.eligibility-workspace'),projectId});return;
-}
 const embeddedManual=params.get('embedded')==='fulltext-criteria';
 const embeddedPreview=params.get('embedded')==='search-criteria-preview';
 let embeddedPreviewSummary=null;
@@ -154,6 +150,32 @@ function criteriaSignature(value){return JSON.stringify({mode:value.generationMe
 function manualSourceSignature(){return JSON.stringify({framework:state.framework,reviewType:state.reviewType,criteria:state.criteria.map(({title,condition,uncertain,definition})=>({title,condition,uncertain,definition})),dateRange:state.dateRange,language:state.language,limitsOther:state.limitsOther})}
 function machineSourceSignature(question,reviewType,revision,rows){return JSON.stringify({question,reviewType,revision,rows:rows.map(({title,condition,uncertain,definition})=>({title,condition,uncertain,definition}))})}
 let manualRefinementController=null,manualRefinementNonce=0,manualRunSignature='';
+let eligibilityBackgroundService=null,eligibilityBackgroundPromise=null,pendingBackgroundStage=null;
+function getEligibilityBackground(){
+  if(!window.AIMSTEPEligibilityBackground)return null;
+  if(!eligibilityBackgroundPromise)eligibilityBackgroundPromise=window.AIMSTEPEligibilityBackground.create({projectId,storage:localStorage}).then(service=>eligibilityBackgroundService=service);
+  return eligibilityBackgroundPromise;
+}
+function backgroundErrorMessage(error){
+  if(!/[\u3400-\u9fff]/u.test(error.message||''))return error.message;
+  const messages={SEMANTIC_REVIEW_FAILED:'A proposed criterion did not match the original input. Your previous version has been kept.',MODEL_SCHEMA_ERROR:'The model returned an invalid structure. Your previous version has been kept.',MODEL_TIMEOUT:'The model request timed out. Your previous version has been kept.'};
+  return messages[error.code]||'The eligibility check could not be completed'+(error.code?' ('+error.code+')':'')+'. Your previous version has been kept.';
+}
+function backgroundModelClient(model){return {get exchanges(){return model.auditTrail||[];},request(step,project,payload,schema,instruction,signal){return callCriteriaJson(model,instruction,{step,project_id:project.project_id,base_revision:project.revision,config_versions:project.config_versions,output_language:'en',payload},signal,schema);}};}
+function useBackgroundCriteria(stage,runData,resetDecisions=true){
+  const result=stage.classic,rows=result.rows.filter(row=>row.include.length||row.exclude.length);
+  state.framework=result.framework;state.machineCriteria=rows.map((row,index)=>({id:'INC-'+String(index+1).padStart(2,'0'),title:row.dimension,condition:row.include.join('\n'),uncertain:row.exclude.join('\n'),definition:'',purpose:'Eligibility',stage:'',source:'machine'}));
+  state.activeGenerator='machine';state.generationMode='machine';state.generationMethodChoice='machine';state.generationMethod='source-structured-v3';
+  state.machineRun={...runData,methodVersion:window.AIMSTEPEligibilityEngine.VERSION,generatedAt:new Date().toISOString(),backgroundRevision:stage.project.revision};
+  const signature=machineSourceSignature(runData.question,runData.reviewType,runData.sourceRevision??0,state.machineCriteria);
+  const paragraph=manuscriptDraft(rows.map(row=>({label:row.dimension,include:row.include,exclude:row.exclude})),rows.flatMap(row=>row.exclude.map(rule=>({rule,domains:[row.dimension]}))),previewLimits([]));
+  const {snapshot,...refinement}=result;state.machineRefinement={...refinement,rows,signature,generatedAt:state.machineRun.generatedAt,modelName:runData.modelName,manuscriptParagraph:paragraph};
+  state.eligibilityV3Snapshot=snapshot;state.eligibility_v3_revision=stage.project.revision;state.confirmed=false;state.visibleDescription=null;
+  if(resetDecisions){state.finalCriteria=null;state.resolvedPending=[];state.pendingDecisions={};}
+  if(state.protocolSource)state.protocolSource.sharedCriteria=false;
+  pendingBackgroundStage=stage;
+}
+
 function setManualStatus(message,error=false){const area=$('manual-refine-status');area.textContent=message;area.hidden=!message;area.classList.toggle('error',error)}
 function stopManualRefinement(){manualRefinementNonce++;if(manualRefinementController){manualRefinementController.abort();manualRefinementController=null}$('refine-manual').disabled=false;$('refine-manual').textContent='Generate'}
 // A generated criteria set keeps its original generation method until cleared.
@@ -182,7 +204,13 @@ function save(options={}){
   if(embeddedManual||embeddedPreview){renderPreview();return true;}
   let previous=null,saved=true;
   try{previous=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
-  try{if(window.AimstepEligibilityLibrary){const result=window.AimstepEligibilityLibrary.commit(localStorage,projectId,state,options);state.criteriaLibraryId=result.criteriaLibraryId;}else localStorage.setItem(key,JSON.stringify(state));}catch(e){saved=false}
+  let methodology=null;
+  try{
+    methodology=pendingBackgroundStage||(eligibilityBackgroundService&&previous?eligibilityBackgroundService.recordEdit(previous,state):null);
+    const write=()=>{if(window.AimstepEligibilityLibrary){const result=window.AimstepEligibilityLibrary.commit(localStorage,projectId,state,options);state.criteriaLibraryId=result.criteriaLibraryId;}else localStorage.setItem(key,JSON.stringify(state));};
+    if(methodology)eligibilityBackgroundService.transaction(methodology,write);else write();
+    pendingBackgroundStage=null;
+  }catch(e){saved=false;pendingBackgroundStage=null;if(methodology&&previous)state=previous;}
   if(saved&&previous&&completionKey&&criteriaSignature(previous)!==criteriaSignature(state)){
     try{const done=JSON.parse(localStorage.getItem(completionKey)||'[]');if(Array.isArray(done))localStorage.setItem(completionKey,JSON.stringify(done.filter(step=>![1,2,3].includes(Number(step)))))}catch(e){}
   }
@@ -747,7 +775,7 @@ async function refineManualCriteria(){
     if(run!==manualRefinementNonce||controller.signal.aborted||manualSourceSignature()!==signature)return;
     state.manualRefinement=refinement;
     state.confirmed=false;const saved=save({fresh:true,createdAt:new Date().toISOString()});setManualStatus(saved?'Criteria generated.':'Draft generated, but could not be saved on this device.',!saved);
-  }catch(error){if(run===manualRefinementNonce)setManualStatus(timedOut?'Model request timed out after 10 minutes.':error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);if(run===manualRefinementNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===manualRefinementNonce&&!manualRefinementController)setManualStatus(message,true)})}
+  }catch(error){if(run===manualRefinementNonce)setManualStatus(timedOut?'Model request timed out after 10 minutes.':error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);if(run===manualRefinementNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===manualRefinementNonce&&!manualRefinementController)setManualStatus(message,true)})}
   finally{clearTimeout(timer);if(run===manualRefinementNonce){manualRefinementController=null;button.disabled=false;button.textContent='Generate'}}
 }
 function normalizeScopeSuggestions(items,types){
@@ -797,6 +825,14 @@ async function generateMachineCriteria(){
     setMachineStatus('Preparing original source passages…');
     const originalSources=await originalMachineSources(model,input,reviewType,controller.signal);
     if(run!==generationNonce||controller.signal.aborted)return;
+    if(window.AIMSTEPEligibilityBackground){
+      const service=await getEligibilityBackground();
+      const stage=await service.generate({legacy:structuredClone(state),question,reviewType,sources:originalSources,modelClient:backgroundModelClient(model),signal:controller.signal,onProgress:()=>setMachineStatus('Checking source conditions and generating criteria…',false,65)});
+      if(run!==generationNonce||controller.signal.aborted)return;
+      useBackgroundCriteria(stage,{question,reviewType,sourceRevision,sourceFiles:files.map(entry=>entry.file.name),modelName:model.name});
+      document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));
+      const saved=save({fresh:true,createdAt:state.machineRun.generatedAt});criteriaProgress(100);setMachineStatus(saved?'':'Criteria generated, but could not be saved on this device.',!saved);return;
+    }
     setMachineStatus('Generating criteria…');
     const result=normalizeMachineCriteria(await requestMachineCriteria(model,{texts:originalSources,images:[]},reviewType,controller.signal));
     if(run!==generationNonce||controller.signal.aborted)return;
@@ -827,7 +863,7 @@ async function generateMachineCriteria(){
     state.machineRun.statusMessage='Criteria generated.';
     const saved=save({fresh:true,createdAt:state.machineRun.generatedAt});criteriaProgress(100);setMachineStatus(saved?'':'Criteria generated, but could not be saved on this device.',!saved);
   }catch(error){
-    if(run===generationNonce)setMachineStatus(timedOut?'Model request timed out after 10 minutes.':error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:error.message,true);
+    if(run===generationNonce)setMachineStatus(timedOut?'Model request timed out after 10 minutes.':error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);
     if(run===generationNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===generationNonce&&!generationController)setMachineStatus(message,true)});
   }finally{clearTimeout(timer);if(run===generationNonce){generationController=null;button.disabled=false;button.textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}}
 }
@@ -1049,6 +1085,10 @@ function sourceConfirmationsHtml(refinement){
   const details=(refinement?.sourceConfirmations||[]).map((detail,index)=>({detail,index})).filter(({detail})=>detail.status==='suggested');
   if(!details.length)return '';
   return '<section class="summary-block source-confirmations"><h3 data-ui-localize>Confirm unclear criteria</h3>'+details.map(({detail,index})=>{
+    if(detail.backgroundIssue){
+      const actions=detail.options.map((option,choice)=>'<button class="btn small" type="button" data-source-confirm="'+index+'" data-source-option="'+choice+'">'+escapeHtml(option.label)+'</button>').join('');
+      return '<div class="scope-suggestion"><p>'+escapeHtml(detail.text)+'</p><div class="scope-actions">'+actions+'<button class="btn small" type="button" data-source-confirm="'+index+'" data-source-option="'+detail.options.length+'">Answer…</button></div></div>';
+    }
     const same=detail.options.every(option=>ruleKey(option.text)===ruleKey(detail.options[0].text));
     const button=(option,choice)=>'<button class="btn small" type="button" data-source-confirm="'+index+'" data-source-option="'+choice+'" data-ui-localize>'+(option.side==='exclude'?'Exclude':'Include')+'</button>';
     const options=same?'<div class="scope-actions">'+detail.options.map(button).join('')+'</div>':detail.options.map((option,choice)=>'<div class="scope-actions"><span>'+escapeHtml(option.text)+'</span>'+button(option,choice)+'</div>').join('');
@@ -1096,6 +1136,8 @@ function criteriaWordFile(){const normalized=standardizedCriteria(),widths=[3000
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';syncGenerationMethodOptions();$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';state.reviewType=reviewTypeForProject();document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});
+if(window.AIMSTEPEligibilityBackground&&!embeddedManual&&!embeddedPreview)getEligibilityBackground().catch(()=>{});
+window.addEventListener('load',()=>{try{if(window.parent!==window)window.parent.AIMSTEP?.setLanguage?.('en');}catch(_){}window.AIMSTEP?.setLanguage?.('en');},{once:true});
 $('generation-method').addEventListener('change',()=>{const locked=lockedGenerationMethod();if(locked&&$('generation-method').value!==locked){syncGenerationMethodOptions();return;}stopMachineGeneration();stopManualRefinement();abortVoiceInput();setMachineStatus('');setManualStatus('');const mode=$('generation-method').value;syncProposalCriteria();state.generationMethodChoice=mode;state.activeGenerator=mode;state.generationMode=mode==='machine'?'machine':mode==='manual'?'manual':'';$('machine-generate-panel').hidden=mode!=='machine';$('manual-generate-panel').hidden=mode!=='manual';renderPreview();save()});
 $('start-machine').addEventListener('click',generateMachineCriteria);
 $('stop-machine').addEventListener('click',()=>{if(generationController){$('stop-machine').disabled=true;generationController.abort()}});
@@ -1254,7 +1296,28 @@ function applyScopeSuggestion(index,action){
   if(!generateFinalCriteria([detail.item])){state=before;renderCards();renderPreview();return false;}
   return true;
 }
+async function confirmBackgroundIssue(detail,choice){
+  const answer=choice===detail.options.length?window.prompt(detail.text,''):null;
+  if(choice===detail.options.length&&(!answer||!answer.trim()))return false;
+  const before=structuredClone(state);stopMachineGeneration();stopManualRefinement();
+  const run=++generationNonce,controller=new AbortController();generationController=controller;$('start-machine').disabled=true;$('stop-machine').hidden=false;
+  const timer=setTimeout(()=>controller.abort(),600000);
+  try{
+    const service=await getEligibilityBackground(),option=detail.options[choice];let model;
+    if(!option){model=await resolveLocalModel(false,controller.signal);model.auditTrail=[];}
+    const stage=await service.decide({issue_id:detail.issue_id,option_id:option?.option_id,answer_text:answer||option?.label,modelClient:model?backgroundModelClient(model):null,signal:controller.signal});
+    if(run!==generationNonce||controller.signal.aborted)return false;
+    const decision=stage.project.decisions.at(-1),confirmed=stage.project.criteria.filter(c=>c.source_decision_ids.includes(decision.decision_id));
+    useBackgroundCriteria(stage,state.machineRun,false);
+    state.finalCriteria={at:new Date().toISOString(),count:(state.finalCriteria?.count||0)+1,decisions:[...(state.finalCriteria?.decisions||[]),...confirmed.map(c=>({item:detail.text,domain:window.AIMSTEPEligibilityBackground.projectToClassic(stage.project).rows.find(row=>row[c.disposition].includes(c.text))?.dimension||detail.domain,rule:c.text,decision:c.disposition==='include'?'meets':'fails',side:c.disposition,kind:'proposal',at:new Date().toISOString(),provenance:'author-decision',decision_id:decision.decision_id}))]};
+    if(!save({updateEntry:true}))throw Error('Could not save this decision. Your previous criteria have been kept.');
+    toast('Criteria saved.');return true;
+  }catch(error){state=before;pendingBackgroundStage=null;renderPreview();setMachineStatus(error.name==='AbortError'?'Confirmation stopped.':backgroundErrorMessage(error),true);return false;}
+  finally{clearTimeout(timer);if(run===generationNonce){generationController=null;$('start-machine').disabled=false;$('stop-machine').hidden=true;}}
+}
 function confirmSourceRule(index,choice){
+  const backgroundDetail=currentRefinement()?.sourceConfirmations?.[index];
+  if(backgroundDetail?.backgroundIssue){if(previewDirty&&!savePreviewEdits(false))return false;return confirmBackgroundIssue(backgroundDetail,choice);}
   if(!Number.isInteger(index)||index<0||!Number.isInteger(choice)||choice<0||choice>1)return false;
   if(previewDirty&&!savePreviewEdits(false))return false;
   const machine=state.activeGenerator==='machine',refinement=currentRefinement(),detail=refinement?.sourceConfirmations?.[index],option=detail?.options?.[choice];
