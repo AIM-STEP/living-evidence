@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync('eligibility.html','utf8'),attributes=new Map(),classes=new Map(),label={textContent:''};let tick=null,elapsed=1000,cancelled=0;
+const el={hidden:true,style:{setProperty(){}},classList:{toggle:(key,value)=>classes.set(key,value)},setAttribute:(k,v)=>attributes.set(k,v),removeAttribute:k=>attributes.delete(k),querySelector:()=>label};
+const ctx={$:()=>el,Date:{now:()=>elapsed},setTimeout:(fn,ms)=>{assert.equal(ms,1000);tick=fn;return 1},clearTimeout:()=>{cancelled++;tick=null}};
+vm.createContext(ctx);vm.runInContext(html.slice(html.indexOf('let generationController=null'),html.indexOf('\nfunction setMachineStatus')),ctx);
+ctx.criteriaProgress(15);ctx.criteriaWaiting(true);assert.equal(label.textContent,'Working · 0:00');assert.equal(attributes.has('aria-valuenow'),false);assert.equal(classes.get('is-waiting'),true);
+elapsed+=12000;tick();assert.equal(label.textContent,'Working · 0:12');assert.equal(attributes.has('aria-valuenow'),false,'Unknown model completion must not become a fabricated percentage');
+ctx.criteriaWaiting(false);ctx.criteriaProgress(60);assert.equal(label.textContent,'60%');assert.equal(tick,null);assert(cancelled);
+ctx.criteriaWaiting(true);ctx.criteriaProgress(100);assert.equal(label.textContent,'100%');assert.equal(classes.get('is-waiting'),false);assert.equal(tick,null);
+assert(html.includes('criteriaWaiting(!!event.waiting)'));assert(html.includes('generationController=null;criteriaWaiting(false)'));
+console.log('PASS: model waits show activity and elapsed time, no simulated completion, timers stop on completion and cancellation');

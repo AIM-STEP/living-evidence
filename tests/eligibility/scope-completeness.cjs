@@ -13,19 +13,16 @@ assert(output.rows.find(r=>r.dimension==='Intervention').include.join(' ').inclu
 assert(output.rows.find(r=>r.dimension==='Comparison').include.join(' ').includes('standard care, placebo, or another nutritional intervention'));
 assert(!output.rows.some(r=>['Other','Outcomes','Study design','Analysis plan','Data plan'].includes(r.dimension)),'Focus and analysis must not become invented eligibility criteria');
 for(const dimension of ['Outcomes','Analysis plan','Data plan','Analysis objectives'])assert(output.focusRows.some(r=>r.dimension===dimension&&r.values.length),dimension+' must remain visible');
-for(const dimension of ['Population','Intervention','Comparison','Outcomes','Analysis plan','Data plan'])assert(output.sourceConfirmations.some(c=>c.domain===dimension),'Missing author check for '+dimension);
-assert(output.sourceConfirmations.some(c=>c.domain==='Intervention'&&c.text.includes('delivery routes')));
-assert(output.sourceConfirmations.some(c=>c.domain==='Comparison'&&c.text.includes('head-to-head')));
-assert(output.sourceConfirmations.find(c=>c.domain==='Outcomes').focusOnly);
+assert(output.sourceConfirmations.some(c=>c.domain==='Population'&&c.text.includes('age boundary')));
+assert(!output.sourceConfirmations.some(c=>['Intervention','Comparison','Outcomes','Analysis plan','Data plan'].includes(c.domain)),'Clearly stated scope needs no checklist confirmation');
 assert(output.manuscriptParagraph.includes('that compare nutritional interventions with standard care, placebo, or another nutritional intervention'));
 assert(output.manuscriptParagraph.includes('assess patient-relevant outcomes and use individual participant data in a network meta-analysis to compare and rank'));
 assert(!/Additional eligibility requirements|Eligible populations were defined|RCT|65 years|oral nutrition/i.test(output.manuscriptParagraph),'Prose must be natural and source-grounded');
-const interventionCheck=state.issues.find(i=>i.status==='open'&&i.trigger_rule_id==='scope_review:intervention_scope'),before=JSON.stringify(state.criteria);
-state=E.apply_decisions(state,{base_revision:state.revision,request_id:'keep-broad-interventions',answers:[{issue_id:interventionCheck.issue_id,option_id:'keep',answer_text:'Retain the source-defined nutritional intervention scope.'}]}).state;
-assert.equal(JSON.stringify(state.criteria),before,'Acknowledging broad scope must not add an eligibility restriction');
-output=B.projectToClassic(state);assert(!output.sourceConfirmations.some(c=>c.issue_id===interventionCheck.issue_id),'An acknowledged check must stay resolved');
+const old=structuredClone(state);old.issues.push({issue_id:'old-generic-check',status:'open',author_scope_review:true,blocking:false,trigger_rule_id:'scope_review:intervention_scope',element_ids:[],options:[]});
+assert(!B.projectToClassic(old).sourceConfirmations.some(c=>c.issue_id==='old-generic-check'),'Saved blanket checks must not reappear');
+E.rebuild(old);assert.equal(old.issues.find(i=>i.issue_id==='old-generic-check').status,'obsolete');
 const focusCandidates=structuredClone(candidates);for(const e of focusCandidates.questions[0].elements.filter(e=>['intervention','comparator'].includes(e.dimension_id))){e.semantic_role='review_focus';e.scope_status='unspecified';e.disposition=null;}
 const focusProject=E.ingest_candidates(originalState,focusCandidates).state,focusOutput=B.projectToClassic(focusProject);
 for(const dimension of ['Intervention','Comparison']){assert(focusOutput.focusRows.some(r=>r.dimension===dimension),'A review-focus classification must not hide '+dimension);assert(focusOutput.sourceConfirmations.some(c=>c.domain===dimension&&!c.reviewOnly),'The eligibility role needs author confirmation');}
 assert(focusOutput.manuscriptParagraph.includes('nutritional interventions with standard care, placebo, or another nutritional intervention'),'The summary must retain the source-defined interventions and comparison even when their eligibility role is pending');
-console.log('PASS: complete PICO and analysis content, author checks by element, concise active prose, and scope-preserving confirmation');
+console.log('PASS: complete PICO and analysis content, only unresolved source checks, concise active prose, and scope-preserving confirmation');

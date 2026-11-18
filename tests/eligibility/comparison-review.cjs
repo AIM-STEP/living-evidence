@@ -22,7 +22,7 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
  let state=t.api.state();assert(state.machineRun,t.el('generation-status').textContent);const rows=state.machineRefinement.rows;
  assert(!rows.some(r=>r.dimension==='Other'));assert(rows.find(r=>r.dimension==='Comparison').include.join(' ').includes('another nutritional intervention'));
  const checks=state.machineRefinement.sourceConfirmations;assert(checks.some(c=>c.text.includes('Which assessment defines nutritional risk?')),'Actual source questions must reach the user');
- for(const domain of ['Population','Intervention','Comparison','Outcomes','Analysis plan','Data plan'])assert(checks.some(c=>c.domain===domain),'Each broad source element must offer its own author check: '+domain);
+ assert(!checks.some(c=>['Intervention','Comparison','Outcomes','Analysis plan','Data plan'].includes(c.domain)),'Broad, clearly stated scope is accepted directly');
  const preview=t.el('preview').innerHTML;assert(preview.includes('Review focus and analysis plan'));assert(preview.includes('patient-relevant outcomes'));assert(preview.includes('individual participant data'));
  const exported=Buffer.from(t.api.export()).toString('utf8');assert(exported.includes('Review focus and analysis plan'));assert(exported.includes('Author checks pending'));assert(exported.includes('patient-relevant outcomes'));
  assert(checks.some(c=>c.text.includes('age boundary')));assert(t.el('preview').innerHTML.includes('data-source-answer='),'Unresolved questions need a working answer field');
