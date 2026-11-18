@@ -15,6 +15,7 @@ const extractionSchema=obj({questions:list(questionSchema)});
 const reviewSchema=obj({items:list(obj({id:str,status:{enum:['supported','uncertain','contradicted']},reason:str,issue_type:{enum:['none','ambiguous_source','unsupported_rewrite']},information_status:{enum:D.ENUMS.information_status},semantic_role:{enum:D.ENUMS.semantic_role},scope_status:{enum:D.ENUMS.scope_status},disposition:{enum:['include','exclude',null]}}))});
 const updateSchema=obj({element_id:str,normalized_text:str,structured_value:valueSchema,scope_status:{enum:D.ENUMS.scope_status},semantic_role:{enum:D.ENUMS.semantic_role},disposition:{enum:['include','exclude']}},['element_id']);
 const answerSchema=obj({answers:list(obj({issue_ids:list(str),answer_text:str,action:{enum:['confirm','modify','defer']},updates:list(updateSchema),context_updates:{type:'object'}},['issue_ids','answer_text','action','updates']))});
+const serializationInstruction='\nJSON serialization only: emit compact JSON without indentation or optional whitespace outside string values. Keep every field and all string contents complete.';
 function requestEnvelope(step,state,payload,schema){return {step,project_id:state.project_id,base_revision:state.revision,config_versions:state.config_versions,output_language:state.output_language,payload,schema};}
 function client(options={}){
  let base=options.base||null,model=options.model||null;const exchanges=[];
@@ -27,7 +28,7 @@ function client(options={}){
  }
  async function request(step,state,payload,schema,instruction,signal){
   const endpoint=await discover(signal),controller=new AbortController(),abort=()=>controller.abort(signal?.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(()=>controller.abort(),options.timeout_ms||600000);
-  const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',messages,format:schema};
+  const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',messages,format:schema};
   try{
    const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let error;try{error=await r.json();}catch(_){error={error:'HTTP '+r.status};}D.fail('MODEL_HTTP_ERROR',step,error.error||'Model request failed.');}
    const data=await r.json(),raw=data.message?.content||data.choices?.[0]?.message?.content;if(typeof raw!=='string')D.fail('MODEL_EMPTY_RESPONSE',step,'模型返回空内容。');
@@ -44,26 +45,62 @@ function sourceBatches(q){
  const groups=[];let part=[],size=0;for(const source of fragments){if(part.length&&size+source.original_text.length>5500){groups.push(part);part=[];size=0;}part.push(source);size+=source.original_text.length;}if(part.length)groups.push(part);return groups;
 }
 function prefixLogic(node,prefix){return node?.op==='predicate'?{...node,element_id:prefix+node.element_id}:node?{...node,children:(node.children||[]).map(n=>prefixLogic(n,prefix))}:null;}
+// Only independent batches overlap. Keep their inputs, review rules and merge order.
+async function mapModelBatches(items,options,work){
+ const controller=new AbortController(),abort=()=>controller.abort(options.signal?.reason);
+ options.signal?.addEventListener('abort',abort,{once:true});if(options.signal?.aborted)abort();
+ const results=new Array(items.length),limit=Math.max(1,Math.min(2,Math.floor(Number(options.concurrency)||2)));let next=0,failure;
+ try{
+  await Promise.all(Array.from({length:Math.min(limit,items.length)},async()=>{
+   while(next<items.length&&!controller.signal.aborted){const index=next++;try{results[index]=await work(items[index],index,controller.signal);}catch(error){if(!failure)failure=error;controller.abort(error);}}
+  }));
+  if(failure)throw failure;if(controller.signal.aborted)throw options.signal?.reason||Object.assign(new Error('Generation stopped.'),{name:'AbortError'});return results;
+ }finally{options.signal?.removeEventListener('abort',abort);}
+}
 async function extract_elements(state,env,adapter,options={}){
- const payload=E.extraction_payload(state,env),questions=[],plans=payload.questions.map(sourceBatches),total=plans.reduce((n,groups)=>n+groups.length,0);let completed=0;
- for(const [qi,q]of payload.questions.entries()){
-  const batches=plans[qi],merged={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null};const trees=[];
-  for(const [bi,sources]of batches.entries()){
-   options.onProgress?.('Extracting source conditions ('+(completed+1)+'/'+total+')…',{phase:'extract',completed,total,waiting:true});
-   const request={question:{...q,sources,original_text:undefined},frameworks:compactFrames(env),review_profiles:env.profiles.resolve(q.context.review_methods),part_index:bi,part_count:batches.length};
-   let answer;for(let attempt=0;attempt<=(options.retries??1);attempt++)try{answer=await adapter.request('extract_elements',state,request,extractionSchema,extractionInstruction+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),options.signal);if(!Array.isArray(answer.questions)||answer.questions.length!==1||answer.questions[0].question_id!==q.question_id)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The model omitted or changed the question ID.');D.text(answer.questions[0].review_topic,'review_topic',1000);if(!answer.questions[0].review_topic.trim())D.fail('MODEL_SCHEMA_ERROR','extract_elements','A concise research objective is required.');for(const e of answer.questions[0].elements||[])D.validate_candidate_element(e);if(answer.questions[0].logic)D.validate_expression(answer.questions[0].logic,new Set((answer.questions[0].elements||[]).map(e=>e.candidate_id)));if(!Array.isArray(answer.questions[0].elements)||!Array.isArray(answer.questions[0].issues)||!Array.isArray(answer.questions[0].framework_candidates))D.fail('MODEL_SCHEMA_ERROR','extract_elements','Required extraction arrays are missing.');break;}catch(error){if(options.signal?.aborted||!retryableResponse(error)||attempt===(options.retries??1))throw error;request.validation_feedback={code:error.code,message:error.message};options.onProgress?.('Correcting the model response structure…',{phase:'extract',completed,total,waiting:true});}
-   options.onProgress?.('Source conditions extracted ('+(++completed)+'/'+total+').',{phase:'extract',completed,total});
-   const item=answer.questions[0],prefix='q'+qi+'b'+bi+'_';for(const e of item.elements)merged.elements.push({...e,candidate_id:prefix+e.candidate_id});for(const issue of item.issues)merged.issues.push({...issue,element_candidate_ids:(issue.element_candidate_ids||[]).map(eid=>prefix+eid)});if(item.logic)trees.push(prefixLogic(item.logic,prefix));if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;for(const field of ['question_types','review_methods','evidence_units'])merged[field]=[...new Set([...(merged[field]||[]),...(item[field]||[])])];
+ const payload=E.extraction_payload(state,env),plans=payload.questions.map(sourceBatches),jobs=plans.flatMap((batches,qi)=>batches.map((sources,bi)=>({qi,bi,sources}))),total=jobs.length,frameworks=compactFrames(env);let completed=0;
+ const parts=await mapModelBatches(jobs,options,async({qi,bi,sources},index,signal)=>{
+  const q=payload.questions[qi],batches=plans[qi];
+  options.onProgress?.('Extracting source conditions ('+(index+1)+'/'+total+')…',{phase:'extract',completed,total,waiting:true});
+  const request={question:{...q,sources,original_text:undefined},frameworks,review_profiles:env.profiles.resolve(q.context.review_methods),part_index:bi,part_count:batches.length};
+  let answer;for(let attempt=0;attempt<=(options.retries??1);attempt++)try{
+   answer=await adapter.request('extract_elements',state,request,extractionSchema,extractionInstruction+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
+   if(!Array.isArray(answer.questions)||answer.questions.length!==1||answer.questions[0].question_id!==q.question_id)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The model omitted or changed the question ID.');
+   D.text(answer.questions[0].review_topic,'review_topic',1000);if(!answer.questions[0].review_topic.trim())D.fail('MODEL_SCHEMA_ERROR','extract_elements','A concise research objective is required.');
+   for(const e of answer.questions[0].elements||[])D.validate_candidate_element(e);if(answer.questions[0].logic)D.validate_expression(answer.questions[0].logic,new Set((answer.questions[0].elements||[]).map(e=>e.candidate_id)));
+   if(!Array.isArray(answer.questions[0].elements)||!Array.isArray(answer.questions[0].issues)||!Array.isArray(answer.questions[0].framework_candidates))D.fail('MODEL_SCHEMA_ERROR','extract_elements','Required extraction arrays are missing.');break;
+  }catch(error){if(signal.aborted||!retryableResponse(error)||attempt===(options.retries??1))throw error;request.validation_feedback={code:error.code,message:error.message};options.onProgress?.('Correcting the model response structure…',{phase:'extract',completed,total,waiting:true});}
+  options.onProgress?.('Source conditions extracted ('+(++completed)+'/'+total+').',{phase:'extract',completed,total});return answer.questions[0];
+ });
+ // Reassemble in source order even when requests finish out of order.
+ let offset=0;const questions=payload.questions.map((q,qi)=>{
+  const merged={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null},trees=[];
+  for(let bi=0;bi<plans[qi].length;bi++){
+   const item=parts[offset++],prefix='q'+qi+'b'+bi+'_';
+   for(const e of item.elements)merged.elements.push({...e,candidate_id:prefix+e.candidate_id});for(const issue of item.issues)merged.issues.push({...issue,element_candidate_ids:(issue.element_candidate_ids||[]).map(eid=>prefix+eid)});
+   if(item.logic)trees.push(prefixLogic(item.logic,prefix));if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;
+   for(const field of ['question_types','review_methods','evidence_units'])merged[field]=[...new Set([...(merged[field]||[]),...(item[field]||[])])];
   }
-  merged.logic=trees.length===1?trees[0]:trees.length?{op:'all_of',children:trees}:null;questions.push(merged);
- }
+  merged.logic=trees.length===1?trees[0]:trees.length?{op:'all_of',children:trees}:null;return merged;
+ });
  return {questions};
 }
 async function review_elements(state,candidates,adapter,options={}){
  const candidatesById=new Map(),items=[];for(const q of candidates.questions)for(const e of q.elements){const unique=q.question_id+'/'+e.candidate_id;candidatesById.set(unique,e);items.push({id:unique,question_id:q.question_id,dimension_id:e.dimension_id,normalized_text:e.normalized_text,structured_value:e.structured_value,semantic_role:e.semantic_role,information_status:e.information_status,scope_status:e.scope_status,disposition:e.disposition,source_quotes:e.source_refs,scope_conditions:e.scope_conditions,exceptions:e.exceptions});}
- const batches=G.batches(items,12500,7);for(const [index,batch]of batches.entries()){
-  options.onProgress?.('Checking criteria against the sources ('+(index+1)+'/'+batches.length+')…',{phase:'review',completed:index,total:batches.length,waiting:true});const questionIds=new Set(batch.map(item=>item.question_id)),questions=candidates.questions.filter(q=>questionIds.has(q.question_id)).map(q=>{const original=state.questions.find(item=>item.question_id===q.question_id)?.original_text||'';return {question_id:q.question_id,original_question:original.length<3500?original:null,logic:q.logic};});const result=await adapter.request('review_normalization',state,{questions,items:batch},reviewSchema,reviewInstruction+' Shared original question text and logic are supplied once per question in questions; match each item by question_id. Keep each reason to one short sentence.',options.signal);if(!Array.isArray(result.items))D.fail('MODEL_SCHEMA_ERROR','review_normalization','Missing semantic assessments.');const seen=new Set();for(const assessment of result.items){if(!batch.some(item=>item.id===assessment.id)||seen.has(assessment.id)||!['supported','uncertain','contradicted'].includes(assessment.status))D.fail('MODEL_SCHEMA_ERROR','review_normalization','Invalid, duplicate or unknown semantic assessment.');seen.add(assessment.id);const e=candidatesById.get(assessment.id);for(const field of ['semantic_role','scope_status','disposition']){const allowed=field==='disposition'?['include','exclude',null]:D.ENUMS[field];if(!allowed.includes(assessment[field]))D.fail('MODEL_SCHEMA_ERROR','review_normalization','Invalid reviewed '+field+'.');if(e[field]!==assessment[field]){e.metadata_corrections=[...(e.metadata_corrections||[]),{field,from:e[field],to:assessment[field],basis:'Separate semantic review against the original input: '+assessment.reason}];e[field]=assessment[field];}}e.semantic_review={status:assessment.status,reason:assessment.reason||'',issue_type:assessment.issue_type};if(assessment.information_status){if(!D.ENUMS.information_status.includes(assessment.information_status))D.fail('MODEL_SCHEMA_ERROR','review_normalization','Invalid reviewed information status.');e.initial_information_status=e.information_status;e.information_status=assessment.information_status;}if(assessment.status==='uncertain'&&assessment.issue_type==='ambiguous_source')e.information_status='ambiguous';else if(assessment.status!=='supported'&&e.information_status==='explicit')D.fail('SEMANTIC_REVIEW_FAILED','review_normalization','标准化尚未通过语义核对：'+assessment.reason,{candidate_id:e.candidate_id});}if(seen.size!==batch.length)D.fail('MODEL_SCHEMA_ERROR','review_normalization','A semantic assessment is missing.');options.onProgress?.('Source checks complete ('+(index+1)+'/'+batches.length+').',{phase:'review',completed:index+1,total:batches.length});
- }
+ const batches=G.batches(items,12500,7);let completed=0;
+ await mapModelBatches(batches,options,async(batch,index,signal)=>{
+  options.onProgress?.('Checking criteria against the sources ('+(index+1)+'/'+batches.length+')…',{phase:'review',completed,total:batches.length,waiting:true});
+  const questionIds=new Set(batch.map(item=>item.question_id)),questions=candidates.questions.filter(q=>questionIds.has(q.question_id)).map(q=>{const original=state.questions.find(item=>item.question_id===q.question_id)?.original_text||'';return {question_id:q.question_id,original_question:original.length<3500?original:null,logic:q.logic};});
+  const result=await adapter.request('review_normalization',state,{questions,items:batch},reviewSchema,reviewInstruction+' Shared original question text and logic are supplied once per question in questions; match each item by question_id. Keep each reason to one short sentence.',signal);
+  if(!Array.isArray(result.items))D.fail('MODEL_SCHEMA_ERROR','review_normalization','Missing semantic assessments.');const seen=new Set();
+  for(const assessment of result.items){
+   if(!batch.some(item=>item.id===assessment.id)||seen.has(assessment.id)||!['supported','uncertain','contradicted'].includes(assessment.status))D.fail('MODEL_SCHEMA_ERROR','review_normalization','Invalid, duplicate or unknown semantic assessment.');seen.add(assessment.id);const e=candidatesById.get(assessment.id);
+   for(const field of ['semantic_role','scope_status','disposition']){const allowed=field==='disposition'?['include','exclude',null]:D.ENUMS[field];if(!allowed.includes(assessment[field]))D.fail('MODEL_SCHEMA_ERROR','review_normalization','Invalid reviewed '+field+'.');if(e[field]!==assessment[field]){e.metadata_corrections=[...(e.metadata_corrections||[]),{field,from:e[field],to:assessment[field],basis:'Separate semantic review against the original input: '+assessment.reason}];e[field]=assessment[field];}}
+   e.semantic_review={status:assessment.status,reason:assessment.reason||'',issue_type:assessment.issue_type};if(assessment.information_status){if(!D.ENUMS.information_status.includes(assessment.information_status))D.fail('MODEL_SCHEMA_ERROR','review_normalization','Invalid reviewed information status.');e.initial_information_status=e.information_status;e.information_status=assessment.information_status;}
+   if(assessment.status==='uncertain'&&assessment.issue_type==='ambiguous_source')e.information_status='ambiguous';else if(assessment.status!=='supported'&&e.information_status==='explicit')D.fail('SEMANTIC_REVIEW_FAILED','review_normalization','标准化尚未通过语义核对：'+assessment.reason,{candidate_id:e.candidate_id});
+  }
+  if(seen.size!==batch.length)D.fail('MODEL_SCHEMA_ERROR','review_normalization','A semantic assessment is missing.');options.onProgress?.('Source checks complete ('+(++completed)+'/'+batches.length+').',{phase:'review',completed,total:batches.length});
+ });
  return candidates;
 }
 async function analyze(state,env,adapter,options={}){const start=adapter.exchanges?.length||0;const candidates=await extract_elements(state,env,adapter,options);await review_elements(state,candidates,adapter,options);return {candidates,base_revision:state.revision,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};}
@@ -92,5 +129,5 @@ async function parse_answers(state,answerText,issueIds,adapter,options={}){
  }
  return {base_revision:state.revision,request_id:options.request_id||D.id('answer_request'),answers:result.answers,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
 }
-return {client,analyze,extract_elements,review_elements,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,requestEnvelope};
+return {client,analyze,extract_elements,review_elements,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,requestEnvelope,serializationInstruction};
 });

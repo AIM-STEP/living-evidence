@@ -103,7 +103,7 @@
 <script src="app/eligibility/domain.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/methodology.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/engine.js?v=20261118-criteria-actions-1"></script>
-<script src="app/eligibility/model.js?v=20261118-generation-runtime-1"></script>
+<script src="app/eligibility/model.js?v=20261118-generation-speed-1"></script>
 <script src="app/eligibility/background.js?v=20261118-criteria-actions-1"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
@@ -490,6 +490,7 @@ async function callCriteriaJson(model,system,payload,signal,schema=null){
 }
 async function requestCriteriaJson(model,system,payload,signal,schema=null){
   const backend=model.provider==='backend',ollama=model.provider!=='compatible';
+  if(schema&&payload.step)system+=window.AIMSTEPEligibilityModel?.serializationInstruction||'';
   const messages=[{role:'system',content:system},{role:'user',content:JSON.stringify(payload)}];
   const body=backend?{messages,provider:'local',...(schema?{format:schema}:{})}:ollama?{model:model.name,messages,stream:false,think:false,format:schema||'json',options:{temperature:0,num_ctx:16384}}:{model:model.name,messages,stream:false,response_format:schema?{type:'json_schema',json_schema:{name:'eligibility_rules',schema,strict:true}}:{type:'json_object'},temperature:0};
   const headers={'Content-Type':'application/json'},token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
@@ -835,6 +836,7 @@ async function generateMachineCriteria(){
   const button=$('start-machine');button.disabled=true;button.textContent='Generating…';$('stop-machine').hidden=false;$('stop-machine').disabled=false;criteriaProgress(5);setMachineStatus(files.length?'Reading attached files…':'Connecting to the selected model…');
   state.confirmed=false;save();
   try{
+    const backgroundTask=window.AIMSTEPEligibilityBackground?getEligibilityBackground().then(service=>({service}),error=>({error})):null;
     const input=await prepareSources(question,files,controller.signal);
     if(run!==generationNonce||controller.signal.aborted)return;
     setMachineStatus('Connecting to the selected model…');
@@ -845,7 +847,7 @@ async function generateMachineCriteria(){
     const originalSources=await originalMachineSources(model,input,reviewType,controller.signal);
     if(run!==generationNonce||controller.signal.aborted)return;
     if(window.AIMSTEPEligibilityBackground){
-      const service=await getEligibilityBackground();
+      const background=await backgroundTask;if(background.error)throw background.error;const service=background.service;
       const stage=await service.generate({legacy:structuredClone(state),question,reviewType,sources:originalSources,modelClient:backgroundModelClient(model),signal:controller.signal,onProgress:(message,event)=>setMachineStatus(message,false,window.AIMSTEPEligibilityBackground.progressPercent(event))});
       if(run!==generationNonce||controller.signal.aborted)return;
       useBackgroundCriteria(stage,{question,reviewType,sourceRevision,sourceFiles:files.map(entry=>entry.file.name),modelName:model.name});
