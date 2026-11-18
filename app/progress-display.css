@@ -47,6 +47,18 @@
 }
 .unified-progress :is(.criteria-progress-percent, .progress-percent, .screening-progress-percent, b),
 .workspace-progress-group > .workspace-progress-label { display: none !important; }
+/* A pending model response has no measurable percentage. Keep its activity
+   indicator and elapsed-time label when applying the shared presentation. */
+.unified-progress.is-waiting .unified-progress-fill {
+  width: 35% !important;
+  animation: unified-progress-wait 1.6s ease-in-out infinite !important;
+  transition: none !important;
+}
+.unified-progress.is-waiting::after { left: 50%; transition: none; }
+@keyframes unified-progress-wait {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(286%); }
+}
 .progress-title-row {
   display: flex !important;
   align-items: center !important;
@@ -64,4 +76,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .unified-progress .unified-progress-fill, .unified-progress::after { transition: none !important; }
+  .unified-progress.is-waiting .unified-progress-fill { animation: none !important; transform: none; }
 }

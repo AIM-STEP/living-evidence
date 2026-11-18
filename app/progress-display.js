@@ -50,9 +50,12 @@
         align(meter);
         meter.classList.add('unified-progress');
         fill.classList.add('unified-progress-fill');
+        const waiting = meter.matches('.criteria-progress.is-waiting');
         const value = Math.max(0, Math.min(100, percentage(meter, fill)));
         const position = (Number.isFinite(value) ? value : 0) + '%';
-        const label = Math.round(Number.isFinite(value) ? value : 0) + '%';
+        const label = waiting
+          ? meter.querySelector('.criteria-progress-percent')?.textContent || 'Working'
+          : Math.round(Number.isFinite(value) ? value : 0) + '%';
         if (meter.style.getPropertyValue('--meter-value') !== position) meter.style.setProperty('--meter-value', position);
         if (meter.dataset.progressLabel !== label) meter.dataset.progressLabel = label;
       });

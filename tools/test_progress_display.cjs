@@ -14,10 +14,11 @@ function meter(kind, value = 0, max = 100) {
   const item = {
     kind, attrs, fill, dataset: {}, style: style(), classList: { add() {} },
     getAttribute(key) { return attrs[key] ?? null; },
-    matches(selector) { return selector === '[role="progressbar"]' && kind === 'aria'; },
+    matches(selector) { return selector === '[role="progressbar"]' && kind === 'aria' || selector === '.criteria-progress.is-waiting' && !!this.waiting; },
     querySelector(selector) {
       if (selector === 'progress') return this.native || null;
       if (selector === '[role="progressbar"]') return this.child || null;
+      if (selector === '.criteria-progress-percent') return this.label || null;
       return fill;
     }
   };
@@ -61,4 +62,24 @@ flush();
 assert.equal(writes, before, 'unchanged values must not trigger an observer loop');
 notify(); notify(); notify();
 assert.equal(frames.length, 1, 'rapid updates are coalesced into one frame');
+initial.waiting = true;
+initial.label = { textContent: 'Working · 0:00' };
+delete initial.attrs['aria-valuenow'];
+flush();
+assert.equal(initial.dataset.progressLabel, 'Working · 0:00', 'Shared styling must preserve the model-wait label instead of displaying 0%');
+initial.label.textContent = 'Working · 0:12';
+flush();
+assert.equal(initial.dataset.progressLabel, 'Working · 0:12');
+const waitingWrites = writes;
+flush();
+assert.equal(writes, waitingWrites, 'Pending labels must not create a render loop');
+initial.waiting = false;
+initial.attrs['aria-valuemax'] = '100';
+initial.attrs['aria-valuenow'] = '60';
+flush();
+assert.equal(initial.dataset.progressLabel, '60%', 'Completed phases return to measured progress');
+const css = fs.readFileSync('app/progress-display.css', 'utf8');
+const waitFill = css.match(/\.unified-progress\.is-waiting \.unified-progress-fill\s*\{([^}]+)\}/)[1];
+assert(/width:\s*35%\s*!important/.test(waitFill));
+assert(/animation:\s*unified-progress-wait[^;]+!important/.test(waitFill), 'Waiting animation must override the shared animation:none!important rule');
 console.log('PASS: initial fractions, 0/50/100%, clamping, empty totals, native/nested/legacy values, dynamic insertion and observer stability');
