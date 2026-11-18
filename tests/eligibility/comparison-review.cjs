@@ -54,6 +54,14 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
  assert(state.machineRefinement.sourceConfirmations.some(c=>c.text.includes('Which assessment defines nutritional risk?')),'Unanswered questions must remain pending');
  const service=await B.create({projectId:'synthetic-grounding',storage:t.ctx.localStorage,frameworkConfig:frameworks,profileConfig:profiles,baseURL:'http://localhost/'});
  const edited=structuredClone(state);edited.machineCriteria[0].condition+=' Author edit.';assert.equal(service.refreshPresentation(edited),null,'Presentation refresh must preserve author edits');
+ const proseEdit=structuredClone(state);
+ Object.assign(proseEdit.machineRefinement,{editedAt:new Date().toISOString(),descriptionEditedByAuthor:true,manuscriptParagraph:'Author-edited description.'});
+ proseEdit.previewEditHistory=[{changes:[]}];
+ const beforeEdit=service.current(),pendingIds=project=>project.issues.filter(issue=>issue.status==='open').map(issue=>issue.issue_id);
+ const afterEdit=service.recordEdit(state,proseEdit).project;
+ assert.equal(afterEdit.revision,beforeEdit.revision+1);
+ assert.deepEqual(pendingIds(afterEdit),pendingIds(beforeEdit));
+ assert.deepEqual(afterEdit.elements,beforeEdit.elements);
  const project=service.current(),q=project.questions.find(q=>q.active!==false),find=dimension=>project.elements.filter(e=>e.active!==false&&e.dimension_id===dimension&&e.information_status!=='missing');
  const population=find('population')[0],intervention=find('intervention')[0],comparisons=find('comparator'),leaf=e=>({op:'predicate',element_id:e.element_id});
  q.logic={op:'any_of',children:comparisons.map(c=>({op:'all_of',children:[leaf(population),leaf(intervention),leaf(c)]}))};E.rebuild(project);

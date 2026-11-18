@@ -1204,7 +1204,7 @@ function renderPreview(){
   publishCriteriaSummary(complete);
   const {rows,framework,exclusions,limits,topic,paragraph}=criteriaForPage(complete);
   if(!complete.rows.length&&!hasConfirmations&&!paragraph){area.innerHTML='<p class="empty" data-ui-localize>'+(state.activeGenerator==='machine'&&state.machineRun?'No eligibility rules could be generated from this input.':'No criteria have been entered.')+'</p>';$('download').hidden=true;shareSummary(null);return}
-  $('download').hidden=!complete.rows.length&&!hasConfirmations&&!paragraph;
+  $('download').hidden=!complete.rows.length&&!paragraph;
   $('save-criteria').hidden=false;$('clear-criteria').hidden=false;
   previewBase={signature:criteriaSignature(state),data:structuredClone(criteriaForPage(complete))};
   const hasStudy=rows.some(row=>row.label==='Study design');
