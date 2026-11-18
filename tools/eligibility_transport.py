@@ -12,7 +12,7 @@ import threading
 import time
 from collections import OrderedDict
 
-VERSION = 'eligibility-transport-v1'
+VERSION = 'eligibility-transport-v2'
 TTL = 300
 MAX_ENTRIES = 32
 _lock = threading.Lock()
@@ -59,11 +59,16 @@ def chat(messages, model, schema, invoke):
         if not group:
             return value
         if value not in tables[group]:
-            serial = len(tables[group]) + 1
-            alias = group + str(serial)
-            while alias in reserved or alias in reverse[group]:
-                serial += 1
+            if group == 'R':
+                question, _, candidate = value.partition('/')
+                # Preserve the visible link to the question's logic leaves.
+                alias = compact('question_id', question) + '/' + candidate
+            else:
+                serial = len(tables[group]) + 1
                 alias = group + str(serial)
+                while alias in reserved or alias in reverse[group]:
+                    serial += 1
+                    alias = group + str(serial)
             tables[group][value] = alias
             reverse[group][alias] = value
         return tables[group][value]

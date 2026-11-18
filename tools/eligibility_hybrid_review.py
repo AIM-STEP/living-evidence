@@ -5,8 +5,11 @@ in place. Jev only accepts unchanged, explicit candidates when every requested
 classification agrees with their metadata at high confidence.
 """
 import copy
+import hashlib
 import json
+import threading
 import time
+from collections import OrderedDict
 
 import typesafe_model as ts
 
@@ -14,6 +17,28 @@ VERSION = 'eligibility-hybrid-v2'
 TASK = 'eligibility-review-v1'
 MIN_CONFIDENCE = .95
 TIMEOUT = 20
+_jev_lock = threading.Lock()
+_jev_cache = OrderedDict()
+
+
+def _jev_request(project_id, key, body):
+    identity = hashlib.sha256(json.dumps([project_id, hashlib.sha256(key.encode()).hexdigest(), body],
+                                        ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    with _jev_lock:
+        stored = _jev_cache.get(identity)
+        if stored and time.monotonic() - stored[0] < 300:
+            _jev_cache.move_to_end(identity)
+            return copy.deepcopy(stored[1]), True
+    response = ts.request('/systemone', key, body, timeout=TIMEOUT)
+    answers = response.get('answers') if isinstance(response, dict) else None
+    if isinstance(answers, dict) and set(answers) == set(body['questions']):
+        for name, question in body['questions'].items():
+            ts.choice(answers[name], question['criteria'])
+        with _jev_lock:
+            _jev_cache[identity] = (time.monotonic(), copy.deepcopy(response))
+            while len(_jev_cache) > 32:
+                _jev_cache.popitem(last=False)
+    return response, False
 
 CHOICES = {
     'status': {
@@ -96,7 +121,7 @@ def review(messages, local_review, local_model, partial_review=None):
     routine = [i for i, item in enumerate(items)
                if item['information_status'] == 'explicit' and item.get('source_quotes')]
     fallback_reason, model, actual_model, usage = None, None, None, None
-    checked, elapsed = 0, 0
+    checked, elapsed, typesafe_cached = 0, 0, False
     if routine:
         started = time.monotonic()
         try:
@@ -117,11 +142,11 @@ def review(messages, local_review, local_model, partial_review=None):
                             'Select only the requested classification, without generating text.'
                         ) % (index, field),
                     }
-            response = ts.request('/systemone', key, {
+            response, typesafe_cached = _jev_request(envelope.get('project_id'), key, {
                 'model': model,
                 'state': {'review_rules': rules, 'questions': payload['questions'], 'items': items},
                 'questions': questions,
-            }, timeout=TIMEOUT)
+            })
             answers = response.get('answers')
             if not isinstance(answers, dict) or set(answers) != set(questions):
                 raise ValueError('Missing or unknown TypeSafe review answers.')
@@ -224,7 +249,9 @@ def review(messages, local_review, local_model, partial_review=None):
                 'local_model': local_model, 'typesafe_checked': checked,
                 'typesafe_accepted': len(items) - len(pending), 'local_reviewed': len(pending),
                 'typesafe_fields_used': sum(sum(p == 'typesafe' for p in a.get('reviewer', {}).get('field_providers', {}).values()) for a in accepted.values()),
-                'typesafe_ms': elapsed, 'fallback_reason': fallback_reason, 'typesafe_usage': usage,
+                'typesafe_ms': elapsed, 'typesafe_cache': 'hit' if typesafe_cached else 'miss',
+                'typesafe_request_made': bool(routine) and not typesafe_cached,
+                'fallback_reason': fallback_reason, 'typesafe_usage': usage,
                 'local_transport': local_transport}
     return {'message': {'role': 'assistant', 'content': json.dumps(
                 {'items': [accepted[item['id']] for item in items]}, ensure_ascii=False, separators=(',', ':'))},

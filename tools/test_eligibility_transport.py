@@ -80,9 +80,9 @@ class TransportTest(unittest.TestCase):
             step='review_normalization', project_id='p', payload=dict(items=[dict(id=identity)], review_fields={identity: ['scope_status']}))))]
         def invoke(wire):
             payload = json.loads(wire[-1]['content'])['payload']
-            self.assertEqual(payload['items'][0]['id'], 'R1')
-            self.assertEqual(payload['review_fields'], {'R1': ['scope_status']})
-            return dict(message=dict(content='{"items":[{"id":"R1","scope_status":"restricted"}]}'))
+            self.assertEqual(payload['items'][0]['id'], 'Q1/c1')
+            self.assertEqual(payload['review_fields'], {'Q1/c1': ['scope_status']})
+            return dict(message=dict(content='{"items":[{"id":"Q1/c1","scope_status":"restricted"}]}'))
         result = transport.chat(messages, 'same-model', {}, invoke)
         self.assertEqual(json.loads(result['message']['content'])['items'][0]['id'], identity)
 

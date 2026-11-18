@@ -8,6 +8,7 @@ import eligibility_hybrid_review as hybrid
 
 class HybridReviewTest(unittest.TestCase):
     def setUp(self):
+        hybrid._jev_cache.clear()
         self.items = [dict(id='c%d' % i, question_id='q1', dimension_id='population',
                            normalized_text='Adults', structured_value=None,
                            information_status='explicit', semantic_role='eligibility_condition',
@@ -137,6 +138,34 @@ class HybridReviewTest(unittest.TestCase):
         self.assertEqual(items[1]['reviewer']['field_providers']['status'], 'typesafe')
         self.assertEqual(result['review']['typesafe_fields_used'], 11)
         self.assertEqual(self.local_ids, [])
+
+    def test_unchanged_input_reuses_jev_decisions_and_partial_local_work(self):
+        import eligibility_transport as transport
+        transport._entries.clear()
+        local_calls = []
+
+        def uncertain_field(*args, **kwargs):
+            result = self.response(*args, **kwargs)
+            result['answers']['c1_information_status']['confidence'] = .6
+            return result
+
+        def generate(messages):
+            local_calls.append(1)
+            return dict(message=dict(content='{"items":[{"id":"c1","information_status":"explicit","reason":"Source-supported condition."}]}'))
+
+        def partial(messages, schema):
+            return transport.chat(messages, 'local-test', schema, generate)
+
+        with patch.object(hybrid.ts, 'server_config', return_value=dict(model='jev-test')), \
+             patch.object(hybrid.ts, 'resolve_key', return_value='synthetic-key'), \
+             patch.object(hybrid.ts, 'request', side_effect=uncertain_field) as request:
+            first = hybrid.review(self.messages(), self.local, 'local-test', partial_review=partial)
+            second = hybrid.review(self.messages(), self.local, 'local-test', partial_review=partial)
+        self.assertEqual(request.call_count, 1)
+        self.assertEqual(len(local_calls), 1)
+        self.assertEqual(first['message']['content'], second['message']['content'])
+        self.assertEqual(second['review']['typesafe_cache'], 'hit')
+        self.assertEqual(second['review']['local_transport']['cache'], 'hit')
 
 
 if __name__ == '__main__':
