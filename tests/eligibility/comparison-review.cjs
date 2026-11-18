@@ -10,7 +10,7 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
    const make=(candidate_id,dimension_id,quote,normalized_text=quote)=>({candidate_id,dimension_id,normalized_text,structured_value:null,source_refs:[{source_id:source.source_id,source_revision:source.revision,quote}],semantic_role:'eligibility_condition',information_status:'explicit',scope_status:'restricted',disposition:'include'});
    result={questions:[{question_id:q.question_id,review_topic:'Nutritional interventions in hospitalised older people.',framework_candidates:[{framework_id:'pico',basis:'Simulated'}],elements:[
     make('p','population','hospitalised older people at risk of or with established malnutrition'),make('i','intervention','various nutritional interventions','nutritional interventions'),
-    make('c1','other',fixture.research_question,'standard care or placebo.'),make('c2','comparison_group','each other','nutritional interventions')],
+    make('c1','other',fixture.research_question,'standard care or placebo.'),make('c2','comparison_group','each other','nutritional interventions'),{...make('o','outcome','patient-relevant outcomes'),semantic_role:'review_focus',scope_status:'unspecified',disposition:null}],
     issues:[{reason_code:'AMBIGUOUS_MEANING',question_text:'Which assessment defines nutritional risk?',scope_impact:'Defines the intended population.',element_candidate_ids:['p']}],
     logic:{op:'all_of',children:[{op:'predicate',element_id:'p'},{op:'predicate',element_id:'i'},{op:'any_of',children:[{op:'predicate',element_id:'c1'},{op:'predicate',element_id:'c2'}]}]}}]};
   }else if(envelope.step==='review_normalization')result={items:payload.items.map(item=>({id:item.id,status:'supported',reason:'Simulated source review',issue_type:'none',information_status:item.information_status,semantic_role:item.semantic_role,scope_status:item.scope_status,disposition:item.disposition}))};
@@ -22,6 +22,9 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
  let state=t.api.state();assert(state.machineRun,t.el('generation-status').textContent);const rows=state.machineRefinement.rows;
  assert(!rows.some(r=>r.dimension==='Other'));assert(rows.find(r=>r.dimension==='Comparison').include.join(' ').includes('another nutritional intervention'));
  const checks=state.machineRefinement.sourceConfirmations;assert(checks.some(c=>c.text.includes('Which assessment defines nutritional risk?')),'Actual source questions must reach the user');
+ for(const domain of ['Population','Intervention','Comparison','Outcomes','Analysis plan','Data plan'])assert(checks.some(c=>c.domain===domain),'Each broad source element must offer its own author check: '+domain);
+ const preview=t.el('preview').innerHTML;assert(preview.includes('Review focus and analysis plan'));assert(preview.includes('patient-relevant outcomes'));assert(preview.includes('individual participant data'));
+ const exported=Buffer.from(t.api.export()).toString('utf8');assert(exported.includes('Review focus and analysis plan'));assert(exported.includes('Author checks pending'));assert(exported.includes('patient-relevant outcomes'));
  assert(checks.some(c=>c.text.includes('age boundary')));assert(t.el('preview').innerHTML.includes('data-source-answer='),'Unresolved questions need a working answer field');
  const ageIndex=checks.findIndex(c=>c.text.includes('age boundary'));t.ctx.document.querySelector=()=>({value:'65 years or older',focus(){}});
  assert(await t.api.confirm(ageIndex,'answer'),t.el('generation-status').textContent);state=t.api.state();

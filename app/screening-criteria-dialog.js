@@ -21,7 +21,7 @@ window.AIMScreeningCriteriaDialog=function(config){
     const same=previous&&previous.generationMethodChoice&&(previous.question||'')===(snapshot.question||'')&&(previous.framework||'Other')===(snapshot.framework||'Other')&&JSON.stringify((rows||[]).map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']))===JSON.stringify(snapshot.rows.map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']));
     const valueToLoad=same?previous:AIMSearchCriteriaEditor.workspace(previous,snapshot,new Date().toISOString());previewWorkspace=valueToLoad;loading.hidden=false;
     const current=document.createElement('iframe');frame=current;current.className='criteria-preview-frame';current.title='Editable eligibility criteria';
-    const url=new URL(config.pageLink('eligibility.html'),location.href);url.searchParams.set('embedded','search-criteria-preview');url.searchParams.set('criteriaPreviewVersion','20261118-hybrid-fields-1');current.src=url.href;
+    const url=new URL(config.pageLink('eligibility.html'),location.href);url.searchParams.set('embedded','search-criteria-preview');url.searchParams.set('criteriaPreviewVersion','20261118-complete-scope-1');current.src=url.href;
     current.addEventListener('load',()=>initialize(current));
     current.addEventListener('error',()=>{if(frame===current){loading.hidden=true;showError('Could not load the criteria editor. Clear is still available.')}});
     $('criteria-view').replaceChildren(current);

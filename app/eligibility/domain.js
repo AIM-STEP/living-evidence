@@ -55,6 +55,7 @@ function mapExpression(node,map,field='criterion_id'){if(node.op==='predicate')r
 function walkLeaves(node){return node?.op==='predicate'?[node.element_id]:array(node?.children).flatMap(walkLeaves);}
 function validate_candidate_element(candidate){
  object(candidate);for(const field of ['candidate_id','dimension_id','normalized_text'])text(candidate[field],field,2000);if(!candidate.candidate_id||!candidate.dimension_id)fail('INVALID_STRUCTURE','schema','Element and dimension IDs cannot be empty.');
+ if(candidate.information_status!=='missing'&&!candidate.normalized_text.trim())fail('INVALID_STRUCTURE','schema','A source-defined element needs non-empty wording.');
  if(!Object.hasOwn(candidate,'structured_value')||candidate.structured_value!==null&&(typeof candidate.structured_value!=='object'||Array.isArray(candidate.structured_value)))fail('INVALID_STRUCTURE','schema','structured_value must be an object or null.');
  for(const field of ['semantic_role','information_status','scope_status'])enumValue(field,candidate[field]);
  if(candidate.disposition!=null)enumValue('disposition',candidate.disposition);
