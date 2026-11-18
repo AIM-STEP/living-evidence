@@ -109,3 +109,14 @@ Current engine version: `eligibility-v3.1.1`; review-profile configuration: `1.1
 ## Progress display correction
 
 Progress reflects completed extraction/review batches and validation/save stages, rather than assigning 65% to every model step. The existing status region displays the current English stage and elapsed response-wait time. Percentages do not increase merely because time passes; this does not accelerate model inference. The established Stop control and ten-minute deadline can release the interface even if an upstream transport fails to acknowledge cancellation. Existing criteria remain saved. See `docs/eligibility-evaluation/progress-display-tests.json` for the targeted checks. Model instructions, schemas and request payloads are unchanged by this correction.
+
+
+### 18 November 2026: concise English criteria presentation
+
+Review topics now name the clinical question without an introductory review sentence or analysis methods. Criteria display source-grounded phrases. Comparative alternatives are mapped to Comparison, including source-defined reciprocal intervention comparisons. Description uses concise, active protocol prose; analysis plans remain distinct from study eligibility. Style reference: [The BMJ house style](https://www.bmj.com/about-bmj/resources-authors/house-style).
+
+Human checks appear under the corresponding inclusion/exclusion element, with check/cross controls and explicit action labels. For an undefined older-people boundary, the author may retain the source's qualitative restriction without inventing an age threshold, or explicitly remove that restriction. The retained qualitative definition and its unresolved numeric precision remain recorded separately from a numeric age cutoff. Decisions update criteria, prose and provenance. No age cutoff is supplied automatically.
+
+Model completion time is unknown: the progress bar therefore shows activity, the current real processing step/batch and elapsed model wait, rather than a fabricated percentage. It shows 100% only after saving the completed result. Existing Stop and timeout controls remain available.
+
+This release was published without running tests or live-model evaluation, at the user's explicit request. Earlier evaluation artifacts describe earlier versions and do not validate this release.
