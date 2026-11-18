@@ -30,7 +30,7 @@ function client(options={}){
   const endpoint=await discover(signal),controller=new AbortController(),abort=()=>controller.abort(signal?.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(()=>controller.abort(),options.timeout_ms||600000);
   const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',messages,format:schema,...(step==='review_normalization'?{task:'eligibility-review-v1'}:{})};
   try{
-   const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let error;try{error=await r.json();}catch(_){error={error:'HTTP '+r.status};}D.fail('MODEL_HTTP_ERROR',step,error.error||'Model request failed.');}
+   const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let error;try{error=await r.json();}catch(_){error={error:'HTTP '+r.status};}D.fail(error.code==='MODEL_SCHEMA_ERROR'?'MODEL_SCHEMA_ERROR':'MODEL_HTTP_ERROR',step,error.error||'Model request failed.');}
    const data=await r.json(),raw=data.message?.content||data.choices?.[0]?.message?.content;if(typeof raw!=='string')D.fail('MODEL_EMPTY_RESPONSE',step,'模型返回空内容。');
    const log={request_id:D.id('model'),step,base_revision:state.revision,at:D.now(),model:data.model||model||'configured',provider:data.provider||'configured backend',prompt_sha256:await G.hashText(JSON.stringify(messages)),response_sha256:await G.hashText(raw),actual_sampling:'not_reported',...(data.review?{hybrid_review:data.review}:{}),...(data.transport?{transport:data.transport}:{})};exchanges.push(log);options.onExchange?.({...log,input:envelope,raw_output:raw});
    try{return JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''));}catch(_){D.fail('MODEL_INVALID_JSON',step,'模型返回非法JSON；已有状态未更改。');}
@@ -63,8 +63,9 @@ async function extract_elements(state,env,adapter,options={}){
   const q=payload.questions[qi],batches=plans[qi];
   options.onProgress?.('Extracting source conditions ('+(index+1)+'/'+total+')…',{phase:'extract',completed,total,waiting:true});
   const request={question:{...q,sources,original_text:undefined},frameworks,review_profiles:env.profiles.resolve(q.context.review_methods),part_index:bi,part_count:batches.length};
+  const responseSchema=D.clone(extractionSchema);responseSchema.properties.questions.minItems=1;responseSchema.properties.questions.maxItems=1;responseSchema.properties.questions.items.properties.question_id={type:'string',enum:[q.question_id]};
   let answer;for(let attempt=0;attempt<=(options.retries??1);attempt++)try{
-   answer=await adapter.request('extract_elements',state,request,extractionSchema,extractionInstruction+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
+   answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
    if(!Array.isArray(answer.questions)||answer.questions.length!==1||answer.questions[0].question_id!==q.question_id)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The model omitted or changed the question ID.');
    D.text(answer.questions[0].review_topic,'review_topic',1000);if(!answer.questions[0].review_topic.trim())D.fail('MODEL_SCHEMA_ERROR','extract_elements','A concise research objective is required.');
    for(const e of answer.questions[0].elements||[])D.validate_candidate_element(e);if(answer.questions[0].logic)D.validate_expression(answer.questions[0].logic,new Set((answer.questions[0].elements||[]).map(e=>e.candidate_id)));

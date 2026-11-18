@@ -103,7 +103,7 @@
 <script src="app/eligibility/domain.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/methodology.js?v=20261118-hybrid-fields-1"></script>
 <script src="app/eligibility/engine.js?v=20261118-hybrid-fields-1"></script>
-<script src="app/eligibility/model.js?v=20261118-hybrid-fields-1"></script>
+<script src="app/eligibility/model.js?v=20261118-question-id-1"></script>
 <script src="app/eligibility/background.js?v=20261118-hybrid-fields-1"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
@@ -497,7 +497,7 @@ async function requestCriteriaJson(model,system,payload,signal,schema=null){
   if(token)headers.Authorization='Bearer '+token;
   async function post(){
     const response=await localFetch(model.base+(backend?'/model':ollama?'/api/chat':'/chat/completions'),{method:'POST',headers,body:JSON.stringify(body),signal});
-    if(!response.ok){const raw=(await response.text()).slice(0,250);let message=raw;try{message=JSON.parse(raw).error||raw}catch(e){}throw new Error('Model HTTP '+response.status+': '+message)}
+    if(!response.ok){const raw=(await response.text()).slice(0,500);let message=raw,code;try{const detail=JSON.parse(raw);message=detail.error||raw;code=detail.code}catch(e){}throw Object.assign(new Error('Model HTTP '+response.status+': '+message),code==='MODEL_SCHEMA_ERROR'?{code}:{})}
     return response.json();
   }
   let data;try{data=await post()}catch(error){if(!ollama&&/response.format|json.object|json.schema|json mode/i.test(error.message)){delete body.response_format;data=await post()}else throw error}

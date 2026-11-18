@@ -12,12 +12,16 @@ import threading
 import time
 from collections import OrderedDict
 
-VERSION = 'eligibility-transport-v2'
+VERSION = 'eligibility-transport-v3'
 TTL = 300
 MAX_ENTRIES = 32
 _lock = threading.Lock()
 _entries = OrderedDict()
 _fields = {'source_id': 'S', 'source_ids': 'S', 'question_id': 'Q', 'question_ids': 'Q', 'answer_question_id': 'Q', 'id': 'R'}
+
+
+class IdentityError(ValueError):
+    """An invalid routing identifier must never be accepted or reused."""
 
 
 def _group(key, value):
@@ -38,7 +42,7 @@ def _walk(value, transform, key=None):
     return transform(key, value)
 
 
-def chat(messages, model, schema, invoke):
+def chat(messages, model, schema, invoke, invoke_with_schema=None):
     users = [m for m in messages if m.get('role') == 'user']
     if len(users) != 1 or any(m.get('images') for m in messages):
         return invoke(messages)
@@ -74,6 +78,31 @@ def chat(messages, model, schema, invoke):
         return tables[group][value]
 
     wire = _walk(envelope, compact)
+    wire_schema = copy.deepcopy(schema)
+
+    def compact_schema(node):
+        if not isinstance(node, dict):
+            return
+        for field, child in node.get('properties', {}).items():
+            if isinstance(child, dict) and field in _fields:
+                if isinstance(child.get('enum'), list):
+                    child['enum'] = [compact(field, value) for value in child['enum']]
+                if 'const' in child:
+                    child['const'] = compact(field, child['const'])
+            compact_schema(child)
+        for field in ('items', 'additionalProperties'):
+            compact_schema(node.get(field))
+        for field in ('anyOf', 'oneOf', 'allOf'):
+            for child in node.get(field, []):
+                compact_schema(child)
+
+    compact_schema(wire_schema)
+    if envelope['step'] == 'extract_elements' and isinstance(wire_schema, dict):
+        questions = wire_schema.get('properties', {}).get('questions')
+        expected = wire.get('payload', {}).get('question', {}).get('question_id')
+        if isinstance(questions, dict) and expected:
+            questions['minItems'] = questions['maxItems'] = 1
+            questions['items']['properties']['question_id'] = {'type': 'string', 'enum': [expected]}
     wire_messages = [{**m, 'content': json.dumps(wire, ensure_ascii=False, separators=(',', ':'))}
                      if m.get('role') == 'user' else m for m in messages]
     # Revision is an optimistic-write guard, not a change to the model's task.
@@ -82,7 +111,7 @@ def chat(messages, model, schema, invoke):
     cache_envelope['base_revision'] = 0
     cache_messages = [{**m, 'content': json.dumps(cache_envelope, ensure_ascii=False, separators=(',', ':'))}
                       if m.get('role') == 'user' else m for m in messages]
-    key = hashlib.sha256(json.dumps([envelope.get('project_id'), model, schema, cache_messages],
+    key = hashlib.sha256(json.dumps([VERSION, envelope.get('project_id'), model, wire_schema, cache_messages],
                                    ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     now = time.monotonic()
     with _lock:
@@ -104,7 +133,7 @@ def chat(messages, model, schema, invoke):
         cache_status = 'miss' if owner else 'hit' if entry['event'].is_set() else 'shared'
     if owner:
         try:
-            reply = invoke(wire_messages)
+            reply = invoke_with_schema(wire_messages, wire_schema) if invoke_with_schema else invoke(wire_messages)
             raw = reply.get('message', {}).get('content', '').strip()
             entry['wire_prompt_sha256'] = hashlib.sha256(json.dumps(wire_messages, ensure_ascii=False).encode()).hexdigest()
             entry['wire_response_sha256'] = hashlib.sha256(raw.encode()).hexdigest()
@@ -113,6 +142,12 @@ def chat(messages, model, schema, invoke):
                 if raw.startswith('json'):
                     raw = raw[4:].strip()
             result = json.loads(raw)
+            if envelope['step'] == 'extract_elements':
+                expected = wire.get('payload', {}).get('question', {}).get('question_id')
+                questions = result.get('questions') if isinstance(result, dict) else None
+                if expected and (not isinstance(questions, list) or len(questions) != 1
+                                 or not isinstance(questions[0], dict) or questions[0].get('question_id') != expected):
+                    raise IdentityError('The model response did not preserve the requested question identifier. No result was saved or cached.')
             entry['reply'], entry['result'] = reply, result
             entry['at'] = time.monotonic()
             # Failed/limited generations and structurally incomplete replies

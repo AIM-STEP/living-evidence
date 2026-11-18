@@ -396,7 +396,8 @@ class Handler(SimpleHTTPRequestHandler):
         started = time.time()
         attempts = []
         local_chat = lambda subset, selected_format=fmt: eligibility_transport.chat(subset, self.model, selected_format,
-            lambda wire: chat(self.ollama, self.model, wire, attempts=attempts, fmt=selected_format))
+            lambda wire: chat(self.ollama, self.model, wire, attempts=attempts, fmt=selected_format),
+            invoke_with_schema=lambda wire, wire_format: chat(self.ollama, self.model, wire, attempts=attempts, fmt=wire_format))
         try:
             if provider == "local" and payload.get("task") == eligibility_hybrid_review.TASK:
                 reply = eligibility_hybrid_review.review(messages,
@@ -404,6 +405,8 @@ class Handler(SimpleHTTPRequestHandler):
                     partial_review=lambda subset, schema: local_chat(subset, schema))
             else:
                 reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else local_chat(messages)
+        except eligibility_transport.IdentityError as e:
+            return self._send_json(422, {"error": str(e), "code": "MODEL_SCHEMA_ERROR"})
         except (ValueError, KeyError, TypeError) as e:
             return self._send_json(502, {"error": str(e) if provider == "local" else "API request failed: " + str(e)})
         except urllib.error.HTTPError as e:

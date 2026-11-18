@@ -86,6 +86,34 @@ class TransportTest(unittest.TestCase):
         result = transport.chat(messages, 'same-model', {}, invoke)
         self.assertEqual(json.loads(result['message']['content'])['items'][0]['id'], identity)
 
+    def test_question_constraint_is_compacted_with_the_payload_and_schema_is_not_mutated(self):
+        canonical = 'question_' + 'a' * 32
+        schema = {'type': 'object', 'properties': {'questions': {'type': 'array', 'items': {
+            'type': 'object', 'properties': {'question_id': {'type': 'string', 'enum': [canonical]}}}}}}
+        original = copy.deepcopy(schema)
+        def generate(messages, wire_schema):
+            questions = wire_schema['properties']['questions']
+            self.assertEqual(questions['minItems'], 1)
+            self.assertEqual(questions['maxItems'], 1)
+            self.assertEqual(questions['items']['properties']['question_id']['enum'], ['Q1'])
+            return self.invoke(messages)
+        result = transport.chat(self.messages(), 'same-model', schema,
+                                lambda messages: self.fail('The constrained schema must reach the model'),
+                                invoke_with_schema=generate)
+        self.assertEqual(schema, original)
+        self.assertEqual(json.loads(result['message']['content'])['questions'][0]['question_id'], canonical)
+
+    def test_unknown_missing_or_extra_question_ids_are_never_cached(self):
+        for questions in [[{'question_id': 'Q2'}], [{}], [], [{'question_id': 'Q1'}, {'question_id': 'Q2'}]]:
+            with self.subTest(questions=questions):
+                transport._entries.clear()
+                with self.assertRaises(transport.IdentityError):
+                    transport.chat(self.messages(), 'same-model', {},
+                                   lambda messages: dict(message=dict(content=json.dumps({'questions': questions}))))
+                self.assertEqual(len(transport._entries), 0)
+                result = transport.chat(self.messages(), 'same-model', {}, self.invoke)
+                self.assertEqual(result['transport']['cache'], 'miss')
+
 
 if __name__ == '__main__':
     unittest.main()
