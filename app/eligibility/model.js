@@ -32,7 +32,7 @@ function client(options={}){
   try{
    const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let error;try{error=await r.json();}catch(_){error={error:'HTTP '+r.status};}D.fail('MODEL_HTTP_ERROR',step,error.error||'Model request failed.');}
    const data=await r.json(),raw=data.message?.content||data.choices?.[0]?.message?.content;if(typeof raw!=='string')D.fail('MODEL_EMPTY_RESPONSE',step,'模型返回空内容。');
-   const log={request_id:D.id('model'),step,base_revision:state.revision,at:D.now(),model:data.model||model||'configured',provider:data.provider||'configured backend',prompt_sha256:await G.hashText(JSON.stringify(messages)),response_sha256:await G.hashText(raw),actual_sampling:'not_reported',...(data.review?{hybrid_review:data.review}:{})};exchanges.push(log);options.onExchange?.({...log,input:envelope,raw_output:raw});
+   const log={request_id:D.id('model'),step,base_revision:state.revision,at:D.now(),model:data.model||model||'configured',provider:data.provider||'configured backend',prompt_sha256:await G.hashText(JSON.stringify(messages)),response_sha256:await G.hashText(raw),actual_sampling:'not_reported',...(data.review?{hybrid_review:data.review}:{}),...(data.transport?{transport:data.transport}:{})};exchanges.push(log);options.onExchange?.({...log,input:envelope,raw_output:raw});
    try{return JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''));}catch(_){D.fail('MODEL_INVALID_JSON',step,'模型返回非法JSON；已有状态未更改。');}
   }catch(error){if(controller.signal.aborted&&!signal?.aborted)D.fail('MODEL_TIMEOUT',step,'模型请求超时；已有状态未更改。');throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
  }

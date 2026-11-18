@@ -112,6 +112,32 @@ class HybridReviewTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.run_review()
 
+    def test_local_only_generates_fields_not_already_verified_by_jev(self):
+        def uncertain_field(*args, **kwargs):
+            result = self.response(*args, **kwargs)
+            result['answers']['c1_information_status']['confidence'] = .6
+            return result
+
+        requested = []
+        def partial(messages, schema):
+            payload = json.loads(messages[-1]['content'])['payload']
+            requested.append(payload['review_fields'])
+            self.assertEqual(schema['properties']['items']['items']['required'], ['id', 'reason'])
+            return dict(model='local-test', message=dict(content=json.dumps(dict(items=[
+                dict(id='c1', information_status='explicit', reason='Original wording explicitly states the condition.')]))))
+
+        with patch.object(hybrid.ts, 'server_config', return_value=dict(model='jev-test')), \
+             patch.object(hybrid.ts, 'resolve_key', return_value='synthetic-key'), \
+             patch.object(hybrid.ts, 'request', side_effect=uncertain_field):
+            result = hybrid.review(self.messages(), self.local, 'local-test', partial_review=partial)
+        self.assertEqual(requested, [{'c1': ['information_status']}])
+        items = json.loads(result['message']['content'])['items']
+        self.assertEqual(items[1]['semantic_role'], 'eligibility_condition')
+        self.assertEqual(items[1]['reviewer']['field_providers']['information_status'], 'local')
+        self.assertEqual(items[1]['reviewer']['field_providers']['status'], 'typesafe')
+        self.assertEqual(result['review']['typesafe_fields_used'], 11)
+        self.assertEqual(self.local_ids, [])
+
 
 if __name__ == '__main__':
     unittest.main()

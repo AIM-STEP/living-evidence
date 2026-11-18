@@ -10,7 +10,7 @@ import time
 
 import typesafe_model as ts
 
-VERSION = 'eligibility-hybrid-v1'
+VERSION = 'eligibility-hybrid-v2'
 TASK = 'eligibility-review-v1'
 MIN_CONFIDENCE = .95
 TIMEOUT = 20
@@ -87,9 +87,9 @@ def _envelope(messages):
     return envelope
 
 
-def review(messages, local_review, local_model):
+def review(messages, local_review, local_model, partial_review=None):
     envelope = _envelope(messages)
-    payload, accepted, decisions = envelope['payload'], {}, {}
+    payload, accepted, decisions, verified_fields = envelope['payload'], {}, {}, {}
     items = payload['items']
     rules = '\n'.join(m['content'] for m in messages if m.get('role') == 'system')
     # Ambiguous/conflicting candidates always receive the existing local review.
@@ -136,39 +136,61 @@ def review(messages, local_review, local_model):
                     continue
                 checked += 1
                 selected = {field: answer['choice'] for field, answer in results.items()}
-                confidence = min(min(a['confidence'], a['probabilities'][a['choice']])
-                                 for a in results.values())
-                agrees = (selected['status'] == 'supported' and selected['issue_type'] == 'none'
-                          and all(selected[field] == ('none' if field == 'disposition' and item.get(field) is None else item.get(field))
-                                  for field in ('information_status', 'semantic_role', 'scope_status', 'disposition')))
+                verified = {field: (None if field == 'disposition' and a['choice'] == 'none' else a['choice'])
+                            for field, a in results.items()
+                            if min(a['confidence'], a['probabilities'][a['choice']]) >= MIN_CONFIDENCE}
+                verified_fields[item['id']] = verified
                 audit = {'provider': 'typesafe', 'model': actual_model, 'version': VERSION,
-                         'confidence': confidence, 'assessments': results}
-                if not agrees or confidence < MIN_CONFIDENCE:
-                    decisions[item['id']] = {'route': 'local', 'reason': 'metadata_disagreement' if not agrees else 'low_confidence',
-                                             'typesafe': audit}
+                         'assessments': results, 'verified_fields': list(verified)}
+                routine_supported = (verified.get('status') == 'supported' and verified.get('issue_type') == 'none')
+                if not routine_supported or len(verified) != len(CHOICES):
+                    decisions[item['id']] = {'route': 'local', 'reason': 'unresolved_fields', 'typesafe': audit}
                     continue
                 accepted[item['id']] = {
-                    'id': item['id'], 'status': 'supported', 'issue_type': 'none',
+                    'id': item['id'], **verified,
                     'reason': 'TypeSafe/Jev classified the candidate wording and metadata as supported by the supplied original source context.',
-                    **{field: item.get(field) for field in ('information_status', 'semantic_role', 'scope_status', 'disposition')},
-                    'reviewer': audit,
+                    'reviewer': {**audit, 'field_providers': {field: 'typesafe' for field in CHOICES}},
                 }
         except (ts.ConfigurationError, OSError, ValueError, KeyError, TypeError, AttributeError):
             # Authentication, quota, network and response errors never remove the
             # semantic review. The existing local reviewer receives all candidates.
             accepted.clear()
             decisions.clear()
+            verified_fields.clear()
             fallback_reason = 'typesafe_unavailable_or_invalid'
         finally:
             elapsed = round((time.monotonic() - started) * 1000)
 
     pending = [item for item in items if item['id'] not in accepted]
+    local_transport = None
     if pending:
         local_envelope = copy.deepcopy(envelope)
         local_envelope['payload']['items'] = pending
+        partial = partial_review is not None and any(verified_fields.get(i['id']) for i in pending)
+        if partial:
+            local_envelope['payload']['review_fields'] = {
+                item['id']: [field for field in CHOICES if field not in verified_fields.get(item['id'], {})]
+                for item in pending}
         local_messages = [{**m, 'content': json.dumps(local_envelope, ensure_ascii=False, separators=(',', ':'))}
                           if m.get('role') == 'user' else m for m in messages]
-        reply = local_review(local_messages)
+        if partial:
+            local_messages = copy.deepcopy(local_messages)
+            system = next(m for m in local_messages if m.get('role') == 'system')
+            system['content'] += (' Other review fields have already received a separate high-confidence assessment. '
+                                  'For each candidate return id, a short source-based reason, and every field listed '
+                                  'in payload.review_fields for that ID. Omit other fields to avoid duplicate work. '
+                                  'If the source contradicts another field, include that correction as well. '
+                                  'All original semantic review rules still apply. Return compact JSON.')
+            properties = {field: {'enum': [None if field == 'disposition' and value == 'none' else value for value in options]}
+                          for field, options in CHOICES.items()}
+            properties.update({'id': {'type': 'string'}, 'reason': {'type': 'string'}})
+            schema = {'type': 'object', 'required': ['items'], 'properties': {'items': {
+                'type': 'array', 'items': {'type': 'object', 'properties': properties,
+                                          'required': ['id', 'reason'], 'additionalProperties': False}}}}
+            reply = partial_review(local_messages, schema)
+        else:
+            reply = local_review(local_messages)
+        local_transport = reply.get('transport')
         raw = reply.get('message', {}).get('content', '').strip()
         if raw.startswith('```'):
             raw = raw.strip('`').strip()
@@ -184,18 +206,26 @@ def review(messages, local_review, local_model):
                 raise ValueError('Invalid or duplicate local eligibility assessment.')
             identity = assessment['id']
             seen.add(identity)
-            assessment['reviewer'] = {
-                'provider': 'local', 'model': reply.get('model') or local_model, 'version': VERSION,
+            combined = {**verified_fields.get(identity, {}), **assessment}
+            if any(field not in combined for field in CHOICES) or not isinstance(combined.get('reason'), str):
+                raise ValueError('The local eligibility reviewer omitted an unresolved field.')
+            providers = {field: 'local' if field in assessment else 'typesafe' for field in CHOICES}
+            combined['reviewer'] = {
+                'provider': 'hybrid' if 'typesafe' in providers.values() else 'local',
+                'model': reply.get('model') or local_model, 'version': VERSION,
+                'field_providers': providers,
                 'routing': decisions.get(identity, {'route': 'local', 'reason': fallback_reason or 'source_requires_clarification'}),
             }
-            accepted[identity] = assessment
+            accepted[identity] = combined
         if seen != wanted:
             raise ValueError('The local eligibility reviewer omitted a candidate.')
 
     metadata = {'version': VERSION, 'typesafe_model': actual_model or model,
                 'local_model': local_model, 'typesafe_checked': checked,
                 'typesafe_accepted': len(items) - len(pending), 'local_reviewed': len(pending),
-                'typesafe_ms': elapsed, 'fallback_reason': fallback_reason, 'typesafe_usage': usage}
+                'typesafe_fields_used': sum(sum(p == 'typesafe' for p in a.get('reviewer', {}).get('field_providers', {}).values()) for a in accepted.values()),
+                'typesafe_ms': elapsed, 'fallback_reason': fallback_reason, 'typesafe_usage': usage,
+                'local_transport': local_transport}
     return {'message': {'role': 'assistant', 'content': json.dumps(
                 {'items': [accepted[item['id']] for item in items]}, ensure_ascii=False, separators=(',', ':'))},
             'provider': 'hybrid', 'model': local_model + ' / ' + str(actual_model or model or 'local fallback'),

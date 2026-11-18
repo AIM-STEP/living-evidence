@@ -48,6 +48,7 @@ import argparse
 import api_model
 import typesafe_model
 import eligibility_hybrid_review
+import eligibility_transport
 import fulltext_sources
 import fulltext_assistant
 import json
@@ -131,6 +132,7 @@ def ollama_body(model, messages, temperature=0, fmt="json"):
         "messages": messages,
         "stream": False,
         "think": False,
+        "keep_alive": "30m",
         "format": fmt,
         "options": {"temperature": temperature, "num_ctx": NUM_CTX, "num_predict": NUM_PREDICT},
     }
@@ -334,7 +336,8 @@ class Handler(SimpleHTTPRequestHandler):
                 "model": self.model, "ollama": self.ollama, "status": msg,
                 "embedModel": self.embed_model if embed_ok else "",
                 "typesafe": {"available": True, "configured": typesafe_model.configured(), "version": typesafe_model.VERSION,
-                             "eligibilityReview": eligibility_hybrid_review.VERSION},
+                             "eligibilityReview": eligibility_hybrid_review.VERSION,
+                             "eligibilityTransport": eligibility_transport.VERSION},
                 "api": {"acceptsKey": api_model.status("configuration-check")[0],
                         "ready": api_model.status()[0], "status": api_model.status()[1],
                         "model": api_model.config()["model"]}})
@@ -392,13 +395,15 @@ class Handler(SimpleHTTPRequestHandler):
             return self._send_json(400, {"error": str(e)})
         started = time.time()
         attempts = []
+        local_chat = lambda subset, selected_format=fmt: eligibility_transport.chat(subset, self.model, selected_format,
+            lambda wire: chat(self.ollama, self.model, wire, attempts=attempts, fmt=selected_format))
         try:
             if provider == "local" and payload.get("task") == eligibility_hybrid_review.TASK:
                 reply = eligibility_hybrid_review.review(messages,
-                    local_review=lambda subset: chat(self.ollama, self.model, subset, attempts=attempts, fmt=fmt),
-                    local_model=self.model)
+                    local_review=local_chat, local_model=self.model,
+                    partial_review=lambda subset, schema: local_chat(subset, schema))
             else:
-                reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else chat(self.ollama, self.model, messages, attempts=attempts, fmt=fmt)
+                reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else local_chat(messages)
         except (ValueError, KeyError, TypeError) as e:
             return self._send_json(502, {"error": str(e) if provider == "local" else "API request failed: " + str(e)})
         except urllib.error.HTTPError as e:
@@ -423,7 +428,8 @@ class Handler(SimpleHTTPRequestHandler):
             "reply": content})
         return self._send_json(200, {"message": {"role": "assistant", "content": content},
                                      "model": used_model, "provider": used_provider,
-                                     **({"review": reply["review"]} if "review" in reply else {})})
+                                     **({"review": reply["review"]} if "review" in reply else {}),
+                                     **({"transport": reply["transport"]} if "transport" in reply else {})})
 
     def _typesafe(self, payload):
         try:
