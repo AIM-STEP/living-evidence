@@ -504,7 +504,7 @@ function renderCriteria(){
   const workspace=state.source==='previous'&&previous?previous:AIMSearchCriteriaEditor.workspace(previous,snapshot,now());
   const frame=document.createElement('iframe');criteriaPreviewFrame=frame;
   frame.className='criteria-preview-frame';frame.title='Editable eligibility criteria';
-  frame.src=pageLink('eligibility.html')+(pageLink('eligibility.html').includes('?')?'&':'?')+'embedded=search-criteria-preview&criteriaPreviewVersion=20261118-nma-methods-1';
+  frame.src=pageLink('eligibility.html')+(pageLink('eligibility.html').includes('?')?'&':'?')+'embedded=search-criteria-preview&criteriaPreviewVersion=20261118-nma-methods-2';
   frame.addEventListener('load',()=>{
     if(criteriaPreviewFrame!==frame)return;
     try{

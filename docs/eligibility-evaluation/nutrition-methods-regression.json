@@ -44,7 +44,7 @@
         "side": "include",
         "status": "suggested",
         "backgroundIssue": true,
-        "issue_id": "issue_0ad2116ff2747ee5d6b610dbedefe3a1",
+        "issue_id": "issue_3610940398a33dadf474a65fc0e25929",
         "options": [
           {
             "label": "No age restriction",
@@ -58,7 +58,7 @@
         "evidence": [
           {
             "quote": "hospitalised older people at risk of or with established malnutrition",
-            "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+            "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
             "source_revision": 1
           }
         ]
@@ -69,7 +69,7 @@
     "clarifications": [],
     "trace": [],
     "audit": {
-      "version": "eligibility-v3.1.0",
+      "version": "eligibility-v3.1.1",
       "methodology": "two-stage-eligibility",
       "status": "needs_clarification",
       "project_revision": 2,
@@ -80,7 +80,7 @@
       "calls": [],
       "sources": [
         {
-          "id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+          "id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
           "revision": 1,
           "name": "Question / voice input",
           "text": "To evaluate the eﬀects of various nutritional interventions, compared with either a control group (standard care or placebo) or each other, on patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition, and to rank the eﬀects of these diﬀerent interventions using network meta-analysis (NMA) based on individual participant data (IPD).",
@@ -91,19 +91,19 @@
         "valid": false,
         "errors": [],
         "blocking_issues": [
-          "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+          "issue_3610940398a33dadf474a65fc0e25929"
         ],
         "completeness": {
           "framework": [
             {
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "mapped": true,
               "missing_slots": []
             }
           ],
           "eligibility": {
             "blocking_issues": [
-              "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+              "issue_3610940398a33dadf474a65fc0e25929"
             ],
             "all_scope_information_accounted_for": true
           }
@@ -122,7 +122,7 @@
       "question_relation": null,
       "questions": [
         {
-          "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+          "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
           "display_number": "RQ1",
           "research_question": "To evaluate the eﬀects of various nutritional interventions, compared with either a control group (standard care or placebo) or each other, on patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition, and to rank the eﬀects of these diﬀerent interventions using network meta-analysis (NMA) based on individual participant data (IPD).",
           "objective": "This review uses individual participant data network meta-analysis to compare and rank nutritional interventions for patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition.",
@@ -146,7 +146,7 @@
             "provisional": false,
             "source_refs": [
               {
-                "source_id": "source_ca5e987b-45e8-446e-af57-fe2025274012",
+                "source_id": "source_13736713-d3a5-447b-92ad-557b818fbf71",
                 "source_revision": 1,
                 "quote": "{\"review_methods\":[\"systematic_review\"],\"question_types\":[],\"evidence_units\":[],\"framework_requested\":\"PICO\"}",
                 "start": 0,
@@ -162,7 +162,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "hospitalised older people at risk of or with established malnutrition",
                   "start": 172,
@@ -177,9 +177,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_edf8e1d6b5ff627894d4db0a89bf393c",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"population\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_f6da825fa09d2745bf3c18bbc3cf66e1",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"population\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "hospitalised older people at risk of or with established malnutrition",
               "framework_bindings": [
                 {
@@ -204,9 +204,9 @@
                 }
               ],
               "age_factored": true,
-              "age_boundary_element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
+              "age_boundary_element_id": "element_66777c52251ff854cce6824689341d48",
               "normalization_operations": [
-                "age_boundary_tracked_separately_in_element_0c12d43a7bd0f1ccf5053afe565c96b0"
+                "age_boundary_tracked_separately_in_element_66777c52251ff854cce6824689341d48"
               ]
             },
             {
@@ -216,7 +216,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "various nutritional interventions",
                   "start": 26,
@@ -231,9 +231,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_e650417f1ba2a0bd871869d3b35cc2c1",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"intervention\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"various nutritional interventions\"]],\"nutritional interventions\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_1045240e7c57b1a05c8d6a5a0ee8866c",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"intervention\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"various nutritional interventions\"]],\"nutritional interventions\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "various nutritional interventions",
               "framework_bindings": [
                 {
@@ -257,7 +257,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "a control group (standard care or placebo)",
                   "start": 82,
@@ -272,9 +272,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_379a19c00f8b625a00ab3f84cc9416be",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"comparator\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"a control group (standard care or placebo)\"]],\"control group (standard care or placebo)\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_4e30c13d25880d5bbb9c9459b4d9e187",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"comparator\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"a control group (standard care or placebo)\"]],\"control group (standard care or placebo)\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "a control group (standard care or placebo)",
               "framework_bindings": [
                 {
@@ -298,7 +298,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "each other",
                   "start": 128,
@@ -313,9 +313,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_329d1de57ebf6e0f7ef126994a6f7843",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"comparator\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"each other\"]],\"each other\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_022d7e1cbd1717aa91f986e817c78296",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"comparator\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"each other\"]],\"each other\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "each other",
               "framework_bindings": [
                 {
@@ -342,7 +342,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "patient-relevant outcomes",
                   "start": 143,
@@ -357,9 +357,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_323c11d595aa1fa38d15ca81a35d559f",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"outcome\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"patient-relevant outcomes\"]],\"patient-relevant outcomes\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_725df3aee6e948e071eb1a42444b9784",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"outcome\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"patient-relevant outcomes\"]],\"patient-relevant outcomes\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "patient-relevant outcomes",
               "framework_bindings": [
                 {
@@ -384,7 +384,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "individual participant data (IPD)",
                   "start": 341,
@@ -399,9 +399,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_d72eeaa62c5c01e836ddff62aa54c344",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"evidence_source\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_0ca785f14d386c2fe865ecb57e3dbdb3",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"evidence_source\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "individual participant data (IPD)",
               "framework_bindings": [],
               "related_issue_ids": [],
@@ -423,15 +423,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1b519de002f84d9a60f8693cf0cfee76",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c87abeaf05405e8df5e6c823f59aebc1",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_method",
               "raw_text": "network meta-analysis (NMA)",
               "normalized_text": "network meta-analysis (NMA)",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "network meta-analysis (NMA)",
                   "start": 304,
@@ -451,15 +451,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_ce6ae6fcf2cfbdfab932efa083f9598e",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_2295ca15083e4a073575765170d5ee33",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_objective",
               "raw_text": "rank the eﬀects of these diﬀerent interventions",
               "normalized_text": "rank the effects of the interventions",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "rank the eﬀects of these diﬀerent interventions",
                   "start": 250,
@@ -479,8 +479,8 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1c5198309d735f6e7ec3fa34f3d0d312",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_9163a23d47b55aeb6946f10140982bbf",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "study_design",
               "raw_text": "",
               "normalized_text": "",
@@ -503,8 +503,8 @@
               }
             },
             {
-              "element_id": "element_6339bb3bb7c6c7e980bcee87814605e5",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_d6b4cbd02fd579de2043e78c4f2ada9a",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "evidence_source",
               "raw_text": "",
               "normalized_text": "",
@@ -527,8 +527,8 @@
               }
             },
             {
-              "element_id": "element_8f3205d214f337785b9ce39668f4d10c",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_a5741477f7c1f1ad2d001c8b7d6c7381",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "language",
               "raw_text": "",
               "normalized_text": "",
@@ -551,8 +551,8 @@
               }
             },
             {
-              "element_id": "element_a8c6420342c136b9ceddad5feca62db5",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_5a81d2060f8c712c3c039d922ad562f8",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "publication_date",
               "raw_text": "",
               "normalized_text": "",
@@ -575,8 +575,8 @@
               }
             },
             {
-              "element_id": "element_45c5f98012e7834a57eb557c7950e836",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_272b6373dc3c219db4d3723f768d06b9",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "report_format",
               "raw_text": "",
               "normalized_text": "",
@@ -599,8 +599,8 @@
               }
             },
             {
-              "element_id": "element_15ec6d665cd756c48192906a395776e8",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_a57e09f5014379339fe303e9094798f7",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "sample_size",
               "raw_text": "",
               "normalized_text": "",
@@ -623,8 +623,8 @@
               }
             },
             {
-              "element_id": "element_c7fd49b80a620faa6881be2497a75dc6",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c1e25bab79ff3f2da6a59ae786c2e449",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "quality_score",
               "raw_text": "",
               "normalized_text": "",
@@ -647,8 +647,8 @@
               }
             },
             {
-              "element_id": "element_74da13085cc7102e6d15515cd2ea27d2",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_4c7bcdf98b5b57777dea113d7c0af77b",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "full_text_access",
               "raw_text": "",
               "normalized_text": "",
@@ -677,7 +677,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "hospitalised older people at risk of or with established malnutrition",
                   "start": 172,
@@ -692,9 +692,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"population\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_66777c52251ff854cce6824689341d48",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"population\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "hospitalised older people at risk of or with established malnutrition",
               "framework_bindings": [
                 {
@@ -703,7 +703,7 @@
                 }
               ],
               "related_issue_ids": [
-                "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+                "issue_3610940398a33dadf474a65fc0e25929"
               ],
               "revision": 1,
               "active": true,
@@ -725,88 +725,88 @@
           ],
           "include": [
             {
-              "criterion_id": "criterion_cfbdba2c44931bd26c2e2a0879263d5e",
+              "criterion_id": "criterion_8b7dcbc4f5dabe7a135cc0904741eef6",
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ],
               "disposition": "include",
               "dimension_id": "population",
               "text": "hospitalised older people at risk of or with established malnutrition",
               "expression": {
                 "op": "predicate",
-                "criterion_id": "criterion_cfbdba2c44931bd26c2e2a0879263d5e"
+                "criterion_id": "criterion_8b7dcbc4f5dabe7a135cc0904741eef6"
               },
               "structured_value": null,
               "scope_conditions": [],
               "exceptions": [],
               "source_element_ids": [
-                "element_edf8e1d6b5ff627894d4db0a89bf393c"
+                "element_f6da825fa09d2745bf3c18bbc3cf66e1"
               ],
               "source_decision_ids": [],
               "source_rule_ids": [],
               "revision": 1
             },
             {
-              "criterion_id": "criterion_731ba3bd755810f707b984b180b5989b",
+              "criterion_id": "criterion_443f0c7932bc82df09dfc66d5215ebd3",
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ],
               "disposition": "include",
               "dimension_id": "intervention",
               "text": "nutritional interventions",
               "expression": {
                 "op": "predicate",
-                "criterion_id": "criterion_731ba3bd755810f707b984b180b5989b"
+                "criterion_id": "criterion_443f0c7932bc82df09dfc66d5215ebd3"
               },
               "structured_value": null,
               "scope_conditions": [],
               "exceptions": [],
               "source_element_ids": [
-                "element_e650417f1ba2a0bd871869d3b35cc2c1"
+                "element_1045240e7c57b1a05c8d6a5a0ee8866c"
               ],
               "source_decision_ids": [],
               "source_rule_ids": [],
               "revision": 1
             },
             {
-              "criterion_id": "criterion_f4607c5ceef7647299411a20bc4cc3f6",
+              "criterion_id": "criterion_73f24bf4bd19d81225927f1056c84ede",
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ],
               "disposition": "include",
               "dimension_id": "comparator",
               "text": "control group (standard care or placebo)",
               "expression": {
                 "op": "predicate",
-                "criterion_id": "criterion_f4607c5ceef7647299411a20bc4cc3f6"
+                "criterion_id": "criterion_73f24bf4bd19d81225927f1056c84ede"
               },
               "structured_value": null,
               "scope_conditions": [],
               "exceptions": [],
               "source_element_ids": [
-                "element_379a19c00f8b625a00ab3f84cc9416be"
+                "element_4e30c13d25880d5bbb9c9459b4d9e187"
               ],
               "source_decision_ids": [],
               "source_rule_ids": [],
               "revision": 1
             },
             {
-              "criterion_id": "criterion_db15f67a97ad10ec9f0d3dde512a84f0",
+              "criterion_id": "criterion_3b8f9be787de4145422089031f2da7f1",
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ],
               "disposition": "include",
               "dimension_id": "comparator",
               "text": "another nutritional intervention",
               "expression": {
                 "op": "predicate",
-                "criterion_id": "criterion_db15f67a97ad10ec9f0d3dde512a84f0"
+                "criterion_id": "criterion_3b8f9be787de4145422089031f2da7f1"
               },
               "structured_value": null,
               "scope_conditions": [],
               "exceptions": [],
               "source_element_ids": [
-                "element_329d1de57ebf6e0f7ef126994a6f7843"
+                "element_022d7e1cbd1717aa91f986e817c78296"
               ],
               "source_decision_ids": [],
               "source_rule_ids": [],
@@ -820,22 +820,22 @@
               "children": [
                 {
                   "op": "predicate",
-                  "criterion_id": "criterion_cfbdba2c44931bd26c2e2a0879263d5e"
+                  "criterion_id": "criterion_8b7dcbc4f5dabe7a135cc0904741eef6"
                 },
                 {
                   "op": "predicate",
-                  "criterion_id": "criterion_731ba3bd755810f707b984b180b5989b"
+                  "criterion_id": "criterion_443f0c7932bc82df09dfc66d5215ebd3"
                 },
                 {
                   "op": "any_of",
                   "children": [
                     {
                       "op": "predicate",
-                      "criterion_id": "criterion_f4607c5ceef7647299411a20bc4cc3f6"
+                      "criterion_id": "criterion_73f24bf4bd19d81225927f1056c84ede"
                     },
                     {
                       "op": "predicate",
-                      "criterion_id": "criterion_db15f67a97ad10ec9f0d3dde512a84f0"
+                      "criterion_id": "criterion_3b8f9be787de4145422089031f2da7f1"
                     }
                   ]
                 }
@@ -847,22 +847,22 @@
               "children": [
                 {
                   "op": "predicate",
-                  "criterion_id": "criterion_cfbdba2c44931bd26c2e2a0879263d5e"
+                  "criterion_id": "criterion_8b7dcbc4f5dabe7a135cc0904741eef6"
                 },
                 {
                   "op": "predicate",
-                  "criterion_id": "criterion_731ba3bd755810f707b984b180b5989b"
+                  "criterion_id": "criterion_443f0c7932bc82df09dfc66d5215ebd3"
                 },
                 {
                   "op": "any_of",
                   "children": [
                     {
                       "op": "predicate",
-                      "criterion_id": "criterion_f4607c5ceef7647299411a20bc4cc3f6"
+                      "criterion_id": "criterion_73f24bf4bd19d81225927f1056c84ede"
                     },
                     {
                       "op": "predicate",
-                      "criterion_id": "criterion_db15f67a97ad10ec9f0d3dde512a84f0"
+                      "criterion_id": "criterion_3b8f9be787de4145422089031f2da7f1"
                     }
                   ]
                 }
@@ -878,7 +878,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "patient-relevant outcomes",
                   "start": 143,
@@ -893,9 +893,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_323c11d595aa1fa38d15ca81a35d559f",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"outcome\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"patient-relevant outcomes\"]],\"patient-relevant outcomes\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_725df3aee6e948e071eb1a42444b9784",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"outcome\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"patient-relevant outcomes\"]],\"patient-relevant outcomes\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "patient-relevant outcomes",
               "framework_bindings": [
                 {
@@ -920,7 +920,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "individual participant data (IPD)",
                   "start": 341,
@@ -935,9 +935,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_d72eeaa62c5c01e836ddff62aa54c344",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"evidence_source\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_0ca785f14d386c2fe865ecb57e3dbdb3",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"evidence_source\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "individual participant data (IPD)",
               "framework_bindings": [],
               "related_issue_ids": [],
@@ -959,15 +959,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1b519de002f84d9a60f8693cf0cfee76",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c87abeaf05405e8df5e6c823f59aebc1",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_method",
               "raw_text": "network meta-analysis (NMA)",
               "normalized_text": "network meta-analysis (NMA)",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "network meta-analysis (NMA)",
                   "start": 304,
@@ -987,15 +987,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_ce6ae6fcf2cfbdfab932efa083f9598e",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_2295ca15083e4a073575765170d5ee33",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_objective",
               "raw_text": "rank the eﬀects of these diﬀerent interventions",
               "normalized_text": "rank the effects of the interventions",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "rank the eﬀects of these diﬀerent interventions",
                   "start": 250,
@@ -1024,7 +1024,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "individual participant data (IPD)",
                   "start": 341,
@@ -1039,9 +1039,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_d72eeaa62c5c01e836ddff62aa54c344",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"evidence_source\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_0ca785f14d386c2fe865ecb57e3dbdb3",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"evidence_source\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "individual participant data (IPD)",
               "framework_bindings": [],
               "related_issue_ids": [],
@@ -1063,15 +1063,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1b519de002f84d9a60f8693cf0cfee76",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c87abeaf05405e8df5e6c823f59aebc1",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_method",
               "raw_text": "network meta-analysis (NMA)",
               "normalized_text": "network meta-analysis (NMA)",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "network meta-analysis (NMA)",
                   "start": 304,
@@ -1091,15 +1091,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_ce6ae6fcf2cfbdfab932efa083f9598e",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_2295ca15083e4a073575765170d5ee33",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_objective",
               "raw_text": "rank the eﬀects of these diﬀerent interventions",
               "normalized_text": "rank the effects of the interventions",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "rank the eﬀects of these diﬀerent interventions",
                   "start": 250,
@@ -1119,8 +1119,8 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1c5198309d735f6e7ec3fa34f3d0d312",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_9163a23d47b55aeb6946f10140982bbf",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "study_design",
               "raw_text": "",
               "normalized_text": "",
@@ -1143,8 +1143,8 @@
               }
             },
             {
-              "element_id": "element_6339bb3bb7c6c7e980bcee87814605e5",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_d6b4cbd02fd579de2043e78c4f2ada9a",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "evidence_source",
               "raw_text": "",
               "normalized_text": "",
@@ -1167,8 +1167,8 @@
               }
             },
             {
-              "element_id": "element_8f3205d214f337785b9ce39668f4d10c",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_a5741477f7c1f1ad2d001c8b7d6c7381",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "language",
               "raw_text": "",
               "normalized_text": "",
@@ -1191,8 +1191,8 @@
               }
             },
             {
-              "element_id": "element_a8c6420342c136b9ceddad5feca62db5",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_5a81d2060f8c712c3c039d922ad562f8",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "publication_date",
               "raw_text": "",
               "normalized_text": "",
@@ -1215,8 +1215,8 @@
               }
             },
             {
-              "element_id": "element_45c5f98012e7834a57eb557c7950e836",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_272b6373dc3c219db4d3723f768d06b9",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "report_format",
               "raw_text": "",
               "normalized_text": "",
@@ -1239,8 +1239,8 @@
               }
             },
             {
-              "element_id": "element_15ec6d665cd756c48192906a395776e8",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_a57e09f5014379339fe303e9094798f7",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "sample_size",
               "raw_text": "",
               "normalized_text": "",
@@ -1263,8 +1263,8 @@
               }
             },
             {
-              "element_id": "element_c7fd49b80a620faa6881be2497a75dc6",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c1e25bab79ff3f2da6a59ae786c2e449",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "quality_score",
               "raw_text": "",
               "normalized_text": "",
@@ -1287,8 +1287,8 @@
               }
             },
             {
-              "element_id": "element_74da13085cc7102e6d15515cd2ea27d2",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_4c7bcdf98b5b57777dea113d7c0af77b",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "full_text_access",
               "raw_text": "",
               "normalized_text": "",
@@ -1316,11 +1316,11 @@
       ],
       "issues": [
         {
-          "issue_id": "issue_0ad2116ff2747ee5d6b610dbedefe3a1",
-          "signature": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499|AMBIGUOUS_BOUNDARY|population_age_boundary|element_0c12d43a7bd0f1ccf5053afe565c96b0",
-          "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+          "issue_id": "issue_3610940398a33dadf474a65fc0e25929",
+          "signature": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d|AMBIGUOUS_BOUNDARY|population_age_boundary|element_66777c52251ff854cce6824689341d48",
+          "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
           "element_ids": [
-            "element_0c12d43a7bd0f1ccf5053afe565c96b0"
+            "element_66777c52251ff854cce6824689341d48"
           ],
           "options": [
             {
@@ -1347,27 +1347,27 @@
       "decisions": [],
       "sources": [
         {
-          "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+          "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
           "source_type": "user_input",
           "original_text": "To evaluate the eﬀects of various nutritional interventions, compared with either a control group (standard care or placebo) or each other, on patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition, and to rank the eﬀects of these diﬀerent interventions using network meta-analysis (NMA) based on individual participant data (IPD).",
           "revision": 1,
-          "created_at": "2026-11-18T07:16:11.645Z",
+          "created_at": "2026-11-18T07:18:14.605Z",
           "question_ids": [
-            "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+            "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
           ],
-          "identity": "question:question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+          "identity": "question:question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
           "input_kind": "research_question"
         },
         {
-          "source_id": "source_ca5e987b-45e8-446e-af57-fe2025274012",
+          "source_id": "source_13736713-d3a5-447b-92ad-557b818fbf71",
           "source_type": "user_input",
           "original_text": "{\"review_methods\":[\"systematic_review\"],\"question_types\":[],\"evidence_units\":[],\"framework_requested\":\"PICO\"}",
           "revision": 1,
-          "created_at": "2026-11-18T07:16:11.645Z",
+          "created_at": "2026-11-18T07:18:14.605Z",
           "question_ids": [
-            "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+            "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
           ],
-          "identity": "context:question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+          "identity": "context:question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
           "input_kind": "explicit_context_fields"
         }
       ],
@@ -1375,19 +1375,19 @@
         "valid": false,
         "errors": [],
         "blocking_issues": [
-          "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+          "issue_3610940398a33dadf474a65fc0e25929"
         ],
         "completeness": {
           "framework": [
             {
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "mapped": true,
               "missing_slots": []
             }
           ],
           "eligibility": {
             "blocking_issues": [
-              "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+              "issue_3610940398a33dadf474a65fc0e25929"
             ],
             "all_scope_information_accounted_for": true
           }
@@ -1396,27 +1396,27 @@
       },
       "changes": [
         {
-          "change_id": "change_6f72e8c6-d11a-4cb1-af4c-091cfc9f6cdf",
+          "change_id": "change_9d2a1d3a-ea24-4538-998a-d537d0684fd9",
           "revision": 1,
           "operation": "save_input",
-          "at": "2026-11-18T07:16:11.645Z",
+          "at": "2026-11-18T07:18:14.605Z",
           "changes": [
             {
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ]
             }
           ]
         },
         {
-          "change_id": "change_b38b205e-3c05-4432-948d-f88d028a4f80",
+          "change_id": "change_3f145e96-d929-4370-a7dd-a5bc9b699775",
           "revision": 2,
           "operation": "stage_one",
-          "at": "2026-11-18T07:16:11.649Z",
+          "at": "2026-11-18T07:18:14.609Z",
           "changes": [
             {
               "questions": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ]
             }
           ]
@@ -1467,7 +1467,7 @@
     "clarifications": [],
     "trace": [],
     "audit": {
-      "version": "eligibility-v3.1.0",
+      "version": "eligibility-v3.1.1",
       "methodology": "two-stage-eligibility",
       "status": "final",
       "project_revision": 3,
@@ -1478,7 +1478,7 @@
       "calls": [],
       "sources": [
         {
-          "id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+          "id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
           "revision": 1,
           "name": "Question / voice input",
           "text": "To evaluate the eﬀects of various nutritional interventions, compared with either a control group (standard care or placebo) or each other, on patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition, and to rank the eﬀects of these diﬀerent interventions using network meta-analysis (NMA) based on individual participant data (IPD).",
@@ -1492,7 +1492,7 @@
         "completeness": {
           "framework": [
             {
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "mapped": true,
               "missing_slots": []
             }
@@ -1516,7 +1516,7 @@
       "question_relation": null,
       "questions": [
         {
-          "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+          "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
           "display_number": "RQ1",
           "research_question": "To evaluate the eﬀects of various nutritional interventions, compared with either a control group (standard care or placebo) or each other, on patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition, and to rank the eﬀects of these diﬀerent interventions using network meta-analysis (NMA) based on individual participant data (IPD).",
           "objective": "This review uses individual participant data network meta-analysis to compare and rank nutritional interventions for patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition.",
@@ -1540,7 +1540,7 @@
             "provisional": false,
             "source_refs": [
               {
-                "source_id": "source_ca5e987b-45e8-446e-af57-fe2025274012",
+                "source_id": "source_13736713-d3a5-447b-92ad-557b818fbf71",
                 "source_revision": 1,
                 "quote": "{\"review_methods\":[\"systematic_review\"],\"question_types\":[],\"evidence_units\":[],\"framework_requested\":\"PICO\"}",
                 "start": 0,
@@ -1556,7 +1556,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "hospitalised older people at risk of or with established malnutrition",
                   "start": 172,
@@ -1571,9 +1571,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_edf8e1d6b5ff627894d4db0a89bf393c",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"population\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_f6da825fa09d2745bf3c18bbc3cf66e1",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"population\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "hospitalised older people at risk of or with established malnutrition",
               "framework_bindings": [
                 {
@@ -1598,9 +1598,9 @@
                 }
               ],
               "age_factored": true,
-              "age_boundary_element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
+              "age_boundary_element_id": "element_66777c52251ff854cce6824689341d48",
               "normalization_operations": [
-                "age_boundary_tracked_separately_in_element_0c12d43a7bd0f1ccf5053afe565c96b0"
+                "age_boundary_tracked_separately_in_element_66777c52251ff854cce6824689341d48"
               ]
             },
             {
@@ -1610,7 +1610,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "various nutritional interventions",
                   "start": 26,
@@ -1625,9 +1625,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_e650417f1ba2a0bd871869d3b35cc2c1",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"intervention\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"various nutritional interventions\"]],\"nutritional interventions\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_1045240e7c57b1a05c8d6a5a0ee8866c",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"intervention\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"various nutritional interventions\"]],\"nutritional interventions\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "various nutritional interventions",
               "framework_bindings": [
                 {
@@ -1651,7 +1651,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "a control group (standard care or placebo)",
                   "start": 82,
@@ -1666,9 +1666,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_379a19c00f8b625a00ab3f84cc9416be",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"comparator\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"a control group (standard care or placebo)\"]],\"control group (standard care or placebo)\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_4e30c13d25880d5bbb9c9459b4d9e187",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"comparator\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"a control group (standard care or placebo)\"]],\"control group (standard care or placebo)\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "a control group (standard care or placebo)",
               "framework_bindings": [
                 {
@@ -1692,7 +1692,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "each other",
                   "start": 128,
@@ -1707,9 +1707,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_329d1de57ebf6e0f7ef126994a6f7843",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"comparator\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"each other\"]],\"each other\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_022d7e1cbd1717aa91f986e817c78296",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"comparator\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"each other\"]],\"each other\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "each other",
               "framework_bindings": [
                 {
@@ -1736,7 +1736,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "patient-relevant outcomes",
                   "start": 143,
@@ -1751,9 +1751,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_323c11d595aa1fa38d15ca81a35d559f",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"outcome\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"patient-relevant outcomes\"]],\"patient-relevant outcomes\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_725df3aee6e948e071eb1a42444b9784",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"outcome\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"patient-relevant outcomes\"]],\"patient-relevant outcomes\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "patient-relevant outcomes",
               "framework_bindings": [
                 {
@@ -1778,7 +1778,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "individual participant data (IPD)",
                   "start": 341,
@@ -1793,9 +1793,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_d72eeaa62c5c01e836ddff62aa54c344",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"evidence_source\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_0ca785f14d386c2fe865ecb57e3dbdb3",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"evidence_source\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "individual participant data (IPD)",
               "framework_bindings": [],
               "related_issue_ids": [],
@@ -1817,15 +1817,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1b519de002f84d9a60f8693cf0cfee76",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c87abeaf05405e8df5e6c823f59aebc1",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_method",
               "raw_text": "network meta-analysis (NMA)",
               "normalized_text": "network meta-analysis (NMA)",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "network meta-analysis (NMA)",
                   "start": 304,
@@ -1845,15 +1845,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_ce6ae6fcf2cfbdfab932efa083f9598e",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_2295ca15083e4a073575765170d5ee33",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_objective",
               "raw_text": "rank the eﬀects of these diﬀerent interventions",
               "normalized_text": "rank the effects of the interventions",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "rank the eﬀects of these diﬀerent interventions",
                   "start": 250,
@@ -1873,8 +1873,8 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1c5198309d735f6e7ec3fa34f3d0d312",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_9163a23d47b55aeb6946f10140982bbf",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "study_design",
               "raw_text": "",
               "normalized_text": "",
@@ -1897,8 +1897,8 @@
               }
             },
             {
-              "element_id": "element_6339bb3bb7c6c7e980bcee87814605e5",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_d6b4cbd02fd579de2043e78c4f2ada9a",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "evidence_source",
               "raw_text": "",
               "normalized_text": "",
@@ -1921,8 +1921,8 @@
               }
             },
             {
-              "element_id": "element_8f3205d214f337785b9ce39668f4d10c",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_a5741477f7c1f1ad2d001c8b7d6c7381",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "language",
               "raw_text": "",
               "normalized_text": "",
@@ -1945,8 +1945,8 @@
               }
             },
             {
-              "element_id": "element_a8c6420342c136b9ceddad5feca62db5",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_5a81d2060f8c712c3c039d922ad562f8",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "publication_date",
               "raw_text": "",
               "normalized_text": "",
@@ -1969,8 +1969,8 @@
               }
             },
             {
-              "element_id": "element_45c5f98012e7834a57eb557c7950e836",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_272b6373dc3c219db4d3723f768d06b9",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "report_format",
               "raw_text": "",
               "normalized_text": "",
@@ -1993,8 +1993,8 @@
               }
             },
             {
-              "element_id": "element_15ec6d665cd756c48192906a395776e8",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_a57e09f5014379339fe303e9094798f7",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "sample_size",
               "raw_text": "",
               "normalized_text": "",
@@ -2017,8 +2017,8 @@
               }
             },
             {
-              "element_id": "element_c7fd49b80a620faa6881be2497a75dc6",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c1e25bab79ff3f2da6a59ae786c2e449",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "quality_score",
               "raw_text": "",
               "normalized_text": "",
@@ -2041,8 +2041,8 @@
               }
             },
             {
-              "element_id": "element_74da13085cc7102e6d15515cd2ea27d2",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_4c7bcdf98b5b57777dea113d7c0af77b",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "full_text_access",
               "raw_text": "",
               "normalized_text": "",
@@ -2075,14 +2075,14 @@
               },
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "hospitalised older people at risk of or with established malnutrition",
                   "start": 172,
                   "end": 241
                 },
                 {
-                  "source_id": "source_b8e3b5ef-0ae8-4b91-87e5-c0284d97472c",
+                  "source_id": "source_aec082f5-c9d7-48e8-b32e-be0988580030",
                   "source_revision": 1,
                   "quote": "Define older people as 65 years or older.",
                   "start": 0,
@@ -2097,9 +2097,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"population\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_66777c52251ff854cce6824689341d48",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"population\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "hospitalised older people at risk of or with established malnutrition",
               "framework_bindings": [
                 {
@@ -2114,7 +2114,7 @@
               "exceptions": [],
               "source_rule_ids": [],
               "source_decision_ids": [
-                "decision_ef52bc94-aa16-4e18-a361-758398e66e8b"
+                "decision_bfee5cc2-13c7-40c8-8c8d-f6240f2287bc"
               ],
               "decision_status": "confirmed_by_user",
               "metadata_corrections": [
@@ -2132,104 +2132,104 @@
           ],
           "include": [
             {
-              "criterion_id": "criterion_cfbdba2c44931bd26c2e2a0879263d5e",
+              "criterion_id": "criterion_8b7dcbc4f5dabe7a135cc0904741eef6",
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ],
               "disposition": "include",
               "dimension_id": "population",
               "text": "hospitalised older people at risk of or with established malnutrition",
               "expression": {
                 "op": "predicate",
-                "criterion_id": "criterion_cfbdba2c44931bd26c2e2a0879263d5e"
+                "criterion_id": "criterion_8b7dcbc4f5dabe7a135cc0904741eef6"
               },
               "structured_value": null,
               "scope_conditions": [],
               "exceptions": [],
               "source_element_ids": [
-                "element_edf8e1d6b5ff627894d4db0a89bf393c"
+                "element_f6da825fa09d2745bf3c18bbc3cf66e1"
               ],
               "source_decision_ids": [],
               "source_rule_ids": [],
               "revision": 1
             },
             {
-              "criterion_id": "criterion_731ba3bd755810f707b984b180b5989b",
+              "criterion_id": "criterion_443f0c7932bc82df09dfc66d5215ebd3",
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ],
               "disposition": "include",
               "dimension_id": "intervention",
               "text": "nutritional interventions",
               "expression": {
                 "op": "predicate",
-                "criterion_id": "criterion_731ba3bd755810f707b984b180b5989b"
+                "criterion_id": "criterion_443f0c7932bc82df09dfc66d5215ebd3"
               },
               "structured_value": null,
               "scope_conditions": [],
               "exceptions": [],
               "source_element_ids": [
-                "element_e650417f1ba2a0bd871869d3b35cc2c1"
+                "element_1045240e7c57b1a05c8d6a5a0ee8866c"
               ],
               "source_decision_ids": [],
               "source_rule_ids": [],
               "revision": 1
             },
             {
-              "criterion_id": "criterion_f4607c5ceef7647299411a20bc4cc3f6",
+              "criterion_id": "criterion_73f24bf4bd19d81225927f1056c84ede",
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ],
               "disposition": "include",
               "dimension_id": "comparator",
               "text": "control group (standard care or placebo)",
               "expression": {
                 "op": "predicate",
-                "criterion_id": "criterion_f4607c5ceef7647299411a20bc4cc3f6"
+                "criterion_id": "criterion_73f24bf4bd19d81225927f1056c84ede"
               },
               "structured_value": null,
               "scope_conditions": [],
               "exceptions": [],
               "source_element_ids": [
-                "element_379a19c00f8b625a00ab3f84cc9416be"
+                "element_4e30c13d25880d5bbb9c9459b4d9e187"
               ],
               "source_decision_ids": [],
               "source_rule_ids": [],
               "revision": 1
             },
             {
-              "criterion_id": "criterion_db15f67a97ad10ec9f0d3dde512a84f0",
+              "criterion_id": "criterion_3b8f9be787de4145422089031f2da7f1",
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ],
               "disposition": "include",
               "dimension_id": "comparator",
               "text": "another nutritional intervention",
               "expression": {
                 "op": "predicate",
-                "criterion_id": "criterion_db15f67a97ad10ec9f0d3dde512a84f0"
+                "criterion_id": "criterion_3b8f9be787de4145422089031f2da7f1"
               },
               "structured_value": null,
               "scope_conditions": [],
               "exceptions": [],
               "source_element_ids": [
-                "element_329d1de57ebf6e0f7ef126994a6f7843"
+                "element_022d7e1cbd1717aa91f986e817c78296"
               ],
               "source_decision_ids": [],
               "source_rule_ids": [],
               "revision": 1
             },
             {
-              "criterion_id": "criterion_200ed11986c0269b247cde4592aa3257",
+              "criterion_id": "criterion_a9709ac600e616dce27e09922080c978",
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ],
               "disposition": "include",
               "dimension_id": "population.age",
               "text": "Age (≥65 year)",
               "expression": {
                 "op": "predicate",
-                "criterion_id": "criterion_200ed11986c0269b247cde4592aa3257"
+                "criterion_id": "criterion_a9709ac600e616dce27e09922080c978"
               },
               "structured_value": {
                 "operator": "gte",
@@ -2239,10 +2239,10 @@
               "scope_conditions": [],
               "exceptions": [],
               "source_element_ids": [
-                "element_0c12d43a7bd0f1ccf5053afe565c96b0"
+                "element_66777c52251ff854cce6824689341d48"
               ],
               "source_decision_ids": [
-                "decision_ef52bc94-aa16-4e18-a361-758398e66e8b"
+                "decision_bfee5cc2-13c7-40c8-8c8d-f6240f2287bc"
               ],
               "source_rule_ids": [],
               "revision": 1
@@ -2258,22 +2258,22 @@
                   "children": [
                     {
                       "op": "predicate",
-                      "criterion_id": "criterion_cfbdba2c44931bd26c2e2a0879263d5e"
+                      "criterion_id": "criterion_8b7dcbc4f5dabe7a135cc0904741eef6"
                     },
                     {
                       "op": "predicate",
-                      "criterion_id": "criterion_731ba3bd755810f707b984b180b5989b"
+                      "criterion_id": "criterion_443f0c7932bc82df09dfc66d5215ebd3"
                     },
                     {
                       "op": "any_of",
                       "children": [
                         {
                           "op": "predicate",
-                          "criterion_id": "criterion_f4607c5ceef7647299411a20bc4cc3f6"
+                          "criterion_id": "criterion_73f24bf4bd19d81225927f1056c84ede"
                         },
                         {
                           "op": "predicate",
-                          "criterion_id": "criterion_db15f67a97ad10ec9f0d3dde512a84f0"
+                          "criterion_id": "criterion_3b8f9be787de4145422089031f2da7f1"
                         }
                       ]
                     }
@@ -2281,7 +2281,7 @@
                 },
                 {
                   "op": "predicate",
-                  "criterion_id": "criterion_200ed11986c0269b247cde4592aa3257"
+                  "criterion_id": "criterion_a9709ac600e616dce27e09922080c978"
                 }
               ]
             },
@@ -2294,22 +2294,22 @@
                   "children": [
                     {
                       "op": "predicate",
-                      "criterion_id": "criterion_cfbdba2c44931bd26c2e2a0879263d5e"
+                      "criterion_id": "criterion_8b7dcbc4f5dabe7a135cc0904741eef6"
                     },
                     {
                       "op": "predicate",
-                      "criterion_id": "criterion_731ba3bd755810f707b984b180b5989b"
+                      "criterion_id": "criterion_443f0c7932bc82df09dfc66d5215ebd3"
                     },
                     {
                       "op": "any_of",
                       "children": [
                         {
                           "op": "predicate",
-                          "criterion_id": "criterion_f4607c5ceef7647299411a20bc4cc3f6"
+                          "criterion_id": "criterion_73f24bf4bd19d81225927f1056c84ede"
                         },
                         {
                           "op": "predicate",
-                          "criterion_id": "criterion_db15f67a97ad10ec9f0d3dde512a84f0"
+                          "criterion_id": "criterion_3b8f9be787de4145422089031f2da7f1"
                         }
                       ]
                     }
@@ -2317,7 +2317,7 @@
                 },
                 {
                   "op": "predicate",
-                  "criterion_id": "criterion_200ed11986c0269b247cde4592aa3257"
+                  "criterion_id": "criterion_a9709ac600e616dce27e09922080c978"
                 }
               ]
             }
@@ -2331,7 +2331,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "patient-relevant outcomes",
                   "start": 143,
@@ -2346,9 +2346,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_323c11d595aa1fa38d15ca81a35d559f",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"outcome\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"patient-relevant outcomes\"]],\"patient-relevant outcomes\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_725df3aee6e948e071eb1a42444b9784",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"outcome\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"patient-relevant outcomes\"]],\"patient-relevant outcomes\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "patient-relevant outcomes",
               "framework_bindings": [
                 {
@@ -2373,7 +2373,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "individual participant data (IPD)",
                   "start": 341,
@@ -2388,9 +2388,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_d72eeaa62c5c01e836ddff62aa54c344",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"evidence_source\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_0ca785f14d386c2fe865ecb57e3dbdb3",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"evidence_source\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "individual participant data (IPD)",
               "framework_bindings": [],
               "related_issue_ids": [],
@@ -2412,15 +2412,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1b519de002f84d9a60f8693cf0cfee76",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c87abeaf05405e8df5e6c823f59aebc1",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_method",
               "raw_text": "network meta-analysis (NMA)",
               "normalized_text": "network meta-analysis (NMA)",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "network meta-analysis (NMA)",
                   "start": 304,
@@ -2440,15 +2440,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_ce6ae6fcf2cfbdfab932efa083f9598e",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_2295ca15083e4a073575765170d5ee33",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_objective",
               "raw_text": "rank the eﬀects of these diﬀerent interventions",
               "normalized_text": "rank the effects of the interventions",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "rank the eﬀects of these diﬀerent interventions",
                   "start": 250,
@@ -2477,7 +2477,7 @@
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "individual participant data (IPD)",
                   "start": 341,
@@ -2492,9 +2492,9 @@
                 "status": "supported",
                 "reason": "SIMULATED: isolate downstream semantic safeguards"
               },
-              "element_id": "element_d72eeaa62c5c01e836ddff62aa54c344",
-              "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"evidence_source\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_0ca785f14d386c2fe865ecb57e3dbdb3",
+              "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"evidence_source\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"individual participant data (IPD)\"]],\"individual participant data (IPD)\",\"eligibility_condition\",\"include\",[],[]]",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "raw_text": "individual participant data (IPD)",
               "framework_bindings": [],
               "related_issue_ids": [],
@@ -2516,15 +2516,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1b519de002f84d9a60f8693cf0cfee76",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c87abeaf05405e8df5e6c823f59aebc1",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_method",
               "raw_text": "network meta-analysis (NMA)",
               "normalized_text": "network meta-analysis (NMA)",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "network meta-analysis (NMA)",
                   "start": 304,
@@ -2544,15 +2544,15 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_ce6ae6fcf2cfbdfab932efa083f9598e",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_2295ca15083e4a073575765170d5ee33",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "analysis_objective",
               "raw_text": "rank the eﬀects of these diﬀerent interventions",
               "normalized_text": "rank the effects of the interventions",
               "structured_value": null,
               "source_refs": [
                 {
-                  "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                  "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                   "source_revision": 1,
                   "quote": "rank the eﬀects of these diﬀerent interventions",
                   "start": 250,
@@ -2572,8 +2572,8 @@
               "methodology_rule_id": "analysis_plan_is_not_eligibility"
             },
             {
-              "element_id": "element_1c5198309d735f6e7ec3fa34f3d0d312",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_9163a23d47b55aeb6946f10140982bbf",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "study_design",
               "raw_text": "",
               "normalized_text": "",
@@ -2596,8 +2596,8 @@
               }
             },
             {
-              "element_id": "element_6339bb3bb7c6c7e980bcee87814605e5",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_d6b4cbd02fd579de2043e78c4f2ada9a",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "evidence_source",
               "raw_text": "",
               "normalized_text": "",
@@ -2620,8 +2620,8 @@
               }
             },
             {
-              "element_id": "element_8f3205d214f337785b9ce39668f4d10c",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_a5741477f7c1f1ad2d001c8b7d6c7381",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "language",
               "raw_text": "",
               "normalized_text": "",
@@ -2644,8 +2644,8 @@
               }
             },
             {
-              "element_id": "element_a8c6420342c136b9ceddad5feca62db5",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_5a81d2060f8c712c3c039d922ad562f8",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "publication_date",
               "raw_text": "",
               "normalized_text": "",
@@ -2668,8 +2668,8 @@
               }
             },
             {
-              "element_id": "element_45c5f98012e7834a57eb557c7950e836",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_272b6373dc3c219db4d3723f768d06b9",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "report_format",
               "raw_text": "",
               "normalized_text": "",
@@ -2692,8 +2692,8 @@
               }
             },
             {
-              "element_id": "element_15ec6d665cd756c48192906a395776e8",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_a57e09f5014379339fe303e9094798f7",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "sample_size",
               "raw_text": "",
               "normalized_text": "",
@@ -2716,8 +2716,8 @@
               }
             },
             {
-              "element_id": "element_c7fd49b80a620faa6881be2497a75dc6",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_c1e25bab79ff3f2da6a59ae786c2e449",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "quality_score",
               "raw_text": "",
               "normalized_text": "",
@@ -2740,8 +2740,8 @@
               }
             },
             {
-              "element_id": "element_74da13085cc7102e6d15515cd2ea27d2",
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "element_id": "element_4c7bcdf98b5b57777dea113d7c0af77b",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "dimension_id": "full_text_access",
               "raw_text": "",
               "normalized_text": "",
@@ -2770,12 +2770,12 @@
       "issues": [],
       "decisions": [
         {
-          "decision_id": "decision_ef52bc94-aa16-4e18-a361-758398e66e8b",
+          "decision_id": "decision_bfee5cc2-13c7-40c8-8c8d-f6240f2287bc",
           "issue_ids": [
-            "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+            "issue_3610940398a33dadf474a65fc0e25929"
           ],
           "source_ref": {
-            "source_id": "source_b8e3b5ef-0ae8-4b91-87e5-c0284d97472c",
+            "source_id": "source_aec082f5-c9d7-48e8-b32e-be0988580030",
             "source_revision": 1,
             "quote": "Define older people as 65 years or older.",
             "start": 0,
@@ -2783,11 +2783,11 @@
           },
           "answer_text": "Define older people as 65 years or older.",
           "action": "confirm",
-          "at": "2026-11-18T07:16:11.652Z",
+          "at": "2026-11-18T07:18:14.612Z",
           "revision": 3,
           "changes": [
             {
-              "element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
+              "element_id": "element_66777c52251ff854cce6824689341d48",
               "old": {
                 "candidate_id": "p",
                 "dimension_id": "population.age",
@@ -2795,7 +2795,7 @@
                 "structured_value": null,
                 "source_refs": [
                   {
-                    "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                    "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                     "source_revision": 1,
                     "quote": "hospitalised older people at risk of or with established malnutrition",
                     "start": 172,
@@ -2810,9 +2810,9 @@
                   "status": "supported",
                   "reason": "SIMULATED: isolate downstream semantic safeguards"
                 },
-                "element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
-                "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"population\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
-                "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+                "element_id": "element_66777c52251ff854cce6824689341d48",
+                "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"population\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
+                "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
                 "raw_text": "hospitalised older people at risk of or with established malnutrition",
                 "framework_bindings": [
                   {
@@ -2821,7 +2821,7 @@
                   }
                 ],
                 "related_issue_ids": [
-                  "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+                  "issue_3610940398a33dadf474a65fc0e25929"
                 ],
                 "revision": 1,
                 "active": true,
@@ -2851,14 +2851,14 @@
                 },
                 "source_refs": [
                   {
-                    "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                    "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                     "source_revision": 1,
                     "quote": "hospitalised older people at risk of or with established malnutrition",
                     "start": 172,
                     "end": 241
                   },
                   {
-                    "source_id": "source_b8e3b5ef-0ae8-4b91-87e5-c0284d97472c",
+                    "source_id": "source_aec082f5-c9d7-48e8-b32e-be0988580030",
                     "source_revision": 1,
                     "quote": "Define older people as 65 years or older.",
                     "start": 0,
@@ -2873,9 +2873,9 @@
                   "status": "supported",
                   "reason": "SIMULATED: isolate downstream semantic safeguards"
                 },
-                "element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
-                "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"population\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
-                "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+                "element_id": "element_66777c52251ff854cce6824689341d48",
+                "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"population\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
+                "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
                 "raw_text": "hospitalised older people at risk of or with established malnutrition",
                 "framework_bindings": [
                   {
@@ -2884,7 +2884,7 @@
                   }
                 ],
                 "related_issue_ids": [
-                  "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+                  "issue_3610940398a33dadf474a65fc0e25929"
                 ],
                 "revision": 2,
                 "active": true,
@@ -2913,42 +2913,42 @@
       ],
       "sources": [
         {
-          "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+          "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
           "source_type": "user_input",
           "original_text": "To evaluate the eﬀects of various nutritional interventions, compared with either a control group (standard care or placebo) or each other, on patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition, and to rank the eﬀects of these diﬀerent interventions using network meta-analysis (NMA) based on individual participant data (IPD).",
           "revision": 1,
-          "created_at": "2026-11-18T07:16:11.645Z",
+          "created_at": "2026-11-18T07:18:14.605Z",
           "question_ids": [
-            "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+            "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
           ],
-          "identity": "question:question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+          "identity": "question:question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
           "input_kind": "research_question"
         },
         {
-          "source_id": "source_ca5e987b-45e8-446e-af57-fe2025274012",
+          "source_id": "source_13736713-d3a5-447b-92ad-557b818fbf71",
           "source_type": "user_input",
           "original_text": "{\"review_methods\":[\"systematic_review\"],\"question_types\":[],\"evidence_units\":[],\"framework_requested\":\"PICO\"}",
           "revision": 1,
-          "created_at": "2026-11-18T07:16:11.645Z",
+          "created_at": "2026-11-18T07:18:14.605Z",
           "question_ids": [
-            "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+            "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
           ],
-          "identity": "context:question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+          "identity": "context:question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
           "input_kind": "explicit_context_fields"
         },
         {
-          "source_id": "source_b8e3b5ef-0ae8-4b91-87e5-c0284d97472c",
+          "source_id": "source_aec082f5-c9d7-48e8-b32e-be0988580030",
           "source_type": "human_answer",
           "original_text": "Define older people as 65 years or older.",
           "revision": 1,
-          "created_at": "2026-11-18T07:16:11.652Z",
+          "created_at": "2026-11-18T07:18:14.612Z",
           "question_ids": [
-            "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+            "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
           ],
           "identity": null,
           "request_id": "confirm-age",
           "issue_ids": [
-            "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+            "issue_3610940398a33dadf474a65fc0e25929"
           ]
         }
       ],
@@ -2959,7 +2959,7 @@
         "completeness": {
           "framework": [
             {
-              "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+              "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
               "mapped": true,
               "missing_slots": []
             }
@@ -2973,44 +2973,44 @@
       },
       "changes": [
         {
-          "change_id": "change_6f72e8c6-d11a-4cb1-af4c-091cfc9f6cdf",
+          "change_id": "change_9d2a1d3a-ea24-4538-998a-d537d0684fd9",
           "revision": 1,
           "operation": "save_input",
-          "at": "2026-11-18T07:16:11.645Z",
+          "at": "2026-11-18T07:18:14.605Z",
           "changes": [
             {
               "question_ids": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ]
             }
           ]
         },
         {
-          "change_id": "change_b38b205e-3c05-4432-948d-f88d028a4f80",
+          "change_id": "change_3f145e96-d929-4370-a7dd-a5bc9b699775",
           "revision": 2,
           "operation": "stage_one",
-          "at": "2026-11-18T07:16:11.649Z",
+          "at": "2026-11-18T07:18:14.609Z",
           "changes": [
             {
               "questions": [
-                "question_c9a13825-10ad-4e64-ae04-b0c9509ab499"
+                "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d"
               ]
             }
           ]
         },
         {
-          "change_id": "change_5797bb4a-8ba3-435d-a056-d285ca91a27c",
+          "change_id": "change_5e90ed0e-4840-4bba-8dd7-049508e7cd5f",
           "revision": 3,
           "operation": "apply_decisions",
-          "at": "2026-11-18T07:16:11.653Z",
+          "at": "2026-11-18T07:18:14.613Z",
           "changes": [
             {
-              "decision_id": "decision_ef52bc94-aa16-4e18-a361-758398e66e8b",
+              "decision_id": "decision_bfee5cc2-13c7-40c8-8c8d-f6240f2287bc",
               "issue_ids": [
-                "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+                "issue_3610940398a33dadf474a65fc0e25929"
               ],
               "source_ref": {
-                "source_id": "source_b8e3b5ef-0ae8-4b91-87e5-c0284d97472c",
+                "source_id": "source_aec082f5-c9d7-48e8-b32e-be0988580030",
                 "source_revision": 1,
                 "quote": "Define older people as 65 years or older.",
                 "start": 0,
@@ -3018,11 +3018,11 @@
               },
               "answer_text": "Define older people as 65 years or older.",
               "action": "confirm",
-              "at": "2026-11-18T07:16:11.652Z",
+              "at": "2026-11-18T07:18:14.612Z",
               "revision": 3,
               "changes": [
                 {
-                  "element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
+                  "element_id": "element_66777c52251ff854cce6824689341d48",
                   "old": {
                     "candidate_id": "p",
                     "dimension_id": "population.age",
@@ -3030,7 +3030,7 @@
                     "structured_value": null,
                     "source_refs": [
                       {
-                        "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                        "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                         "source_revision": 1,
                         "quote": "hospitalised older people at risk of or with established malnutrition",
                         "start": 172,
@@ -3045,9 +3045,9 @@
                       "status": "supported",
                       "reason": "SIMULATED: isolate downstream semantic safeguards"
                     },
-                    "element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
-                    "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"population\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
-                    "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+                    "element_id": "element_66777c52251ff854cce6824689341d48",
+                    "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"population\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
+                    "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
                     "raw_text": "hospitalised older people at risk of or with established malnutrition",
                     "framework_bindings": [
                       {
@@ -3056,7 +3056,7 @@
                       }
                     ],
                     "related_issue_ids": [
-                      "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+                      "issue_3610940398a33dadf474a65fc0e25929"
                     ],
                     "revision": 1,
                     "active": true,
@@ -3086,14 +3086,14 @@
                     },
                     "source_refs": [
                       {
-                        "source_id": "source_910eff04-5ec1-4064-b462-7fb41cc8340e",
+                        "source_id": "source_54127978-599a-4fca-985d-6ae8fdae80a7",
                         "source_revision": 1,
                         "quote": "hospitalised older people at risk of or with established malnutrition",
                         "start": 172,
                         "end": 241
                       },
                       {
-                        "source_id": "source_b8e3b5ef-0ae8-4b91-87e5-c0284d97472c",
+                        "source_id": "source_aec082f5-c9d7-48e8-b32e-be0988580030",
                         "source_revision": 1,
                         "quote": "Define older people as 65 years or older.",
                         "start": 0,
@@ -3108,9 +3108,9 @@
                       "status": "supported",
                       "reason": "SIMULATED: isolate downstream semantic safeguards"
                     },
-                    "element_id": "element_0c12d43a7bd0f1ccf5053afe565c96b0",
-                    "original_candidate_key": "[\"question_c9a13825-10ad-4e64-ae04-b0c9509ab499\",\"population\",[[\"source_910eff04-5ec1-4064-b462-7fb41cc8340e\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
-                    "question_id": "question_c9a13825-10ad-4e64-ae04-b0c9509ab499",
+                    "element_id": "element_66777c52251ff854cce6824689341d48",
+                    "original_candidate_key": "[\"question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d\",\"population\",[[\"source_54127978-599a-4fca-985d-6ae8fdae80a7\",1,\"hospitalised older people at risk of or with established malnutrition\"]],\"hospitalised people at risk of or with established malnutrition\",\"eligibility_condition\",\"include\",[],[]]",
+                    "question_id": "question_5865d3a7-5d27-4bdd-8e86-1310c2eeac9d",
                     "raw_text": "hospitalised older people at risk of or with established malnutrition",
                     "framework_bindings": [
                       {
@@ -3119,7 +3119,7 @@
                       }
                     ],
                     "related_issue_ids": [
-                      "issue_0ad2116ff2747ee5d6b610dbedefe3a1"
+                      "issue_3610940398a33dadf474a65fc0e25929"
                     ],
                     "revision": 2,
                     "active": true,

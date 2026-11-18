@@ -1,6 +1,6 @@
 {
   "case": "User nutrition/IPD/NMA objective",
-  "engine_version": "eligibility-v3.1.0",
+  "engine_version": "eligibility-v3.1.1",
   "test_type": "PROGRAM_AND_ESTABLISHED_FRONTEND_REGRESSION",
   "model_outputs_in_tests": "SIMULATED",
   "new_live_model_evaluation_completed": false,
