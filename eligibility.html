@@ -168,11 +168,9 @@ function backgroundErrorMessage(error){
   return messages[error.code]||'The eligibility check could not be completed'+(error.code?' ('+error.code+')':'')+'. Your previous version has been kept.';
 }
 function backgroundModelClient(model){return {get exchanges(){return model.auditTrail||[];},async request(step,project,payload,schema,instruction,signal){
-  const started=Date.now(),message=(generationStatus.textContent||'Waiting for model response…').replace(/ Waiting for model response — .*$/,'');
-  const waiting=typeof setInterval==='function'?setInterval(()=>{if(signal?.aborted)return;generationStatus.hidden=false;generationStatus.textContent=message+' Waiting for model response — '+Math.floor((Date.now()-started)/1000)+' s elapsed.';},1000):null;
   let abort;const cancelled=new Promise((_,reject)=>{abort=()=>{const error=new Error('Generation stopped.');error.name='AbortError';reject(error);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true});});
   try{return await Promise.race([cancelled,Promise.resolve().then(()=>{if(signal?.aborted){const error=new Error('Generation stopped.');error.name='AbortError';throw error;}return callCriteriaJson(model,instruction,{step,project_id:project.project_id,base_revision:project.revision,config_versions:project.config_versions,output_language:'en',payload},signal,schema);})]);}
-  finally{signal?.removeEventListener('abort',abort);if(waiting!==null)clearInterval(waiting);}
+  finally{signal?.removeEventListener('abort',abort);}
 }};}
 
 function useBackgroundCriteria(stage,runData,resetDecisions=true){
@@ -233,7 +231,7 @@ const generationStatus=$('generation-status');
 let generationController=null,generationNonce=0;
 function criteriaProgress(percent){const el=$('criteria-progress'),value=Math.max(0,Math.min(100,Math.round(percent)));el.hidden=false;el.style.setProperty('--progress',value+'%');el.setAttribute('aria-valuenow',String(value));el.setAttribute('aria-valuetext',value===100?'Completed':value+'% of workflow stages completed — see the current step below');el.querySelector('.criteria-progress-percent').textContent=value+'%';el.classList.toggle('is-processing',value<100)}
 
-function setMachineStatus(message,error=false,percent){generationStatus.textContent=message;generationStatus.hidden=!message;generationStatus.classList.toggle('error',error);if(Number.isFinite(percent))criteriaProgress(percent);if(error)$('criteria-progress').classList.remove('is-processing');if(!message&&!generationController)$('criteria-progress').hidden=true;if(message&&generationController){state.generationProgressLog=[...(state.generationProgressLog||[]),{message,error,date:new Date().toISOString()}].slice(-60);try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}}
+function setMachineStatus(message,error=false,percent){generationStatus.textContent=message;generationStatus.hidden=!message||!!(generationController&&!error);generationStatus.classList.toggle('error',error);if(Number.isFinite(percent))criteriaProgress(percent);if(error)$('criteria-progress').classList.remove('is-processing');if(!message&&!generationController)$('criteria-progress').hidden=true;if(message&&generationController){state.generationProgressLog=[...(state.generationProgressLog||[]),{message,error,date:new Date().toISOString()}].slice(-60);try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}}
 function stopMachineGeneration(){generationNonce++;if(generationController){generationController.abort();generationController=null}$('criteria-progress').classList.remove('is-processing');$('start-machine').disabled=false;$('start-machine').textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}
 const attachedFiles=[];
 let nextAttachmentId=0,voiceRecognition=null,voiceDone=Promise.resolve(),resolveVoiceDone=null,pdfModulePromise=null;
