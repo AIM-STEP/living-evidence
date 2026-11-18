@@ -18,7 +18,7 @@ assert(!html.includes('AIMSTEPEligibilityWorkspace.mount'));assert(!html.include
   return {ok:true,json:async()=>({message:{content:JSON.stringify(answer)},model:'SIMULATED'})};
  });
  t.el('generation-method').value='machine';t.el('generation-method').handlers.change();t.el('question').value='Review exercise in older patients. Exclude animal studies.';
- await t.el('start-machine').handlers.click();let state=t.api.state();assert(state.machineRun,t.el('generation-status').textContent);assert.equal(state.machineRefinement.audit.version,'eligibility-v3.0.0');assert.equal(state.eligibilityV3Snapshot.output_language,'en');assert(state.machineCriteria.some(row=>row.uncertain.includes('animal studies')),'Explicit exclusions must remain in Exclusion');
+ await t.el('start-machine').handlers.click();let state=t.api.state();assert(state.machineRun,t.el('generation-status').textContent);assert.equal(state.machineRefinement.audit.version,E.VERSION);assert.equal(state.eligibilityV3Snapshot.output_language,'en');assert(state.machineCriteria.some(row=>/animal studies/i.test(row.uncertain)),'Explicit exclusions must remain in Exclusion');
  let markup=t.el('preview').innerHTML;for(const section of ['Review topic:','Inclusion','Exclusion','Description','Confirm unclear criteria'])assert(markup.includes(section),section);
  assert(!/[\u3400-\u9fff]/u.test(markup));assert(!markup.includes('FrameworkRegistry'));assert(!markup.includes('Original source excerpts'));assert(!markup.includes('Automatic check notes'));assert(!markup.includes('<input'));
  let core=JSON.parse(t.storage.get('aimstep-eligibility-v3:synthetic-grounding'));assert.equal(core.status,'needs_clarification');assert.equal(core.output_language,'en');

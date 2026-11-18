@@ -45,6 +45,7 @@ The established generation cancellation and ten-minute request limit remain. Mod
 | --- | --- |
 | `app/eligibility/background.js` | Headless integration with the established editor, English projection, necessary confirmations, atomic storage and author-edit provenance |
 | `app/eligibility/registries.js` | Independent framework/profile registries and case-sensitive alias handling |
+| `app/eligibility/methodology.js` | Source-grounded analysis/data roles, retained age qualifiers, dimension-preserving English prose and analysis objectives |
 | `app/eligibility/domain.js` | Stable IDs, enums, Unicode source positions, numeric/role/exception checks and logical structures |
 | `app/eligibility/engine.js` | Versioned input, Elements, clarification detection, Decisions, criteria, validation and snapshots |
 | `app/eligibility/model.js` | Extraction, separate semantic review and natural-language answer interpretation |
@@ -94,3 +95,13 @@ node tools/evaluate_eligibility_v3.cjs --case all --output /tmp/eligibility-real
 ```
 
 Use `AIMSTEP_ELIGIBILITY_MODEL_BASE` or `--base` for the existing backend. `--exchange-dir` supports external HTTP execution in a restricted test environment; `--resume` preserves input IDs, and `--replay` verifies unchanged request hashes before replaying recorded responses. Synthetic tests, historical real outputs, metadata corrections, transport failures and independent expert validation must remain separately reported.
+
+## Nutrition / IPD-NMA correction (2026-11-18)
+
+The user-provided objective is covered by `tests/eligibility/fixtures/nutrition-ipd-nma.json`, `nutrition.cjs` and `nutrition-frontend.cjs`. These tests deliberately reproduce the reported bad semantic candidates, rather than supplying only ideal inputs: a dropped older qualifier, an IPD eligibility condition, an unresolved comparator antecedent and a topic without analysis objectives.
+
+The engine preserves “older people” while its numeric age boundary remains pending. IPD/NMA/ranking are saved as source-backed analysis information; a separate, explicit data-availability eligibility rule remains effective. Within-dimension alternatives stay under Comparison or their corresponding framework slot. The topic covers the clinical scope and explicit analysis objectives. Description retains outcomes of interest and analysis purposes, including after a human age decision or inline edit. Word export uses the same preview output.
+
+Only the necessary age boundary is requested for this case. No RCT, language, nutritional-intervention subtype or numeric age restriction is added by default. The interface layout is unchanged. Existing saved outputs are retained; Generate must be run again to apply the new method to them.
+
+Current engine version: `eligibility-v3.1.0`; review-profile configuration: `1.1.0`. Program/integration results are in `docs/eligibility-evaluation/nutrition-methods-tests.json`; the reference output is explicitly labeled as a simulated-candidate program regression. The new live-model verification attempt did not obtain a complete response within the external test client's 30-second window and is not counted as passed. These fixes address the reported conversions and are not a claim of independent validation of all research-method requirements.

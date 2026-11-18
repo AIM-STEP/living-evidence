@@ -1,0 +1,9 @@
+{
+  "case_id": "user-nutrition-ipd-nma",
+  "research_question": "To evaluate the eﬀects of various nutritional interventions, compared with either a control group (standard care or placebo) or each other, on patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition, and to rank the eﬀects of these diﬀerent interventions using network meta-analysis (NMA) based on individual participant data (IPD).",
+  "expected_topic": "This review uses individual participant data network meta-analysis to compare and rank nutritional interventions for patient-relevant outcomes in hospitalised older people at risk of or with established malnutrition.",
+  "expected_population": "Studies involving hospitalised older people at risk of or with established malnutrition.",
+  "expected_intervention": "Studies evaluating nutritional interventions.",
+  "expected_comparison": "Studies comparing the nutritional intervention with standard care, placebo, or another nutritional intervention.",
+  "expectation_basis": "User-provided research question and explicitly approved correction; semantic model responses in the regression test are simulated, not a live model evaluation."
+}

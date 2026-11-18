@@ -1,3 +1,5 @@
+> Nutrition/IPD-NMA update: the user's original objective now has a dedicated [program and frontend regression](nutrition-methods-tests.json) and [reference output](nutrition-methods-regression.json). Semantic responses in these tests are simulated and deliberately reproduce the reported defects. The new live-model attempt is incomplete; it is not counted as a pass. Existing real-model records below remain historical records.
+
 > Production frontend update: the established English interface has been restored. The technical workspace and its DOM test have been removed. The new methodology runs through the headless adapter behind the existing Generate and confirmation flow. Current regression and integration results are in [classic-frontend-tests.json](classic-frontend-tests.json); the workspace DOM result below is a historical development record, not the current production interface. No new live-model accuracy claim is made for this frontend change.
 
 # 本次纳排模块验收记录（2026-11-18）

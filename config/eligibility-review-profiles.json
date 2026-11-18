@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "profiles": [
     {
       "applicable_dimensions": [
@@ -58,6 +58,12 @@
           "rule_id": "separate_outcome_uses",
           "category": "expression_data",
           "content": "结局关注、测量要求、报告要求分别保存，不自动形成报告资格限制。"
+        },
+        {
+          "rule_id": "analysis_plan_is_not_eligibility",
+          "category": "expression_data",
+          "content": "Preserve analysis methods, data levels and ranking objectives as review-focus information. They authorize a study eligibility restriction only when independently specified as such in the input or a human decision.",
+          "basis": "docs/eligibility-spec.md sections 2, 6 and 8.2"
         }
       ],
       "authorized_defaults": [],
@@ -69,7 +75,7 @@
           "version": "online; accessed 2026-11-18"
         }
       ],
-      "version": "1.0.0",
+      "version": "1.1.0",
       "profile_id": "general",
       "display_name": "通用证据综合",
       "review_methods": [],
@@ -132,6 +138,12 @@
           "rule_id": "separate_outcome_uses",
           "category": "expression_data",
           "content": "结局关注、测量要求、报告要求分别保存，不自动形成报告资格限制。"
+        },
+        {
+          "rule_id": "analysis_plan_is_not_eligibility",
+          "category": "expression_data",
+          "content": "Preserve analysis methods, data levels and ranking objectives as review-focus information. They authorize a study eligibility restriction only when independently specified as such in the input or a human decision.",
+          "basis": "docs/eligibility-spec.md sections 2, 6 and 8.2"
         }
       ],
       "authorized_defaults": [],
@@ -143,7 +155,7 @@
           "version": "online; accessed 2026-11-18"
         }
       ],
-      "version": "1.0.0",
+      "version": "1.1.0",
       "profile_id": "systematic",
       "display_name": "系统评价",
       "review_methods": [
@@ -208,6 +220,12 @@
           "rule_id": "separate_outcome_uses",
           "category": "expression_data",
           "content": "结局关注、测量要求、报告要求分别保存，不自动形成报告资格限制。"
+        },
+        {
+          "rule_id": "analysis_plan_is_not_eligibility",
+          "category": "expression_data",
+          "content": "Preserve analysis methods, data levels and ranking objectives as review-focus information. They authorize a study eligibility restriction only when independently specified as such in the input or a human decision.",
+          "basis": "docs/eligibility-spec.md sections 2, 6 and 8.2"
         }
       ],
       "authorized_defaults": [],
@@ -219,7 +237,7 @@
           "version": "online; accessed 2026-11-18"
         }
       ],
-      "version": "1.0.0",
+      "version": "1.1.0",
       "profile_id": "scoping",
       "display_name": "范围综述",
       "review_methods": [
@@ -289,6 +307,12 @@
           "rule_id": "separate_outcome_uses",
           "category": "expression_data",
           "content": "结局关注、测量要求、报告要求分别保存，不自动形成报告资格限制。"
+        },
+        {
+          "rule_id": "analysis_plan_is_not_eligibility",
+          "category": "expression_data",
+          "content": "Preserve analysis methods, data levels and ranking objectives as review-focus information. They authorize a study eligibility restriction only when independently specified as such in the input or a human decision.",
+          "basis": "docs/eligibility-spec.md sections 2, 6 and 8.2"
         }
       ],
       "authorized_defaults": [],
@@ -300,7 +324,7 @@
           "version": "online; accessed 2026-11-18"
         }
       ],
-      "version": "1.0.0",
+      "version": "1.1.0",
       "profile_id": "umbrella",
       "display_name": "伞状综述",
       "review_methods": [
@@ -386,6 +410,12 @@
             "intervention_effect"
           ],
           "content": "不因未报告某结局而自动排除研究；测量与报告的资格作用须独立明确。"
+        },
+        {
+          "rule_id": "analysis_plan_is_not_eligibility",
+          "category": "expression_data",
+          "content": "Preserve analysis methods, data levels and ranking objectives as review-focus information. They authorize a study eligibility restriction only when independently specified as such in the input or a human decision.",
+          "basis": "docs/eligibility-spec.md sections 2, 6 and 8.2"
         }
       ],
       "authorized_defaults": [],
@@ -397,7 +427,7 @@
           "version": "current online; accessed 2026-11-18"
         }
       ],
-      "version": "1.0.0",
+      "version": "1.1.0",
       "profile_id": "cochrane_intervention",
       "display_name": "Cochrane干预性综述",
       "review_methods": [
