@@ -1,0 +1,52 @@
+{
+  "scope": "Progress display and cancellation; no change to eligibility methodology or model prompts",
+  "stage_percentages": [
+    15,
+    60,
+    90,
+    94,
+    98,
+    100
+  ],
+  "heartbeat": "Visible English stage and elapsed wait; no artificial progress while waiting",
+  "unresponsive_transport_abort_test": "PASS; the UI is released even when transport ignores cancellation",
+  "model_request_identity_comparison_to_previous_release": "PASS for identical instructions, schema and request payloads",
+  "backend_health_check": "ok; does not verify the specific browser-owned inference job",
+  "checks": [
+    {
+      "file": "tests/eligibility/classic.cjs",
+      "exit_code": 0,
+      "output": "PASS classic English UI (simulated model): established Generate → headless v3 extraction/review → necessary age answer → immediate Include/Exclude/Description update → restore → manual-revision provenance → stale guard.\n"
+    },
+    {
+      "file": "tests/eligibility/nutrition.cjs",
+      "exit_code": 0,
+      "output": "PASS user nutrition/IPD/NMA case: source age qualifier preserved, typed PICO alternatives, analysis/data roles, source-grounded objective, full Description, minimal clarification, confirmed age and explicit data-gate counterexample.\n"
+    },
+    {
+      "file": "tests/eligibility/nutrition-frontend.cjs",
+      "exit_code": 0,
+      "output": "PASS nutrition case through established frontend and Word export (simulated model): PICO slots, older qualifier, analysis purpose, age decision and Description remain consistent.\n"
+    },
+    {
+      "file": "tools/test_eligibility_progress.cjs",
+      "exit_code": 0,
+      "output": "PASS: batch-based monotonic stages, completion progress and visible stage text\n"
+    },
+    {
+      "file": "tools/test_eligibility_grounding.cjs",
+      "exit_code": 0,
+      "output": "PASS: separate development/test splits; 14 supported paraphrases and 14 adversarial rules; thresholds, strictness, units, AND/OR, negation, exceptions, Chinese and numeric scope\nPASS: original document tails, exact offsets, page attribution, SHA-256 manifest, forged quotations, missing/duplicate semantic assessments, and image-transcription provenance\nPASS: end-to-end machine transport, original-source evidence, two semantic review passes, inactive fabricated limits, direct editable output, no required forms, optional important suggestions, consistent Description, author audit and persistence\nPASS: unsupported-only input yields an empty draft without questions or invented rules\nPASS: v2 drafts restore all confirmed rules and full Description without regeneration; historical prompts remain archived; no required forms for optional, missing-scope or conflicting-source notices\n"
+    },
+    {
+      "file": "tools/test_eligibility_preview_edit.cjs",
+      "exit_code": 0,
+      "output": "PASS: editable criteria save/export/handoff/reload, visible confirmed rules, failed-save retry, escaped text and complete-domain mapping\nPASS: identical standalone/embedded previews in both modes, prepared summary, isolated editing\n"
+    },
+    {
+      "file": "tools/test_eligibility_source_confirmations.cjs",
+      "exit_code": 0,
+      "output": "PASS: full-sentence topic, explicit include/exclude, source-only ambiguity confirmation without blanks, immediate chosen-side updates, persistence/rollback, empty-draft confirmation and audit-only excerpts/notes.\n"
+    }
+  ]
+}

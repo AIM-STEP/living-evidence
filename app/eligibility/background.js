@@ -5,6 +5,7 @@ const clone=D.clone;
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
+function progressPercent(event={}){const stages={extract:[15,60],review:[60,90],validate:[94,94],ready:[98,98]},range=stages[event.phase];if(!range)return undefined;const fraction=event.total?Math.max(0,Math.min(1,event.completed/event.total)):0;return Math.round(range[0]+(range[1]-range[0])*fraction);}
 function optionLabel(option){
  if(!option)return 'Confirm';
  if(option.label&&/^[\x00-\x7F]*$/.test(option.label))return option.label;
@@ -34,7 +35,7 @@ function projectToClassic(project){
 }
 async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
  if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');
- const base=baseURL||new URL('.',root.location.href).href,version='20261118-nma-methods-2';
+ const base=baseURL||new URL('.',root.location.href).href,version='20261118-progress-stage-1';
  const configs=await Promise.all([frameworkConfig||root.fetch(new URL('config/eligibility-frameworks.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load framework definitions.');return r.json();}),profileConfig||root.fetch(new URL('config/eligibility-review-profiles.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load review profiles.');return r.json();})]);
  const keys={project:'aimstep-eligibility-v3:'+projectId,legacy:'aimstep-eligibility:'+projectId,library:'aimstep-eligibility-library:'+projectId,summary:'aimstep-eligibility-summary:'+projectId};
  const read=key=>JSON.parse(storage.getItem(key)||'null');
@@ -48,7 +49,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   let project=E.save_input(saved,{research_question:raw,review_method:methods[reviewType]||null,output_language:'en',legacy_archive:legacy},{base_revision:revision},env).state;
   for(const [index,source]of sources.entries()){if(source.name==='Question / voice input'&&source.text===question)continue;const questions=project.questions.filter(q=>q.active!==false),stored=E.addSource(project,'user_input',source.text,questions.map(q=>q.question_id),'classic_document:'+index,{input_kind:'original_document',name:source.name,page:source.page||null,verification:source.verification||'original-text'});for(const q of questions)q.imported_source_refs=[...(q.imported_source_refs||[]),E.ref(stored)];}
   if(saved.classic_author_source_ref){const ref=saved.classic_author_source_ref;for(const q of project.questions.filter(q=>q.active!==false))if(!q.additional_source_refs.some(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision))q.additional_source_refs.push(clone(ref));}
-  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');return staged(project,revision,expected);
+  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected);
  }
  async function decide({issue_id,option_id,answer_text,modelClient,signal}){
   const project=current(),issue=project.issues.find(issue=>issue.issue_id===issue_id&&issue.status==='open');if(!issue)D.fail('ISSUE_NOT_FOUND','background','This clarification has already changed. Reload the saved criteria.');
@@ -69,5 +70,5 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  }
  return {generate,decide,validate,transaction,recordEdit,current,projectToClassic,keys};
 }
-return {create,projectToClassic,signature,issueText,optionLabel,renderDescription:Methods.description};
+return {create,projectToClassic,signature,issueText,optionLabel,progressPercent,renderDescription:Methods.description};
 });
