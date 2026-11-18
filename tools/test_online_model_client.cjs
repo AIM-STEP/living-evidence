@@ -15,11 +15,16 @@ function setup({signed=true,host='aimsetp.com',network}={}){
  const key='synthetic-job-1234567890';let deleted=false;
  t=setup({network:(u,o)=>{if(o.method==='DELETE'){deleted=true;return new Response('{}');}if(u.endsWith('/model'))return new Response(JSON.stringify({jobId:key}),{status:202});return new Response(JSON.stringify({status:'complete',httpStatus:200,result:{message:{content:'synthetic'}}}));}});
  const r=await t.api.request(t.api.base+'/model',{method:'POST',body:'{}'});assert.equal((await r.json()).message.content,'synthetic');await new Promise(r=>setTimeout(r,10));assert(deleted);
+ let polls=0,posts=0;deleted=false;
+ t=setup({network:(u,o)=>{if(o.method==='DELETE'){deleted=true;return new Response('{}');}if(u.endsWith('/model')){posts++;return new Response(JSON.stringify({jobId:key}),{status:202});}polls++;assert(!deleted,'A transient poll failure must not cancel the running inference');if(polls===1)throw TypeError('Temporary network loss');if(polls===2)return new Response('{}',{status:503});if(polls===3)return new Response(JSON.stringify({status:'running'}),{status:202});return new Response(JSON.stringify({status:'complete',httpStatus:200,result:{message:{content:'recovered'}}}));}});
+ const recovered=await t.api.request(t.api.base+'/model',{method:'POST',body:'{}'});assert.equal((await recovered.json()).message.content,'recovered');assert.equal(posts,1,'Never duplicate inference when retrying a poll');assert.equal(polls,4);
+ polls=0;t=setup({network:(u,o)=>{if(o.method==='DELETE')return new Response('{}');if(u.endsWith('/model'))return new Response(JSON.stringify({jobId:key}),{status:202});polls++;return new Response(JSON.stringify({error:'Access revoked'}),{status:403});}});
+ await assert.rejects(t.api.request(t.api.base+'/model',{method:'POST'}),/Access revoked/);assert.equal(polls,1,'Do not retry authorization failures');
  const controller=new AbortController();deleted=false;
  t=setup({network:(u,o)=>{if(o.method==='DELETE'){deleted=true;return new Response('{}');}controller.abort();return new Response(JSON.stringify({jobId:key}),{status:202});}});
  await assert.rejects(t.api.request(t.api.base+'/model',{signal:controller.signal}),e=>e.name==='AbortError');await new Promise(r=>setTimeout(r,10));assert(deleted);
  for(const page of ['eligibility','search-strategy','title-abstract-screening','full-text-screening']){
-  const html=fs.readFileSync(page+'.html','utf8');assert(html.includes('app/online-model.js?v=online-auth-v2'));assert(html.includes('window.AIMSTEPOnlineModel.base'));
+  const html=fs.readFileSync(page+'.html','utf8');assert(html.includes('app/online-model.js?v=online-auth-v3'));assert(html.includes('window.AIMSTEPOnlineModel.base'));
  }
  console.log('PASS: authenticated fixed-origin requests, local-mode compatibility, unauthenticated/offline errors, asynchronous results and cancellation');
 })().catch(e=>{console.error(e);process.exitCode=1});

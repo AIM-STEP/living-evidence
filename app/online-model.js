@@ -7,7 +7,7 @@
   const online = ['aimsetp.com', 'www.aimsetp.com'].includes(location.hostname);
   const origin = 'https://ai.aimsetp.com', base = origin + '/api/eligibility';
   const unavailable = 'The online AI service is unavailable. Contact the AIM-STEP administrator; no local model or local network permission is required on this device.';
-  const failure = message => Object.assign(new Error(message), {configuration:true, onlineModel:true});
+  const failure = (message, details={}) => Object.assign(new Error(message), {configuration:true, onlineModel:true,...details});
   let authentication;
   async function user() {
     if (!authentication) authentication = (async () => {
@@ -36,18 +36,18 @@
     const {targetAddressSpace, ...rest} = options;
     let response;
     try {response=await fetch(url,{...rest,headers,credentials:'omit',cache:'no-store',redirect:'error'});}
-    catch(e){if(options.signal?.aborted)throw e;throw failure(unavailable);}
+    catch(e){if(options.signal?.aborted)throw e;throw failure(unavailable,{retryable:true});}
     if(!response.ok) {
       let message=unavailable;
       try{message=(await response.json()).error||message;}catch(_){}
-      throw failure(message);
+      throw failure(message,{status:response.status,retryable:response.status===408||response.status===429||response.status>=500});
     }
     return response;
   }
-  function delay(signal) {
+  function delay(signal, ms=1200) {
     return new Promise((resolve,reject)=>{
       const abort=()=>{clearTimeout(timer);signal?.removeEventListener('abort',abort);reject(new DOMException('Stopped','AbortError'));};
-      const timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve();},1200);
+      const timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve();},ms);
       signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
     });
   }
@@ -60,10 +60,19 @@
     if(!/^[A-Za-z0-9_-]{20,80}$/.test(job.jobId||''))throw failure('Invalid online AI response.');
     const jobURL=base+'/jobs/'+job.jobId;
     try {
+      let failures=0;
       while(true){
-        await delay(options.signal);
-        const poll=await signedFetch(jobURL,{signal:options.signal});
-        const result=await poll.json();
+        await delay(options.signal,failures?Math.min(10000,1200*2**failures):1200);
+        let poll,result;
+        try{
+          const signal=AbortSignal.any([options.signal,AbortSignal.timeout(15000)].filter(Boolean));
+          poll=await signedFetch(jobURL,{signal});
+          result=await poll.json();failures=0;
+        }catch(error){
+          if(options.signal?.aborted)throw error;
+          if(!(error.retryable||['AbortError','TimeoutError','SyntaxError'].includes(error.name))||++failures>5)throw error;
+          continue;
+        }
         if(poll.status===202)continue;
         return new Response(JSON.stringify(result.result),{status:result.httpStatus,headers:{'Content-Type':'application/json'}});
       }

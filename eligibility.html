@@ -3,7 +3,7 @@
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
 <script src="app/secure-origin.js?v=20261020-1"></script>
-<script src="app/online-model.js?v=online-auth-v2"></script>
+<script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
 <title>AIM-STEP | Eligibility criteria</title>
@@ -19,6 +19,8 @@
 .step-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid var(--plum);border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.2;letter-spacing:0;text-decoration:none;white-space:nowrap;cursor:pointer}.step-btn:hover{text-decoration:none}.step-btn.back,.step-btn.next{background:#fff;color:var(--plum);border:0}.step-btn.back:hover,.step-btn.next:hover{background:#eff1f8;color:var(--plum)}.step-tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:#eff1f8;color:var(--plum);font-size:11px;font-weight:600;vertical-align:1px}
 .collapse-toggle{width:30px;height:30px;display:inline-grid;place-items:center;padding:0;border:1px solid #e4e5e8;border-radius:6px;background:#fafafb;color:#5f6169;cursor:pointerflex:none;}.collapse-toggle:hover{border-color:var(--plum);color:var(--plum)}.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:1px}.collapse-toggle svg{width:18px;height:18px;fill:currentColor;transition:transform .15s}.collapse-toggle[aria-expanded="false"] svg{transform:rotate(180deg)}@media(prefers-reduced-motion:reduce){.collapse-toggle svg{transition:none}}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.head-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}.has-collapse{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#machine-generate-panel>.section-head>.head-actions,#manual-generate-panel>.section-head>.head-actions{flex:1;margin-left:0;justify-content:flex-start}
+#machine-generate-panel>.section-head>.head-actions>.collapse-toggle,#manual-generate-panel>.section-head>.head-actions>.collapse-toggle{margin-left:auto}
 .is-collapsed>:not(.section-head):not(.panel-head):not(.criteria-heading):not(.panel-footer):not(.preview-actions){display:none!important}.panel.is-collapsed>.panel-head{border-bottom:0}.section.is-collapsed>.section-head{margin-bottom:0}
 
 /* Compact neutral controls shared with Full-text assess. */
@@ -48,6 +50,9 @@
 .embedded-preview .preview-body{padding:0}
 .criteria-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.criteria-heading .criteria-file-actions{flex:none;flex-wrap:nowrap}.criteria-heading .criteria-file-actions .btn{min-width:0;padding:0 6px;white-space:nowrap}.criteria-heading h2{flex:none;margin:0}.criteria-heading .head-actions{flex:0 0 auto;min-width:0;align-items:center;flex-wrap:nowrap}#criteria-progress{position:relative;flex:1 1 80px;min-width:40px;max-width:none;height:18px;padding:0;margin:0;align-self:center;--progress:0%}.criteria-progress-track{height:18px;background:#e5e7f1;border-radius:9px;overflow:hidden}.criteria-progress.is-processing .criteria-progress-fill{animation:criteria-wait 1.4s ease-in-out infinite alternate}@keyframes criteria-wait{from{opacity:.35}to{opacity:1}}.criteria-progress-fill{height:100%;width:var(--progress);background:#4d6bfe;border-radius:9px;transition:width .35s ease}.criteria-progress-percent{position:absolute;top:50%;left:clamp(18px,var(--progress),calc(100% - 18px));transform:translate(-50%,-50%);min-width:32px;padding:0 2px;border-radius:8px;background:#fff;font-size:10px;line-height:16px;text-align:center;white-space:nowrap;color:#253b9c;transition:left .35s ease}@media(prefers-reduced-motion:reduce){.criteria-progress-fill,.criteria-progress-percent{transition:none;animation:none!important}}
 #machine-generate-panel:not(.is-collapsed){padding-bottom:10px}#machine-generate-panel .machine-actions{margin-top:8px}
+.criteria-progress.is-processing .criteria-progress-fill{animation:criteria-flow 1.2s linear infinite;background:repeating-linear-gradient(110deg,#4d6bfe 0 14px,#8295ff 14px 28px);background-size:60px 100%}
+@keyframes criteria-flow{from{background-position:0 0}to{background-position:60px 0}}
+@media(prefers-reduced-motion:reduce){.criteria-progress.is-processing .criteria-progress-fill{animation:none}}
 
 /* Editor and criteria preview. */
 .wrap{max-width:1440px}
@@ -98,7 +103,7 @@
 <script src="app/eligibility/domain.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/methodology.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/engine.js?v=20261118-criteria-actions-1"></script>
-<script src="app/eligibility/model.js?v=20261118-criteria-actions-1"></script>
+<script src="app/eligibility/model.js?v=20261118-generation-runtime-1"></script>
 <script src="app/eligibility/background.js?v=20261118-criteria-actions-1"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
@@ -226,10 +231,10 @@ function save(options={}){
 }
 const generationStatus=$('generation-status');
 let generationController=null,generationNonce=0;
-function criteriaProgress(percent){const el=$('criteria-progress');el.hidden=false;const complete=percent===100;el.style.setProperty('--progress',complete?'100%':'45%');el.setAttribute('aria-valuetext',complete?'Completed':'Processing — see the current step below');if(complete)el.setAttribute('aria-valuenow','100');else el.removeAttribute('aria-valuenow');el.querySelector('.criteria-progress-percent').textContent=complete?'100%':'…';el.classList.toggle('is-processing',!complete)}
+function criteriaProgress(percent){const el=$('criteria-progress'),value=Math.max(0,Math.min(100,Math.round(percent)));el.hidden=false;el.style.setProperty('--progress',value+'%');el.setAttribute('aria-valuenow',String(value));el.setAttribute('aria-valuetext',value===100?'Completed':value+'% of workflow stages completed — see the current step below');el.querySelector('.criteria-progress-percent').textContent=value+'%';el.classList.toggle('is-processing',value<100)}
 
-function setMachineStatus(message,error=false,percent){generationStatus.textContent=message;generationStatus.hidden=!message;generationStatus.classList.toggle('error',error);if(Number.isFinite(percent))criteriaProgress(percent);if(!message&&!generationController)$('criteria-progress').hidden=true;if(message&&generationController){state.generationProgressLog=[...(state.generationProgressLog||[]),{message,error,date:new Date().toISOString()}].slice(-60);try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}}
-function stopMachineGeneration(){generationNonce++;if(generationController){generationController.abort();generationController=null}$('start-machine').disabled=false;$('start-machine').textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}
+function setMachineStatus(message,error=false,percent){generationStatus.textContent=message;generationStatus.hidden=!message;generationStatus.classList.toggle('error',error);if(Number.isFinite(percent))criteriaProgress(percent);if(error)$('criteria-progress').classList.remove('is-processing');if(!message&&!generationController)$('criteria-progress').hidden=true;if(message&&generationController){state.generationProgressLog=[...(state.generationProgressLog||[]),{message,error,date:new Date().toISOString()}].slice(-60);try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}}
+function stopMachineGeneration(){generationNonce++;if(generationController){generationController.abort();generationController=null}$('criteria-progress').classList.remove('is-processing');$('start-machine').disabled=false;$('start-machine').textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}
 const attachedFiles=[];
 let nextAttachmentId=0,voiceRecognition=null,voiceDone=Promise.resolve(),resolveVoiceDone=null,pdfModulePromise=null;
 function renderAttachments(){
@@ -477,9 +482,18 @@ async function recordCriteriaExchange(model,system,payload,raw,data,schema=null)
   model.auditTrail.push({at:new Date().toISOString(),stage:system.split('.')[0].slice(0,120),model:data.model||model.name,provider:data.provider||model.provider,requestedTemperature:0,actualParameters:'not reported by provider',promptHash:await helper.hashText(JSON.stringify({system,payload})),responseHash:await helper.hashText(raw),schemaHash:schema?await helper.hashText(JSON.stringify(schema)):null});
 }
 async function callCriteriaJson(model,system,payload,signal,schema=null){
+  const controller=new AbortController();let expired=false;
+  const abort=()=>controller.abort(signal?.reason);
+  signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
+  const timer=setTimeout(()=>{expired=true;controller.abort()},600000);
+  let cancel;const cancelled=new Promise((_,reject)=>{cancel=()=>reject(Object.assign(new Error(expired?'This model step exceeded 10 minutes. Your previous criteria have been kept.':'Generation stopped.'),{name:expired?'Error':'AbortError',code:expired?'MODEL_TIMEOUT':'MODEL_CANCELLED'}));controller.signal.addEventListener('abort',cancel,{once:true});if(controller.signal.aborted)cancel();});
+  try{return await Promise.race([cancelled,Promise.resolve().then(()=>{if(controller.signal.aborted)return cancelled;return requestCriteriaJson(model,system,payload,controller.signal,schema)})]);}
+  finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);controller.signal.removeEventListener('abort',cancel);}
+}
+async function requestCriteriaJson(model,system,payload,signal,schema=null){
   const backend=model.provider==='backend',ollama=model.provider!=='compatible';
   const messages=[{role:'system',content:system},{role:'user',content:JSON.stringify(payload)}];
-  const body=backend?{messages,provider:'local',...(schema?{format:schema}:{})}:ollama?{model:model.name,messages,stream:false,format:schema||'json',options:{temperature:0,num_ctx:16384}}:{model:model.name,messages,stream:false,response_format:schema?{type:'json_schema',json_schema:{name:'eligibility_rules',schema,strict:true}}:{type:'json_object'},temperature:0};
+  const body=backend?{messages,provider:'local',...(schema?{format:schema}:{})}:ollama?{model:model.name,messages,stream:false,think:false,format:schema||'json',options:{temperature:0,num_ctx:16384}}:{model:model.name,messages,stream:false,response_format:schema?{type:'json_schema',json_schema:{name:'eligibility_rules',schema,strict:true}}:{type:'json_object'},temperature:0};
   const headers={'Content-Type':'application/json'},token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
   async function post(){
@@ -493,7 +507,7 @@ async function callCriteriaJson(model,system,payload,signal,schema=null){
   if(!raw)throw new Error('The selected model returned no criteria.');
   await recordCriteriaExchange(model,system,payload,raw,data,schema);
   try{return JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''))}
-  catch{throw new Error('The selected model returned invalid JSON. Try a shorter input or a stronger local model.')}
+  catch{throw Object.assign(new Error('The selected model returned invalid JSON. Try a shorter input or a stronger local model.'),{code:'MODEL_INVALID_JSON'})}
 }
 // Adapt AutoCriteria's preprocessing to study-level review rules: separate inclusion,
 // exclusion and conditional notes, then preserve sentence boundaries in 200-word chunks.
@@ -775,7 +789,6 @@ async function refineManualCriteria(){
   if(JSON.stringify(input).length>24000){setManualStatus('Shorten the manual rules before standardizing.',true);return}
   stopManualRefinement();const run=++manualRefinementNonce,controller=new AbortController(),signature=manualSourceSignature();manualRefinementController=controller;manualRunSignature=signature;
   const button=$('refine-manual');button.disabled=true;button.textContent='Generating…';setManualStatus('Connecting to the selected model…');
-  let timedOut=false;const timer=setTimeout(()=>{timedOut=true;controller.abort()},600000);
   try{
     const model=await resolveLocalModel(false,controller.signal);
     model.auditTrail=[];
@@ -784,8 +797,8 @@ async function refineManualCriteria(){
     if(run!==manualRefinementNonce||controller.signal.aborted||manualSourceSignature()!==signature)return;
     state.manualRefinement=refinement;
     state.confirmed=false;const saved=save({fresh:true,createdAt:new Date().toISOString()});setManualStatus(saved?'Criteria generated.':'Draft generated, but could not be saved on this device.',!saved);
-  }catch(error){if(run===manualRefinementNonce)setManualStatus(timedOut?'Model request timed out after 10 minutes.':error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);if(run===manualRefinementNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===manualRefinementNonce&&!manualRefinementController)setManualStatus(message,true)})}
-  finally{clearTimeout(timer);if(run===manualRefinementNonce){manualRefinementController=null;button.disabled=false;button.textContent='Generate'}}
+  }catch(error){if(run===manualRefinementNonce)setManualStatus(error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);if(run===manualRefinementNonce&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===manualRefinementNonce&&!manualRefinementController)setManualStatus(message,true)})}
+  finally{if(run===manualRefinementNonce){manualRefinementController=null;button.disabled=false;button.textContent='Generate'}}
 }
 function normalizeScopeSuggestions(items,types){
   const seen=new Set(),suggestions=[];
@@ -823,7 +836,6 @@ async function generateMachineCriteria(){
   stopMachineGeneration();const run=++generationNonce,controller=new AbortController();generationController=controller;
   const button=$('start-machine');button.disabled=true;button.textContent='Generating…';$('stop-machine').hidden=false;$('stop-machine').disabled=false;criteriaProgress(5);setMachineStatus(files.length?'Reading attached files…':'Connecting to the selected model…');
   state.confirmed=false;save();
-  let timedOut=false;const timer=setTimeout(()=>{timedOut=true;controller.abort()},600000);
   try{
     const input=await prepareSources(question,files,controller.signal);
     if(run!==generationNonce||controller.signal.aborted)return;
@@ -872,9 +884,9 @@ async function generateMachineCriteria(){
     state.machineRun.statusMessage='Criteria generated.';
     const saved=save({fresh:true,createdAt:state.machineRun.generatedAt});criteriaProgress(100);setMachineStatus(saved?'':'Criteria generated, but could not be saved on this device.',!saved);
   }catch(error){
-    if(run===generationNonce)setMachineStatus(timedOut?'Model request timed out after 10 minutes.':error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);
-    if(run===generationNonce&&!timedOut&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===generationNonce&&!generationController)setMachineStatus(message,true)});
-  }finally{clearTimeout(timer);if(run===generationNonce){generationController=null;button.disabled=false;button.textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}}
+    if(run===generationNonce)setMachineStatus(error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);
+    if(run===generationNonce&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===generationNonce&&!generationController)setMachineStatus(message,true)});
+  }finally{if(run===generationNonce){generationController=null;$('criteria-progress').classList.remove('is-processing');button.disabled=false;button.textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}}
 }
 
 function renderPicker(){const types=criterionTypesByFramework[state.framework]||criterionTypesByFramework.Other;picker.innerHTML=types.map(t=>{const added=state.criteria.some(c=>c.typeKey===t.key||c.title===t.title);return `<button type="button" class="criterion-option" data-add-type="${t.key}" ${added?'disabled':''}>${t.title}${added?' · Added':''}</button>`}).join('');picker.querySelectorAll('[data-add-type]:not(:disabled)').forEach(button=>button.addEventListener('click',()=>{const type=types.find(t=>t.key===button.dataset.addType);if(!type||state.criteria.some(c=>c.typeKey===type.key||c.title===type.title))return;markManual();state.criteria.push({id:type.id,typeKey:type.key,title:type.title,condition:'',definition:'',purpose:'Eligibility',stage:'',uncertain:''});$('add-criterion').setAttribute('aria-expanded','false');picker.hidden=true;renderCards();save();const card=list.lastElementChild;if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'})}))}
