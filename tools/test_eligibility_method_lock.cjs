@@ -7,7 +7,7 @@ function setup(storage=new Map()){
   if(!elements.has(id))elements.set(id,{value:'',hidden:false,innerHTML:'',textContent:'',disabled:false,handlers:{},
    options:id==='generation-method'?['','machine','manual'].map(value=>({value,disabled:false})):[],
    style:{setProperty(){}},classList:{add(){},remove(){},toggle(){}},dataset:{},
-   addEventListener(type,handler){this.handlers[type]=handler},setAttribute(){},getAttribute(){return null},
+   addEventListener(type,handler){this.handlers[type]=handler},setAttribute(){},removeAttribute(){},getAttribute(){return null},
    querySelectorAll(){return []},querySelector(){return {textContent:''}},replaceChildren(){},focus(){}});
   return elements.get(id);
  }

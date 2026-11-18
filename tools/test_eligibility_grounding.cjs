@@ -92,7 +92,7 @@ async function run(){
  assert(!test.el('preview').innerHTML.includes('Original source excerpts'));assert(test.api.state().machineRefinement.trace.length);
  assert.equal(test.api.pending().length,0,'Missing core scope and diagnostics must not become required questions');
  assert(!test.el('preview').innerHTML.includes('Automatic check notes'));assert(!test.el('preview').innerHTML.includes('data-pc-'));
- assert.equal(state.machineRefinement.scopeSuggestions.length,2);assert(test.el('preview').innerHTML.includes('Optional scope suggestions'));
+ assert.equal(state.machineRefinement.scopeSuggestions.length,2);assert(!test.el('preview').innerHTML.includes('Optional scope suggestions'));
  assert.equal(state.machineCriteria.length,1,'Suggestions do not enter the active criteria automatically');
  const rowsBefore=JSON.stringify(state.machineCriteria);
  assert(test.api.suggest(0,'keep'));assert.equal(JSON.stringify(state.machineCriteria),rowsBefore,'Keeping the draft must not create a complementary exclusion');
@@ -107,7 +107,7 @@ async function run(){
  const reloaded=setup(test.storage);assert.equal(reloaded.api.state().machineRefinement.audit.sources[0].sha256,saved.machineRefinement.audit.sources[0].sha256);assert(!reloaded.el('preview').innerHTML.includes('Original source excerpts'));assert(reloaded.api.state().machineRefinement.trace.length);
  const archive=Buffer.from(test.api.export());let offset=0,xml='';
  while(archive.readUInt32LE(offset)===0x04034b50){const length=archive.readUInt32LE(offset+18),nameLength=archive.readUInt16LE(offset+26),extra=archive.readUInt16LE(offset+28),name=archive.subarray(offset+30,offset+30+nameLength).toString(),start=offset+30+nameLength+extra;if(name==='word/document.xml')xml=archive.subarray(start,start+length).toString();offset=start+length;}
- assert(!xml.includes('Source evidence'));assert(!xml.includes('Include studies of adults with fibromyalgia.'));assert(saved.machineRefinement.audit.sources[0].text.includes('Include studies of adults with fibromyalgia.'));assert(xml.includes('Ignored suggestion'));
+ assert(!xml.includes('Source evidence'));assert(!xml.includes('Include studies of adults with fibromyalgia.'));assert(saved.machineRefinement.audit.sources[0].text.includes('Include studies of adults with fibromyalgia.'));assert(!xml.includes('Ignored suggestion'));
  reloaded.api.state().machineRun.sourceFiles=['Saved protocol.pdf'];const generatedAt=reloaded.api.state().machineRun.generatedAt;
  await reloaded.el('start-machine').handlers.click();assert(reloaded.el('generation-status').textContent.includes('Reattach the original files'));assert.equal(reloaded.api.state().machineRun.generatedAt,generatedAt);
  console.log('PASS: end-to-end machine transport, original-source evidence, two semantic review passes, inactive fabricated limits, direct editable output, no required forms, optional important suggestions, consistent Description, author audit and persistence');

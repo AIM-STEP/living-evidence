@@ -207,11 +207,22 @@ function detect_clarification_issues(state,env=environment()){
 function conditionText(value,disposition){const text=String(value||'').trim();return disposition==='exclude'?text.replace(/^(?:exclude|excluding|do not include)\s+|^排除[:：]?\s*/i,''):text.replace(/^(?:include|including)\s+|^(?:仅纳入|纳入)[:：]?\s*/i,'');}
 function build_criteria(state){
  const old=new Map(state.criteria.map(c=>[c.source_element_ids.join('|')+'|'+c.disposition,c]));const criteria=[];
+ const byMeaning=new Map();
  for(const e of state.elements.filter(e=>accepted(e)&&e.semantic_role==='eligibility_condition'&&e.scope_status==='restricted')){
   const signature=e.element_id+'|'+e.disposition,prior=old.get(signature);
   const c={criterion_id:prior?.criterion_id||D.stableId('criterion',signature),question_ids:[e.question_id],disposition:e.disposition,dimension_id:e.dimension_id,text:e.normalized_text,expression:null,structured_value:clone(e.structured_value),scope_conditions:clone(e.scope_conditions||[]),exceptions:clone(e.exceptions||[]),source_element_ids:[e.element_id],source_decision_ids:clone(e.source_decision_ids||[]),source_rule_ids:clone(e.source_rule_ids||[]),revision:prior?(prior.text===e.normalized_text?prior.revision:prior.revision+1):1};
   c.expression={op:'predicate',criterion_id:c.criterion_id};if(c.exceptions.length||c.scope_conditions.length)c.expression.qualifiers={exceptions:clone(c.exceptions),applies_to:clone(c.scope_conditions)};
-  const duplicate=criteria.find(item=>item.question_ids[0]===e.question_id&&item.disposition===c.disposition&&key(item.text)===key(c.text)&&JSON.stringify(item.scope_conditions)===JSON.stringify(c.scope_conditions)&&JSON.stringify(item.exceptions)===JSON.stringify(c.exceptions));if(duplicate){duplicate.source_element_ids.push(e.element_id);duplicate.source_decision_ids=[...new Set([...duplicate.source_decision_ids,...c.source_decision_ids])];duplicate.source_rule_ids=[...new Set([...duplicate.source_rule_ids,...c.source_rule_ids])];}else criteria.push(c);
+  // An identical phrase may describe two different roles or numeric bounds.
+  const meaning=JSON.stringify([e.question_id,c.dimension_id,c.disposition,key(c.text),c.structured_value,c.scope_conditions,c.exceptions]);
+  const duplicate=byMeaning.get(meaning);
+  if(duplicate){
+   duplicate.source_element_ids.push(e.element_id);
+   duplicate.source_decision_ids=[...new Set([...duplicate.source_decision_ids,...c.source_decision_ids])];
+   duplicate.source_rule_ids=[...new Set([...duplicate.source_rule_ids,...c.source_rule_ids])];
+  }else{
+   byMeaning.set(meaning,c);
+   criteria.push(c);
+  }
  }
  state.criteria=criteria;state.logic={questions:{},relation:state.question_relation};
  for(const q of state.questions.filter(active)){

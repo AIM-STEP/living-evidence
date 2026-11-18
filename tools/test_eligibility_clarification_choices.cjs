@@ -20,7 +20,7 @@ for(const mode of ['manual','machine']){
  api.set(state);api.save();
  const markup=el('preview').innerHTML;
  assert.equal(api.pending().length,0);assert(!markup.includes('Pending clarification'));assert(!markup.includes('data-pc-'));assert(!markup.includes('<input'));assert(!markup.includes('Historical question'));
- assert(markup.includes('Optional scope suggestions'));assert(markup.includes('Keep current criteria'));assert(markup.includes('data-scope-action="adopt"'));
+ assert(!markup.includes('Optional scope suggestions'));assert(!markup.includes('data-scope-action="adopt"'));
  assert(!api.normalized().exclusions.some(row=>row.rule.includes('Case reports')),'A proposed exclusion is initially inactive');
  assert.equal(api.apply(0,'adopt'),true);
  assert(api.normalized().exclusions.some(row=>row.rule.includes('Case reports')));assert(api.normalized().paragraph.includes('Case reports'));assert.match(docXml(),/Case reports/);
@@ -32,7 +32,7 @@ for(const mode of ['manual','machine']){
  ctx.localStorage.setItem=write;
  const currentRows=JSON.stringify(mode==='machine'?api.get().machineCriteria:api.get().criteria);
  assert.equal(api.apply(1,'keep'),true);assert.equal(JSON.stringify(mode==='machine'?api.get().machineCriteria:api.get().criteria),currentRows,'Keeping the draft creates no complementary rule');
- assert(!el('preview').innerHTML.includes('Optional scope suggestions'));assert.match(docXml(),/Ignored suggestion/);assert.equal(api.normalized().paragraph,'Author-written Description that must stay unchanged when keeping the draft.');
+ assert(!el('preview').innerHTML.includes('Optional scope suggestions'));assert.doesNotMatch(docXml(),/Ignored suggestion/);assert.equal(api.normalized().paragraph,'Author-written Description that must stay unchanged when keeping the draft.');
  assert.equal(api.get().finalCriteria.decisions.length,2);assert.equal(api.pending().length,0);
  const summary=JSON.parse(storage.get('aimstep-eligibility-summary:synthetic-project'));assert(summary.exclusions.some(row=>row.text.includes('Case reports')));
 }

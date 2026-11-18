@@ -23,8 +23,30 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
  assert(!rows.some(r=>r.dimension==='Other'));assert(rows.find(r=>r.dimension==='Comparison').include.join(' ').includes('another nutritional intervention'));
  const checks=state.machineRefinement.sourceConfirmations;assert(checks.some(c=>c.text.includes('Which assessment defines nutritional risk?')),'Actual source questions must reach the user');
  assert(!checks.some(c=>['Intervention','Comparison','Outcomes','Analysis plan','Data plan'].includes(c.domain)),'Broad, clearly stated scope is accepted directly');
- const preview=t.el('preview').innerHTML;assert(preview.includes('Review focus and analysis plan'));assert(preview.includes('patient-relevant outcomes'));assert(preview.includes('individual participant data'));
- const exported=Buffer.from(t.api.export()).toString('utf8');assert(exported.includes('Review focus and analysis plan'));assert(exported.includes('Author checks pending'));assert(exported.includes('patient-relevant outcomes'));
+ const preview=t.el('preview').innerHTML;assert(!preview.includes('Review focus and analysis plan'));assert(preview.includes('patient-relevant outcomes'));assert(preview.includes('individual participant data'));
+ const exported=Buffer.from(t.api.export()).toString('utf8');assert(!exported.includes('Review focus and analysis plan'));assert(!exported.includes('Author checks pending'));assert(exported.includes('patient-relevant outcomes'));
+ const risk='Which assessment defines nutritional risk?';
+ const populationRow=rows.find(r=>r.dimension==='Population');
+ assert(checks.filter(c=>c.domain==='Population').every(c=>c.locations.some(l=>l.rule===populationRow.include[0])),'Both the age subelement and risk issue belong on the source population rule');
+ assert(preview.indexOf(risk)>preview.indexOf('data-criteria-row="0"'));assert(preview.indexOf(risk)<preview.indexOf('data-criteria-row="1"'));
+ assert(preview.slice(preview.lastIndexOf('aria-label="Description"')).endsWith('</span></p></section></div>'),'Description ends the preview');
+ const xml=exported.slice(exported.indexOf('<w:document'),exported.indexOf('</w:document>'));
+ assert(xml.indexOf(risk)<xml.indexOf('>Intervention<'),'Word places the question inside the affected row');
+ assert(xml.lastIndexOf('</w:p>')>xml.indexOf('>Description<'));assert.equal(xml.slice(xml.indexOf('>Description<')).match(/<w:p>/g).length,1,'Only the Description paragraph follows its heading');
+ const savedChecks=state.machineRefinement.sourceConfirmations;
+ const placed=structuredClone(savedChecks[0]);placed.text='Linked question';placed.locations=[
+  {domain:'Framework',section:'framework'},{domain:'Outcomes',section:'focus',subject:'outcome of interest'},
+  {domain:'Unused group',section:'exclude',subject:'Source eligibility wording'}];
+ const sameDomain=structuredClone(savedChecks[0]);sameDomain.text='Second rule question';
+ populationRow.include.push('Second population rule.');
+ sameDomain.locations=[{domain:'Population',section:'include',rule:'Second population rule.'}];
+ state.machineRefinement.sourceConfirmations=[placed,sameDomain];
+ t.api.fill();const routed=t.el('preview').innerHTML;
+ assert.equal(routed.split('Linked question').length-1,3,'Cross-element checks must appear at each affected location');
+ assert(routed.indexOf('>Framework:</strong>')<routed.indexOf('Linked question')&&routed.indexOf('Linked question')<routed.indexOf('>Inclusion</h3>'));
+ assert(routed.indexOf('Second population rule.')<routed.indexOf('Second rule question')&&routed.indexOf('Second rule question')<routed.indexOf('>Intervention:</strong>'));
+ assert(routed.indexOf('>Exclusion</h3>')<routed.indexOf('Unused group'));assert(routed.indexOf('Outcomes · Review focus')<routed.indexOf('>Description</h3>'));
+ state.machineRefinement.sourceConfirmations=savedChecks;populationRow.include.pop();t.api.fill();
  assert(checks.some(c=>c.text.includes('age boundary')));assert(t.el('preview').innerHTML.includes('data-source-answer='),'Unresolved questions need a working answer field');
  const ageIndex=checks.findIndex(c=>c.text.includes('age boundary'));t.ctx.document.querySelector=()=>({value:'65 years or older',focus(){}});
  assert(await t.api.confirm(ageIndex,'answer'),t.el('generation-status').textContent);state=t.api.state();

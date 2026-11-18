@@ -2,10 +2,10 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const html=fs.readFileSync(path.join(__dirname,'../eligibility.html'),'utf8');
 const source=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(s=>s.includes('const params='));
 const storage=new Map(),elements=new Map(),documentEvents=new Map();
-function el(id){if(!elements.has(id))elements.set(id,{value:'',hidden:false,innerHTML:'',textContent:'',options:[{value:'Systematic Review'}],classList:{add(){},remove(){},toggle(){}},handlers:{},addEventListener(k,f){this.handlers[k]=f},setAttribute(){},getAttribute(){return null},querySelectorAll(){return []},focus(){}});return elements.get(id);}
+function el(id){if(!elements.has(id))elements.set(id,{value:'',hidden:false,innerHTML:'',textContent:'',options:[{value:'Systematic Review'}],classList:{add(){},remove(){},toggle(){}},handlers:{},addEventListener(k,f){this.handlers[k]=f},setAttribute(){},getAttribute(){return null},querySelector(){return {textContent:''}},querySelectorAll(){return []},focus(){}});return elements.get(id);}
 const ctx={console,URL,URLSearchParams,AbortController,structuredClone,TextEncoder,Blob,setTimeout(){},clearTimeout(){},navigator:{},
  localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},sessionStorage:{getItem(){return null}},
- location:{search:'?projectId=synthetic-project',href:'http://127.0.0.1:8765/eligibility.html?projectId=synthetic-project',pathname:'/eligibility.html'},document:{getElementById:el,querySelectorAll(){return []},addEventListener(type,handler){documentEvents.set(type,handler)}},window:{addEventListener(){}}};
+ location:{search:'?projectId=synthetic-project',href:'http://127.0.0.1:8765/eligibility.html?projectId=synthetic-project',pathname:'/eligibility.html'},document:{getElementById:el,querySelectorAll(){return []},addEventListener(type,handler){documentEvents.set(type,handler)}},window:{addEventListener(){},AIMSTEPEligibilityMethodology:require('../app/eligibility/methodology.js')}};
 const code=source.replace('// Reuse this exact manual editor',`globalThis.criteriaTest={get:()=>state,set:s=>{previewDirty=false;state=s;fill()},pending:currentPending,generate:generateFinalCriteria,export:criteriaWordFile,savePreviewEdits,clearPreviewCriteria,dirty(){previewDirty=true},normalized:standardizedCriteria,exportState:()=>({dirty:previewDirty}),save,renderCards,updateVisibleRule};\n// Reuse this exact manual editor`);
 ctx.window.AIMSTEPProjectAccess={run:fn=>fn()};
  vm.runInNewContext(code,ctx);const api=ctx.criteriaTest;
@@ -91,7 +91,7 @@ assert(html.indexOf('id="save-criteria"')<html.indexOf('id="download"'));assert(
 console.log('PASS: editable criteria save/export/handoff/reload, visible confirmed rules, failed-save retry, escaped text and complete-domain mapping');
 
 // Search embeds the actual preview; raw input and polished display must not diverge.
-const previewContext={...ctx,location:{...ctx.location,search:'?projectId=synthetic-project&embedded=search-criteria-preview'},document:{...ctx.document,documentElement:{classList:{add(){}}}},window:{addEventListener(){}}};
+const previewContext={...ctx,location:{...ctx.location,search:'?projectId=synthetic-project&embedded=search-criteria-preview'},document:{...ctx.document,documentElement:{classList:{add(){}}}},window:{addEventListener(){},AIMSTEPEligibilityMethodology:require('../app/eligibility/methodology.js')}};
 previewContext.window.AIMSTEPProjectAccess={run:fn=>fn()};
 vm.runInNewContext(source,previewContext);
 const embedded=previewContext.window.aimstepCriteriaPreview;

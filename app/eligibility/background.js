@@ -2,22 +2,22 @@
 (function(root,factory){const api=factory(root,typeof module==='object'&&module.exports?require('./domain.js'):root.AIMSTEPEligibilityDomain,typeof module==='object'&&module.exports?require('./engine.js'):root.AIMSTEPEligibilityEngine,typeof module==='object'&&module.exports?require('./model.js'):root.AIMSTEPEligibilityModel,typeof module==='object'&&module.exports?require('./methodology.js'):root.AIMSTEPEligibilityMethodology);if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSTEPEligibilityBackground=api;})(typeof window==='object'?window:globalThis,function(root,D,E,M,Methods){
 'use strict';
 const clone=D.clone;
-const presentationVersion='20261118-direct-scope-2';
+const presentationVersion='20261118-criteria-review-3';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
 function progressPercent(event={}){const stages={extract:[15,60],review:[60,90],validate:[94,94],ready:[98,98]},range=stages[event.phase];if(!range)return undefined;const fraction=event.total?Math.max(0,Math.min(1,event.completed/event.total)):0;return Math.round(range[0]+(range[1]-range[0])*fraction);}
 function optionLabel(option){
  if(!option)return 'Confirm';
- if(option.label&&/^[\x00-\x7F]*$/.test(option.label))return option.label;
+ if(option.label&&!/[\u3400-\u9fff]/u.test(option.label))return option.label;
  const names={unrestricted:'No age restriction',defer:'Keep pending',ignore:'Keep the existing scope',keep:'Keep the previous decision',replace:'Use the revised decision',focus:'Review focus only',eligibility:'Eligibility requirement',any_of:'Any condition',all_of:'All conditions',systematic_review:'Systematic reviews',review:'Systematic reviews and other reviews',pico:'PICO',pico_qualitative:'PICo'};
  return names[option.option_id]||option.updates?.[0]?.normalized_text||option.option_id;
 }
-function issueText(issue,project){
- const elements=issue.element_ids.map(id=>project.elements.find(e=>e.element_id===id)).filter(Boolean),names=elements.map(e=>e.normalized_text).filter(Boolean).join('; '),domain=label(elements[0]?.dimension_id);
+function issueText(issue,project,elements=issue.element_ids.map(id=>project.elements.find(e=>e.element_id===id)).filter(Boolean)){
+ const names=elements.map(e=>e.normalized_text).filter(Boolean).join('; '),domain=label(elements[0]?.dimension_id);
  if(issue.author_scope_review)return issue.question_text;
  if(issue.trigger_rule_id==='population_age_boundary')return 'The source specifies older people without a numeric age threshold. Define the age boundary below, or confirm whether to retain the original wording.';
- if(issue.trigger_rule_id?.startsWith('model_issue:')&&/^[\x00-\x7F]*$/.test(issue.question_text||''))return issue.question_text;
+ if(issue.trigger_rule_id?.startsWith('model_issue:')&&issue.question_text&&!/[\u3400-\u9fff]/u.test(issue.question_text))return issue.question_text;
  if(issue.trigger_rule_id==='between_question_relation')return 'Should studies satisfy any subquestion or all subquestions?';
  if(issue.reason_code==='CONFLICTING_REQUIREMENTS')return 'Which requirement should apply to '+domain.toLowerCase()+'?';
  if(issue.reason_code==='FRAMEWORK_AMBIGUITY')return issue.trigger_rule_id.startsWith('custom_definition:')?'What does this custom framework field mean?':'Which question framework should be used?';
@@ -28,14 +28,61 @@ function issueText(issue,project){
 }
 function projectToClassic(project){
  const output=E.render_output(project),rows=[];
- const add=(dimension,side,text)=>{if(!text)return;let row=rows.find(r=>r.dimension===dimension);if(!row){row={dimension,include:[],exclude:[]};rows.push(row);}if(!row[side].includes(text))row[side].push(text);};
- if(output.questions.length>1){const parts=output.questions.map(q=>q.logic_text?q.display_number+': '+q.logic_text:'').filter(Boolean);if(parts.length)add('Other','include',parts.join(project.question_relation==='any_of'?' or ':' and '));}
- else for(const q of output.questions){const reference=Methods.interventionReference(q.elements);for(const unit of Methods.splitDimensions(q.logic?.include,project.criteria,label))add(unit.dimension,'include',Methods.ageClause(unit.criteria)||Methods.clause(unit.dimension,unit.text,reference));for(const unit of Methods.splitDimensions(q.logic?.exclude,project.criteria,label))add(unit.dimension,'exclude',Methods.ageClause(unit.criteria)||Methods.clause(unit.dimension,unit.text,reference));}
+ const displayedByElement=new Map();
+ const elementsById=new Map(project.elements.map(element=>[element.element_id,element]));
+ function add(target,dimension,side,text,criteria){
+  if(!text)return;
+  let row=target.find(row=>row.dimension===dimension);
+  if(!row){row={dimension,include:[],exclude:[]};target.push(row);}
+  if(!row[side].includes(text))row[side].push(text);
+  if(target!==rows)return;
+  for(const criterion of criteria)for(const id of criterion.source_element_ids){
+   const location={domain:dimension,section:side,rule:text};
+   displayedByElement.set(id,location);
+   const age=elementsById.get(id)?.age_boundary_element_id;
+   if(age&&!displayedByElement.has(age))displayedByElement.set(age,location);
+  }
+ }
+ const multiple=output.questions.length>1;
+ const contexts=output.questions.map(q=>{
+  const target=multiple?[]:rows,reference=Methods.interventionReference(q.elements);
+  for(const side of ['include','exclude'])for(const unit of Methods.splitDimensions(q.logic?.[side],q[side],label)){
+   add(target,unit.dimension,side,Methods.ageClause(unit.criteria)||Methods.clause(unit.dimension,unit.text,reference),unit.criteria);
+  }
+  const context=Methods.descriptionContext(q,project);
+  return multiple?{...context,rows:target,display_number:q.display_number}:context;
+ });
+ if(multiple){
+  const questions=output.questions.filter(q=>q.logic_text);
+  const overview=q=>q.display_number+': '+q.logic_text;
+  if(project.question_relation){
+   add(rows,'Other','include',questions.map(overview).join(project.question_relation==='any_of'?' or ':' and '),project.criteria);
+  }else for(const q of questions)add(rows,'Other','include',overview(q),[...q.include,...q.exclude]);
+ }
  const order=['Population','Sample','Intervention','Exposure','Concept','Phenomenon of Interest','Comparison','Outcomes','Context','Study design','Other'];rows.sort((a,b)=>(order.includes(a.dimension)?order.indexOf(a.dimension):99)-(order.includes(b.dimension)?order.indexOf(b.dimension):99));
- const contexts=output.questions.map(q=>Methods.descriptionContext(q,project)),descriptionContext={...(contexts.length===1?contexts[0]:{}),focus_sentence:contexts.map(c=>c.focus_sentence).filter(Boolean).join(' '),methods_sentence:contexts.map(c=>c.methods_sentence).filter(Boolean).join(' ')};
- const focusRows=[];for(const e of project.elements.filter(e=>e.active!==false&&e.information_status!=='missing'&&e.dimension_id!=='population.age'&&e.source_refs?.length&&!project.criteria.some(c=>c.source_element_ids.includes(e.element_id))&&['review_focus','undecided'].includes(e.semantic_role))){const analysis=e.decision_status==='confirmed_by_user'?null:Methods.classifyAnalysis(e,project.questions.find(q=>q.question_id===e.question_id)?.original_text||''),dimension=label(analysis?.dimension_id||e.dimension_id);let row=focusRows.find(row=>row.dimension===dimension);if(!row){row={dimension,values:[],role:e.semantic_role};focusRows.push(row);}if(e.normalized_text&&!row.values.includes(e.normalized_text))row.values.push(e.normalized_text);}
+ const descriptionContext={...(contexts.length===1?contexts[0]:{question_contexts:contexts,question_relation:project.question_relation,combined_rows:clone(rows)}),focus_sentence:contexts.map(c=>c.focus_sentence).filter(Boolean).join(' '),methods_sentence:contexts.map(c=>c.methods_sentence).filter(Boolean).join(' ')};
+ const focusRows=[];for(const e of project.elements.filter(e=>e.active!==false&&e.information_status!=='missing'&&e.dimension_id!=='population.age'&&e.source_refs?.length&&!displayedByElement.has(e.element_id)&&['review_focus','undecided'].includes(e.semantic_role))){const analysis=e.decision_status==='confirmed_by_user'?null:Methods.classifyAnalysis(e,project.questions.find(q=>q.question_id===e.question_id)?.original_text||''),dimension=label(analysis?.dimension_id||e.dimension_id);let row=focusRows.find(row=>row.dimension===dimension);if(!row){row={dimension,values:[],role:e.semantic_role};focusRows.push(row);}if(e.normalized_text&&!row.values.includes(e.normalized_text))row.values.push(e.normalized_text);}
  for(const row of focusRows)if(row.dimension==='Analysis plan')row.values=row.values.filter(value=>!row.values.some(other=>other.length>value.length&&other.toLowerCase().includes(value.toLowerCase())));
- const confirmations=project.issues.filter(issue=>issue.status==='open'&&issue.blocking).map(issue=>({item:issueText(issue,project),kind:'proposal',type:'source-ambiguity',domain:label(project.elements.find(e=>e.element_id===issue.element_ids[0])?.dimension_id),text:issueText(issue,project),side:project.elements.find(e=>e.element_id===issue.element_ids[0])?.disposition==='exclude'?'exclude':'include',status:'suggested',backgroundIssue:true,reviewOnly:!issue.blocking,focusOnly:focusRows.some(row=>row.dimension===label(project.elements.find(e=>e.element_id===issue.element_ids[0])?.dimension_id))&&!rows.some(row=>row.dimension===label(project.elements.find(e=>e.element_id===issue.element_ids[0])?.dimension_id)),issue_id:issue.issue_id,options:issue.options.map(option=>({label:optionLabel(option),option_id:option.option_id})),evidence:issue.element_ids.flatMap(id=>(project.elements.find(e=>e.element_id===id)?.source_refs||[]).map(ref=>({quote:ref.quote,source_id:ref.source_id,source_revision:ref.source_revision})))}));
+ const confirmations=project.issues.filter(issue=>issue.status==='open'&&issue.blocking).map(issue=>{
+  const elements=issue.element_ids.map(id=>elementsById.get(id)).filter(Boolean);
+  const locations=[];
+  for(const element of elements){
+   const location=displayedByElement.get(element.element_id)||{
+    domain:label(element.dimension_id),
+    section:['review_focus','undecided'].includes(element.semantic_role)?'focus':element.disposition==='exclude'?'exclude':'include',
+    subject:element.information_status==='missing'?'':element.normalized_text
+   };
+   if(!locations.some(prior=>prior.domain===location.domain&&prior.section===location.section&&prior.rule===location.rule&&prior.subject===location.subject))locations.push(location);
+  }
+  if(!locations.length)locations.push(issue.reason_code==='FRAMEWORK_AMBIGUITY'?{section:'framework',domain:'Framework'}:{section:'topic',domain:'Review topic'});
+  const primary=locations[0],text=issueText(issue,project,elements);
+  return {item:text,text,kind:'proposal',type:'source-ambiguity',domain:primary.domain,
+   side:primary.section==='exclude'?'exclude':'include',status:'suggested',backgroundIssue:true,
+   reviewOnly:false,focusOnly:primary.section==='focus',locations,issue_id:issue.issue_id,
+   questionNumber:output.questions.length>1?output.questions.find(q=>q.question_id===issue.question_id)?.display_number:null,
+   options:issue.options.map(option=>({label:optionLabel(option),option_id:option.option_id})),
+   evidence:elements.flatMap(element=>element.source_refs||[]).map(({quote,source_id,source_revision})=>({quote,source_id,source_revision}))};
+ });
  return {manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows,framework:output.questions.length===1?output.questions[0].framework_mapping?.display_name||'Other':'Other',rows,reviewTopic:output.questions.map(q=>q.objective).join(' '),topicStyle:'sentence-v3',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
 }
 async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
@@ -45,12 +92,35 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  const keys={project:'aimstep-eligibility-v3:'+projectId,legacy:'aimstep-eligibility:'+projectId,library:'aimstep-eligibility-library:'+projectId,summary:'aimstep-eligibility-summary:'+projectId};
  const read=key=>JSON.parse(storage.getItem(key)||'null');
  function current(){const saved=read(keys.project);if(saved&&(saved.schema_version!==3||saved.project_id!==projectId))D.fail('INVALID_PROJECT','background','The saved methodology record is invalid; it has been preserved.');return saved||E.create_project(projectId);}
- function staged(project,expectedRevision,expectedSignature){return {project,expectedRevision,expectedSignature,classic:projectToClassic(project)};}
+ function staged(project,expectedRevision,expectedSignature,classic=projectToClassic(project)){return {project,expectedRevision,expectedSignature,classic};}
  function validate(stage){const saved=read(keys.project);if((saved?.revision??0)!==stage.expectedRevision||signature(read(keys.legacy))!==stage.expectedSignature)D.fail('VERSION_CONFLICT','background','The criteria changed while this request was running. Your newer edits have been kept.');}
  function transaction(stage,writeLegacy){validate(stage);const names=Object.values(keys),before=names.map(key=>storage.getItem(key));try{const result=writeLegacy();stage.project.last_published_legacy_signature=signature(read(keys.legacy));storage.setItem(keys.project,JSON.stringify(stage.project));return result;}catch(error){names.forEach((key,i)=>{try{before[i]==null?storage.removeItem(key):storage.setItem(key,before[i]);}catch(_){}});throw error;}}
  function refreshPresentation(legacy){
-  const saved=read(keys.project);if(!saved||saved.presentation_version===presentationVersion||!saved.elements.some(e=>e.active!==false)||saved.last_published_legacy_signature!==signature(legacy))return null;
-  const project=clone(saved);project.revision++;project.updated_at=D.now();E.rebuild(project,E.environment(...configs));project.presentation_version=presentationVersion;
+  const saved=read(keys.project);if(!saved||saved.presentation_version===presentationVersion||saved.last_published_legacy_signature!==signature(legacy))return null;
+  const project=clone(saved);
+  if(!project.elements.some(e=>e.active!==false)){
+   // Earlier versions retired the whole projection even for a title-only or prose-only edit.
+   const run=legacy.machineRun,editHistory=legacy.previewEditHistory?.at(-1);
+   if(legacy.activeGenerator!=='machine'||!run||run.question!==legacy.question||
+    run.reviewType!==legacy.reviewType||(run.sourceRevision??0)!==(legacy.machineSourceRevision??0)||
+    editHistory?.changes?.length!==0||
+    !(legacy.machineRefinement?.descriptionEditedByAuthor||legacy.machineRefinement?.topicEditedByAuthor))return null;
+   const snapshot=project.snapshots.at(-1);
+   const revisions=snapshot&&project.changes.filter(change=>change.revision>snapshot.revision);
+   const displayOnly=revisions?.length&&revisions.every(change=>{
+    const decision=project.decisions.find(item=>item.revision===change.revision&&item.action==='classic_author_revision');
+    const edit=decision?.changes?.[0];
+    return change.operation==='classic_author_revision'&&edit?.old&&edit.new&&
+     edit.old.question===edit.new.question&&edit.old.framework===edit.new.framework&&
+     JSON.stringify(edit.old.rows)===JSON.stringify(edit.new.rows)&&
+     (edit.old.topic!==edit.new.topic||edit.old.paragraph!==edit.new.paragraph);
+   });
+   if(!displayOnly||!snapshot.elements?.length||!Array.isArray(snapshot.issues))return null;
+   const activeById=new Map(snapshot.elements.map(element=>[element.element_id,element]));
+   project.elements=project.elements.map(element=>activeById.get(element.element_id)||element);
+   project.issues=clone(snapshot.issues);
+  }
+  project.revision++;project.updated_at=D.now();E.rebuild(project,E.environment(...configs));project.presentation_version=presentationVersion;
   project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_comparison_and_clarification_display',at:project.updated_at,changes:[]});
   return staged(project,saved.revision,signature(read(keys.legacy)));
  }
@@ -60,7 +130,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   let project=E.save_input(saved,{research_question:raw,review_method:methods[reviewType]||null,output_language:'en',legacy_archive:legacy},{base_revision:revision},env).state;
   for(const [index,source]of sources.entries()){if(source.name==='Question / voice input'&&source.text===question)continue;const questions=project.questions.filter(q=>q.active!==false),stored=E.addSource(project,'user_input',source.text,questions.map(q=>q.question_id),'classic_document:'+index,{input_kind:'original_document',name:source.name,page:source.page||null,verification:source.verification||'original-text'});for(const q of questions)q.imported_source_refs=[...(q.imported_source_refs||[]),E.ref(stored)];}
   if(saved.classic_author_source_ref){const ref=saved.classic_author_source_ref;for(const q of project.questions.filter(q=>q.active!==false))if(!q.additional_source_refs.some(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision))q.additional_source_refs.push(clone(ref));}
-  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);project.presentation_version=presentationVersion;const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected);
+  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);project.presentation_version=presentationVersion;const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected,visible);
  }
  async function decide({issue_id,option_id,answer_text,modelClient,signal}){
   const project=current(),issue=project.issues.find(issue=>issue.issue_id===issue_id&&issue.status==='open');if(!issue)D.fail('ISSUE_NOT_FOUND','background','This clarification has already changed. Reload the saved criteria.');
@@ -71,6 +141,21 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  }
  function recordEdit(previous,next){
   const saved=read(keys.project);if(!saved||signature(previous)===signature(next))return null;
+  const before=previous.machineRefinement,after=next.machineRefinement;
+  const displayEdit=before&&after?.editedAt&&
+   (after.reviewTopic!==before.reviewTopic||after.manuscriptParagraph!==before.manuscriptParagraph)&&
+   (after.topicEditedByAuthor||after.descriptionEditedByAuthor)&&next.previewEditHistory?.at(-1)?.changes?.length===0;
+  if(displayEdit&&previous.activeGenerator==='machine'&&next.activeGenerator==='machine'&&
+   previous.question===next.question&&previous.reviewType===next.reviewType&&previous.framework===next.framework&&
+   previous.machineSourceRevision===next.machineSourceRevision&&JSON.stringify(previous.machineCriteria)===JSON.stringify(next.machineCriteria)){
+   // Editing the manuscript or its title cannot invalidate pending source questions.
+   saved.revision++;saved.updated_at=D.now();
+   saved.changes.push({change_id:D.id('change'),revision:saved.revision,operation:'edit_presentation',at:saved.updated_at,
+    changes:[{previous_topic:before.reviewTopic,topic:after.reviewTopic,previous_paragraph:before.manuscriptParagraph,paragraph:after.manuscriptParagraph}]});
+   next.eligibility_v3_revision=saved.revision;
+   if(next.eligibilityV3Snapshot)next.eligibilityV3Snapshot={...next.eligibilityV3Snapshot,revision:saved.revision};
+   return {project:saved,expectedRevision:saved.revision-1,expectedSignature:signature(previous)};
+  }
   const scope=value=>({question:value.question,framework:value.framework,rows:clone((value.activeGenerator==='machine'?value.machineCriteria:value.criteria)||[]),topic:(value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement)?.reviewTopic,paragraph:(value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement)?.manuscriptParagraph});
   const rowsChanged=JSON.stringify(previous.activeGenerator==='machine'?previous.machineCriteria:previous.criteria)!==JSON.stringify(next.activeGenerator==='machine'?next.machineCriteria:next.criteria),decisionId=D.id('decision');
   const project=clone(saved),source=E.addSource(project,'human_answer',JSON.stringify({question:next.question,framework:next.framework,rows:next.activeGenerator==='machine'?next.machineCriteria:next.criteria,topic:(next.activeGenerator==='machine'?next.machineRefinement:next.manualRefinement)?.reviewTopic}),project.questions.filter(q=>q.active!==false).map(q=>q.question_id),null,{input_kind:'classic_author_revision',...(rowsChanged?{legacy_decision_id:decisionId}:{})});if(rowsChanged)project.classic_author_source_ref=E.ref(source);

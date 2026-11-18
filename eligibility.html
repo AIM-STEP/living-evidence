@@ -101,11 +101,11 @@
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div id="criteria-progress" class="criteria-progress" role="progressbar" aria-label="Criteria generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="criteria-progress-track"><div class="criteria-progress-fill"></div></div><span class="criteria-progress-percent">0%</span></div></div><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app/eligibility-library.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/registries.js?v=20261118-criteria-actions-1"></script>
-<script src="app/eligibility/domain.js?v=20261118-wait-animation-1"></script>
-<script src="app/eligibility/methodology.js?v=20261118-wait-animation-1"></script>
-<script src="app/eligibility/engine.js?v=20261118-wait-animation-1"></script>
-<script src="app/eligibility/model.js?v=20261118-wait-animation-1"></script>
-<script src="app/eligibility/background.js?v=20261118-wait-animation-1"></script>
+<script src="app/eligibility/domain.js?v=20261118-criteria-review-3"></script>
+<script src="app/eligibility/methodology.js?v=20261118-criteria-review-3"></script>
+<script src="app/eligibility/engine.js?v=20261118-criteria-review-3"></script>
+<script src="app/eligibility/model.js?v=20261118-criteria-review-3"></script>
+<script src="app/eligibility/background.js?v=20261118-criteria-review-3"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -160,7 +160,11 @@ let manualRefinementController=null,manualRefinementNonce=0,manualRunSignature='
 let eligibilityBackgroundService=null,eligibilityBackgroundPromise=null,pendingBackgroundStage=null;
 function getEligibilityBackground(){
   if(!window.AIMSTEPEligibilityBackground)return null;
-  if(!eligibilityBackgroundPromise)eligibilityBackgroundPromise=window.AIMSTEPEligibilityBackground.create({projectId,storage:localStorage}).then(service=>eligibilityBackgroundService=service);
+  if(!eligibilityBackgroundPromise){
+    eligibilityBackgroundPromise=window.AIMSTEPEligibilityBackground.create({projectId,storage:localStorage})
+      .then(service=>eligibilityBackgroundService=service)
+      .catch(error=>{eligibilityBackgroundPromise=null;throw error});
+  }
   return eligibilityBackgroundPromise;
 }
 function backgroundErrorMessage(error){
@@ -174,14 +178,23 @@ function backgroundModelClient(model){return {get exchanges(){return model.audit
   finally{signal?.removeEventListener('abort',abort);}
 }};}
 
-function useBackgroundCriteria(stage,runData,resetDecisions=true){
+function useBackgroundCriteria(stage,runData,resetDecisions=true,{presentationRefresh=false}={}){
   const result=stage.classic,rows=result.rows.filter(row=>row.include.length||row.exclude.length);
+  const previous=resetDecisions?null:state.machineRefinement;
   state.framework=result.framework;state.machineCriteria=rows.map((row,index)=>({id:'INC-'+String(index+1).padStart(2,'0'),title:row.dimension,condition:row.include.join('\n'),uncertain:row.exclude.join('\n'),definition:'',purpose:'Eligibility',stage:'',source:'machine'}));
   state.activeGenerator='machine';state.generationMode='machine';state.generationMethodChoice='machine';state.generationMethod='source-structured-v3';
   state.machineRun={...runData,methodVersion:window.AIMSTEPEligibilityEngine.VERSION,generatedAt:new Date().toISOString(),backgroundRevision:stage.project.revision};
   const signature=machineSourceSignature(runData.question,runData.reviewType,runData.sourceRevision??0,state.machineCriteria);
   const paragraph=result.manuscriptParagraph||manuscriptDraft(rows.map(row=>({label:row.dimension,include:row.include,exclude:row.exclude})),rows.flatMap(row=>row.exclude.map(rule=>({rule,domains:[row.dimension]}))),previewLimits([]));
   const {snapshot,...refinement}=result;state.machineRefinement={...refinement,rows,signature,generatedAt:state.machineRun.generatedAt,modelName:runData.modelName,manuscriptParagraph:paragraph};
+  if(previous?.topicEditedByAuthor){
+    state.machineRefinement.reviewTopic=previous.reviewTopic;
+    state.machineRefinement.topicEditedByAuthor=true;
+  }
+  if(previous?.descriptionEditedByAuthor&&(presentationRefresh||JSON.stringify(previous.rows)===JSON.stringify(rows))){
+    state.machineRefinement.manuscriptParagraph=previous.manuscriptParagraph;
+    state.machineRefinement.descriptionEditedByAuthor=true;
+  }
   state.eligibilityV3Snapshot=snapshot;state.eligibility_v3_revision=stage.project.revision;state.confirmed=false;state.visibleDescription=null;
   if(resetDecisions){state.finalCriteria=null;state.resolvedPending=[];state.pendingDecisions={};}
   if(state.protocolSource)state.protocolSource.sharedCriteria=false;
@@ -239,7 +252,18 @@ function criteriaWaiting(waiting){
 }
 function criteriaProgress(percent){const el=$('criteria-progress'),value=Math.max(0,Math.min(100,Math.round(percent)));criteriaProgressValue=value;el.hidden=false;el.style.setProperty('--progress',value+'%');el.setAttribute('aria-valuenow',String(value));el.setAttribute('aria-valuetext',value===100?'Completed':value+'% of workflow stages completed');el.querySelector('.criteria-progress-percent').textContent=value+'%';el.classList.toggle('is-processing',value<100);if(value===100)criteriaWaiting(false)}
 
-function setMachineStatus(message,error=false,percent){generationStatus.textContent=message;generationStatus.hidden=!message||!!(generationController&&!error);generationStatus.classList.toggle('error',error);if(Number.isFinite(percent))criteriaProgress(percent);if(error)$('criteria-progress').classList.remove('is-processing');if(!message&&!generationController)$('criteria-progress').hidden=true;if(message&&generationController){state.generationProgressLog=[...(state.generationProgressLog||[]),{message,error,date:new Date().toISOString()}].slice(-60);try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}}
+function setMachineStatus(message,error=false,percent){
+  generationStatus.textContent=message;
+  generationStatus.hidden=!message||!!(generationController&&!error);
+  generationStatus.classList.toggle('error',error);
+  if(Number.isFinite(percent))criteriaProgress(percent);
+  if(error)$('criteria-progress').classList.remove('is-processing');
+  if(!message&&!generationController)$('criteria-progress').hidden=true;
+  // A progress event is not a project edit. Persist the log with the next real save.
+  if(message&&generationController){
+    state.generationProgressLog=[...(state.generationProgressLog||[]),{message,error,date:new Date().toISOString()}].slice(-60);
+  }
+}
 function stopMachineGeneration(){generationNonce++;if(generationController){generationController.abort();generationController=null}criteriaWaiting(false);$('criteria-progress').classList.remove('is-processing');$('start-machine').disabled=false;$('start-machine').textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}
 const attachedFiles=[];
 let nextAttachmentId=0,voiceRecognition=null,voiceDone=Promise.resolve(),resolveVoiceDone=null,pdfModulePromise=null;
@@ -485,7 +509,11 @@ async function requestMachineCriteria(model,input,reviewType,signal,transcribe=f
 async function recordCriteriaExchange(model,system,payload,raw,data,schema=null){
   if(!Array.isArray(model.auditTrail))return;
   const helper=window.AIMSTEPCriteriaGrounding;
-  model.auditTrail.push({at:new Date().toISOString(),stage:system.split('.')[0].slice(0,120),model:data.model||model.name,provider:data.provider||model.provider,requestedTemperature:0,actualParameters:'not reported by provider',promptHash:await helper.hashText(JSON.stringify({system,payload})),responseHash:await helper.hashText(raw),schemaHash:schema?await helper.hashText(JSON.stringify(schema)):null,...(data.review?{hybridReview:data.review}:{}),...(data.transport?{transport:data.transport}:{})});
+  const [promptHash,responseHash,schemaHash]=await Promise.all([
+    helper.hashText(JSON.stringify({system,payload})),helper.hashText(raw),
+    schema?helper.hashText(JSON.stringify(schema)):null
+  ]);
+  model.auditTrail.push({at:new Date().toISOString(),stage:system.split('.')[0].slice(0,120),model:data.model||model.name,provider:data.provider||model.provider,requestedTemperature:0,actualParameters:'not reported by provider',promptHash,responseHash,schemaHash,...(data.review?{hybridReview:data.review}:{}),...(data.transport?{transport:data.transport}:{})});
 }
 async function callCriteriaJson(model,system,payload,signal,schema=null){
   const controller=new AbortController();let expired=false;
@@ -747,7 +775,7 @@ function validateAcademicDraft(answer,input,signature,model,extracts){
   const missed=extracts.atoms.filter(atom=>!used.has(atom.id)).map(atom=>atom.dimension+': check the omitted or conditional proposition '+atom.sourceSentence);
   const notes=answer.uncertainties.filter(item=>typeof item==='string'&&item.trim()&&item.length<500).map(item=>item.trim());
   const uncertainties=[...new Set([...dropped,...extracts.issues,...notes,...missed])];
-  return {signature,slot:model.slot,modelName:model.name,descriptionStyle:'accepted-rules-v2',generatedAt:new Date().toISOString(),reviewTopic:topic,rows,sourceConfirmations:mergeSourceConfirmations(sourceConfirmations),ruleEvidence:acceptedLinks,renderingFallbacks,uncertainties,clarifications:uncertainties.map(item=>pendingDetails.find(detail=>detail.item===item)||({item,kind:'review',text:'',domain:'Other'})),manuscriptParagraph:paragraph,trace:extracts.atoms.map(({sourceContext,...atom})=>({...atom,used:used.has(atom.id)})),ruleReviews:[...(extracts.draftReview||new Map())].map(([id,result])=>({id,...result}))};
+  return {signature,slot:model.slot,modelName:model.name,descriptionStyle:'clinical-prose-v3',generatedAt:new Date().toISOString(),reviewTopic:topic,rows,sourceConfirmations:mergeSourceConfirmations(sourceConfirmations),ruleEvidence:acceptedLinks,renderingFallbacks,uncertainties,clarifications:uncertainties.map(item=>pendingDetails.find(detail=>detail.item===item)||({item,kind:'review',text:'',domain:'Other'})),manuscriptParagraph:paragraph,trace:extracts.atoms.map(({sourceContext,...atom})=>({...atom,used:used.has(atom.id)})),ruleReviews:[...(extracts.draftReview||new Map())].map(([id,result])=>({id,...result}))};
 }
 async function autoCriteriaPipeline(model,input,signature,signal,progress){
   const segments=sourceSegments(input);if(!segments.length)throw new Error('No source rules were entered.');
@@ -1002,22 +1030,24 @@ function standardizedCriteria(){
     const polished=refinement.rows.map((row,index)=>({code:normalized[index].code,label:normalized[index].label,include:row.include,exclude:row.exclude}));
     const polishedExclusions=new Map();for(const row of polished)for(const rule of row.exclude){const key=ruleKey(rule);if(!polishedExclusions.has(key))polishedExclusions.set(key,{rule,domains:[]});polishedExclusions.get(key).domains.push(row.label)}
     const unresolved=polishedExclusions.size?pending.filter(item=>item!=='Confirm whether explicit exclusion rules are needed.'):pending;
-    return {rows:polished,framework,pending:openPending([...new Set([...unresolved,...refinement.uncertainties])]),exclusions:[...polishedExclusions.values()],limits,topic:refinement.topicEditedByAuthor||refinement.topicStyle==='sentence-v3'?refinement.reviewTopic:validatedReviewTopic(refinement.reviewTopic)||summaryTopic(polished,framework),paragraph:hasConfirmedRules()&&!refinement.descriptionEditedByAuthor&&!refinement.descriptionContext?manuscriptDraft(polished,[...polishedExclusions.values()],limits):refinement.manuscriptParagraph,trace:refinement.trace||[],focusRows:refinement.focusRows||[],refined:true};
+    return {rows:polished,framework,pending:openPending([...new Set([...unresolved,...refinement.uncertainties])]),exclusions:[...polishedExclusions.values()],limits,topic:refinement.topicEditedByAuthor||refinement.topicStyle==='sentence-v3'?refinement.reviewTopic:validatedReviewTopic(refinement.reviewTopic)||summaryTopic(polished,framework),paragraph:renderSavedDescription(refinement,polished,[...polishedExclusions.values()],limits),trace:refinement.trace||[],focusRows:refinement.focusRows||[],refined:true};
   }
   return {rows:normalized,framework,pending:openPending([...new Set(pending)]),exclusions:[...exclusions.values()],limits,topic:'',paragraph:state.activeGenerator==='machine'||hasConfirmedRules()?manuscriptDraft(normalized,[...exclusions.values()],limits):'',refined:false};
 }
-function manuscriptDraft(rows,exclusions,limits){
-  const order=['Study design','Population','Intervention','Exposure','Phenomenon of Interest','Concept','Comparison','Outcomes','Context'];
-  const ranked=rows.map((r,i)=>({r,i,rank:order.includes(r.label)?order.indexOf(r.label):order.length})).sort((a,b)=>a.rank-b.rank||a.i-b.i).map(x=>x.r);
-  const sentences=[];
-  for(const row of ranked){if(!row.include.length)continue;const rules=row.include.join(' ').trim();
-    const lead={'Study design':'Eligible study designs were specified as follows: ','Population':'Eligible populations were defined as follows: ','Intervention':'Eligible interventions were defined as follows: ','Exposure':'Eligible exposures were defined as follows: ','Comparison':'Eligible comparators were defined as follows: ','Outcomes':'Outcome-related criteria were specified as follows: ','Context':'Eligible settings were defined as follows: '}[row.label]||'Additional eligibility criteria were as follows: ';
-    sentences.push(lead+rules.replace(/[.\s]+$/,'')+'.');
+function renderSavedDescription(refinement,rows,exclusions,limits){
+  if(refinement.descriptionEditedByAuthor)return refinement.manuscriptParagraph;
+  if(!refinement.descriptionContext&&(hasConfirmedRules()||refinement.descriptionStyle==='accepted-rules-v2')){
+    return manuscriptDraft(rows,exclusions,limits);
   }
-  if(!sentences.length)return '';
-  if(exclusions.length)sentences.push('The exclusion criteria were '+exclusions.map(item=>item.rule.replace(/[.\s]+$/,'')).join('; ')+'.');
-  if(limits.length)sentences.push('The following report restrictions applied: '+limits.join('; ').replace(/[.\s]+$/,'')+'.');
-  return sentences.join(' ');
+  return refinement.manuscriptParagraph;
+}
+function manuscriptDraft(rows,exclusions,limits,context={}){
+  const criteria=rows.map(row=>({dimension:row.label||row.dimension,include:row.include||[],exclude:row.exclude||[]}));
+  const render=window.AIMSTEPEligibilityMethodology?.description||window.AIMSTEPEligibilityBackground?.renderDescription;
+  if(render)return render(criteria,{...context,exclusions,limits});
+  // Standalone editor without the methodology bundle: keep the accepted text readable.
+  const sentence=text=>String(text).trim().replace(/[.\s]+$/,'')+'.';
+  return [...criteria.flatMap(row=>row.include.map(sentence)),...exclusions.map(item=>sentence('We will exclude '+item.rule)),...limits.map(sentence)].join(' ');
 }
 
 // The summary exactly as shown below, for Title and abstract screening to
@@ -1029,10 +1059,6 @@ function shareSummary(data){if(embeddedPreview){embeddedPreviewSummary=data?{ver
 let previewDirty=false,previewBase=null;
 function editableCriteriaText(value,attributes,label,placeholder=''){
   return `<span class="criteria-editable" contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="${escapeHtml(label)}" data-placeholder="${escapeHtml(placeholder)}" ${attributes}>${escapeHtml(value)}</span>`;
-}
-function editableCriteriaRules(rules,index,kind,label){
-  const items=rules.length?rules:[''];
-  return items.map((rule,i)=>(items.length>1?(i+1)+'.':'')+editableCriteriaText(rule,`data-criteria-row="${index}" data-criteria-kind="${kind}" data-criteria-rule="${i}"`,label+' '+kind+' rule '+(i+1),'To be defined.')).join(' ');
 }
 function savePreviewEdits(notify=true){
   if(!previewDirty){const ok=save();if(notify)toast(ok?'Criteria saved.':'Could not save criteria on this device.');return ok;}
@@ -1105,23 +1131,59 @@ function clearPreviewCriteria(){
 $('clear-criteria').addEventListener('click',clearPreviewCriteria);
 
 window.addEventListener('beforeunload',event=>{if(previewDirty){event.preventDefault();event.returnValue='';}});
-function scopeSuggestionsHtml(refinement){
-  const suggestions=(refinement?.scopeSuggestions||[]).slice(0,2).map((detail,index)=>({detail,index})).filter(({detail})=>detail.status==='suggested');
-  if(!suggestions.length)return '';
-  return '<section class="summary-block scope-suggestions"><h3 data-ui-localize>Optional scope suggestions</h3><p class="summary-muted" data-ui-localize>The current criteria are ready to use. Adopt a suggestion only if it matches your intended scope.</p>'+suggestions.map(({detail,index})=>'<div class="scope-suggestion"><p><strong>'+escapeHtml(detail.domain)+':</strong> <span data-ui-localize>'+(detail.side==='exclude'?'Exclusion':'Inclusion')+'</span> — '+escapeHtml(detail.text)+'</p><p class="summary-muted">'+escapeHtml(detail.reason)+'</p><div class="scope-actions"><button class="btn small" type="button" data-scope-action="adopt" data-scope-index="'+index+'" data-ui-localize>Adopt</button><button class="btn small" type="button" data-scope-action="keep" data-scope-index="'+index+'" data-ui-localize>Keep current criteria</button></div></div>').join('')+'</section>';
+// Keep one display model for the editable preview and the Word export.
+function criteriaDisplay(rows,refinement){
+ const entries=rows.map((row,index)=>({
+  label:row.label,index,
+  include:row.include.map((text,position)=>({text,position,checks:[]})),
+  exclude:row.exclude.map((text,position)=>({text,position,checks:[]}))
+ }));
+ const display={rows:entries,topic:[],framework:[],focus:[]};
+ for(const [index,detail] of (refinement?.sourceConfirmations||[]).entries()){
+  if(detail.status!=='suggested')continue;
+  const locations=detail.locations?.length?detail.locations:[{domain:detail.domain,section:detail.focusOnly?'focus':detail.side||'include'}];
+  for(const location of locations){
+   const check={detail,index,subject:location.subject||'',domain:location.domain};
+   if(['topic','framework','focus'].includes(location.section)){display[location.section].push(check);continue;}
+   const side=location.section==='exclude'?'exclude':'include';
+   const sameDomain=row=>row.label.toLowerCase()===location.domain.toLowerCase();
+   let row=entries.find(row=>sameDomain(row)&&location.rule&&row[side].some(line=>line.text===location.rule));
+   if(!row)row=entries.find(sameDomain);
+   if(!row){row={label:location.domain,index:null,include:[],exclude:[]};entries.push(row);}
+   let line=location.rule&&row[side].find(line=>line.text===location.rule);
+   if(!line){
+    line=row[side].find(line=>line.position===null&&line.text===check.subject);
+    if(!line){line={text:check.subject,position:null,checks:[]};row[side].push(line);}
+   }
+   if(!line.checks.some(item=>item.index===index))line.checks.push(check);
+  }
+ }
+ return display;
 }
-function sourceConfirmationsHtml(refinement,domain,side,focusOnly=false){
- const details=(refinement?.sourceConfirmations||[]).map((detail,index)=>({detail,index})).filter(({detail})=>detail.status==='suggested'&&!!detail.focusOnly===focusOnly&&(!domain||detail.domain===domain)&&(!side||detail.side===side));
- return details.map(({detail,index})=>{
+function sourceConfirmationHtml({detail,index}){
   const button=(choice,symbol,title)=>'<button class="btn small" type="button" data-source-confirm="'+index+'" data-source-option="'+choice+'" aria-label="'+escapeHtml(title)+'" title="'+escapeHtml(title)+'">'+symbol+'</button>';
   const evidence=(detail.evidence||[]).slice(0,2).map(ref=>'<p class="summary-muted">Source: “'+escapeHtml(ref.quote||'')+'”</p>').join('');
   if(detail.backgroundIssue){
    const answer='<div class="scope-actions"><input class="text-input" type="text" maxlength="2000" data-source-answer="'+index+'" aria-label="Your clarification" placeholder="Enter your clarification for this element"><button class="btn small" type="button" data-source-confirm="'+index+'" data-source-option="answer">Apply</button></div>';
    const options=detail.options.length===2?'<div class="scope-actions">'+button(0,'✓',detail.options[0].label)+button(1,'×',detail.options[1].label)+'</div><p class="summary-muted">✓ '+escapeHtml(detail.options[0].label)+' × '+escapeHtml(detail.options[1].label)+'</p>':detail.options.map((option,choice)=>'<div class="scope-actions"><span>'+escapeHtml(option.label)+'</span>'+button(choice,'✓','Use '+option.label)+button(-1,'×','Keep this issue pending')+'</div>').join('');
-   return '<div class="scope-suggestion source-confirmations"><p><strong>Author check:</strong> '+escapeHtml(detail.text)+'</p>'+evidence+options+answer+'</div>';
+   return '<div class="scope-suggestion source-confirmations"><p><strong>Author check:</strong> '+escapeHtml((detail.questionNumber?detail.questionNumber+' · ':'')+detail.text)+'</p>'+evidence+options+answer+'</div>';
   }
   return '<div class="scope-suggestion source-confirmations"><p>'+escapeHtml(detail.text||detail.options?.[0]?.text||'Confirm this condition')+'</p>'+evidence+'<div class="scope-actions">'+button(0,'✓','Use the first interpretation')+button(1,'×','Use the alternative interpretation')+'</div></div>';
+}
+function renderCriteriaSide(display,side){
+ const markup=display.rows.filter(row=>row[side].length).map(row=>{
+  const count=row[side].filter(line=>line.position!==null).length;
+  const lines=row[side].map((line,lineIndex)=>{
+   const title=lineIndex===0?'<strong>'+escapeHtml(row.label)+':</strong> ':'';
+   const number=line.position!==null&&count>1?(line.position+1)+'. ':'';
+   const value=line.position===null?(line.text?'Pending · '+escapeHtml(line.text):''):editableCriteriaText(line.text,
+    `data-criteria-row="${row.index}" data-criteria-kind="${side}" data-criteria-rule="${line.position}"`,
+    row.label+' '+side+' rule '+(line.position+1));
+   return '<div class="summary-inclusion"><span>'+title+number+value+'</span>'+line.checks.map(sourceConfirmationHtml).join('')+'</div>';
+  });
+  return lines.join('');
  }).join('');
+ return markup||'<p class="summary-muted" data-ui-localize>'+(side==='include'?'No explicit inclusion rules entered.':'No explicit exclusion rules entered.')+'</p>';
 }
 function renderPreview(){
   const area=$('preview');
@@ -1141,33 +1203,44 @@ function renderPreview(){
   const hasConfirmations=refinement?.sourceConfirmations?.some(detail=>detail.status==='suggested');
   publishCriteriaSummary(complete);
   const {rows,framework,exclusions,limits,topic,paragraph}=criteriaForPage(complete);
-  if(!complete.rows.length&&!hasConfirmations){area.innerHTML='<p class="empty" data-ui-localize>'+(state.activeGenerator==='machine'&&state.machineRun?'No eligibility rules could be generated from this input.':'No criteria have been entered.')+'</p>';$('download').hidden=true;shareSummary(null);return}
-  $('download').hidden=!complete.rows.length;
+  if(!complete.rows.length&&!hasConfirmations&&!paragraph){area.innerHTML='<p class="empty" data-ui-localize>'+(state.activeGenerator==='machine'&&state.machineRun?'No eligibility rules could be generated from this input.':'No criteria have been entered.')+'</p>';$('download').hidden=true;shareSummary(null);return}
+  $('download').hidden=!complete.rows.length&&!hasConfirmations&&!paragraph;
   $('save-criteria').hidden=false;$('clear-criteria').hidden=false;
   previewBase={signature:criteriaSignature(state),data:structuredClone(criteriaForPage(complete))};
   const hasStudy=rows.some(row=>row.label==='Study design');
   const frameworkLabel=framework==='PICO'&&hasStudy?'PICOS':framework==='PECO'&&hasStudy?'PECOS':framework;
-  const renderSide=side=>{
-   const shown=new Set();let html=rows.map((row,index)=>{const checks=sourceConfirmationsHtml(refinement,row.label,side);if(!row[side].length&&!checks)return '';shown.add(row.label);return '<div class="summary-inclusion"><span><strong>'+escapeHtml(row.label)+':</strong> '+(row[side].length?editableCriteriaRules(row[side],index,side,row.label):'')+'</span>'+checks+'</div>';}).join('');
-   for(const detail of refinement?.sourceConfirmations||[])if(detail.status==='suggested'&&!detail.focusOnly&&detail.side===side&&!shown.has(detail.domain)){shown.add(detail.domain);html+='<div class="summary-inclusion"><span><strong>'+escapeHtml(detail.domain)+':</strong></span>'+sourceConfirmationsHtml(refinement,detail.domain,side)+'</div>';}
-   return html||'<p class="summary-muted" data-ui-localize>'+(side==='include'?'No explicit inclusion rules entered.':'No explicit exclusion rules entered.')+'</p>';
-  };
-  const includes=renderSide('include'),exclusionHtml=renderSide('exclude');
-  const focusRows=refinement?.focusRows||[],focusHtml=focusRows.length?'<section class=\"summary-block\"><h3>Review focus and analysis plan</h3><p class=\"summary-muted\">These source-defined elements are retained separately from eligibility restrictions.</p>'+focusRows.map(row=>'<div class=\"summary-inclusion\"><span><strong>'+escapeHtml(row.dimension)+':</strong> '+escapeHtml(row.values.join('; '))+'</span>'+sourceConfirmationsHtml(refinement,row.dimension,'include',true)+'</div>').join('')+'</section>':'';
+  const display=criteriaDisplay(rows,refinement);
+  const includes=renderCriteriaSide(display,'include'),exclusionHtml=renderCriteriaSide(display,'exclude');
+  const focusChecks=display.focus.map(check=>'<div class="summary-inclusion"><strong>'+escapeHtml(check.domain)+' · Review focus</strong>'+escapeHtml(check.subject)+sourceConfirmationHtml(check)+'</div>').join('');
   const legacyNote=state.activeGenerator==='machine'&&state.machineRefinement&&!state.machineRefinement.audit?'<p class="summary-muted">This saved draft has not been checked against the original sources with the updated method. Generate again to run the new checks.</p>':'';
-  area.innerHTML=`<div class="criteria-summary">${legacyNote}<div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> ${editableCriteriaText(topic||summaryTopic(rows,framework),'data-criteria-text="topic"','Review topic')}</p><p><strong data-ui-localize>Framework:</strong> ${escapeHtml(frameworkLabel)}</p></div><section class="summary-block"><h3 data-ui-localize>Inclusion</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong data-ui-localize>Limits:</strong> ${escapeHtml(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3 data-ui-localize>Exclusion</h3>${exclusionHtml}</section><section class="summary-block"><h3 data-ui-localize>Description</h3>${paragraph?`<p class="summary-paragraph">${editableCriteriaText(paragraph,'data-criteria-text="paragraph"','Description')}</p>`:'<p class="summary-muted" data-ui-localize>'+(hasConfirmations?'Description updates when a rule is confirmed.':'Click Generate to generate a publication-style paragraph with the local model.')+'</p>'}</section>${focusHtml}${scopeSuggestionsHtml(refinement)}</div>`;
+  area.innerHTML=`<div class="criteria-summary">${legacyNote}<div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> ${editableCriteriaText(topic||summaryTopic(rows,framework),'data-criteria-text="topic"','Review topic')}</p>${display.topic.map(sourceConfirmationHtml).join('')}<p><strong data-ui-localize>Framework:</strong> ${escapeHtml(frameworkLabel)}</p>${display.framework.map(sourceConfirmationHtml).join('')}</div><section class="summary-block"><h3 data-ui-localize>Inclusion</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong data-ui-localize>Limits:</strong> ${escapeHtml(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3 data-ui-localize>Exclusion</h3>${exclusionHtml}</section>${focusChecks}<section class="summary-block"><h3 data-ui-localize>Description</h3>${paragraph?`<p class="summary-paragraph">${editableCriteriaText(paragraph,'data-criteria-text="paragraph"','Description')}</p>`:'<p class="summary-muted" data-ui-localize>'+(hasConfirmations?'Description updates when a rule is confirmed.':'Click Generate to generate a publication-style paragraph with the local model.')+'</p>'}</section></div>`;
 }
 function xmlEscape(value){return String(value==null?'':value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
 function wordParagraph(value,bold){return '<w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r>'+(bold?'<w:rPr><w:b/></w:rPr>':'')+'<w:t xml:space="preserve">'+xmlEscape(value)+'</w:t></w:r></w:p>'}
-function wordCell(value,width,bold){return '<w:tc><w:tcPr><w:tcW w:w="'+width+'" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>'+wordParagraph(value,bold)+'</w:tc>'}
+function wordCell(value,width,bold){
+ const lines=Array.isArray(value)?value:[value];
+ return '<w:tc><w:tcPr><w:tcW w:w="'+width+'" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>'+(lines.length?lines:['']).map(text=>wordParagraph(text,bold)).join('')+'</w:tc>';
+}
 function crc32(bytes){let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let bit=0;bit<8;bit++)crc=(crc>>>1)^((crc&1)?0xedb88320:0)}return(crc^0xffffffff)>>>0}
 function concatBytes(parts){const length=parts.reduce((total,part)=>total+part.length,0),result=new Uint8Array(length);let offset=0;for(const part of parts){result.set(part,offset);offset+=part.length}return result}
 function makeStoredZip(files){const encoder=new TextEncoder(),localParts=[],centralParts=[];let offset=0;for(const file of files){const name=encoder.encode(file.name),data=encoder.encode(file.content),crc=crc32(data),local=new Uint8Array(30+name.length),lv=new DataView(local.buffer);lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint32(14,crc,true);lv.setUint32(18,data.length,true);lv.setUint32(22,data.length,true);lv.setUint16(26,name.length,true);local.set(name,30);localParts.push(local,data);const central=new Uint8Array(46+name.length),cv=new DataView(central.buffer);cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint32(16,crc,true);cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);cv.setUint16(28,name.length,true);cv.setUint32(42,offset,true);central.set(name,46);centralParts.push(central);offset+=local.length+data.length}const centralOffset=offset,central=concatBytes(centralParts),end=new Uint8Array(22),ev=new DataView(end.buffer);ev.setUint32(0,0x06054b50,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,central.length,true);ev.setUint32(16,centralOffset,true);return concatBytes([...localParts,central,end])}
-function criteriaWordFile(){const normalized=standardizedCriteria(),widths=[3000,4200,2160],headers=['Domain','Include','Exclude'];const rows=[headers,...normalized.rows.map(row=>[row.label,formatCriteriaRules(row.include),formatCriteriaRules(row.exclude)]),...(normalized.limits.length?[['Limits',normalized.limits.join(' '),'']]:[])];const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>',tableRows=rows.map((row,index)=>'<w:tr>'+row.map((cell,column)=>wordCell(cell,widths[column],index===0)).join('')+'</w:tr>').join('');const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+(normalized.topic||summaryTopic(normalized.rows,normalized.framework)),false)+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+((normalized.focusRows||[]).length?wordParagraph('Review focus and analysis plan',true)+normalized.focusRows.map(row=>wordParagraph(row.dimension+': '+row.values.join('; '),false)).join(''):'')+(normalized.paragraph?wordParagraph('Description',true)+wordParagraph(normalized.paragraph,false):'')+clarificationWordParagraphs()+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
+function criteriaWordFile(){
+ const normalized=standardizedCriteria(),display=criteriaDisplay(normalized.rows,currentRefinement());
+ const widths=[3000,4200,2160],headers=['Domain','Include','Exclude'];
+ const checkText=({detail})=>'Author check: '+(detail.questionNumber?detail.questionNumber+' · ':'')+detail.text;
+ const sideText=lines=>{
+  const numbered=lines.filter(line=>line.position!==null).length>1;
+  return lines.flatMap(line=>[...(line.text?[(line.position===null?'Pending · ':numbered?(line.position+1)+'. ':'')+line.text]:[]),...line.checks.map(checkText)]);
+ };
+ const rows=[headers,...display.rows.map(row=>[row.label,sideText(row.include),sideText(row.exclude)]),...(normalized.limits.length?[['Limits',normalized.limits.join(' '),'']]:[])];
+ const topicChecks=display.topic.map(check=>wordParagraph(checkText(check),false)).join('');
+ const frameworkChecks=display.framework.map(check=>wordParagraph(check.domain+' · '+checkText(check),false)).join('');
+ const focusChecks=display.focus.map(check=>wordParagraph(check.domain+' · Review focus'+(check.subject?' · '+check.subject:''),true)+wordParagraph(checkText(check),false)).join('');
+ const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>',tableRows=rows.map((row,index)=>'<w:tr>'+row.map((cell,column)=>wordCell(cell,widths[column],index===0)).join('')+'</w:tr>').join('');const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+(normalized.topic||summaryTopic(normalized.rows,normalized.framework)),false)+topicChecks+frameworkChecks+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+focusChecks+(normalized.paragraph?wordParagraph('Description',true)+wordParagraph(normalized.paragraph,false):'')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';syncGenerationMethodOptions();$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';state.reviewType=reviewTypeForProject();document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});
-if(window.AIMSTEPEligibilityBackground&&!embeddedManual&&!embeddedPreview)getEligibilityBackground().then(service=>{if(generationController||previewDirty||state.activeGenerator!=='machine')return;const stage=service.refreshPresentation?.(state);if(!stage)return;const generatedAt=state.machineRun?.generatedAt;useBackgroundCriteria(stage,state.machineRun||{},false);if(generatedAt){state.machineRun.generatedAt=generatedAt;state.machineRefinement.generatedAt=generatedAt;}save({updateEntry:true});}).catch(()=>{});
+if(window.AIMSTEPEligibilityBackground&&!embeddedManual&&!embeddedPreview)getEligibilityBackground().then(service=>{if(generationController||previewDirty||state.activeGenerator!=='machine')return;const stage=service.refreshPresentation?.(state);if(!stage)return;const generatedAt=state.machineRun?.generatedAt;useBackgroundCriteria(stage,state.machineRun||{},false,{presentationRefresh:true});if(generatedAt){state.machineRun.generatedAt=generatedAt;state.machineRefinement.generatedAt=generatedAt;}save({updateEntry:true});}).catch(()=>{});
 window.addEventListener('load',()=>{try{if(window.parent!==window)window.parent.AIMSTEP?.setLanguage?.('en');}catch(_){}window.AIMSTEP?.setLanguage?.('en');},{once:true});
 $('generation-method').addEventListener('change',()=>{const locked=lockedGenerationMethod();if(locked&&$('generation-method').value!==locked){syncGenerationMethodOptions();return;}stopMachineGeneration();stopManualRefinement();abortVoiceInput();setMachineStatus('');setManualStatus('');const mode=$('generation-method').value;syncProposalCriteria();state.generationMethodChoice=mode;state.activeGenerator=mode;state.generationMode=mode==='machine'?'machine':mode==='manual'?'manual':'';$('machine-generate-panel').hidden=mode!=='machine';$('manual-generate-panel').hidden=mode!=='manual';renderPreview();save()});
 $('start-machine').addEventListener('click',generateMachineCriteria);
@@ -1255,21 +1328,6 @@ function pendingSuggestion(item){
   return {domain,text,vague,issue};
 }
 const PENDING_CLARIFICATION_GUIDANCE='Optional scope suggestions may be adopted without blocking use of the generated criteria.';
-function decisionRuleIsActive(decision){
-  const rows=state.activeGenerator==='machine'?state.machineCriteria:state.criteria,row=rows.find(row=>row.title===decision.domain);
-  if(!row||!decision.rule)return false;
-  const side=decision.side||(decision.decision==='fails'?'exclude':'include'),field=side==='exclude'?'uncertain':'condition';
-  const active=new Set(ruleClauses([row[field],side==='include'?row.definition:''].filter(Boolean).join('\n'),side).map(ruleKey));
-  return ruleClauses(decision.rule,side).every(rule=>active.has(ruleKey(rule)));
-}
-function clarificationWordParagraphs(){
-  const confirmed=state.finalCriteria?.decisions||[],seen=new Set(confirmed.map(d=>d.item));
-  const pending=Object.entries(state.pendingDecisions||{}).filter(([item,d])=>d.decision&&!seen.has(item)).map(([item,d])=>({item,...d,unapplied:true}));
-  const decisions=[...confirmed,...pending];
-  const open=currentRefinement()?.sourceConfirmations?.filter(c=>c.status==='suggested')||[],checks=open.length?wordParagraph('Author checks pending',true)+open.map(c=>wordParagraph(c.domain+': '+c.text,false)).join(''):'';
-  if(!decisions.length)return checks;
-  return checks+wordParagraph('Clarification decisions',true)+decisions.map((d,i)=>wordParagraph((i+1)+'. '+d.item,false)+wordParagraph('Selected: '+(d.kind==='proposal'?(d.decision==='meets'?'Use proposed rule':'Ignored suggestion'):d.kind==='review'?'Reviewed':d.decision==='meets'?'Meets (✓)':'Does not meet (×)')+(d.unapplied?' — saved selection; not yet applied':''),false)+(d.rule?wordParagraph('Rule ('+d.domain+'): '+d.rule,false)+(!d.unapplied&&!decisionRuleIsActive(d)?wordParagraph('Status: Superseded by later criteria edits.',false):''):'')).join('');
-}
 function currentPending(){return standardizedCriteria().pending}
 function persistQuietly(){if(embeddedManual||embeddedPreview)return;try{localStorage.setItem(key,JSON.stringify(state))}catch(e){}}
 function sentence(t){t=String(t||'').replace(/\s+/g,' ').trim().replace(/[.。]+$/,'');return t?t.charAt(0).toUpperCase()+t.slice(1)+'.':''}
@@ -1328,8 +1386,8 @@ function applyScopeSuggestion(index,action){
   if(!generateFinalCriteria([detail.item])){state=before;renderCards();renderPreview();return false;}
   return true;
 }
-async function confirmBackgroundIssue(detail,choice){
-  let answer=null,option;if(choice==='answer'){const index=currentRefinement()?.sourceConfirmations?.indexOf(detail),field=document.querySelector('[data-source-answer=\"'+index+'\"]');answer=field?.value.trim();if(!answer){field?.focus();toast('Enter your clarification first.');return false;}}else{if(choice<0){toast('This issue remains pending.');return false;}option=detail.options[choice];if(!option)return false;}
+async function confirmBackgroundIssue(detail,choice,answerField){
+  let answer=null,option;if(choice==='answer'){const index=currentRefinement()?.sourceConfirmations?.indexOf(detail),field=answerField||document.querySelector('[data-source-answer=\"'+index+'\"]');answer=field?.value.trim();if(!answer){field?.focus();toast('Enter your clarification first.');return false;}}else{if(choice<0){toast('This issue remains pending.');return false;}option=detail.options[choice];if(!option)return false;}
   const before=structuredClone(state);stopMachineGeneration();stopManualRefinement();
   const run=++generationNonce,controller=new AbortController();generationController=controller;$('start-machine').disabled=true;$('stop-machine').hidden=false;
   const timer=setTimeout(()=>controller.abort(),600000);
@@ -1340,15 +1398,15 @@ async function confirmBackgroundIssue(detail,choice){
     if(run!==generationNonce||controller.signal.aborted)return false;
     const decision=stage.project.decisions.at(-1),confirmed=stage.project.criteria.filter(c=>c.source_decision_ids.includes(decision.decision_id));
     useBackgroundCriteria(stage,state.machineRun,false);
-    state.finalCriteria={at:new Date().toISOString(),count:(state.finalCriteria?.count||0)+1,decisions:[...(state.finalCriteria?.decisions||[]),...confirmed.map(c=>({item:detail.text,domain:window.AIMSTEPEligibilityBackground.projectToClassic(stage.project).rows.find(row=>row[c.disposition].includes(c.text))?.dimension||detail.domain,rule:c.text,decision:c.disposition==='include'?'meets':'fails',side:c.disposition,kind:'proposal',at:new Date().toISOString(),provenance:'author-decision',decision_id:decision.decision_id}))]};
+    state.finalCriteria={at:new Date().toISOString(),count:(state.finalCriteria?.count||0)+1,decisions:[...(state.finalCriteria?.decisions||[]),...confirmed.map(c=>({item:detail.text,domain:stage.classic.rows.find(row=>row[c.disposition].includes(c.text))?.dimension||detail.domain,rule:c.text,decision:c.disposition==='include'?'meets':'fails',side:c.disposition,kind:'proposal',at:new Date().toISOString(),provenance:'author-decision',decision_id:decision.decision_id}))]};
     if(!save({updateEntry:true}))throw Error('Could not save this decision. Your previous criteria have been kept.');
     toast('Criteria saved.');return true;
   }catch(error){state=before;pendingBackgroundStage=null;renderPreview();setMachineStatus(error.name==='AbortError'?'Confirmation stopped.':backgroundErrorMessage(error),true);return false;}
   finally{clearTimeout(timer);if(run===generationNonce){generationController=null;$('start-machine').disabled=false;$('stop-machine').hidden=true;}}
 }
-function confirmSourceRule(index,choice){
+function confirmSourceRule(index,choice,answerField){
   const backgroundDetail=currentRefinement()?.sourceConfirmations?.[index];
-  if(backgroundDetail?.backgroundIssue){if(previewDirty&&!savePreviewEdits(false))return false;return confirmBackgroundIssue(backgroundDetail,choice);}
+  if(backgroundDetail?.backgroundIssue){if(previewDirty&&!savePreviewEdits(false))return false;return confirmBackgroundIssue(backgroundDetail,choice,answerField);}
   if(!Number.isInteger(index)||index<0||!Number.isInteger(choice)||choice<0||choice>1)return false;
   if(previewDirty&&!savePreviewEdits(false))return false;
   const machine=state.activeGenerator==='machine',refinement=currentRefinement(),detail=refinement?.sourceConfirmations?.[index],option=detail?.options?.[choice];
@@ -1368,7 +1426,7 @@ function confirmSourceRule(index,choice){
 }
 $('preview').addEventListener('click',event=>{
   const confirmation=event.target.closest('[data-source-confirm]');
-  if(confirmation){confirmSourceRule(Number(confirmation.dataset.sourceConfirm),confirmation.dataset.sourceOption==='answer'?'answer':Number(confirmation.dataset.sourceOption));return;}
+  if(confirmation){confirmSourceRule(Number(confirmation.dataset.sourceConfirm),confirmation.dataset.sourceOption==='answer'?'answer':Number(confirmation.dataset.sourceOption),confirmation.closest('.source-confirmations')?.querySelector('[data-source-answer]'));return;}
   const button=event.target.closest('[data-scope-action]');if(!button)return;
   applyScopeSuggestion(Number(button.dataset.scopeIndex),button.dataset.scopeAction);
 });
