@@ -103,7 +103,7 @@
 <script src="app/eligibility/domain.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/methodology.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/engine.js?v=20261118-criteria-actions-1"></script>
-<script src="app/eligibility/model.js?v=20261118-generation-speed-1"></script>
+<script src="app/eligibility/model.js?v=20261118-hybrid-review-1"></script>
 <script src="app/eligibility/background.js?v=20261118-criteria-actions-1"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
@@ -477,7 +477,7 @@ async function requestMachineCriteria(model,input,reviewType,signal,transcribe=f
 async function recordCriteriaExchange(model,system,payload,raw,data,schema=null){
   if(!Array.isArray(model.auditTrail))return;
   const helper=window.AIMSTEPCriteriaGrounding;
-  model.auditTrail.push({at:new Date().toISOString(),stage:system.split('.')[0].slice(0,120),model:data.model||model.name,provider:data.provider||model.provider,requestedTemperature:0,actualParameters:'not reported by provider',promptHash:await helper.hashText(JSON.stringify({system,payload})),responseHash:await helper.hashText(raw),schemaHash:schema?await helper.hashText(JSON.stringify(schema)):null});
+  model.auditTrail.push({at:new Date().toISOString(),stage:system.split('.')[0].slice(0,120),model:data.model||model.name,provider:data.provider||model.provider,requestedTemperature:0,actualParameters:'not reported by provider',promptHash:await helper.hashText(JSON.stringify({system,payload})),responseHash:await helper.hashText(raw),schemaHash:schema?await helper.hashText(JSON.stringify(schema)):null,...(data.review?{hybridReview:data.review}:{})});
 }
 async function callCriteriaJson(model,system,payload,signal,schema=null){
   const controller=new AbortController();let expired=false;
@@ -492,7 +492,7 @@ async function requestCriteriaJson(model,system,payload,signal,schema=null){
   const backend=model.provider==='backend',ollama=model.provider!=='compatible';
   if(schema&&payload.step)system+=window.AIMSTEPEligibilityModel?.serializationInstruction||'';
   const messages=[{role:'system',content:system},{role:'user',content:JSON.stringify(payload)}];
-  const body=backend?{messages,provider:'local',...(schema?{format:schema}:{})}:ollama?{model:model.name,messages,stream:false,think:false,format:schema||'json',options:{temperature:0,num_ctx:16384}}:{model:model.name,messages,stream:false,response_format:schema?{type:'json_schema',json_schema:{name:'eligibility_rules',schema,strict:true}}:{type:'json_object'},temperature:0};
+  const body=backend?{messages,provider:'local',...(schema?{format:schema}:{}),...(payload.step==='review_normalization'?{task:'eligibility-review-v1'}:{})}:ollama?{model:model.name,messages,stream:false,think:false,format:schema||'json',options:{temperature:0,num_ctx:16384}}:{model:model.name,messages,stream:false,response_format:schema?{type:'json_schema',json_schema:{name:'eligibility_rules',schema,strict:true}}:{type:'json_object'},temperature:0};
   const headers={'Content-Type':'application/json'},token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
   async function post(){

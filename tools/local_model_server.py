@@ -47,6 +47,7 @@ from __future__ import annotations
 import argparse
 import api_model
 import typesafe_model
+import eligibility_hybrid_review
 import fulltext_sources
 import fulltext_assistant
 import json
@@ -332,7 +333,8 @@ class Handler(SimpleHTTPRequestHandler):
                 "service": SERVICE if ok else SERVICE + "-unavailable",
                 "model": self.model, "ollama": self.ollama, "status": msg,
                 "embedModel": self.embed_model if embed_ok else "",
-                "typesafe": {"available": True, "configured": typesafe_model.configured(), "version": typesafe_model.VERSION},
+                "typesafe": {"available": True, "configured": typesafe_model.configured(), "version": typesafe_model.VERSION,
+                             "eligibilityReview": eligibility_hybrid_review.VERSION},
                 "api": {"acceptsKey": api_model.status("configuration-check")[0],
                         "ready": api_model.status()[0], "status": api_model.status()[1],
                         "model": api_model.config()["model"]}})
@@ -391,7 +393,12 @@ class Handler(SimpleHTTPRequestHandler):
         started = time.time()
         attempts = []
         try:
-            reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else chat(self.ollama, self.model, messages, attempts=attempts, fmt=fmt)
+            if provider == "local" and payload.get("task") == eligibility_hybrid_review.TASK:
+                reply = eligibility_hybrid_review.review(messages,
+                    local_review=lambda subset: chat(self.ollama, self.model, subset, attempts=attempts, fmt=fmt),
+                    local_model=self.model)
+            else:
+                reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else chat(self.ollama, self.model, messages, attempts=attempts, fmt=fmt)
         except (ValueError, KeyError, TypeError) as e:
             return self._send_json(502, {"error": str(e) if provider == "local" else "API request failed: " + str(e)})
         except urllib.error.HTTPError as e:
@@ -405,16 +412,18 @@ class Handler(SimpleHTTPRequestHandler):
             return self._send_json(502, {"error": "Ollama HTTP %d: %s" % (e.code, detail)})
         except (urllib.error.URLError, OSError) as e:
             return self._send_json(502, {"error": "API provider is unreachable or timed out." if provider == "api" else "Ollama is not reachable: %s" % e})
-        used_model = api_model.config()["model"] if provider == "api" else self.model
+        used_model = api_model.config()["model"] if provider == "api" else reply.get("model", self.model)
+        used_provider = reply.get("provider", provider)
         content = reply.get("message", {}).get("content", "")
         write_log(self.log_dir, {
             "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "seconds": round(time.time() - started, 1),
-            "model": used_model, "provider": provider, "options": {} if provider == "api" else ollama_body(self.model, [])["options"], "attempts": attempts,
+            "model": used_model, "provider": used_provider, "options": {} if provider == "api" else ollama_body(self.model, [])["options"], "attempts": attempts,
             "messages": [{k: (v if k != "images" else ["<%d base64 chars>" % len(i) for i in v])
                           for k, v in m.items()} for m in messages],
             "reply": content})
         return self._send_json(200, {"message": {"role": "assistant", "content": content},
-                                     "model": used_model, "provider": provider})
+                                     "model": used_model, "provider": used_provider,
+                                     **({"review": reply["review"]} if "review" in reply else {})})
 
     def _typesafe(self, payload):
         try:

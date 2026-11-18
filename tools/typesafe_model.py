@@ -46,11 +46,11 @@ def configured():
 
 
 
-def request(path, key, body=None):
+def request(path, key, body=None, timeout=180):
     req = urllib.request.Request(BASE + path,
         data=None if body is None else json.dumps(body).encode(),
         headers={'Authorization': 'Bearer ' + clean_key(key), 'Content-Type': 'application/json'})
-    with urllib.request.build_opener(NoRedirect()).open(req, timeout=180) as response:
+    with urllib.request.build_opener(NoRedirect()).open(req, timeout=timeout) as response:
         return json.loads(response.read())
 
 
