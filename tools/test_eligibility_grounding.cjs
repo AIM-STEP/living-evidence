@@ -9,7 +9,7 @@ function setup(initialStorage=new Map()){
   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},sessionStorage:{getItem(){return null}},
   location:{search:'?projectId=synthetic-grounding',href:'http://localhost/eligibility.html?projectId=synthetic-grounding',pathname:'/eligibility.html'},
   document:{getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{AIMSTEPCriteriaGrounding:grounding,AIMSTEPProjectAccess:{run:fn=>fn()},addEventListener(){}}};
- const code=source.replace('// Reuse this exact manual editor',`globalThis.testAPI={validate:validateAcademicDraft,extract:processExtracts,segments:sourceSegments,pipeline:autoCriteriaPipeline,state:()=>state,fill,pending:currentPending,normalized:standardizedCriteria,signature:machineSourceSignature,suggest:applyScopeSuggestion,normalizeSuggestions:normalizeScopeSuggestions,export:criteriaWordFile,sourceImages:originalMachineSources,navigate:saveBeforeToolNavigation,
+ const code=source.replace('// Reuse this exact manual editor',`globalThis.testAPI={validate:validateAcademicDraft,extract:processExtracts,segments:sourceSegments,pipeline:autoCriteriaPipeline,state:()=>state,fill,pending:currentPending,normalized:standardizedCriteria,signature:machineSourceSignature,confirm:confirmSourceRule,sourceConfirmation,mergeConfirmations:mergeSourceConfirmations,topic:summaryTopic,validTopic:validatedReviewTopic,normalize:normalizeMachineCriteria,suggest:applyScopeSuggestion,normalizeSuggestions:normalizeScopeSuggestions,export:criteriaWordFile,sourceImages:originalMachineSources,navigate:saveBeforeToolNavigation,
   transport(fn){localFetch=fn;resolveLocalModel=async()=>({name:'Synthetic model',provider:'ollama',base:'http://synthetic.invalid',slot:'synthetic'});},
   manualInput(input){prepareSources=async()=>input;},
   declineAll(){reviewCriteriaRules=async(m,items)=>new Map(items.map(item=>[item.id,{status:'uncertain',reason:'Needs author clarification.'}]));}
@@ -20,7 +20,7 @@ function evaluate(api,example,candidate,status='supported',verification='origina
  const extracts={atoms:[{id:'A001',dimension:example.domain,logic:'required',sourceId:'S001',sourceName:'Synthetic protocol',sourceSentence:example.source,verification}],issues:[],draftReview:new Map([[example.domain+':include:0',{status,reason:'Synthetic independent assessment.'}]])};
  return api.validate({criteria:[{dimension:example.domain,include:[{text:candidate,evidenceIds:['A001']}],exclude:[]}],reviewTopic:'Unverified topic',manuscriptParagraph:'Only English-language studies were eligible.',uncertainties:[]},{framework:'PICO',criteria:[{dimension:example.domain,eligibilityRule:example.source}],limits:{}},'synthetic',{name:'Synthetic'},extracts);
 }
-(async()=>{
+async function run(){
  const {api}=setup(),fixturePath=path.join(__dirname,'fixtures/eligibility-grounding-benchmark.json'),bytes=fs.readFileSync(fixturePath),benchmark=JSON.parse(bytes);
  // Only change this digest after an explicit review of benchmark changes.
  assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),fs.readFileSync(fixturePath+'.sha256','utf8').trim(),'The evaluation fixture changed; review it before updating the lock.');
@@ -89,7 +89,7 @@ function evaluate(api,example,candidate,status='supported',verification='origina
  assert(!state.machineRefinement.manuscriptParagraph.includes('English'));assert(!state.machineRefinement.manuscriptParagraph.includes('18'));assert(!state.machineRefinement.manuscriptParagraph.includes('2020'));
  assert.equal(state.machineRefinement.audit.sources[0].text,test.el('question').value);assert.equal(state.machineRefinement.trace[0].sourceName,'Question / voice input');
  assert(calls.filter(c=>c.system.startsWith('Independently')).length>=2,'Extracted and final rules undergo separate reviews');
- assert(test.el('preview').innerHTML.includes('Original source excerpts'));
+ assert(!test.el('preview').innerHTML.includes('Original source excerpts'));assert(test.api.state().machineRefinement.trace.length);
  assert.equal(test.api.pending().length,0,'Missing core scope and diagnostics must not become required questions');
  assert(!test.el('preview').innerHTML.includes('Automatic check notes'));assert(!test.el('preview').innerHTML.includes('data-pc-'));
  assert.equal(state.machineRefinement.scopeSuggestions.length,2);assert(test.el('preview').innerHTML.includes('Optional scope suggestions'));
@@ -104,10 +104,10 @@ function evaluate(api,example,candidate,status='supported',verification='origina
  const saved=JSON.parse(test.storage.get('aimstep-eligibility:synthetic-grounding'));assert(saved.machineRefinement.audit.sources.length);assert.equal(saved.machineRefinement.audit.version,grounding.VERSION);
  assert.equal(saved.machineRefinement.audit.calls.length,calls.length);assert(saved.machineRefinement.audit.calls.every(call=>call.promptHash?.length===64&&call.responseHash?.length===64));
  assert(saved.machineRefinement.audit.calls.some(call=>call.schemaHash?.length===64),'Schema-constrained calls are recorded');
- const reloaded=setup(test.storage);assert.equal(reloaded.api.state().machineRefinement.audit.sources[0].sha256,saved.machineRefinement.audit.sources[0].sha256);assert(reloaded.el('preview').innerHTML.includes('Original source excerpts')||reloaded.api.state().finalCriteria.decisions.length);
+ const reloaded=setup(test.storage);assert.equal(reloaded.api.state().machineRefinement.audit.sources[0].sha256,saved.machineRefinement.audit.sources[0].sha256);assert(!reloaded.el('preview').innerHTML.includes('Original source excerpts'));assert(reloaded.api.state().machineRefinement.trace.length);
  const archive=Buffer.from(test.api.export());let offset=0,xml='';
  while(archive.readUInt32LE(offset)===0x04034b50){const length=archive.readUInt32LE(offset+18),nameLength=archive.readUInt16LE(offset+26),extra=archive.readUInt16LE(offset+28),name=archive.subarray(offset+30,offset+30+nameLength).toString(),start=offset+30+nameLength+extra;if(name==='word/document.xml')xml=archive.subarray(start,start+length).toString();offset=start+length;}
- assert(xml.includes('Source evidence'));assert(xml.includes('original-source-v2'));assert(xml.includes('Include studies of adults with fibromyalgia.'));assert(xml.includes('Ignored suggestion'));
+ assert(!xml.includes('Source evidence'));assert(!xml.includes('Include studies of adults with fibromyalgia.'));assert(saved.machineRefinement.audit.sources[0].text.includes('Include studies of adults with fibromyalgia.'));assert(xml.includes('Ignored suggestion'));
  reloaded.api.state().machineRun.sourceFiles=['Saved protocol.pdf'];const generatedAt=reloaded.api.state().machineRun.generatedAt;
  await reloaded.el('start-machine').handlers.click();assert(reloaded.el('generation-status').textContent.includes('Reattach the original files'));assert.equal(reloaded.api.state().machineRun.generatedAt,generatedAt);
  console.log('PASS: end-to-end machine transport, original-source evidence, two semantic review passes, inactive fabricated limits, direct editable output, no required forms, optional important suggestions, consistent Description, author audit and persistence');
@@ -131,4 +131,6 @@ function evaluate(api,example,candidate,status='supported',verification='origina
  assert.equal(mixed.length,0,'Old essential-scope and source-conflict tasks do not reopen required forms');
  assert.equal(grounding.reviewMap({items:[{id:'R',status:'contradicted',reason:'The original text contradicts the proposed rewrite.'}]},['R']).get('R').issueType,'unclassified');
  console.log('PASS: v2 drafts restore all confirmed rules and full Description without regeneration; historical prompts remain archived; no required forms for optional, missing-scope or conflicting-source notices');
-})().catch(error=>{console.error(error);process.exitCode=1});
+}
+if(require.main===module)run().catch(error=>{console.error(error);process.exitCode=1});
+module.exports={setup};

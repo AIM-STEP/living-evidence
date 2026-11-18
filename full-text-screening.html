@@ -402,7 +402,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js?v=20261006-queue1"></script>
 <script src="app/fulltext-assistant.js?v=20261006-queue1"></script>
-<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261118-direct-draft-1"></script><script>
+<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261118-topic-confirm-1"></script><script>
 window.AIMSTEPProjectAccess?.run(function(){
 
 'use strict';
@@ -592,9 +592,7 @@ function summaryHtml(m){
   const limits=list(m.limits);
   const exclusionHtml=list(m.exclusions).length?`<ol class="summary-list">${m.exclusions.map(g=>`<li><strong>${esc(g.domain)}:</strong> ${esc(g.text)}</li>`).join('')}</ol>`:'<p class="summary-muted" data-ui-localize>No explicit exclusion rules entered.</p>';
   const pending=list(m.pending);
-  const trace=list(m.trace);
-  const traceHtml=trace.length?`<details class="source-trace"><summary>${esc(m.traceLabel||'Source trace')} (${trace.length})</summary><ol>${trace.map(a=>`<li><strong>${esc(a.dimension)} · ${esc(a.logic)}</strong> — ${esc(a.proposition)}<small>${esc(a.id)} / ${esc(a.sourceId)} · ${a.used?'Included in draft':'Check omission'} · ${esc(m.traceSource||'Source')}: ${esc(a.sourceSentence)}</small></li>`).join('')}</ol></details>`:'';
-  return `<div class="criteria-summary"><div class="summary-rule" aria-hidden="true"></div><div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> ${esc(m.topic||'To be defined')}</p><p><strong data-ui-localize>Framework:</strong> ${esc(m.framework||'Other')}</p></div><div class="summary-rule" aria-hidden="true"></div><section class="summary-block"><h3 data-ui-localize>Inclusion criteria</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong data-ui-localize>Limits:</strong> ${esc(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3 data-ui-localize>Exclusion criteria</h3>${exclusionHtml}</section><section class="summary-block"><h3 data-ui-localize>Pending clarification</h3>${pending.length?`<ul class="summary-list summary-pending">${pending.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`:'<p class="summary-muted" data-ui-localize>None identified.</p>'}</section><section class="summary-block"><h3 data-ui-localize>Manuscript wording</h3>${m.paragraph?`<p class="summary-paragraph">${esc(m.paragraph)}</p>`:`<p class="summary-muted">${esc(m.paragraphNote||'No manuscript wording was generated for these criteria.')}</p>`}</section>${traceHtml}<div class="summary-rule" aria-hidden="true"></div></div>`;
+  return `<div class="criteria-summary"><div class="summary-rule" aria-hidden="true"></div><div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> ${esc(m.topic||'To be defined')}</p><p><strong data-ui-localize>Framework:</strong> ${esc(m.framework||'Other')}</p></div><div class="summary-rule" aria-hidden="true"></div><section class="summary-block"><h3 data-ui-localize>Inclusion criteria</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong data-ui-localize>Limits:</strong> ${esc(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3 data-ui-localize>Exclusion criteria</h3>${exclusionHtml}</section><section class="summary-block"><h3 data-ui-localize>Pending clarification</h3>${pending.length?`<ul class="summary-list summary-pending">${pending.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`:'<p class="summary-muted" data-ui-localize>None identified.</p>'}</section><section class="summary-block"><h3 data-ui-localize>Manuscript wording</h3>${m.paragraph?`<p class="summary-paragraph">${esc(m.paragraph)}</p>`:`<p class="summary-muted">${esc(m.paragraphNote||'No manuscript wording was generated for these criteria.')}</p>`}</section><div class="summary-rule" aria-hidden="true"></div></div>`;
 }
 function wilson(k,n){if(!n)return null;const z=1.959964,p=k/n,d=1+z*z/n,c=(p+z*z/(2*n))/d,h=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;return [Math.max(0,c-h),Math.min(1,c+h)]}
 let typesafeKey='',typesafeBackend='',typesafeServerReady=false,typesafeConfirmController=null;
@@ -2073,7 +2071,7 @@ function loadManualCriteriaEditor(snapshot){
   manualEditorReady=false;manualEditorDraft=structuredClone(snapshot||{});
   manualEditorDraft.framework||=inferFramework(manualEditorDraft.rows||[]);
   const frame=$('crit-manual-frame');frame.hidden=true;$('crit-editor-loading').hidden=false;
-  const url=new URL('eligibility.html',location.href);url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261118-direct-draft-1');
+  const url=new URL('eligibility.html',location.href);url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261118-topic-confirm-1');
   if(projectId)url.searchParams.set('projectId',projectId);
   frame.src=url.href;
 }

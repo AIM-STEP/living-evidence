@@ -70,8 +70,9 @@
     for(const item of Array.isArray(response?.items)?response.items:[]){
       if(!ids.includes(item?.id))continue;
       if(result.has(item.id))duplicates.add(item.id);
-      const reason=clean(item.reason).slice(0,400),issueType=['none','source_conflict','unsupported_rewrite','missing_scope','optional_detail'].includes(item.issueType)?item.issueType:/\b(?:sources|source requirements|original requirements)\b.{0,30}\b(?:conflict|contradict each other)|\bconflicting (?:source|original) (?:requirements|criteria)\b/i.test(reason)?'source_conflict':'unclassified';
-      result.set(item.id,{status:['supported','contradicted','uncertain'].includes(item.status)?item.status:'uncertain',reason,issueType});
+      const reason=clean(item.reason).slice(0,400),issueType=['none','source_conflict','ambiguous_source','unsupported_rewrite','missing_scope','optional_detail'].includes(item.issueType)?item.issueType:/\b(?:sources|source requirements|original requirements)\b.{0,30}\b(?:conflict|contradict each other)|\bconflicting (?:source|original) (?:requirements|criteria)\b/i.test(reason)?'source_conflict':'unclassified';
+      const alternatives=(Array.isArray(item.alternatives)?item.alternatives:[]).filter(option=>typeof option?.text==='string'&&['include','exclude'].includes(option.side)).slice(0,2).map(option=>({text:clean(option.text).slice(0,500),side:option.side}));
+      result.set(item.id,{status:['supported','contradicted','uncertain'].includes(item.status)?item.status:'uncertain',reason,issueType,alternatives});
     }
     for(const id of ids)if(!result.has(id)||duplicates.has(id))result.set(id,{status:'uncertain',reason:'The review did not return one unambiguous assessment.'});
     return result;
