@@ -1,0 +1,430 @@
+{
+  "version": "1.0.0",
+  "profiles": [
+    {
+      "applicable_dimensions": [
+        "population",
+        "sample",
+        "intervention",
+        "exposure",
+        "concept",
+        "condition",
+        "phenomenon_of_interest",
+        "context",
+        "study_design",
+        "evidence_source",
+        "outcome",
+        "language",
+        "publication_date"
+      ],
+      "required_decisions": [
+        {
+          "rule_id": "core_research_scope",
+          "kind": "core_scope",
+          "description": "需识别研究对象或核心研究范围；不机械要求每个框架字段。"
+        }
+      ],
+      "conditional_checks": [
+        {
+          "rule_id": "explicit_age_boundary",
+          "kind": "age_boundary",
+          "blocking": true
+        },
+        {
+          "rule_id": "explicit_requirement_conflict",
+          "kind": "conflict",
+          "blocking": true
+        },
+        {
+          "rule_id": "unclear_condition_logic",
+          "kind": "logic",
+          "blocking": true
+        }
+      ],
+      "supported_evidence_units": [
+        "primary_study",
+        "systematic_review",
+        "review",
+        "policy_document",
+        "other"
+      ],
+      "methodological_rules": [
+        {
+          "rule_id": "focus_is_not_positive_results",
+          "category": "expression_data",
+          "content": "研究目的不等同于仅纳入阳性结果。"
+        },
+        {
+          "rule_id": "separate_outcome_uses",
+          "category": "expression_data",
+          "content": "结局关注、测量要求、报告要求分别保存，不自动形成报告资格限制。"
+        }
+      ],
+      "authorized_defaults": [],
+      "source_references": [
+        {
+          "id": "jbi-frameworks",
+          "title": "JBI Manual: developing a search strategy",
+          "url": "https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/652279828/2.4.3+Developing+a+Search+Strategy",
+          "version": "online; accessed 2026-11-18"
+        }
+      ],
+      "version": "1.0.0",
+      "profile_id": "general",
+      "display_name": "通用证据综合",
+      "review_methods": [],
+      "question_types": []
+    },
+    {
+      "applicable_dimensions": [
+        "population",
+        "sample",
+        "intervention",
+        "exposure",
+        "concept",
+        "condition",
+        "phenomenon_of_interest",
+        "context",
+        "study_design",
+        "evidence_source",
+        "outcome",
+        "language",
+        "publication_date"
+      ],
+      "required_decisions": [
+        {
+          "rule_id": "core_research_scope",
+          "kind": "core_scope",
+          "description": "需识别研究对象或核心研究范围；不机械要求每个框架字段。"
+        }
+      ],
+      "conditional_checks": [
+        {
+          "rule_id": "explicit_age_boundary",
+          "kind": "age_boundary",
+          "blocking": true
+        },
+        {
+          "rule_id": "explicit_requirement_conflict",
+          "kind": "conflict",
+          "blocking": true
+        },
+        {
+          "rule_id": "unclear_condition_logic",
+          "kind": "logic",
+          "blocking": true
+        }
+      ],
+      "supported_evidence_units": [
+        "primary_study",
+        "systematic_review",
+        "review",
+        "policy_document",
+        "other"
+      ],
+      "methodological_rules": [
+        {
+          "rule_id": "focus_is_not_positive_results",
+          "category": "expression_data",
+          "content": "研究目的不等同于仅纳入阳性结果。"
+        },
+        {
+          "rule_id": "separate_outcome_uses",
+          "category": "expression_data",
+          "content": "结局关注、测量要求、报告要求分别保存，不自动形成报告资格限制。"
+        }
+      ],
+      "authorized_defaults": [],
+      "source_references": [
+        {
+          "id": "jbi-frameworks",
+          "title": "JBI Manual: developing a search strategy",
+          "url": "https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/652279828/2.4.3+Developing+a+Search+Strategy",
+          "version": "online; accessed 2026-11-18"
+        }
+      ],
+      "version": "1.0.0",
+      "profile_id": "systematic",
+      "display_name": "系统评价",
+      "review_methods": [
+        "systematic_review"
+      ],
+      "question_types": []
+    },
+    {
+      "applicable_dimensions": [
+        "population",
+        "sample",
+        "intervention",
+        "exposure",
+        "concept",
+        "condition",
+        "phenomenon_of_interest",
+        "context",
+        "study_design",
+        "evidence_source",
+        "outcome",
+        "language",
+        "publication_date"
+      ],
+      "required_decisions": [
+        {
+          "rule_id": "core_research_scope",
+          "kind": "core_scope",
+          "description": "需识别研究对象或核心研究范围；不机械要求每个框架字段。"
+        }
+      ],
+      "conditional_checks": [
+        {
+          "rule_id": "explicit_age_boundary",
+          "kind": "age_boundary",
+          "blocking": true
+        },
+        {
+          "rule_id": "explicit_requirement_conflict",
+          "kind": "conflict",
+          "blocking": true
+        },
+        {
+          "rule_id": "unclear_condition_logic",
+          "kind": "logic",
+          "blocking": true
+        }
+      ],
+      "supported_evidence_units": [
+        "primary_study",
+        "systematic_review",
+        "review",
+        "policy_document",
+        "other"
+      ],
+      "methodological_rules": [
+        {
+          "rule_id": "focus_is_not_positive_results",
+          "category": "expression_data",
+          "content": "研究目的不等同于仅纳入阳性结果。"
+        },
+        {
+          "rule_id": "separate_outcome_uses",
+          "category": "expression_data",
+          "content": "结局关注、测量要求、报告要求分别保存，不自动形成报告资格限制。"
+        }
+      ],
+      "authorized_defaults": [],
+      "source_references": [
+        {
+          "id": "jbi-scoping",
+          "title": "JBI Manual 10.2.4: aligning eligibility criteria",
+          "url": "https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/355862707/10.2.4+Inclusion+criteria",
+          "version": "online; accessed 2026-11-18"
+        }
+      ],
+      "version": "1.0.0",
+      "profile_id": "scoping",
+      "display_name": "范围综述",
+      "review_methods": [
+        "scoping_review"
+      ],
+      "question_types": []
+    },
+    {
+      "applicable_dimensions": [
+        "population",
+        "sample",
+        "intervention",
+        "exposure",
+        "concept",
+        "condition",
+        "phenomenon_of_interest",
+        "context",
+        "study_design",
+        "evidence_source",
+        "outcome",
+        "language",
+        "publication_date"
+      ],
+      "required_decisions": [
+        {
+          "rule_id": "core_research_scope",
+          "kind": "core_scope",
+          "description": "需识别研究对象或核心研究范围；不机械要求每个框架字段。"
+        },
+        {
+          "rule_id": "umbrella_evidence_unit",
+          "kind": "evidence_unit",
+          "description": "需明确伞状综述拟纳入的二次证据范围。"
+        }
+      ],
+      "conditional_checks": [
+        {
+          "rule_id": "explicit_age_boundary",
+          "kind": "age_boundary",
+          "blocking": true
+        },
+        {
+          "rule_id": "explicit_requirement_conflict",
+          "kind": "conflict",
+          "blocking": true
+        },
+        {
+          "rule_id": "unclear_condition_logic",
+          "kind": "logic",
+          "blocking": true
+        }
+      ],
+      "supported_evidence_units": [
+        "primary_study",
+        "systematic_review",
+        "review",
+        "policy_document",
+        "other"
+      ],
+      "methodological_rules": [
+        {
+          "rule_id": "focus_is_not_positive_results",
+          "category": "expression_data",
+          "content": "研究目的不等同于仅纳入阳性结果。"
+        },
+        {
+          "rule_id": "separate_outcome_uses",
+          "category": "expression_data",
+          "content": "结局关注、测量要求、报告要求分别保存，不自动形成报告资格限制。"
+        }
+      ],
+      "authorized_defaults": [],
+      "source_references": [
+        {
+          "id": "jbi-frameworks",
+          "title": "JBI Manual: developing a search strategy",
+          "url": "https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/652279828/2.4.3+Developing+a+Search+Strategy",
+          "version": "online; accessed 2026-11-18"
+        }
+      ],
+      "version": "1.0.0",
+      "profile_id": "umbrella",
+      "display_name": "伞状综述",
+      "review_methods": [
+        "umbrella_review"
+      ],
+      "question_types": []
+    },
+    {
+      "applicable_dimensions": [
+        "population",
+        "sample",
+        "intervention",
+        "exposure",
+        "concept",
+        "condition",
+        "phenomenon_of_interest",
+        "context",
+        "study_design",
+        "evidence_source",
+        "outcome",
+        "language",
+        "publication_date"
+      ],
+      "required_decisions": [
+        {
+          "rule_id": "core_research_scope",
+          "kind": "core_scope",
+          "description": "需识别研究对象或核心研究范围；不机械要求每个框架字段。"
+        },
+        {
+          "rule_id": "cochrane_comparator_scope",
+          "kind": "dimension",
+          "dimension_id": "comparator",
+          "description": "此配置需要明确比较范围，可明确不限。"
+        },
+        {
+          "rule_id": "cochrane_design_scope",
+          "kind": "dimension",
+          "dimension_id": "study_design",
+          "description": "此配置需要明确研究设计范围；不默认RCT。"
+        }
+      ],
+      "conditional_checks": [
+        {
+          "rule_id": "explicit_age_boundary",
+          "kind": "age_boundary",
+          "blocking": true
+        },
+        {
+          "rule_id": "explicit_requirement_conflict",
+          "kind": "conflict",
+          "blocking": true
+        },
+        {
+          "rule_id": "unclear_condition_logic",
+          "kind": "logic",
+          "blocking": true
+        }
+      ],
+      "supported_evidence_units": [
+        "primary_study",
+        "systematic_review",
+        "review",
+        "policy_document",
+        "other"
+      ],
+      "methodological_rules": [
+        {
+          "rule_id": "focus_is_not_positive_results",
+          "category": "expression_data",
+          "content": "研究目的不等同于仅纳入阳性结果。"
+        },
+        {
+          "rule_id": "separate_outcome_uses",
+          "category": "expression_data",
+          "content": "结局关注、测量要求、报告要求分别保存，不自动形成报告资格限制。"
+        },
+        {
+          "rule_id": "cochrane_outcome_reporting",
+          "category": "methodological_advice",
+          "applies_to": [
+            "cochrane_intervention_review",
+            "intervention_effect"
+          ],
+          "content": "不因未报告某结局而自动排除研究；测量与报告的资格作用须独立明确。"
+        }
+      ],
+      "authorized_defaults": [],
+      "source_references": [
+        {
+          "id": "cochrane-ch3",
+          "title": "Cochrane Handbook chapter 3",
+          "url": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-03",
+          "version": "current online; accessed 2026-11-18"
+        }
+      ],
+      "version": "1.0.0",
+      "profile_id": "cochrane_intervention",
+      "display_name": "Cochrane干预性综述",
+      "review_methods": [
+        "cochrane_intervention_review"
+      ],
+      "question_types": []
+    }
+  ],
+  "question_types": {
+    "intervention_effect": [
+      "intervention"
+    ],
+    "exposure_outcome": [
+      "exposure"
+    ],
+    "experience": [
+      "phenomenon_of_interest"
+    ],
+    "prevalence": [
+      "condition"
+    ],
+    "diagnostic_accuracy": [
+      "index_test",
+      "target_condition"
+    ],
+    "prognosis": [],
+    "prediction_model": [],
+    "economic": []
+  }
+}

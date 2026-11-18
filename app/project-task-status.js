@@ -20,7 +20,9 @@
     const refinement = e?.activeGenerator === 'machine' ? e.machineRefinement : e?.manualRefinement;
     const reviewPending = grounding ? grounding.decisions(refinement).map(detail => detail.item) : [];
     const unresolved = refinement?.audit ? reviewPending.filter(item => !(e.resolvedPending || []).includes(item)).length : 0;
-    put(files[0], criteria || text(e?.question) || unresolved, criteria + words(' criteria saved', ' 项标准已保存') + (unresolved ? ' · ' + unresolved + words(' pending clarifications', ' 项待澄清') : ''), criteria > 0 && !unresolved);
+    const structured=data.eligibilityProject;
+    if(structured){const blocking=count(structured.issues?.filter(issue=>issue.status==='open'&&issue.blocking));put(files[0],count(structured.questions),count(structured.criteria)+words(' criteria · v',' 项标准 · v')+num(structured.revision)+(blocking?' · '+blocking+words(' required decisions',' 项必要决定'):''),structured.status==='final'&&structured.validation?.valid===true);}
+    else put(files[0], criteria || text(e?.question) || unresolved, criteria + words(' criteria saved', ' 项标准已保存') + (unresolved ? ' · ' + unresolved + words(' pending clarifications', ' 项待澄清') : ''), criteria > 0 && !unresolved);
     const s = data.search, search = data.searchResults;
     const found = search ? count(search.records) : num(s?.unique);
     const runs = search ? count(search.runs) : count(s?.runs);
@@ -75,7 +77,7 @@
   async function collect(id, storage, indexedDB) {
     if (!id || id === 'default') throw Error('A registered project is required.');
     const data = {}, errors = [];
-    for (const [key,prefix] of Object.entries({eligibility:'eligibility',search:'search-summary',searchDraft:'search-strategy',screen:'screen-summary',full:'fulltext-summary',coe:'coe-summary',coeState:'coe',protocol:'protocol'})) {
+    for (const [key,prefix] of Object.entries({eligibility:'eligibility',eligibilityProject:'eligibility-v3',search:'search-summary',searchDraft:'search-strategy',screen:'screen-summary',full:'fulltext-summary',coe:'coe-summary',coeState:'coe',protocol:'protocol'})) {
       try { data[key] = JSON.parse(storage.getItem('aimstep-'+prefix+':'+id) || 'null'); }
       catch (_) { errors.push(key); }
     }

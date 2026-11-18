@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-18",
+  "program_acceptance": {
+    "passed": 32,
+    "total": 32,
+    "model_fixtures": "synthetic"
+  },
+  "additional_invariants": {
+    "passed": 19,
+    "total": 19
+  },
+  "dom_integration": {
+    "passed": true,
+    "model": "simulated",
+    "browser_rendering_verified": false
+  },
+  "legacy_regression_suites": {
+    "passed": 16,
+    "total": 16
+  },
+  "real_model": "gemma4:31b-it-q8_0",
+  "real_model_cases": [
+    {
+      "id": "strict-age",
+      "status": "observed_pass_recorded_real_output",
+      "current_prompt_rerun": false
+    },
+    {
+      "id": "elderly-answer",
+      "status": "observed_pass_with_recorded_metadata_correction",
+      "current_prompt_rerun": false
+    },
+    {
+      "id": "peco-exposure",
+      "status": "observed_pass_with_recorded_metadata_correction",
+      "current_prompt_rerun": true
+    },
+    {
+      "id": "pcc-context",
+      "status": "incomplete_transport",
+      "semantic_assessment_available": false
+    }
+  ],
+  "independent_expert_adjudication": false,
+  "development_failures_preserved": true,
+  "overall_model_accuracy_claim": null
+}

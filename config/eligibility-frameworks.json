@@ -1,0 +1,414 @@
+{
+  "version": "1.0.0",
+  "frameworks": [
+    {
+      "framework_id": "pico",
+      "display_name": "PICO",
+      "version": "1.0.0",
+      "aliases": [
+        "PICO"
+      ],
+      "slots": [
+        {
+          "slot_id": "population",
+          "display_label": "Population",
+          "definition": "研究涉及的人群、对象、机构或技术",
+          "examples": [
+            "老年患者、医疗机构"
+          ]
+        },
+        {
+          "slot_id": "intervention",
+          "display_label": "Intervention",
+          "definition": "研究关注的干预及其实施角色、组合与条件",
+          "examples": [
+            "护士主导的运动干预"
+          ]
+        },
+        {
+          "slot_id": "comparator",
+          "display_label": "Comparator",
+          "definition": "干预或暴露问题中的对照；不等同于诊断参考标准",
+          "examples": [
+            "常规护理"
+          ]
+        },
+        {
+          "slot_id": "outcome",
+          "display_label": "Outcome",
+          "definition": "关注的结局；关注、测量要求、报告要求分别记录",
+          "examples": [
+            "疼痛、生活质量"
+          ]
+        }
+      ],
+      "relationships": [],
+      "check_rules": [],
+      "source_references": [
+        {
+          "id": "cochrane-ch3",
+          "title": "Cochrane Handbook chapter 3",
+          "url": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-03",
+          "version": "current online; accessed 2026-11-18"
+        }
+      ],
+      "scope_note": "框架组织研究信息，不授权任何资格限制。"
+    },
+    {
+      "framework_id": "peco",
+      "display_name": "PECO",
+      "version": "1.0.0",
+      "aliases": [
+        "PECO",
+        "pECO",
+        "peco"
+      ],
+      "slots": [
+        {
+          "slot_id": "population",
+          "display_label": "Population",
+          "definition": "研究涉及的人群、对象、机构或技术",
+          "examples": [
+            "老年患者、医疗机构"
+          ]
+        },
+        {
+          "slot_id": "exposure",
+          "display_label": "Exposure",
+          "definition": "环境、行为或其他暴露及其定义",
+          "examples": [
+            "长期空气污染暴露"
+          ]
+        },
+        {
+          "slot_id": "comparator",
+          "display_label": "Comparator",
+          "definition": "干预或暴露问题中的对照；不等同于诊断参考标准",
+          "examples": [
+            "常规护理"
+          ]
+        },
+        {
+          "slot_id": "outcome",
+          "display_label": "Outcome",
+          "definition": "关注的结局；关注、测量要求、报告要求分别记录",
+          "examples": [
+            "疼痛、生活质量"
+          ]
+        }
+      ],
+      "relationships": [],
+      "check_rules": [],
+      "source_references": [
+        {
+          "id": "peco-2018",
+          "title": "Identifying the PECO",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6908441/",
+          "version": "2018"
+        }
+      ],
+      "scope_note": "框架组织研究信息，不授权任何资格限制。"
+    },
+    {
+      "framework_id": "peo",
+      "display_name": "PEO",
+      "version": "1.0.0",
+      "aliases": [
+        "PEO",
+        "peo"
+      ],
+      "slots": [
+        {
+          "slot_id": "population",
+          "display_label": "Population",
+          "definition": "研究涉及的人群、对象、机构或技术",
+          "examples": [
+            "老年患者、医疗机构"
+          ]
+        },
+        {
+          "slot_id": "exposure",
+          "display_label": "Exposure",
+          "definition": "环境、行为或其他暴露及其定义",
+          "examples": [
+            "长期空气污染暴露"
+          ]
+        },
+        {
+          "slot_id": "outcome",
+          "display_label": "Outcome",
+          "definition": "关注的结局；关注、测量要求、报告要求分别记录",
+          "examples": [
+            "疼痛、生活质量"
+          ]
+        }
+      ],
+      "relationships": [],
+      "check_rules": [],
+      "source_references": [
+        {
+          "id": "peco-2018",
+          "title": "Identifying the PECO",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6908441/",
+          "version": "2018"
+        }
+      ],
+      "scope_note": "框架组织研究信息，不授权任何资格限制。 PEO字段按本项目技术规格配置，PECO文献仅作暴露问题背景。"
+    },
+    {
+      "framework_id": "pcc",
+      "display_name": "PCC",
+      "version": "1.0.0",
+      "aliases": [
+        "PCC",
+        "pcc"
+      ],
+      "slots": [
+        {
+          "slot_id": "population",
+          "display_label": "Population",
+          "definition": "研究涉及的人群、对象、机构或技术",
+          "examples": [
+            "老年患者、医疗机构"
+          ]
+        },
+        {
+          "slot_id": "concept",
+          "display_label": "Concept",
+          "definition": "范围综述等问题的核心概念；不同于情境",
+          "examples": [
+            "数字健康素养"
+          ]
+        },
+        {
+          "slot_id": "context",
+          "display_label": "Context",
+          "definition": "研究涉及的情境、地区、文化或环境",
+          "examples": [
+            "社区、乡村学校"
+          ]
+        }
+      ],
+      "relationships": [],
+      "check_rules": [],
+      "source_references": [
+        {
+          "id": "jbi-scoping",
+          "title": "JBI Manual 10.2.4: aligning eligibility criteria",
+          "url": "https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/355862707/10.2.4+Inclusion+criteria",
+          "version": "online; accessed 2026-11-18"
+        }
+      ],
+      "scope_note": "框架组织研究信息，不授权任何资格限制。"
+    },
+    {
+      "framework_id": "pico_qualitative",
+      "display_name": "PICo",
+      "version": "1.0.0",
+      "aliases": [
+        "PICo",
+        "picO"
+      ],
+      "slots": [
+        {
+          "slot_id": "population",
+          "display_label": "Population",
+          "definition": "研究涉及的人群、对象、机构或技术",
+          "examples": [
+            "老年患者、医疗机构"
+          ]
+        },
+        {
+          "slot_id": "phenomenon_of_interest",
+          "display_label": "Phenomenon of Interest",
+          "definition": "研究关注的体验、现象或过程",
+          "examples": [
+            "术后康复体验"
+          ]
+        },
+        {
+          "slot_id": "context",
+          "display_label": "Context",
+          "definition": "研究涉及的情境、地区、文化或环境",
+          "examples": [
+            "社区、乡村学校"
+          ]
+        }
+      ],
+      "relationships": [],
+      "check_rules": [],
+      "source_references": [
+        {
+          "id": "jbi-frameworks",
+          "title": "JBI Manual: developing a search strategy",
+          "url": "https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/652279828/2.4.3+Developing+a+Search+Strategy",
+          "version": "online; accessed 2026-11-18"
+        }
+      ],
+      "scope_note": "框架组织研究信息，不授权任何资格限制。"
+    },
+    {
+      "framework_id": "cocopop",
+      "display_name": "CoCoPop",
+      "version": "1.0.0",
+      "aliases": [
+        "CoCoPop",
+        "COCOPOP",
+        "cocopop"
+      ],
+      "slots": [
+        {
+          "slot_id": "condition",
+          "display_label": "Condition",
+          "definition": "患病率等问题关注的健康状况或条件",
+          "examples": [
+            "抑郁症"
+          ]
+        },
+        {
+          "slot_id": "context",
+          "display_label": "Context",
+          "definition": "研究涉及的情境、地区、文化或环境",
+          "examples": [
+            "社区、乡村学校"
+          ]
+        },
+        {
+          "slot_id": "population",
+          "display_label": "Population",
+          "definition": "研究涉及的人群、对象、机构或技术",
+          "examples": [
+            "老年患者、医疗机构"
+          ]
+        }
+      ],
+      "relationships": [],
+      "check_rules": [],
+      "source_references": [
+        {
+          "id": "jbi-frameworks",
+          "title": "JBI Manual: developing a search strategy",
+          "url": "https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/652279828/2.4.3+Developing+a+Search+Strategy",
+          "version": "online; accessed 2026-11-18"
+        }
+      ],
+      "scope_note": "框架组织研究信息，不授权任何资格限制。"
+    },
+    {
+      "framework_id": "pird",
+      "display_name": "PIRD",
+      "version": "1.0.0",
+      "aliases": [
+        "PIRD",
+        "pird"
+      ],
+      "slots": [
+        {
+          "slot_id": "population",
+          "display_label": "Population",
+          "definition": "研究涉及的人群、对象、机构或技术",
+          "examples": [
+            "老年患者、医疗机构"
+          ]
+        },
+        {
+          "slot_id": "index_test",
+          "display_label": "Index Test",
+          "definition": "待评价的诊断或筛查试验",
+          "examples": [
+            "快速抗原检测"
+          ]
+        },
+        {
+          "slot_id": "reference_test",
+          "display_label": "Reference Test",
+          "definition": "诊断问题的参考标准；不映射为普通Comparator",
+          "examples": [
+            "PCR参考标准"
+          ]
+        },
+        {
+          "slot_id": "target_condition",
+          "display_label": "Target Condition",
+          "definition": "诊断试验意在识别的目标疾病",
+          "examples": [
+            "COVID-19"
+          ]
+        }
+      ],
+      "relationships": [],
+      "check_rules": [],
+      "source_references": [
+        {
+          "id": "jbi-frameworks",
+          "title": "JBI Manual: developing a search strategy",
+          "url": "https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/652279828/2.4.3+Developing+a+Search+Strategy",
+          "version": "online; accessed 2026-11-18"
+        }
+      ],
+      "scope_note": "框架组织研究信息，不授权任何资格限制。"
+    },
+    {
+      "framework_id": "spider",
+      "display_name": "SPIDER",
+      "version": "1.0.0",
+      "aliases": [
+        "SPIDER",
+        "spider"
+      ],
+      "slots": [
+        {
+          "slot_id": "sample",
+          "display_label": "Sample",
+          "definition": "定性或混合研究的样本/参与对象",
+          "examples": [
+            "照护者"
+          ]
+        },
+        {
+          "slot_id": "phenomenon_of_interest",
+          "display_label": "Phenomenon of Interest",
+          "definition": "研究关注的体验、现象或过程",
+          "examples": [
+            "术后康复体验"
+          ]
+        },
+        {
+          "slot_id": "design",
+          "display_label": "Design",
+          "definition": "SPIDER中的研究资料收集或研究设计",
+          "examples": [
+            "访谈、焦点小组"
+          ]
+        },
+        {
+          "slot_id": "evaluation",
+          "display_label": "Evaluation",
+          "definition": "SPIDER中的评价、感知或体验内容",
+          "examples": [
+            "照护体验"
+          ]
+        },
+        {
+          "slot_id": "research_type",
+          "display_label": "Research type",
+          "definition": "SPIDER中的定性、定量或混合研究类型",
+          "examples": [
+            "定性研究"
+          ]
+        }
+      ],
+      "relationships": [],
+      "check_rules": [],
+      "source_references": [
+        {
+          "id": "spider-2012",
+          "title": "Beyond PICO: the SPIDER tool for qualitative evidence synthesis",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/22829486/",
+          "version": "2012; doi:10.1177/1049732312452938"
+        }
+      ],
+      "scope_note": "框架组织研究信息，不授权任何资格限制。"
+    }
+  ]
+}

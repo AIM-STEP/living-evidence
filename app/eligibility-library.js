@@ -1,7 +1,7 @@
 /* Project-scoped saved criteria sets. Only review content is copied into sets. */
 (function(root){
 'use strict';
-const fields=['framework','question','reviewType','activeGenerator','generationMethodChoice','generationMode','generationMethod','criteria','machineCriteria','machineRun','machineSourceRevision','manualRefinement','machineRefinement','finalCriteria','resolvedPending','pendingDecisions','visibleDescription','dateRange','language','limitsOther','years','dateEnd','reportType','reportTypeOther','limitsReason','outcomeGate','outcomeReason','protocolSource','confirmed'];
+const fields=['eligibilityV3Snapshot','eligibility_v3_revision','framework','question','reviewType','activeGenerator','generationMethodChoice','generationMode','generationMethod','criteria','machineCriteria','machineRun','machineSourceRevision','manualRefinement','machineRefinement','finalCriteria','resolvedPending','pendingDecisions','visibleDescription','dateRange','language','limitsOther','years','dateEnd','reportType','reportTypeOther','limitsReason','outcomeGate','outcomeReason','protocolSource','confirmed'];
 const clone=value=>JSON.parse(JSON.stringify(value));
 const key=id=>'aimstep-eligibility-library:'+id;
 function read(storage,id){

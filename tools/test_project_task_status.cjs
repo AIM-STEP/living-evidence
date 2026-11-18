@@ -38,6 +38,7 @@ notComplete('drafting-manuscript.html',d=>{d.manuscript.confirmedAt=null;});
 notComplete('drafting-manuscript.html',d=>{d.manuscript.text='';});
 assert(T.build({searchDraft:{queries:{pubmed:{text:'PTSD AND trial',wordsChanged:false}}}})['search-strategy.html'].completed,'saved usable strategy is an output');
 assert(T.build({searchResults:{records:[],runs:[{status:'Complete',query:'PTSD AND trial'}]}})['search-strategy.html'].completed,'successful zero-hit searches still produce a real result');
+const v3={schema_version:3,revision:4,questions:[{}],criteria:[{}],issues:[{status:'open',blocking:true}],status:'needs_clarification',validation:{valid:false}};assert(!T.build({eligibilityProject:v3})['eligibility.html'].completed);assert.match(T.build({eligibilityProject:v3})['eligibility.html'].label,/1 required decisions/);assert(T.build({eligibilityProject:{...v3,issues:[],status:'final',validation:{valid:true}}})['eligibility.html'].completed);
 console.log('PASS completed outputs for ten tools; visits/configuration/default examples/partial reviews/empty results/cleared drafts never count as completed');
 const opened=[],reads=[],transactions=[],existing=new Map([['aimstep-extraction',{A:{state:data.extraction},B:{state:{records:[],form:{outcomes:[]}}}}],['aimstep-analysis',{A:{state:data.analysis}}]]);
 const indexedDB={
