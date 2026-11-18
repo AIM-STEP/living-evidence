@@ -35,7 +35,7 @@ function projectToClassic(project){
 }
 async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
  if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');
- const base=baseURL||new URL('.',root.location.href).href,version='20261118-criteria-refine-1';
+ const base=baseURL||new URL('.',root.location.href).href,version='20261118-criteria-actions-1';
  const configs=await Promise.all([frameworkConfig||root.fetch(new URL('config/eligibility-frameworks.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load framework definitions.');return r.json();}),profileConfig||root.fetch(new URL('config/eligibility-review-profiles.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load review profiles.');return r.json();})]);
  const keys={project:'aimstep-eligibility-v3:'+projectId,legacy:'aimstep-eligibility:'+projectId,library:'aimstep-eligibility-library:'+projectId,summary:'aimstep-eligibility-summary:'+projectId};
  const read=key=>JSON.parse(storage.getItem(key)||'null');
