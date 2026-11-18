@@ -76,30 +76,9 @@
     for(const id of ids)if(!result.has(id)||duplicates.has(id))result.set(id,{status:'uncertain',reason:'The review did not return one unambiguous assessment.'});
     return result;
   }
-  // Read-time policy also applies to saved v2 drafts; diagnostics stay in the audit.
-  function decisions(refinement){
-    const details=(refinement?.clarifications||[]).map(detail=>{
-      if(detail.kind==='review'&&/Verify the conflicting rule|proposed as both inclusion and exclusion/i.test(detail.item||''))return {...detail,kind:'question',priority:'source-conflict',required:true,domain:detail.item.split(':')[0],text:''};
-      return detail;
-    }),rows=refinement?.rows||[];
-    const conflictDomains=new Set(details.filter(detail=>detail.priority==='source-conflict').map(detail=>detail.domain));
-    const images=details.filter(detail=>detail.kind==='proposal'&&(detail.evidence||[]).some(source=>source.verification==='visual-review-required'));
-    const eligible=details.filter(detail=>{
-      if(detail.required===true||detail.priority==='source-conflict')return true;
-      if(images.includes(detail))return true;
-      if(detail.kind!=='question')return false;
-      if(detail.priority==='optional'||/^Other: Clarify\b/i.test(detail.item||''))return false;
-      const core=/^(Population|Intervention|Exposure|Concept|Phenomenon of Interest): Specify\b/i.test(detail.item||'');
-      if(core)return !conflictDomains.has(detail.domain)&&!rows.some(row=>row.dimension===detail.domain&&row.include?.length)&&!images.some(image=>image.domain===detail.domain);
-      return /^Other: Specify\b/i.test(detail.item||'')&&!rows.some(row=>row.include?.length);
-    });
-    const hasCore=eligible.some(detail=>detail.kind==='question'&&detail.domain!=='Other'),seen=new Set();
-    return eligible.filter(detail=>{
-      if(hasCore&&/^Other: Specify\b/i.test(detail.item||''))return false;
-      const key=detail.kind==='question'?detail.domain+' / '+(detail.priority==='source-conflict'?'conflict':'scope'):detail.item;
-      if(seen.has(key))return false;seen.add(key);return true;
-    });
-  }
+  // Generation produces an editable draft, never a compulsory decision workflow.
+  // Keep the compatibility API for saved drafts; their diagnostics remain in the audit.
+  function decisions(){return [];}
   function batches(items,maxCharacters=8000,maxItems=8){
     const result=[];let batch=[],size=0;
     for(const item of items){

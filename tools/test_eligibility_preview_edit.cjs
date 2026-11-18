@@ -19,9 +19,11 @@ function edit(nodes,textNodes=[]){
 const node=(index,kind,position,text)=>({dataset:{criteriaRow:String(index),criteriaKind:kind,criteriaRule:String(position)},innerText:text});
 for(const mode of ['manual','machine']){
  let state=setup(mode);
- // Confirmed rules remain in the same editable preview as generated rules.
- for(const item of api.pending())state.pendingDecisions[item]=item.startsWith('Population')?{decision:'meets',domain:'Population',text:'Adults aged 21 or older'}:{decision:'fails',domain:'Study design',text:'Case reports'};
- api.generate();
+ // Previously confirmed rules remain editable without reopening a questionnaire.
+ const confirmedRows=mode==='machine'?state.machineCriteria:state.criteria;
+ confirmedRows[0].condition='Adults.\nAdults aged 21 or older.';confirmedRows[1].uncertain='Case reports';
+ state.finalCriteria={decisions:[{domain:'Population',decision:'meets',rule:'Adults aged 21 or older.'},{domain:'Study design',decision:'fails',rule:'Case reports.'}]};
+ api.set(state);api.save();
  const before=structuredClone(api.get());
  assert.match(el('preview').innerHTML,/contenteditable="plaintext-only"/);
  edit([node(0,'include',0,'Participants with active Fibromyalgia.\nParticipants taking stable medication.\nAdults aged 21 or older.'),node(0,'exclude',0,'Pregnant participants.')]);

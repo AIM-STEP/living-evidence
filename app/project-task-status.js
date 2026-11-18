@@ -18,7 +18,7 @@
     // Reuse the criteria library's placeholder exclusion, including legacy sets.
     const criteria = rows.filter(row => eligibility?.hasRules({...e,generationMethodChoice:e.generationMethodChoice ?? 'legacy',criteria:[row],machineCriteria:[row]})).length;
     const refinement = e?.activeGenerator === 'machine' ? e.machineRefinement : e?.manualRefinement;
-    const reviewPending = grounding && refinement?.clarifications ? grounding.decisions(refinement).map(detail => detail.item) : refinement?.uncertainties || [];
+    const reviewPending = grounding ? grounding.decisions(refinement).map(detail => detail.item) : [];
     const unresolved = refinement?.audit ? reviewPending.filter(item => !(e.resolvedPending || []).includes(item)).length : 0;
     put(files[0], criteria || text(e?.question) || unresolved, criteria + words(' criteria saved', ' 项标准已保存') + (unresolved ? ' · ' + unresolved + words(' pending clarifications', ' 项待澄清') : ''), criteria > 0 && !unresolved);
     const s = data.search, search = data.searchResults;

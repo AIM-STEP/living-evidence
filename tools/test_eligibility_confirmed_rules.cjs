@@ -12,9 +12,11 @@ ctx.window.AIMSTEPProjectAccess={run:fn=>fn()};
 function setup(mode){const state=api.get();Object.assign(state,{activeGenerator:mode,generationMethodChoice:mode,framework:'Other',finalCriteria:null,resolvedPending:[],pendingDecisions:{},manualRefinement:null,machineRefinement:null,criteria:[{title:'Population',condition:'Adults.\nDefine the age threshold',uncertain:'Children',definition:''},{title:'Study design',condition:'Randomized trials',uncertain:'',definition:'Define the excluded study designs'}]});state.machineCriteria=structuredClone(state.criteria);state.machineRun={question:'Synthetic question',reviewType:'Systematic Review',sourceRevision:0};state.machineSourceRevision=0;state.question='Synthetic question';api.set(state);return state;}
 function docXml(){const bytes=Buffer.from(api.export());let offset=0;while(bytes.readUInt32LE(offset)===0x04034b50){const size=bytes.readUInt32LE(offset+18),n=bytes.readUInt16LE(offset+26),extra=bytes.readUInt16LE(offset+28),name=bytes.subarray(offset+30,offset+30+n).toString();const start=offset+30+n+extra;if(name==='word/document.xml')return bytes.subarray(start,start+size).toString();offset=start+size;}throw Error('Missing Word document XML');}
 for(const mode of ['manual','machine']){
- const state=setup(mode),pending=api.pending();assert.equal(pending.length,2);assert.match(el('preview').innerHTML,/Pending clarification/);
- for(const item of pending)state.pendingDecisions[item]=item.startsWith('Population')?{decision:'meets',domain:'Population',text:'Adults aged 21 or older'}:{decision:'fails',domain:'Study design',text:'Case reports'};
- api.generate();
+ const state=setup(mode);
+ const rows=mode==='machine'?state.machineCriteria:state.criteria;
+ rows[0].condition='Adults.\nAdults aged 21 or older.';rows[1].uncertain='Case reports';
+ state.finalCriteria={decisions:[{domain:'Population',decision:'meets',rule:'Adults aged 21 or older.'},{domain:'Study design',decision:'fails',rule:'Case reports.'}]};
+ api.set(state);api.save();assert.equal(api.pending().length,0);
  assert.match(el('preview').innerHTML,/<h3(?:\s[^>]*)?>Description<\/h3>/);assert(!el('preview').innerHTML.includes('Pending clarification'));assert(el('preview').innerHTML.includes('Adults aged 21'));assert(el('preview').innerHTML.includes('Case reports'));if(mode==='manual'){assert(el('criteria-list').innerHTML.includes('Adults aged 21'));assert(el('criteria-list').innerHTML.includes('Case reports'));}
  assert.match(el('preview').innerHTML,/Adults\./);assert.match(el('preview').innerHTML,/Randomized trials/);
  const xml=docXml();assert.match(xml,/Adults aged 21 or older/);assert.match(xml,/Case reports/);
