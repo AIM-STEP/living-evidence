@@ -95,6 +95,15 @@ assert(!opened(E.ingest_candidates(rehab,{questions:[rehabQuestion]}).state).som
 rehabQuestion.elements[0].normalized_text='Exercise-based CR (exercise training alone)';
 assert(opened(E.ingest_candidates(rehab,{questions:[rehabQuestion]}).state).some(i=>i.trigger_rule_id==='source_or_relation'),'Losing the combined intervention still requires review.');
 const withNote=structuredClone(explicit);
+const separated='We included adults with asthma who received exercise. We excluded case reports or animal studies. Our outcomes of interest were cough or wheezing.';
+const separate=E.save_input(E.create_project('separate-eligibility'),{research_question:separated,question_framework:'PICO',output_language:'en'}).state;
+const sq=separate.questions[0],ss=D.sourceAt(separate,sq.source_refs[0]);
+const separateCriteria={...rehabQuestion,question_id:sq.question_id,elements:[
+ {...clinicalArm('exercise','intervention','exercise'),source_refs:[E.ref(ss,separated)]},
+ {...clinicalArm('control','population','adults with asthma'),source_refs:[E.ref(ss,separated)]}
+]};
+assert(!opened(E.ingest_candidates(separate,{questions:[separateCriteria]}).state).some(i=>i.trigger_rule_id==='source_or_relation'),
+ 'Alternatives in a separate exclusion or outcome list cannot make inclusion conditions alternatives.');
 // Source conditions in additional notes must also protect a genuine language decision.
 const noteSource={...explicitSource,source_id:'language-note',source_type:'additional_requirement',original_text:'Languages of publication will depend on translation availability.'};
 withNote.sources.push(noteSource);

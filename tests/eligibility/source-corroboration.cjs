@@ -2,14 +2,14 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const E=require('../../app/eligibility/engine'), M=require('../../app/eligibility/model');
 
-async function generate(text,wording,verdict='supported',ambiguous=false){
+async function generate(text,wording,verdict='supported',ambiguous=false,options={}){
  const state=E.save_input(E.create_project('explicit-source'),{research_question:text,question_framework:'PICO',output_language:'en'}).state;
  const source=state.sources.find(s=>s.input_kind==='research_question');
- const item={candidate_id:'p',dimension_id:'population',normalized_text:wording,source_refs:[E.ref(source,wording)],
-  information_status:ambiguous?'ambiguous':'explicit',disposition:'include',semantic_role:'eligibility_condition',scope_status:'restricted',structured_value:null};
+ const item={candidate_id:'p',dimension_id:options.dimension||'population',normalized_text:wording,source_refs:[E.ref(source,options.quote||wording)],
+  information_status:ambiguous?'ambiguous':'explicit',disposition:options.side||'include',semantic_role:options.role||'eligibility_condition',scope_status:'restricted',structured_value:null};
  let checks=0;
  const adapter={async request(step,project,payload){
-  if(step==='extract_elements')return {questions:[{question_id:state.questions[0].question_id,framework_candidates:['pico'],elements:[item],issues:[],logic:null}]};
+  if(step==='extract_elements')return {questions:[{question_id:state.questions[0].question_id,framework_candidates:['pico'],elements:[item],issues:options.issues||[],logic:null}]};
   assert.equal(step,'review_normalization');checks++;
   return {items:payload.items.map(i=>({...i,status:'uncertain',issue_type:'ambiguous_source',reason:'Fixture vote',
    reviewer:{provider:'typesafe',verdict:verdict==='ambiguous'?verdict:'low_confidence',original_verdict:verdict}}))};
@@ -31,6 +31,24 @@ test('a lower-confidence Jev agreement can be corroborated only by a complete so
  assert(disagrees.e.review_pending);
  const unscoped=await generate('The reported sample included adults with severe asthma.','adults with severe asthma');
  assert(unscoped.e.review_pending);
+});
+
+test('ordinary eligibility language and equivalent typography carry a source-defined field through Jev',async()=>{
+ const statement='To compare A with B in people with heart disease.';
+ const population=await generate(statement,'people with heart disease','supported',true);
+ assert.equal(population.checks,1);
+ assert.equal(population.e.semantic_review.status,'supported');
+ const excluded=await generate('Exclude patients with drug‐resistant asthma.','Patients with drug-resistant asthma','supported',true,{
+  quote:'patients with drug‐resistant asthma',side:'exclude',
+  issues:[{reason_code:'PROPOSED_RESTRICTION',question_text:'Also restrict by age?',scope_impact:'Not stated.',element_candidate_ids:['p'],options:[]}]});
+ assert.equal(excluded.e.semantic_review.status,'supported');
+ const partial=await generate(statement,'people');
+ assert(partial.e.review_pending);
+ const subgroup=await generate('To compare A with B according to severity in people with heart disease.','people with heart disease');
+ assert(subgroup.e.review_pending);
+ const interest=await generate('Our outcomes of interest were pain.','pain','supported',true,{dimension:'outcome',role:'undecided'});
+ assert.equal(interest.checks,0);
+ assert.equal(interest.e,undefined);
 });
 
 test('the original qualitative age group is reviewed once without an invented numerical threshold',async()=>{

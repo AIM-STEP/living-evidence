@@ -14,7 +14,7 @@
 | `analysis_role` | 亚组因素遗漏，分析方法或数据层级变成筛选条件。 | 区分分析计划与纳排要求。仅当作者明示筛选门槛且属于所选框架时，才记录相应条件。[分析计划与独立数据要求](../../tests/eligibility/nutrition.cjs) |
 | `scope_status` | 原文没有设限，却被标作明确不限，随后核对失败。 | 区分未提及、明确不限、范围已限定和不适用。只有来源含有相应表述，才录入明确的豁免。[限制状态](../../tests/eligibility/scope-status.cjs) |
 | `age_bound` | 年龄限定在改写时消失，严格不等号改变，或模型自行补上年龄界值。 | 保留年龄原词、运算符、单位和比较方向。逐字明确的定性年龄组可直接采用；只有原文确实要求另定界值、存在冲突或适用范围不清时才问作者。[年龄与必需确认](../../tests/eligibility/nutrition.cjs) · [阈值核验记录](../../docs/eligibility-evaluation/strict-age-recorded-real.json) |
-| `logical_scope` | 分段后把并列备选条件合并为全部须满足，或把例外附到错误分支。 | 曾将“可纳入三种试验设计”错读为研究设计、人群、干预和对照任选其一。先确定连接词管辖的短语，再按原文重建各字段与共同条件。[明确纳入句](../../tests/eligibility/explicit-inclusion-logic.cjs) 若跨段关系确实未交代，保留针对这一关系的确认。[分段逻辑](../../tests/eligibility/fragment-logic.cjs) |
+| `logical_scope` | 分段后把并列备选条件合并为全部须满足，或把例外附到错误分支。 | 曾将“可纳入三种试验设计”错读为研究设计、人群、干预和对照任选其一。先确定连接词管辖的短语，再按原文重建各字段与共同条件。排除清单、结局关注和亚组分析中的并列选项各自保留在其原有范围。[明确纳入句](../../tests/eligibility/explicit-inclusion-logic.cjs) 若跨段关系确实未交代，保留针对这一关系的确认。[分段逻辑](../../tests/eligibility/fragment-logic.cjs) |
 | `repeated_passage` | 同一短语在不同段落出现时容易选错方向。PDF 中的排版合字也可能使模型引文与原文逐字比较失败。 | 核对来源版本、Unicode 位置、小标题和否定。遇到排版差异，保留原文切片和全部可能的位置。上下文相同的引文可共享依据；相反语义的出现位置须分开。[重复引文与上下文](../../tests/eligibility/repeated-citations.cjs) |
 | 数值与时间 | 起止年龄、小时缩写及时间参照在标准化后被误判为阈值改变。 | 逐条从同一处原文核对范围两端、严格程度、单位和参照事件。仅机器数值属性与完整原文措辞相冲突时，先按原文校正。 |
 | `source_fidelity` | 候选措辞改变了受试人群、干预实施者或条件，出现引用与表述不符。 | 由 Jev 一次核对候选措辞与对应原文。存疑或核对未完成的候选进入相应位置供作者决定，作者答复立即生效。[独立核对与定向修正](../../tests/eligibility/semantic-repair.cjs) |
@@ -29,7 +29,7 @@
 | `clear_project` | 旧草稿或来源污染新任务。清除项目标准、旧记录和反馈，保留有独立清除键的研究问题，拒绝清除前发出的旧请求回写。 | [Clear 与并发保护](../../tests/eligibility/clear-project.cjs) |
 | `author_decision` | 确认项离开对应要素，作者明确回答后仍要等待再次推理。把确认定位到规则，并直接应用作者决定。 | [作者决定路由](../../tests/eligibility/author-answer-routing.cjs) · [确认目标](../../tests/eligibility/author-targets.cjs) |
 | `progress_display` | 工作期间进度停在 0% 或 15%，用户无法判断是否仍在运行。显示阶段进度、等待状态及实际完成的批次。 | [进度反馈](../../tests/eligibility/wait-progress.cjs) |
-| `service_availability` | 上游服务返回 502、忙碌或超时，流程中断。记录运行故障类别并保留可诊断的阶段，把这些问题交给传输层处理。 | [传输层](../../tools/test_eligibility_transport.py) · [用户可见错误](../../tests/eligibility/semantic-error-display.cjs) |
+| `service_availability` | 上游服务超时或缺少判定时，曾为每个未核对条目生成一个作者任务。仅对缺少服务判定的条目自动重试一次。若仍无法完成，页面显示一条服务提示。[部分恢复及服务故障](../../tests/eligibility/semantic-repair.cjs) | [传输层](../../tools/test_eligibility_transport.py) · [用户可见错误](../../tests/eligibility/semantic-error-display.cjs) |
 | `residual_validation` | 程序发现尚未归入具体技巧的校验错误。累计发生运行次数，待可复现后分配更具体的记录代码。 | [校验不变量](../../tests/eligibility/invariants.cjs) |
 
 ## 一次运行如何反馈到下一次

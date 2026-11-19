@@ -395,6 +395,17 @@ function alternativeSpan(quote,wording){
  const start=Array.from(quote.slice(0,first.index)).length;
  return {start,end:start+Array.from(first[0]).length};
 }
+function inclusionContainsOr(quote){
+ // A broad citation may also contain an explicitly separate exclusion list,
+ // outcome list or subgroup analysis. Its alternatives do not join inclusions.
+ return quote.split(/(?:[.!?。！？]\s*|[;；\n]+)/u).some(clause=>{
+  if(!D.hasOr(clause))return false;
+  const text=clause.trim();
+  if(/^(?:(?:we\s+(?:will\s+)?)?exclud(?:e|ed|ing)\b|exclusion criteria\b|(?:our |the )?(?:(?:primary|secondary) )?outcomes? (?:of interest\b|were\b|are\b)|(?:primary|secondary) outcomes?\s*:|(?:we (?:will )?)?(?:examine|assess|investigate) whether\b[^;.!?]{0,180}\b(?:differ(?:s|ed)?|var(?:y|ies|ied)) (?:by|according to|across)\b|subgroup analys[ie]s\b|排除(?:标准)?|关注的结局|亚组分析)/iu.test(text)&&
+     !/\b(?:includ(?:e|ed|ing)|eligible|eligibility|qualif(?:y|ied)|except|unless|alternatively)\b|纳入|除非|但/u.test(text.toLowerCase()))return false;
+  return true;
+ });
+}
 function unrepresentedSourceOr(elements){
  const withAlternatives=elements.filter(e=>D.hasOr(e.normalized_text));
  return elements.some(e=>e.source_refs.some(ref=>{
@@ -419,7 +430,7 @@ function unrepresentedSourceOr(elements){
     if(left<right)chars.fill(' ',left-ref.start,right-ref.start);
    }
   }
-  return D.hasOr(chars.join(''));
+  return inclusionContainsOr(chars.join(''));
  }));
 }
 function matchingRuleIssue(state,q,group,desired){

@@ -33,7 +33,7 @@ function scenario(mode) {
   const previous = structuredClone(question);
   for (const item of previous.elements) item.semantic_review = {status: 'supported', reason: 'Prior review.'};
   const project = engine.ingest_candidates(state, {questions: [previous]}).state;
-  if (!ambiguous && mode !== 'supported') question.elements[1].normalized_text = 'unsupervised exercise';
+  if (['contradicted','field'].includes(mode)) question.elements[1].normalized_text = 'unsupervised exercise';
   const steps = [];
   let affectedId;
 
@@ -52,6 +52,10 @@ function scenario(mode) {
     }
     assert.equal(step, 'review_normalization');
     assert.equal(payload.review_policy, 'jev-once-v1');
+    if (mode === 'recover' && steps.filter(s=>s==='review_normalization').length===2) {
+      assert.deepEqual(payload.items.map(i=>i.id),[affectedId]);
+      return {items: payload.items.map(i=>({...i,status:'supported',issue_type:'none',reason:'Source confirmed.'}))};
+    }
     assert.equal(payload.items.length, 3);
     affectedId = payload.items.find(item => item.normalized_text.includes('exercise')).id;
     if (mode === 'outage') throw Object.assign(new Error('Synthetic gateway outage'), {code: 'MODEL_UPSTREAM_ERROR'});
@@ -60,27 +64,34 @@ function scenario(mode) {
         issue_type: 'none', information_status: 'explicit', semantic_role: item.semantic_role,
         scope_status: item.scope_status, disposition: item.disposition};
       if (item.id !== affectedId || mode === 'supported') return assessment;
+      if (mode === 'recover') return {...assessment,status:'uncertain',issue_type:'ambiguous_source',reviewer:{provider:'typesafe',verdict:'unavailable'}};
       return {...assessment, status: mode === 'contradicted' ? 'contradicted' : 'uncertain',
         issue_type: ambiguous ? 'ambiguous_source' : 'unsupported_rewrite', reason: rejection,
         reviewer:{provider:'typesafe',verdict:mode === 'field' ? 'wrong_field' : 'wording_or_scope'}};
     })};
   }};
-  if (mode === 'field') question.elements[1].dimension_id='study_design';
+  if (mode === 'field') question.elements[1].dimension_id='comparator';
   return {project, steps, adapter, exercise};
 }
 async function check(mode){
   const run=scenario(mode), before=structuredClone(run.project);
+  if(mode==='outage'){
+    await assert.rejects(model.analyze(run.project,engine.environment(),run.adapter,{retries:0}),{code:'MODEL_REVIEW_INCOMPLETE'});
+    assert.deepEqual(run.steps,['extract_elements','review_normalization','review_normalization']);
+    assert.deepEqual(run.project,before);
+    return;
+  }
   const {candidates}=await model.analyze(run.project,engine.environment(),run.adapter,{retries:0});
   const project=engine.ingest_candidates(run.project,candidates).state;
   const checks=project.issues.filter(i=>i.status==='open'&&i.trigger_rule_id==='independent_source_check');
   const expected=['extract_elements','review_normalization'];
   if(mode==='field')expected.push('route_author_checks');
+  if(mode==='recover')expected.push('review_normalization');
   assert.deepEqual(run.steps,expected);
   assert.deepEqual(run.project,before);
-  if(mode==='supported'){assert.equal(checks.length,0);assert.equal(project.criteria.length,3);return;}
-  assert.equal(checks.length,mode==='outage'?3:1);
-  assert.equal(project.criteria.length,mode==='outage'?0:2);
-  if(mode==='outage')assert(checks.every(i=>i.question_text.includes('unavailable')));
+  if(['supported','recover'].includes(mode)){assert.equal(checks.length,0);assert.equal(project.criteria.length,3);return;}
+  assert.equal(checks.length,1);
+  assert.equal(project.criteria.length,2);
   const issue=checks.find(i=>project.elements.some(e=>i.element_ids.includes(e.element_id)&&e.dimension_id==='intervention'&&e.normalized_text.includes('exercise')));
   assert(issue?.blocking);
   const proposal=project.elements.find(e=>issue.element_ids.includes(e.element_id));
@@ -98,13 +109,13 @@ async function check(mode){
   assert.equal(amended.review_pending,undefined);
   assert(confirmed.criteria.some(c=>c.text==='supervised exercise'));
   assert(!confirmed.issues.some(i=>i.issue_id===issue.issue_id&&i.status==='open'));
-  if(mode!=='outage')assert(domain.treeHas(confirmed.logic.questions[proposal.question_id].include,'any_of'));
+  assert(domain.treeHas(confirmed.logic.questions[proposal.question_id].include,'any_of'));
   const omitted=answer('Omit this item','omit');
   assert(!omitted.criteria.some(c=>c.source_element_ids.includes(proposal.element_id)));
   assert(!omitted.validation.errors.length);
   assert.deepEqual(run.steps,expected,'the author decision took no further model calls');
 }
 (async()=>{
-  for(const mode of ['supported','contradicted','ambiguous','field','outage'])await check(mode);
+  for(const mode of ['supported','contradicted','ambiguous','field','recover','outage'])await check(mode);
   console.log('PASS single-pass independent source checks, scoped author routing, direct correction and omission.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

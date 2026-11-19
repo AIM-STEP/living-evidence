@@ -385,12 +385,45 @@ function comparisonEligibilityFields(passage){
 }
 // Only the deterministic source readers can attest the full wording, field and side.
 const literalField=Symbol('field established by the original eligibility clause');
+function literalWording(text){
+ return text.trim().normalize('NFC').replace(/[‐‑]/gu,'-').replace(/[‘’]/gu,"'").replace(/[“”]/gu,'"')
+  .replace(/\s+/gu,' ').replace(/[.。]$/u,'')
+  .replace(/^(?:Adults|Children|Infants|Patients|Participants|People|Studies|Randomised|Randomized)\b/u,word=>word.toLowerCase());
+}
 function markLiteralField(e,dimension,side,wording){
- if(!dimension||e.normalized_text!==wording||e.disposition!==side||
+ if(!dimension||literalWording(e.normalized_text)!==literalWording(wording)||e.disposition!==side||
     e.semantic_role!=='eligibility_condition'||e.scope_status!=='restricted'||e.source_occurrence_alternatives?.length||
     e.scope_conditions?.length||e.exceptions?.length||e.explicit_revision||e.decision_status==='confirmed_by_user'||
     /[?？]|\b(?:to be (?:defined|decided|determined)|uncertain|unclear|if applicable|unless|except)\b|待定|待确认|不明确|除非/u.test(wording.toLowerCase()))return;
- e[literalField]={dimension,side,wording};
+ e[literalField]={dimension,side,wording:e.normalized_text};
+}
+// A complete population in a clinical objective or a standalone eligibility
+// directive supplies its own field and direction without a "Population:" label.
+function markNarrativeField(e,state){
+ if(e[literalField]||e.source_refs.length!==1||!['population','study_design'].includes(e.dimension_id))return;
+ const ref=e.source_refs[0],source=D.sourceAt(state,ref);
+ if(!['research_question','additional_requirement'].includes(source?.input_kind))return;
+ const context=e[locatedContexts]?.[0]||ref;
+ const heading=context.heading?.quote.replace(/[:：]\s*$/u,'').trim().toLowerCase();
+ if(heading&&!['inclusion','inclusion criteria','eligibility criteria','exclusion','exclusion criteria','纳入标准','排除标准'].includes(heading))return;
+ const sentence=(context.context||ref.quote).trim().replace(/[.。]$/u,'');
+ if(/[;；?？]|\b(?:except|unless|may|might|subgroup|according to|depending|whether|examples?|such as|alternatively|only if|whereas)\b/iu.test(sentence))return;
+ const directive=sentence.match(/^(?:(?:we\s+)?(?:will\s+)?(include[ds]?|exclude[ds]?)\s+|(纳入|排除)\s*)[:：]?\s*(.+)$/iu);
+ let value,side='include';
+ if(directive){
+  side=/^(?:exclu|排除)/iu.test(directive[1]||directive[2])?'exclude':'include';
+  if(heading&&heading!=='eligibility criteria'&&/^(?:exclusion|排除)/u.test(heading)!==(side==='exclude'))return;
+  value=directive[3];
+ }else{
+  if(heading||e.dimension_id!=='population'||!/^(?:to |we (?:aim(?:ed)? to )?)(?:assess|evaluate|compare|examine|determine)\b/iu.test(sentence)||
+     !/\b(?:compared (?:with|to)|versus|vs\.?|to compare)\b/iu.test(sentence))return;
+  const population=sentence.match(/\b(?:in|among)\s+((?:adults|children|infants|patients|people|participants|men|women)\b.*)$/iu);
+  if(!population||/\b(?:in|among)\s+(?:adults|children|infants|patients|people|participants|men|women)\b|\b(?:and|to)\s+(?:assess|determine|compare|evaluate|examine)\b/iu.test(population[1]))return;
+  value=population[1];
+ }
+ const dimension=/^(?:(?:older |younger )?(?:adults|children|infants|patients|people|participants|men|women)\b|成年人|儿童|新生儿|患者)/iu.test(value)?'population':
+  /^(?:(?:randomi[sz]ed|controlled|clinical|cluster|quasi|cohort|case[-‐‑ ]control|prospective|retrospective|observational|cross[-‐‑ ]sectional|parallel|double[-‐‑ ]blind)[\s-]+)+(?:trials?|studies)(?:\s*\(RCTs?\))?$/iu.test(value)?'study_design':null;
+ if(dimension===e.dimension_id)markLiteralField(e,dimension,side,value);
 }
 function reconcileEligibilityFields(state,result,q,ranges,passages,onLesson,frame){
  if(!['PICO','PICOS','PICOs','pico','picos'].includes(frame)||q.confirmed_elements?.length)return;
@@ -951,7 +984,7 @@ function restrictToFramework(question,original,savedQuestion,env,trees){
   if(Methods.classifyAnalysis(e,questionText))continue;
   const evidence=e[reviewCitations]||e.source_refs;
   const citedText=evidence.map(r=>(r.heading?.quote||'')+' '+(r.context||r.quote)).join(' ');
-  if(e.dimension_id.split('.')[0]==='outcome'&&e.semantic_role!=='undecided'){
+  if(e.dimension_id.split('.')[0]==='outcome'){
    const citations=evidence.flatMap(r=>[
     ...(r.heading?[r.heading]:[]),
     r.context?{source_id:r.source_id,source_revision:r.source_revision,start:r.context_start,end:r.context_start+Array.from(r.context).length,quote:r.context}:r
@@ -964,7 +997,8 @@ function restrictToFramework(question,original,savedQuestion,env,trees){
     for(const r of gates)if(!e.source_refs.some(s=>s.source_id===r.source_id&&s.source_revision===r.source_revision&&s.start===r.start&&s.end===r.end))e.source_refs.push(r);
    }
    const declaredInterest=/\b(?:outcomes? of interest|(?:primary|secondary) outcomes? (?:were|are)|we (?:will )?(?:assess|examine) whether)\b|关注的结局|亚组分析/i.test(citedText);
-   if(!gate&&(e.semantic_role==='review_focus'||declaredInterest))continue;
+   const statedInterest=e.semantic_role!=='undecided'||/\b(?:our |the )?outcomes? of interest (?:were|are|included?)\b|\b(?:our |the )(?:primary|secondary) outcomes? (?:were|are)\b|关注的结局(?:为|是|包括)/iu.test(citedText);
+   if(!gate&&(e.semantic_role==='review_focus'||declaredInterest&&statedInterest))continue;
    if(gate&&e.semantic_role==='review_focus'){e.semantic_role='eligibility_condition';e.disposition=/\b(?:exclude[ds]?|ineligible)\b|排除/i.test(citedText)?'exclude':'include';e.scope_status='restricted';}
   }
   if(e.semantic_role==='background_information'||e.semantic_role==='review_focus')continue;
@@ -1130,13 +1164,23 @@ function reviewUnavailable(error){
 }
 async function assessWording(state,adapter,questions,items,signal){
  const instruction=reviewInstruction+' Check each item against its own cited source and the original question. Keep each reason to one short sentence.';
- let result;
- try{result=await adapter.request('review_normalization',state,{questions,items,review_policy:'jev-once-v1'},reviewSchema,instruction,signal);}
- catch(error){
-  if(signal?.aborted||!reviewUnavailable(error))throw error;
-  result={items:items.map(unavailableAssessment)};
+ const byId=new Map();
+ let pending=items;
+ for(let attempt=0;attempt<2&&pending.length;attempt++){
+  signal?.throwIfAborted();
+  try{
+   const result=await adapter.request('review_normalization',state,{questions,items:pending,review_policy:'jev-once-v1'},reviewSchema,instruction,signal);
+   for(const [id,assessment] of indexReviewReplies(result,pending)){
+    if(assessment.reviewer?.verdict!=='unavailable')byId.set(id,assessment);
+   }
+  }catch(error){
+   if(signal?.aborted||!reviewUnavailable(error))throw error;
+  }
+  // A missing service verdict is a technical failure. Retry only the missing
+  // items and keep actual semantic disagreements for the ordinary review path.
+  pending=pending.filter(item=>!byId.has(item.id));
  }
- const byId=indexReviewReplies(result,items);
+ if(pending.length)D.fail('MODEL_REVIEW_INCOMPLETE','review_normalization','Jev could not finish checking the source. Please try Generate again.');
  for(const item of items){
   const a=byId.get(item.id);
   // Older compatible providers may return a verdict without reclassifying the input.
@@ -1281,16 +1325,18 @@ function sourceReview(state,adapter,options,env){
     // Only settled candidates need independent verification. The local model
     // has already placed genuine source uncertainty under its native field.
     if(e.review_pending)continue;
+    markNarrativeField(e,state);
     const ageAsWritten=sourceAgeGroup(e,q,sourceQuestion);
     const proof=e[literalField];
+    const openDecision=q.issues.some(i=>i.reason_code!=='PROPOSED_RESTRICTION'&&i.element_candidate_ids?.includes(e.candidate_id));
     if(proof&&proof.dimension===e.dimension_id&&proof.side===e.disposition&&proof.wording===e.normalized_text&&
-       !q.unresolved_fragment_logic&&(ageAsWritten||!q.issues.some(i=>i.element_candidate_ids?.includes(e.candidate_id))))literalCandidates.add(e);
+       !q.unresolved_fragment_logic&&(ageAsWritten||!openDecision))literalCandidates.add(e);
     // Send a complete, source-defined field to the existing independent check
     // when extraction marked it uncertain without identifying an open decision.
     // Qualitative age has its own check for a threshold requested elsewhere.
     if(ageAsWritten||(e.information_status==='ambiguous'&&literalCandidates.has(e)&&
-       !qualitativeAgeGroup.test(e.normalized_text)&&!e.structured_value&&
-       !q.issues.some(i=>!i.element_candidate_ids?.length)&&
+       !qualitativeAgeGroup.test(e.normalized_text)&&
+       !q.issues.some(i=>i.reason_code!=='PROPOSED_RESTRICTION'&&!i.element_candidate_ids?.length)&&
        !/\b(?:to be (?:confirmed|clarified|specified|decided|determined|defined)|undecided|unclear|pending|possibly|tbd|tbc)\b|待定|可能|待确认|待明确|尚未确定/iu.test(original+' '+e.normalized_text))){
      e.information_status='explicit';
     }
