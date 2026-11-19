@@ -29,7 +29,7 @@ window.AIMScreeningCriteriaDialog=function(config){
     const same=previous&&previous.generationMethodChoice&&(previous.question||'')===(snapshot.question||'')&&(previous.framework||'Other')===(snapshot.framework||'Other')&&JSON.stringify((rows||[]).map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']))===JSON.stringify(snapshot.rows.map(r=>[r.title,r.condition||'',r.uncertain||'',r.definition||'']));
     const valueToLoad=same?previous:AIMSearchCriteriaEditor.workspace(previous,snapshot,new Date().toISOString());previewWorkspace=valueToLoad;loading.hidden=false;
     const current=document.createElement('iframe');frame=current;current.className='criteria-preview-frame';current.title='Editable eligibility criteria';
-    const url=new URL(config.pageLink('eligibility.html'),location.href);url.searchParams.set('embedded','search-criteria-preview');url.searchParams.set('criteriaPreviewVersion','20261119-clear-criteria-1');current.src=url.href;
+    const url=new URL(config.pageLink('eligibility.html'),location.href);url.searchParams.set('embedded','search-criteria-preview');url.searchParams.set('criteriaPreviewVersion','20261119-criteria-answers-1');current.src=url.href;
     current.addEventListener('load',()=>initialize(current));
     current.addEventListener('error',()=>{if(frame===current){loading.hidden=true;showError('Could not load the criteria editor. Clear is still available.')}});
     $('criteria-view').replaceChildren(current);
@@ -54,12 +54,13 @@ window.AIMScreeningCriteriaDialog=function(config){
   intercept('edit-criteria',()=>{if(!blocked()&&discard())location.href=config.pageLink('eligibility.html')});
   clearButton.addEventListener('click',async()=>{
     if(blocked()){showError('Wait for the current operation to finish.');return}if(!previewWorkspace||!snapshot?.rows?.length)return;
-    if(!confirm('Permanently clear the question, attachments and every saved criteria draft for this project?'))return;
+    if(!confirm('Permanently clear attachments and every saved criteria draft for this project? The review question will stay in the input box.'))return;
     saving=true;saveButton.disabled=true;clearButton.disabled=true;
     try{
       if(base!==localStorage.getItem(eligibilityKey))throw Error('Criteria changed elsewhere. Reopen the dialog to see the current criteria.');
       const previous=JSON.parse(base||'null')||{};
       const blank=AimstepEligibilityLibrary.blankWorkspace(previous);
+      blank.question=previous.question||'';
       const changes=AimstepEligibilityLibrary.clearChanges(localStorage,config.scope);
       AimstepEligibilityReset.resetProject(localStorage,config.scope,blank,changes);
       const empty={rows:[],question:'',framework:'',reviewType:blank.reviewType||'',cleared:true};

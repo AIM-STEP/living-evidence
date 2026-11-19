@@ -104,6 +104,20 @@ class ServerTest(unittest.TestCase):
 
     MSG = {"messages": [{"role": "system", "content": "s"}, {"role": "user", "content": "u"}]}
 
+    def test_human_answer_routes_to_jev_and_exposes_trusted_provider_metadata(self):
+        flow = srv.eligibility_hybrid_answer
+        answer = {'answers': [{'issue_ids': ['i'], 'answer_text': 'Either group', 'option_id': 'any'}]}
+        reply = {'provider': 'typesafe', 'model': 'jev', 'message': {'content': json.dumps(answer)},
+                 'review': {'version': flow.TASK, 'route': 'stored_option'}}
+        with patch.object(flow, 'interpret', return_value=reply) as interpret, patch.object(srv, 'write_log') as write_log:
+            status, response = self.req('POST', srv.MODEL, {**self.MSG, 'task': flow.TASK, 'workflow': 'eligibility-criteria'})
+        self.assertEqual(status, 200)
+        self.assertEqual((response['provider'], response['model'], response['review']), ('typesafe', 'jev', reply['review']))
+        self.assertEqual(json.loads(response['message']['content']), answer)
+        self.assertEqual(FakeOllama.seen, [])
+        interpret.assert_called_once()
+        write_log.assert_not_called()
+
     def test_criteria_reports_fixed_error_types_without_leaking_content(self):
         payload = {**self.MSG, 'task': srv.eligibility_hybrid_review.TASK}
         cases = [

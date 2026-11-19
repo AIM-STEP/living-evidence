@@ -105,9 +105,9 @@
 <script src="app/eligibility/domain.js?v=20261118-criteria-review-3"></script>
 <script src="app/eligibility/methodology.js?v=20261119-stage-one-2"></script>
 <script src="app/eligibility/engine.js?v=20261119-stage-one-2"></script>
-<script src="app/eligibility/model.js?v=20261119-stage-one-2"></script>
-<script src="app/eligibility-reset.js?v=20261119-clear-criteria-1"></script>
-<script src="app/eligibility/background.js?v=20261119-stage-one-2"></script>
+<script src="app/eligibility/model.js?v=20261119-criteria-answers-1"></script>
+<script src="app/eligibility-reset.js?v=20261119-independent-clear-1"></script>
+<script src="app/eligibility/background.js?v=20261119-criteria-answers-1"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -149,7 +149,8 @@ function syncProposalCriteria(){
  if(!state.protocolSource.sharedCriteria)return;
  const rows=state.activeGenerator==='machine'&&state.machineCriteria.length?state.machineCriteria:state.criteria;
  state.criteria=rows;state.machineCriteria=rows;
- state.machineRun={source:'protocol',question:state.question||'',reviewType:state.reviewType||'Systematic Review',sourceRevision:Number(state.machineSourceRevision)||0,generatedAt:state.protocolSource.date};
+ const sameImport=state.machineRun?.source==='protocol'&&state.machineRun.generatedAt===state.protocolSource.date;
+ state.machineRun={source:'protocol',question:sameImport?state.machineRun.question:state.question||'',reviewType:state.reviewType||'Systematic Review',sourceRevision:Number(state.machineSourceRevision)||0,generatedAt:state.protocolSource.date};
 }
 syncProposalCriteria();
 delete state.machineModelSlot;delete state.manualModelSlot;
@@ -581,7 +582,7 @@ async function requestCriteriaJson(model,system,payload,signal,schema=null){
   const backend=model.provider==='backend',ollama=model.provider!=='compatible';
   if(schema&&payload.step)system+=window.AIMSTEPEligibilityModel?.serializationInstruction||'';
   const messages=[{role:'system',content:system},{role:'user',content:JSON.stringify(payload)}];
-  const body=backend?{messages,provider:'local',workflow:'eligibility-criteria',...(schema?{format:schema}:{}),...(payload.step==='review_normalization'?{task:'eligibility-review-v1'}:{})}:ollama?{model:model.name,messages,stream:false,think:false,format:schema||'json',options:{temperature:0,num_ctx:16384}}:{model:model.name,messages,stream:false,response_format:schema?{type:'json_schema',json_schema:{name:'eligibility_rules',schema,strict:true}}:{type:'json_object'},temperature:0};
+  const body=backend?{messages,provider:'local',workflow:'eligibility-criteria',...(schema?{format:schema}:{}),...window.AIMSTEPEligibilityModel.backendTask(payload.step)}:ollama?{model:model.name,messages,stream:false,think:false,format:schema||'json',options:{temperature:0,num_ctx:16384}}:{model:model.name,messages,stream:false,response_format:schema?{type:'json_schema',json_schema:{name:'eligibility_rules',schema,strict:true}}:{type:'json_object'},temperature:0};
   const headers={'Content-Type':'application/json'},token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
   async function post(){
@@ -592,7 +593,7 @@ async function requestCriteriaJson(model,system,payload,signal,schema=null){
   const raw=typeof content==='string'?content:Array.isArray(content)?content.filter(part=>part.type==='text').map(part=>part.text).join(''):'';
   if(!raw)throw new Error('The selected model returned no criteria.');
   await recordCriteriaExchange(model,system,payload,raw,data,schema);
-  try{return JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''))}
+  try{return window.AIMSTEPEligibilityModel.decodeReply(raw,payload.step,backend?data:null)}
   catch{throw Object.assign(new Error('The selected model returned invalid JSON. Try a shorter input or a stronger local model.'),{code:'MODEL_INVALID_JSON'})}
 }
 // Adapt AutoCriteria's preprocessing to study-level review rules: separate inclusion,
@@ -1202,10 +1203,11 @@ function refreshAfterExternalClear(){
 window.addEventListener('storage',event=>{if(projectId&&event.key==='aimstep-eligibility-epoch:'+projectId)refreshAfterExternalClear();});
 function clearPreviewCriteria(){
   const isolated=embeddedManual||embeddedPreview;
-  const prompt=isolated?'Clear all criteria, the question, and attachments in this editor?':'Permanently clear this project’s eligibility criteria, all earlier drafts, the review question, and attached materials?';
+  const prompt=isolated?'Clear all criteria and attachments in this editor? The review question will stay in the input box.':'Permanently clear this project’s eligibility criteria, all earlier drafts, and attached materials? The review question will stay in the input box.';
   if(!confirm(prompt)||refreshAfterExternalClear())return false;
   const library=window.AimstepEligibilityLibrary;
   const next=library.blankWorkspace({...state,generationMethodChoice:$('generation-method').value});
+  next.question=$('question').value;
   if(!isolated&&projectId){
     try{
       const changes=library.clearChanges(localStorage,projectId);
@@ -1216,6 +1218,29 @@ function clearPreviewCriteria(){
   resetCriteriaView(next);toast('Criteria cleared.');return true;
 }
 $('clear-criteria').addEventListener('click',clearPreviewCriteria);
+
+function clearQuestionInput(){
+  if(refreshAfterExternalClear())return;
+  const input=$('question');
+  if((input.value||voiceRecognition)&&confirm('Clear the text in the review question box?')){
+    try{
+      if(!embeddedManual&&!embeddedPreview&&projectId){
+        // An input edit must not revise the source or decisions of a generated draft.
+        const saved=JSON.parse(localStorage.getItem(key)||'null');
+        if(saved?.question){
+          if(!saved.machineRun&&state.machineRun?.source==='protocol'&&state.machineRun.generatedAt===saved.protocolSource?.date)saved.machineRun=state.machineRun;
+          saved.question='';localStorage.setItem(key,JSON.stringify(saved));
+        }
+      }
+    }catch(error){toast('Could not clear the review question on this device.');return;}
+    stopMachineGeneration();abortVoiceInput();setMachineStatus('');
+    const previewMatches=previewBase?.signature===criteriaSignature(state);
+    state.question='';input.value='';
+    if(previewDirty&&previewMatches)previewBase.signature=criteriaSignature(state);
+    renderPreview();
+  }
+  input.focus();
+}
 
 window.addEventListener('beforeunload',event=>{if(previewDirty){event.preventDefault();event.returnValue='';}});
 // Keep one display model for the editable preview and the Word export.
@@ -1287,7 +1312,8 @@ function renderPreview(){
     return;
   }
   if(!$('generation-method').value){area.innerHTML='';$('download').hidden=true;shareSummary(null);return}
-  if($('generation-method').value==='machine'&&(!state.machineRun||state.machineRun.question!==$('question').value.trim()||state.machineRun.reviewType!==state.reviewType||(state.machineRun.sourceRevision??0)!==(Number(state.machineSourceRevision)||0))){area.innerHTML='<p class="empty" data-ui-localize>Click Generate to generate criteria from the current text and attachments.</p>';$('download').hidden=true;shareSummary(null);return}
+  const questionInput=$('question').value.trim();
+  if($('generation-method').value==='machine'&&(!state.machineRun||(questionInput&&state.machineRun.question!==questionInput)||state.machineRun.reviewType!==state.reviewType||(state.machineRun.sourceRevision??0)!==(Number(state.machineSourceRevision)||0))){area.innerHTML='<p class="empty" data-ui-localize>Click Generate to generate criteria from the current text and attachments.</p>';$('download').hidden=true;shareSummary(null);return}
   $('download').hidden=false;
   const complete=standardizedCriteria();
   const refinement=currentRefinement();
@@ -1348,7 +1374,7 @@ $('source-files').addEventListener('change',event=>{
   state.machineSourceRevision=(Number(state.machineSourceRevision)||0)+1;state.confirmed=false;setMachineStatus('');renderAttachments();save();
 });
 $('voice-toggle').addEventListener('click',toggleVoiceInput);
-$('clear-question').addEventListener('click',()=>{if(clearPreviewCriteria())$('question').focus()});
+$('clear-question').addEventListener('click',clearQuestionInput);
 document.querySelectorAll('.framework').forEach(b=>b.addEventListener('click',()=>{markManual();state.framework=b.dataset.framework;state.confirmed=false;document.querySelectorAll('.framework').forEach(x=>x.classList.toggle('selected',x===b));renderPicker();save()}));
 $('manual-generate').addEventListener('click',clearPreviewCriteria);
 $('add-criterion').addEventListener('click',()=>{markManual();const open=picker.hidden;renderPicker();picker.hidden=!open;$('add-criterion').setAttribute('aria-expanded',String(open));save()});
@@ -1495,14 +1521,23 @@ function applyScopeSuggestion(index,action){
   return true;
 }
 async function confirmBackgroundIssue(detail,choice,answerField){
-  let answer=null,option;if(choice==='answer'){const index=currentRefinement()?.sourceConfirmations?.indexOf(detail),field=answerField||document.querySelector('[data-source-answer=\"'+index+'\"]');answer=field?.value.trim();if(!answer){field?.focus();toast('Enter your clarification first.');return false;}}else{if(choice<0){toast('This issue remains pending.');return false;}option=detail.options[choice];if(!option)return false;}
+  let answer=null,option;if(choice==='answer'){const index=currentRefinement()?.sourceConfirmations?.indexOf(detail),field=answerField||document.querySelector('[data-source-answer=\"'+index+'\"]');answer=field?.value;if(!answer?.trim()){field?.focus();toast('Enter your clarification first.');return false;}}else{if(choice<0){toast('This issue remains pending.');return false;}option=detail.options[choice];if(!option)return false;}
   const before=structuredClone(state);stopMachineGeneration();stopManualRefinement();
   const run=++generationNonce,controller=new AbortController();generationController=controller;$('start-machine').disabled=true;$('stop-machine').hidden=false;
   const timer=setTimeout(()=>controller.abort(),600000);
   try{
-    const service=await getEligibilityBackground();let model;
-    setMachineStatus('Applying your answer…');if(!option||option.requires_interpretation){model=await resolveLocalModel(false,controller.signal);model.auditTrail=[];}
-    const stage=await service.decide({criteriaEpoch:state.criteria_epoch??null,issue_id:detail.issue_id,option_id:option?.option_id,answer_text:answer||option?.label,modelClient:model?backgroundModelClient(model):null,signal:controller.signal});
+    const service=await getEligibilityBackground();let adapter;
+    // Direct decisions work even when model discovery is unavailable.
+    const modelClient={get exchanges(){return adapter?.exchanges||[]},async request(...args){
+      if(!adapter){
+        const online=window.AIMSTEPOnlineModel;
+        const model=online?.online?{provider:'backend',source:'local',base:online.base,name:'local',slot:'local'}:await resolveLocalModel(false,controller.signal);
+        model.auditTrail=[];adapter=backgroundModelClient(model);
+      }
+      return adapter.request(...args);
+    }};
+    setMachineStatus('Applying your answer…');
+    const stage=await service.decide({criteriaEpoch:state.criteria_epoch??null,issue_id:detail.issue_id,option_id:option?.option_id,answer_text:answer||option?.label,modelClient,signal:controller.signal});
     if(run!==generationNonce||controller.signal.aborted)return false;
     const decision=stage.project.decisions.at(-1),confirmed=stage.project.criteria.filter(c=>c.source_decision_ids.includes(decision.decision_id));
     useBackgroundCriteria(stage,state.machineRun,false);

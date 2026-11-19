@@ -26,6 +26,24 @@ function requestEnvelope(step,state,payload,schema){
  return {step,project_id:modelProjectId(state),
   base_revision:state.revision,config_versions:state.config_versions,output_language:state.output_language,payload,schema};
 }
+function backendTask(step){
+ if(step==='review_normalization')return {task:'eligibility-review-v1'};
+ if(step==='interpret_human_answer')return {task:'eligibility-answer-v1'};
+ return {};
+}
+const storedOptionReplies=new WeakSet();
+function decodeReply(raw,step,service){
+ const result=JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''));
+ if(step==='interpret_human_answer'&&service?.provider==='typesafe'&&service.review?.version==='eligibility-answer-v1'&&service.review.route==='stored_option'&&result&&typeof result==='object'){
+  storedOptionReplies.add(result);
+ }
+ return result;
+}
+function executableOption(option){
+ return !!(option?.option_id&&!option.requires_interpretation&&(option.keep_existing||option.logic_op||option.logic_tree||option.project_relation||
+  option.retire_element_ids?.length||option.updates?.length||Object.keys(option.context_updates||{}).length||
+  ['defer','retain_original','unrestricted','not_applicable'].includes(option.action)));
+}
 function httpError(status,detail,step){
  const stages={extract_elements:'Source extraction',review_normalization:'Independent source review',
   repair_candidate_wording:'Candidate wording correction',interpret_human_answer:'Interpretation of the author’s answer',
@@ -52,12 +70,12 @@ function client(options={}){
  }
  async function request(step,state,payload,schema,instruction,signal){
   const endpoint=await discover(signal),controller=new AbortController(),abort=()=>controller.abort(signal?.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(()=>controller.abort(),options.timeout_ms||600000);
-  const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',workflow:'eligibility-criteria',messages,format:schema,...(step==='review_normalization'?{task:'eligibility-review-v1'}:{})};
+  const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',workflow:'eligibility-criteria',messages,format:schema,...backendTask(step)};
   try{
    const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let detail;try{detail=await r.json();}catch(_){}throw httpError(r.status,detail,step);}
    const data=await r.json(),raw=data.message?.content||data.choices?.[0]?.message?.content;if(typeof raw!=='string')D.fail('MODEL_EMPTY_RESPONSE',step,'模型返回空内容。');
    const log={request_id:D.id('model'),step,base_revision:state.revision,at:D.now(),model:data.model||model||'configured',provider:data.provider||'configured backend',prompt_sha256:await G.hashText(JSON.stringify(messages)),response_sha256:await G.hashText(raw),actual_sampling:'not_reported',...(data.review?{hybrid_review:data.review}:{}),...(data.transport?{transport:data.transport}:{})};exchanges.push(log);options.onExchange?.({...log,input:envelope,raw_output:raw});
-   try{return JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''));}catch(_){D.fail('MODEL_INVALID_JSON',step,'模型返回非法JSON；已有状态未更改。');}
+   try{return decodeReply(raw,step,data);}catch(_){D.fail('MODEL_INVALID_JSON',step,'模型返回非法JSON；已有状态未更改。');}
   }catch(error){if(controller.signal.aborted&&!signal?.aborted)D.fail('MODEL_TIMEOUT',step,'模型请求超时；已有状态未更改。');throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
  }
  return {request,exchanges,discover};
@@ -463,14 +481,71 @@ async function analyze(state,env,adapter,options={}){
  }
  return {candidates,base_revision:state.revision,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
 }
+function answerElement(record){
+ // These internal matching keys repeat source text, conditions and normalized
+ // wording. The author-facing records and their original citations stay intact.
+ const {original_candidate_key,source_decision_target,...element}=record;
+ return element;
+}
+function answerPayload(state,answerText,issueIds){
+ const selected=new Set(issueIds||[]);
+ const issues=state.issues.filter(i=>i.status==='open'&&(!selected.size||selected.has(i.issue_id)));
+ if(selected.size&&issues.length!==selected.size)D.fail('ISSUE_NOT_FOUND','interpret_human_answer','The selected author check has already changed.');
+ // A project-wide decision (e.g. how to combine questions) needs all questions.
+ const scoped=selected.size>0&&issues.every(i=>i.question_id);
+ const questionIds=new Set(issues.map(i=>i.question_id));
+ const elements=state.elements.filter(e=>e.active!==false&&(!scoped||questionIds.has(e.question_id)));
+ const questions=state.questions.filter(q=>!scoped||questionIds.has(q.question_id));
+ let prior=state.decisions;
+ if(scoped&&prior.length){
+  const carried=new Set(elements.flatMap(e=>e.source_decision_ids||[]));
+  const issueQuestions=new Map(state.issues.map(i=>[i.issue_id,i.question_id]));
+  const sourceQuestions=new Map(state.sources.map(s=>[JSON.stringify([s.source_id,s.revision]),s.question_ids]));
+  prior=prior.filter(d=>{
+   if(carried.has(d.decision_id))return true;
+   const ref=d.source_ref;
+   const owners=ref&&sourceQuestions.get(JSON.stringify([ref.source_id,ref.source_revision]));
+   if(owners)return !owners.length||owners.some(id=>questionIds.has(id));
+   // Older imports may lack a versioned source. Keep decisions of unknown scope.
+   return !d.issue_ids?.length||d.issue_ids.some(id=>!issueQuestions.get(id)||questionIds.has(issueQuestions.get(id)));
+  });
+ }
+ const prior_decisions=prior.map(decision=>{
+  if(!decision.changes)return decision;
+  const changes=decision.changes.map(change=>{
+   const result={...change};
+   if(change.old?.element_id)result.old=answerElement(change.old);
+   if(change.new?.element_id)result.new=answerElement(change.new);
+   return result;
+  });
+  return {...decision,changes};
+ });
+ return {answer_text:answerText,issues,elements:elements.map(answerElement),prior_decisions,
+  questions:questions.map(q=>({question_id:q.question_id,context:q.context,framework_mapping:q.framework_mapping}))};
+}
 async function parse_answers(state,answerText,issueIds,adapter,options={}){
- const start=adapter.exchanges?.length||0;const issues=state.issues.filter(i=>i.status==='open'&&(!issueIds?.length||issueIds.includes(i.issue_id))),payload={answer_text:answerText,issues,elements:state.elements.filter(e=>e.active!==false),prior_decisions:state.decisions,questions:state.questions.map(q=>({question_id:q.question_id,context:q.context,framework_mapping:q.framework_mapping}))};
+ const start=adapter.exchanges?.length||0,payload=answerPayload(state,answerText,issueIds);
+ if(options.selected_option_id)payload.selected_option_id=options.selected_option_id;
  let result;
  for(let attempt=0;attempt<=(options.retries??1);attempt++){
   try{
    result=await adapter.request('interpret_human_answer',state,payload,answerSchema,answerInstruction,options.signal);
    if(!Array.isArray(result.answers)||!result.answers.length)D.fail('MODEL_SCHEMA_ERROR','interpret_human_answer','No interpreted answer was returned.');
+   if(storedOptionReplies.has(result)){
+    const answer=result.answers[0],issue=payload.issues[0];
+    const option=issue?.options?.find(item=>item.option_id===answer?.option_id);
+    if(payload.selected_option_id||result.answers.length!==1||payload.issues.length!==1||!answer||Object.keys(answer).length!==3||
+       !Array.isArray(answer.issue_ids)||answer.issue_ids.length!==1||answer.issue_ids[0]!==issue.issue_id||
+       answer.answer_text!==answerText||!executableOption(option)||option.explicit_revision||option.keep_element_id||option.retire_element_ids?.length||
+       ['CONFLICTING_REQUIREMENTS','PROPOSED_RESTRICTION'].includes(issue.reason_code)){
+     D.fail('MODEL_SCHEMA_ERROR','interpret_human_answer','The selected answer does not match a stored option for this author check.');
+    }
+    // Supplying action or even an empty updates array would override the stored option.
+    answer.from_model=true;
+    break;
+   }
    for(const answer of result.answers){
+    if(Object.hasOwn(answer,'option_id'))D.fail('MODEL_SCHEMA_ERROR','interpret_human_answer','An interpreted answer must specify its supported updates.');
     answer.answer_text=answerText;answer.from_model=true;
     if(!['confirm','modify','defer'].includes(answer.action)||!Array.isArray(answer.updates)||!Array.isArray(answer.issue_ids))D.fail('MODEL_SCHEMA_ERROR','interpret_human_answer','Invalid interpreted answer. Confirm a stated numerical restriction; unrestricted is a scope_status, not an action.');
     if(answer.action==='defer'&&!/暂不|暂缓|稍后|未决定|defer|undecided|not yet|later/i.test(answerText))D.fail('ANSWER_INTENT_MISMATCH','interpret_human_answer','The author did not postpone this decision.');
@@ -488,5 +563,5 @@ async function parse_answers(state,answerText,issueIds,adapter,options={}){
  }
  return {base_revision:state.revision,request_id:options.request_id||D.id('answer_request'),answers:result.answers,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
 }
-return {client,analyze,extract_elements,review_elements,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,httpError,serializationInstruction};
+return {client,analyze,extract_elements,review_elements,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,httpError,serializationInstruction,backendTask,decodeReply,executableOption};
 });

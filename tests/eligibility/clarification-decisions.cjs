@@ -91,6 +91,7 @@ assert(JSON.parse(t.storage.get(steps)).includes(1),'An optional suggestion does
  const adapter=issueId=>({async request(step,project,payload){
   assert.equal(step,'interpret_human_answer');
   assert.equal(payload.answer_text,option.label);
+  assert.equal(payload.selected_option_id,option.option_id);
   return {answers:[{issue_ids:[issueId],action:'confirm',updates:[{element_id:clarification.element_ids[0],normalized_text:wording}]}]};
  }});
  const decide=modelClient=>service.decide({issue_id:clarification.issue_id,option_id:option.option_id,modelClient});

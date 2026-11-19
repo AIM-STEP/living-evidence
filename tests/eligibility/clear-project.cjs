@@ -48,7 +48,7 @@ async function run() {
   assert.equal(B.currentEpoch(storage, id), epoch);
   const fresh = JSON.parse(storage.getItem(service.keys.legacy));
   assert.equal(fresh.criteria_epoch, epoch);
-  assert.equal(fresh.question, '');
+  assert.equal(fresh.question, clean.question);
   for(const oldField of ['framework','attachments','materials','machineSourceRevision','machineRefinement'])assert(!Object.hasOwn(fresh,oldField));
   const empty = service.current();
   assert.equal(empty.project_id, id); assert.equal(empty.revision, 0);

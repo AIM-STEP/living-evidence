@@ -27,8 +27,9 @@ function resetProject(storage,projectId,cleanState,extraChanges=[]){
  for(const [key,value] of extraChanges)if(!allowed.has(key)||(value!==null&&typeof value!=='string')){
   fail('INVALID_RESET_TARGET','The reset target does not belong to this criteria workspace.');
  }
- // Keep the editor mode and project review type. All question-specific content starts empty.
- const epoch=crypto.randomUUID(),fresh={question:'',criteria:[],machineCriteria:[],criteria_epoch:epoch};
+ // Only the question input and editor settings survive a criteria reset.
+ const epoch=crypto.randomUUID(),fresh={question:typeof cleanState.question==='string'?cleanState.question:'',
+  criteria:[],machineCriteria:[],criteria_epoch:epoch};
  for(const field of ['reviewType','activeGenerator','generationMethodChoice','generationMode']){
   if(cleanState[field]!==undefined)fresh[field]=cleanState[field];
  }

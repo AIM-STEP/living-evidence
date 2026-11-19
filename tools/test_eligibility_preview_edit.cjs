@@ -79,7 +79,7 @@ for(const mode of ['manual','machine']){
  edit([node(0,'include',0,'Unsaved change to discard only after confirmation.')]);
  assert.equal(api.clearPreviewCriteria(),true);assert.equal(api.exportState().dirty,false);
  const saved=JSON.parse(storage.get('aimstep-eligibility:synthetic-project'));
- assert.equal((mode==='machine'?saved.machineCriteria:saved.criteria).length,0);assert.equal(saved.question,'');assert.equal(saved.criteriaClearHistory,undefined);assert(!JSON.stringify(saved).includes('Adults'));
+ assert.equal((mode==='machine'?saved.machineCriteria:saved.criteria).length,0);assert.equal(saved.question,'Synthetic question');assert.equal(saved.criteriaClearHistory,undefined);assert(!JSON.stringify(saved).includes('Adults'));
  assert.equal(storage.has('aimstep-eligibility-summary:synthetic-project'),false);
  api.set(saved);assert.equal(el('save-criteria').hidden,true);assert.equal(el('clear-criteria').hidden,false);
 }

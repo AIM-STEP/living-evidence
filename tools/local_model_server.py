@@ -48,6 +48,7 @@ import argparse
 import api_model
 import typesafe_model
 import eligibility_hybrid_review
+import eligibility_hybrid_answer
 import eligibility_transport
 from model_service_errors import public_error
 import fulltext_sources
@@ -338,6 +339,7 @@ class Handler(SimpleHTTPRequestHandler):
                 "embedModel": self.embed_model if embed_ok else "",
                 "typesafe": {"available": True, "configured": typesafe_model.configured(), "version": typesafe_model.VERSION,
                              "eligibilityReview": eligibility_hybrid_review.VERSION,
+                             "eligibilityAnswers": eligibility_hybrid_answer.TASK,
                              "eligibilityTransport": eligibility_transport.VERSION},
                 "api": {"acceptsKey": api_model.status("configuration-check")[0],
                         "ready": api_model.status()[0], "status": api_model.status()[1],
@@ -394,7 +396,7 @@ class Handler(SimpleHTTPRequestHandler):
                 raise BadRequest("Unknown model provider")
         except (ValueError, BadRequest) as e:
             return self._send_json(400, {"error": str(e)})
-        criteria = payload.get('workflow') == 'eligibility-criteria' or payload.get('task') == eligibility_hybrid_review.TASK
+        criteria = payload.get('workflow') == 'eligibility-criteria' or payload.get('task') in (eligibility_hybrid_review.TASK, eligibility_hybrid_answer.TASK)
         started = time.time()
         attempts = []
         local_chat = lambda subset, selected_format=fmt: eligibility_transport.chat(subset, self.model, selected_format,
@@ -405,6 +407,8 @@ class Handler(SimpleHTTPRequestHandler):
                 reply = eligibility_hybrid_review.review(messages,
                     local_review=local_chat, local_model=self.model,
                     partial_review=lambda subset, schema: local_chat(subset, schema))
+            elif provider == 'local' and payload.get('task') == eligibility_hybrid_answer.TASK:
+                reply = eligibility_hybrid_answer.interpret(messages, local_chat)
             else:
                 reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else local_chat(messages)
         except (eligibility_transport.IdentityError, eligibility_transport.OutputSyntaxError):
@@ -440,7 +444,7 @@ class Handler(SimpleHTTPRequestHandler):
         content = reply.get("message", {}).get("content", "")
         # Structured Criteria calls from older clients already carry a transport
         # or hybrid response. The workflow marker also covers image transcription.
-        if payload.get('workflow') != 'eligibility-criteria' and 'transport' not in reply and payload.get('task') != eligibility_hybrid_review.TASK:
+        if not criteria and 'transport' not in reply:
             write_log(self.log_dir, {
                 "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "seconds": round(time.time() - started, 1),
                 "model": used_model, "provider": used_provider, "options": {} if provider == "api" else ollama_body(self.model, [])["options"], "attempts": attempts,

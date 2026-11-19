@@ -12,28 +12,60 @@ function page(storage){
  return t;
 }
 (async()=>{
- for(const button of ['clear-criteria','clear-question','manual-generate']){
+ for(const button of ['clear-criteria','manual-generate']){
   const store=new Map([[key,JSON.stringify(old)],['aimstep-eligibility-v3:'+project,JSON.stringify(old)],['aimstep-eligibility-summary:'+project,'previous summary']]);
   const t=page(store),stale=page(store);
   store.set('aimstep-protocol-backups:'+project,JSON.stringify([{source:'prior.pdf',date:'2026-10-01',eligibility:old,summary:'previous summary'}]));
   const file={name:'prior.txt',size:3,text(){throw Error('A cleared attachment was reused');}};
   t.el('source-files').handlers.change({target:{files:[file],value:'old filename'}});
+  const current='  Does treatment help?\n人群包括谁？  ';
+  t.el('question').value=current;
   t.el(button).handlers.click();
-  assert.equal(t.el('question').value,'');assert.equal(t.api.state().criteria.length,0);assert.equal(t.api.state().machineCriteria.length,0);
+  assert.equal(t.el('question').value,current);assert.equal(t.api.state().criteria.length,0);assert.equal(t.api.state().machineCriteria.length,0);
+  assert.equal(page(store).el('question').value,current);
   assert.equal(t.el('machine-attachments').hidden,true);assert(!JSON.stringify([...store]).includes('previous'));assert(!JSON.stringify([...store]).includes('prior.'));
-  t.api.transport(()=>{throw Error('Generation must ask for new source material');});
-  await t.el('start-machine').handlers.click();assert(t.el('generation-status').textContent.includes('before starting.'));
   stale.el('question').value='previous restored question';stale.el('question').handlers.input({isComposing:false});
-  assert.equal(stale.api.state().question,'');assert(!JSON.stringify([...store]).includes('previous'));
+  assert.equal(stale.api.state().question,current);assert(!JSON.stringify([...store]).includes('previous'));
   assert.throws(()=>library.commit(t.ctx.localStorage,project,old),e=>e.code==='VERSION_CONFLICT');
   const blank=t.api.state();const planned=library.plan(t.ctx.localStorage,project,blank,{previous:old});assert.equal(planned.library.entries.length,0);
+  let generated;
+  t.api.transport(()=>{throw Error('Unexpected legacy transport');});
+  t.ctx.window.AIMSTEPEligibilityBackground={create:async()=>({generate(input){generated=input;throw Error('End of simulated request');}})};
+  await t.el('start-machine').handlers.click();
+  assert.equal(generated.question,current.trim());
+  assert.deepEqual(Array.from(generated.sources,s=>s.text),[current.trim()]);
+  assert(!JSON.stringify(generated.legacy).includes('previous'));
+ }
+ const inputStore=new Map([[key,JSON.stringify(old)],['aimstep-eligibility-v3:'+project,JSON.stringify({decisions:['retained']})]]);
+ const inputPage=page(inputStore);
+ inputPage.el('source-files').handlers.change({target:{files:[{name:'keep.txt',size:8}],value:''}});
+ inputPage.ctx.confirm=()=>false;inputPage.el('clear-question').handlers.click();
+ assert.equal(inputPage.el('question').value,old.question);
+ inputPage.ctx.confirm=()=>true;inputPage.el('clear-question').handlers.click();
+ assert.equal(inputPage.api.state().question,'');assert.equal(inputPage.el('question').value,'');
+ assert.equal(page(inputStore).el('question').value,'');
+ assert.deepEqual(JSON.parse(inputStore.get(key)).machineRun,old.machineRun);
+ assert.deepEqual(JSON.parse(inputStore.get(key)).machineCriteria,old.machineCriteria);
+ assert(inputStore.get('aimstep-eligibility-v3:'+project).includes('retained'));assert(!inputStore.has('aimstep-eligibility-epoch:'+project));
+ assert.equal(inputPage.el('machine-attachments').hidden,false);
+ inputPage.el('clear-criteria').handlers.click();
+ inputPage.api.transport(()=>{throw Error('Generation must ask for a new question or attachment');});
+ await inputPage.el('start-machine').handlers.click();assert(inputPage.el('generation-status').textContent.includes('before starting.'));
+ for(const initial of [old,{...old,machineRun:null,protocolSource:{sharedCriteria:true,date:'2026-09-01'}}]){
+  const store=new Map([[key,JSON.stringify(initial)]]),p=page(store);
+  p.el('clear-question').handlers.click();
+  const reload=page(store);
+  assert.equal(reload.el('question').value,'');
+  assert.equal(reload.api.state().machineRun.question,initial.question);
+  assert(reload.el('preview').innerHTML.toLowerCase().includes(row.condition),'Criteria remain visible on reload under their original source');
+  assert(store.has('aimstep-eligibility-summary:'+project));
  }
  const t=page(new Map([[key,JSON.stringify(old)]])),state=t.api.state();
  state.machineRefinement={signature:t.api.signature(state.question,state.reviewType,0,state.machineCriteria),sourceConfirmations:[{backgroundIssue:true,issue_id:'issue',options:[{option_id:'keep',label:'Keep'}]}]};
  let started,finish;
  const reviewing=new Promise(resolve=>{started=resolve;});
  t.ctx.window.AIMSTEPEligibilityBackground={create:async()=>({decide(){started();return new Promise((_,reject)=>{finish=reject;});}})};
- const answer=t.api.confirm(0,0);await reviewing;t.el('clear-criteria').handlers.click();finish(Error('Stale review rejected'));assert.equal(await answer,false);assert.equal(t.api.state().question,'');assert(!JSON.stringify(t.api.state()).includes('previous'));
+ const answer=t.api.confirm(0,0);await reviewing;t.el('clear-criteria').handlers.click();finish(Error('Stale review rejected'));assert.equal(await answer,false);assert.equal(t.api.state().question,old.question);assert(!JSON.stringify(t.api.state()).includes('previous patient group'));
  const independent={source:'upload',criteriaSnapshot:{rows:[row]},concepts:[{sourceRule:'independently uploaded'}]};assert.strictEqual(library.stripLinkedSearchCriteria(independent),independent);
- console.log('PASS: all three Clear actions erase source text, attached files and both editors; empty regeneration, stale tab and late answer cannot restore criteria');
+ console.log('PASS: Criteria Clear retains only the current question, independent question Clear preserves drafts and attachments, and late work cannot restore cleared criteria');
 })().catch(error=>{console.error(error.stack);process.exitCode=1});

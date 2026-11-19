@@ -200,9 +200,15 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   requireEpoch(storage,projectId,criteriaEpoch);
   const project=current(),issue=project.issues.find(issue=>issue.issue_id===issue_id&&issue.status==='open');if(!issue)D.fail('ISSUE_NOT_FOUND','background','This clarification has already changed. Reload the saved criteria.');
   const expected=signature(read(keys.legacy));let request;
-  const option=option_id&&issue.options.find(item=>item.option_id===option_id);
-  if(option?.requires_interpretation)request=await M.parse_answers(project,option.label,[issue_id],modelClient,{signal});
-  else if(option_id)request={base_revision:project.revision,request_id:D.id('answer'),answers:[{issue_id,option_id,answer_text:answer_text||optionLabel(issue.options.find(o=>o.option_id===option_id))}]};
+  let option=option_id&&issue.options.find(item=>item.option_id===option_id);
+  if(option_id&&!option)D.fail('OPTION_NOT_FOUND','background','The selected answer is no longer available for this author check.');
+  if(!option&&typeof answer_text==='string'){
+   const wording=answer_text.trim().normalize('NFC');
+   const matches=issue.options.filter(item=>[item.label,optionLabel(item)].some(text=>typeof text==='string'&&text.trim().normalize('NFC')===wording));
+   if(matches.length===1&&M.executableOption(matches[0]))option=matches[0];
+  }
+  if(option?.requires_interpretation)request=await M.parse_answers(project,option.label,[issue_id],modelClient,{signal,selected_option_id:option.option_id});
+  else if(option)request={base_revision:project.revision,request_id:D.id('answer'),answers:[{issue_id,option_id:option.option_id,answer_text:answer_text||optionLabel(option)}]};
   else request=await M.parse_answers(project,answer_text,[issue_id],modelClient,{signal});
   if(request.answers.some(answer=>answer.from_model&&(answer.issue_ids.length!==1||answer.issue_ids[0]!==issue_id)))D.fail('ISSUE_TARGET_MISMATCH','background','The answer could not be matched to the selected author check.');
   requireEpoch(storage,projectId,criteriaEpoch);
