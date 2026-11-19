@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const {setup}=require('./test_eligibility_grounding.cjs');
 const grounding=require('../app/criteria-grounding.js');
 const question='Review exercise in adults with fibromyalgia. Exclude animal studies; randomized trials may be eligible.';
-const topic='This review examines exercise in adults with fibromyalgia.';
+const topic='Exercise in adults with fibromyalgia';
 function wordXml(api){
  const bytes=Buffer.from(api.export());let at=0;
  while(bytes.readUInt32LE(at)===0x04034b50){const size=bytes.readUInt32LE(at+18),n=bytes.readUInt16LE(at+26),extra=bytes.readUInt16LE(at+28),start=at+30+n+extra;if(bytes.subarray(at+30,at+30+n).toString()==='word/document.xml')return bytes.subarray(start,start+size).toString();at=start+size;}
@@ -28,9 +28,9 @@ async function generated(onlyAmbiguous=false){
 }
 (async()=>{
  const {api}=setup(),rows=[{label:'Population',include:['Participants must be adults with fibromyalgia.']},{label:'Intervention',include:['The intervention must be exercise.']},{label:'Comparison',include:['Usual care.']},{label:'Outcomes',include:['Pain.']}];
- assert.equal(api.topic(rows,'PICO'),'This review examines exercise compared with usual care with a focus on pain in adults with fibromyalgia.');
- assert.equal(api.topic([{label:'Population',include:['Adults.']},{label:'Phenomenon of Interest',include:['Lived experience of recovery.']}],'PICo'),'This review explores lived experience of recovery in adults.');
- assert(api.topic([{label:'Population',include:['Adults.']},{label:'Intervention',include:['CBT.']}],'PICO').includes('CBT in adults.'));
+ assert.equal(api.topic(rows,'PICO'),'Exercise and pain in adults with fibromyalgia');
+ assert.equal(api.topic([{label:'Population',include:['Adults.']},{label:'Phenomenon of Interest',include:['Lived experience of recovery.']}],'PICo'),'Lived experience of recovery in adults');
+ assert(api.topic([{label:'Population',include:['Adults.']},{label:'Intervention',include:['CBT.']}],'PICO').includes('CBT in adults'));
  assert(!api.topic(rows,'PCC').includes('P:'));assert(!api.topic(rows,'Other').includes('To be defined'));
  assert.equal(api.validTopic(topic,question),topic);assert.equal(api.validTopic('P: Adults · I: Exercise'), '');
  assert.equal(api.validTopic('This review examines adults aged 18 years.',question),'');
@@ -54,7 +54,7 @@ async function generated(onlyAmbiguous=false){
   test.el('preview').handlers.click({target:{closest:selector=>selector==='[data-source-confirm]'?{dataset:{sourceConfirm:'0',sourceOption:String(choice)},closest:()=>null}:null}});
   const active=test.api.state(),rule=active.machineCriteria.find(row=>row.title==='Study design'),side=choice===0?'condition':'uncertain',opposite=choice===0?'uncertain':'condition';
   assert(rule[side].includes('Randomized trials'));assert(!rule[opposite].includes('Randomized trials'));assert(rule.uncertain.includes('Animal studies'));
-  assert(active.machineRefinement.manuscriptParagraph.includes('Randomized trials'));assert(!test.el('preview').innerHTML.includes('data-source-confirm='));
+  assert.match(active.machineRefinement.manuscriptParagraph,/randomized trials/i);assert(!test.el('preview').innerHTML.includes('data-source-confirm='));
   assert.equal(test.api.confirm(0,choice),false,'Repeated confirmation must not duplicate a rule');
   const shared=JSON.parse(test.storage.get('aimstep-eligibility-summary:synthetic-grounding'));assert(!('trace' in shared));assert(choice===0?shared.includes.some(row=>row.text.includes('Randomized trials')):shared.exclusions.some(row=>row.text.includes('Randomized trials')));
   const saved=JSON.parse(test.storage.get('aimstep-eligibility:synthetic-grounding'));assert(saved.machineRefinement.trace.length);assert.equal(saved.machineRefinement.audit.sources[0].text,question);assert(saved.machineRefinement.sourceConfirmations[0].evidence[0].quote.includes('may be eligible'));
@@ -69,7 +69,7 @@ async function generated(onlyAmbiguous=false){
  const legacy=await generated(),legacyState=legacy.api.state();delete legacyState.machineRefinement.sourceConfirmations;legacyState.machineRefinement.reviewTopic='P: Adults with fibromyalgia · I: Exercise';
  legacyState.machineRefinement.trace.push({id:'A099',dimension:'Study design',logic:'uncertain',proposition:'Randomized trials.',sourceSentence:'Randomized trials may be eligible.',review:{status:'supported'}});
  legacy.storage.set('aimstep-eligibility:synthetic-grounding',JSON.stringify(legacyState));const restored=setup(legacy.storage);
- assert(restored.el('preview').innerHTML.includes('data-source-confirm='));assert.equal(restored.api.state().machineRefinement.sourceConfirmations.length,1);assert(restored.api.normalized().topic.startsWith('This review '));assert(!restored.api.normalized().topic.includes('P:'));assert(restored.api.confirm(0,0),'Saved source ambiguities can be confirmed without another model run');
+ assert(restored.el('preview').innerHTML.includes('data-source-confirm='));assert.equal(restored.api.state().machineRefinement.sourceConfirmations.length,1);assert.equal(restored.api.normalized().topic,topic);assert(!restored.api.normalized().topic.includes('P:'));assert(restored.api.confirm(0,0),'Saved source ambiguities can be confirmed without another model run');
  for(const page of ['eligibility.html','title-abstract-screening.html','full-text-screening.html'])assert(!fs.readFileSync(page,'utf8').includes('${traceHtml}'),'Audit excerpts must not render in shared previews');
- console.log('PASS: full-sentence topic, explicit include/exclude, source-only ambiguity confirmation without blanks, immediate chosen-side updates, persistence/rollback, empty-draft confirmation and audit-only excerpts/notes.');
+ console.log('PASS: concise topic, explicit include/exclude, source-only ambiguity confirmation without blanks, immediate chosen-side updates, persistence/rollback, empty-draft confirmation and audit-only excerpts/notes.');
 })().catch(error=>{console.error(error);process.exitCode=1});

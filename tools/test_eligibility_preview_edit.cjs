@@ -88,7 +88,66 @@ state=setup('machine');
 edit([node(0,'include',0,'Stale preview text.')]);api.get().machineCriteria[0].condition='New source criterion.';
 assert.equal(api.savePreviewEdits(),false);assert.equal(api.get().machineCriteria[0].condition,'New source criterion.');
 assert(html.indexOf('id="save-criteria"')<html.indexOf('id="download"'));assert(!html.includes('Download criteria'));assert(html.indexOf('id="download"')<html.indexOf('id="clear-criteria"'));assert(!/<h3(?:\s[^>]*)?>Inclusion criteria<\/h3>/.test(html));assert.match(html,/<h3(?:\s[^>]*)?>Inclusion<\/h3>/);
-console.log('PASS: editable criteria save/export/handoff/reload, visible confirmed rules, failed-save retry, escaped text and complete-domain mapping');
+{
+ const project=setup('machine');
+ project.framework='PICOS';
+ project.machineCriteria=[
+  {title:'Context',condition:'Inpatient wards.',uncertain:'Community clinics.'},
+  {title:'Population',condition:'Adults with asthma.'},
+  {title:'Other',condition:'At least two follow-up visits.'},
+  {title:'Study design',condition:'Randomized trials.'},
+ ];
+ api.set(project);
+ const displayed=el('preview').innerHTML.split('>Description</h3>');
+ assert(!displayed[0].includes('>Other:</strong>')&&!displayed[0].includes('>Context:</strong>'));
+ assert(displayed[0].includes('>Study design:</strong>')&&/inpatient wards/i.test(displayed[1]));
+ const document=docXml(),table=document.split('<w:tbl>')[1].split('</w:tbl>')[0];
+ assert(!/>(Other|Context|Limits)</.test(table));assert(/>Study design</.test(table));
+ assert.match(document.split('>Description<')[1],/community clinics/i);
+ edit([node(0,'include',0,'Adults aged 21 years or older with asthma.')]);
+ assert(api.savePreviewEdits());assert.equal(api.get().machineCriteria[0].condition,'Inpatient wards.');
+ assert.match(api.get().machineCriteria[1].condition,/21 years/);
+ const share=JSON.parse(storage.get('aimstep-eligibility-summary:synthetic-project'));
+ assert(!share.includes.some(row=>['Other','Context'].includes(row.label)));assert.match(share.paragraph,/two follow-up visits/i);
+ assert(share.screeningCriteria.includes.some(r=>r.label==='Other'&&r.text.includes('two follow-up visits')));
+ const protocol=fs.readFileSync(path.join(__dirname,'../app/protocol-workspace.js'),'utf8');
+ const protocolReader=protocol.slice(protocol.indexOf('function savedManualCriteria()'),protocol.indexOf('function renderManualCriteria()'))+'\nsavedManualCriteria();';
+ const protocolCriteria=()=>vm.runInNewContext(protocolReader,{URL,localStorage:ctx.localStorage,manualCriteriaLink:()=>ctx.location.href,projectDeleted:()=>false});
+ let protocolRules=protocolCriteria();
+ assert(protocolRules.includes.some(r=>r.label==='Context'&&r.text.includes('Inpatient wards')));
+ assert(protocolRules.exclusions.some(r=>r.domain==='Context'&&r.text.includes('Community clinics')));
+ const persistedWorkspace=storage.get('aimstep-eligibility:synthetic-project'),newer=JSON.parse(persistedWorkspace);
+ newer.machineCriteria[0].condition='Regional hospitals.';newer.machineCriteria[0].uncertain='Remote clinics.';
+ storage.set('aimstep-eligibility:synthetic-project',JSON.stringify(newer));
+ protocolRules=protocolCriteria();
+ assert(protocolRules.includes.some(r=>r.label==='Context'&&r.text==='Regional hospitals.'));
+ assert(protocolRules.exclusions.some(r=>r.domain==='Context'&&r.text==='Remote clinics.'));
+ storage.set('aimstep-eligibility:synthetic-project',persistedWorkspace);
+ const storedRows=structuredClone(project.machineCriteria);
+ const manual=setup('manual');
+ manual.framework='PCC';manual.criteria=[{title:'Context',condition:'Rural primary care.'},{title:'Other',condition:'Prospective registration.'}];manual.language='English';
+ api.set(manual);
+ assert(el('criteria-list').innerHTML.includes('Rural primary care'));assert(!el('criteria-list').innerHTML.includes('Prospective registration'));
+ assert(el('description-criteria-list').innerHTML.includes('Prospective registration'));
+ const projected=el('preview').innerHTML.split('>Description</h3>');assert(projected[0].includes('>Context:</strong>'));
+ assert(!projected[0].includes('>Other:</strong>')&&!projected[0].includes('>Limits:</strong>'));
+ assert.match(projected[1],/prospective registration/i);assert.match(projected[1],/english/i);
+ const checked=setup('machine');checked.framework='PICOS';checked.machineCriteria=storedRows;
+ api.set(checked);edit([],[{dataset:{criteriaText:'paragraph'},innerText:'Published clinical wording. Studies must take place in inpatient wards.'}]);
+ assert(api.savePreviewEdits());const editedParagraph=el('preview').innerHTML.split('>Description</h3>')[1];
+ assert(editedParagraph.includes('Published clinical wording.'));assert.equal((editedParagraph.match(/inpatient wards/gi)||[]).length,1);assert.match(editedParagraph,/two follow-up visits/i);
+ const view=api.get().machineRefinement;
+ view.frameworkSlots=[];
+ view.frameworkQuestions=[
+  {display_number:'RQ1',framework:'PICOS',frameworkSlots:['Population','Intervention','Comparison','Outcomes','Study design'],rows:[{dimension:'Population',include:['Adults.'],exclude:[]},{dimension:'Context',include:['District hospitals.'],exclude:[]}]},
+  {display_number:'RQ2',framework:'PCC',frameworkSlots:['Population','Concept','Context'],rows:[{dimension:'Context',include:['School clinics.'],exclude:[]}]},
+ ];
+ api.set(api.get());const sections=el('preview').innerHTML.split('>Description</h3>');
+ assert(sections[0].includes('RQ1 · Population')&&sections[0].includes('RQ2 · Context'));
+ assert(!sections[0].includes('RQ1 · Context')&&!sections[0].includes('District hospitals')&&!sections[0].includes('data-criteria-row='));
+ assert.match(sections[1],/district hospitals/i);assert(docXml().includes('RQ2 · Context'));
+}
+console.log('PASS: editable criteria save/export/handoff/reload, framework-only rows, retained additional conditions, failed-save retry and source-index mapping');
 
 // Search embeds the actual preview; raw input and polished display must not diverge.
 const previewContext={...ctx,location:{...ctx.location,search:'?projectId=synthetic-project&embedded=search-criteria-preview'},document:{...ctx.document,documentElement:{classList:{add(){}}}},window:{addEventListener(){},AimstepEligibilityLibrary:require('../app/eligibility-library.js'),AimstepEligibilityReset:require('../app/eligibility-reset.js'),AIMSTEPEligibilityMethodology:require('../app/eligibility/methodology.js')}};

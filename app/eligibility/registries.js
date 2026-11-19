@@ -3,7 +3,14 @@
 'use strict';
 const copy=x=>JSON.parse(JSON.stringify(x));
 class FrameworkRegistry{
- constructor(config){this.version=config.version||'custom';this.items=new Map();for(const item of config.frameworks||[])this.register(item);}
+ constructor(config){
+  this.version=config.version||'custom';this.items=new Map();
+  for(const item of config.frameworks||[])this.register(item);
+  for(const {base_framework_id,additional_slots,...variant} of config.variants||[]){
+   const base=this.get(base_framework_id);
+   this.register({...base,...variant,base_framework_id,version:this.version,slots:[...base.slots,...additional_slots]});
+  }
+ }
  register(value){const item=copy(value);if(!item.framework_id||!item.display_name||!Array.isArray(item.slots))throw Error('Framework definition requires framework_id, display_name and slots.');const ids=new Set();for(const slot of item.slots){if(!slot.slot_id||ids.has(slot.slot_id))throw Error('Framework slot IDs must be unique and nonempty.');ids.add(slot.slot_id);}for(const rule of item.check_rules||[]){if(!rule.rule_id||!['core_scope','dimension','evidence_unit','advice'].includes(rule.kind)||rule.kind==='dimension'&&!rule.dimension_id)throw Error('Framework check_rules need a rule_id and a supported kind (core_scope, dimension, evidence_unit, advice).');}this.items.set(item.framework_id,item);return item;}
  get(id){return this.items.get(id)||null;}
  list(){return [...this.items.values()].map(copy);}

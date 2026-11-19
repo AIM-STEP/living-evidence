@@ -1,5 +1,21 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "variants": [
+    {
+      "framework_id": "picos",
+      "base_framework_id": "pico",
+      "display_name": "PICOS",
+      "aliases": ["PICOs", "picos"],
+      "additional_slots": [{"slot_id": "study_design", "display_label": "Study design", "definition": "原文明示的研究设计"}]
+    },
+    {
+      "framework_id": "pecos",
+      "base_framework_id": "peco",
+      "display_name": "PECOS",
+      "aliases": ["PECOs", "pecos"],
+      "additional_slots": [{"slot_id": "study_design", "display_label": "Study design", "definition": "原文明示的研究设计"}]
+    }
+  ],
   "frameworks": [
     {
       "framework_id": "pico",

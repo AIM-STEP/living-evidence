@@ -94,7 +94,8 @@ function savedManualCriteria(){
   if(!Array.isArray(rows)||!rows.some(row=>['condition','uncertain','definition'].some(field=>String(row[field]||'').trim())))return empty;
   let hash=2166136261;for(const c of JSON.stringify(rows.map(row=>[String(row.title||''),String(row.condition||''),String(row.uncertain||''),String(row.definition||'')])))hash=Math.imul(hash^c.charCodeAt(0),16777619);
   let summary=null;try{summary=JSON.parse(localStorage.getItem('aimstep-eligibility-summary:'+target)||'null');}catch(_){}
-  if(summary?.rowsSig===(hash>>>0).toString(16)&&Array.isArray(summary.includes)&&Array.isArray(summary.exclusions))return {includes:summary.includes,exclusions:summary.exclusions};
+  const complete=summary?.screeningCriteria||summary;
+  if(summary?.rowsSig===(hash>>>0).toString(16)&&Array.isArray(complete.includes)&&Array.isArray(complete.exclusions))return {includes:complete.includes,exclusions:complete.exclusions};
   const result={includes:[],exclusions:[]};
   for(const row of rows){
    const include=[String(row.condition||'').trim()],exclude=[String(row.uncertain||'').trim()];

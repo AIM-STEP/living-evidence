@@ -8,7 +8,7 @@ function setup(initialStorage=new Map()){
  const ctx={console,URL,URLSearchParams,AbortController,structuredClone,TextEncoder,Blob,Map,crypto:crypto.webcrypto,setTimeout(){},clearTimeout(){},navigator:{},
   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},sessionStorage:{getItem(){return null}},
   location:{search:'?projectId=synthetic-grounding',href:'http://localhost/eligibility.html?projectId=synthetic-grounding',pathname:'/eligibility.html'},
-  document:{getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{AIMSTEPEligibilityModel:require('../app/eligibility/model.js'),AIMSTEPCriteriaGrounding:grounding,AIMSTEPProjectAccess:{run:fn=>fn()},addEventListener(){}}};
+  document:{getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{AIMSTEPEligibilityMethodology:require('../app/eligibility/methodology.js'),AIMSTEPEligibilityModel:require('../app/eligibility/model.js'),AIMSTEPCriteriaGrounding:grounding,AIMSTEPProjectAccess:{run:fn=>fn()},addEventListener(){}}};
  const code=source.replace('// Reuse this exact manual editor',`globalThis.testAPI={progressClient:backgroundModelClient,validate:validateAcademicDraft,extract:processExtracts,segments:sourceSegments,pipeline:autoCriteriaPipeline,state:()=>state,fill,pending:currentPending,normalized:standardizedCriteria,signature:machineSourceSignature,confirm:confirmSourceRule,sourceConfirmation,mergeConfirmations:mergeSourceConfirmations,topic:summaryTopic,validTopic:validatedReviewTopic,normalize:normalizeMachineCriteria,suggest:applyScopeSuggestion,normalizeSuggestions:normalizeScopeSuggestions,export:criteriaWordFile,sourceImages:originalMachineSources,navigate:saveBeforeToolNavigation,
   transport(fn){localFetch=fn;resolveLocalModel=async()=>({name:'Synthetic model',provider:'ollama',base:'http://synthetic.invalid',slot:'synthetic'});},
   manualInput(input){prepareSources=async()=>input;},
@@ -128,7 +128,7 @@ async function run(){
  const priorRows=JSON.stringify(oldState.machineCriteria),storage=new Map([['aimstep-eligibility:synthetic-grounding',JSON.stringify(oldState)]]),restored=setup(storage);
  assert.equal(restored.api.pending().length,0);assert.equal(JSON.stringify(restored.api.state().machineCriteria),priorRows);assert.equal(restored.api.state().machineRefinement.uncertainties.length,15);
  const preview=restored.el('preview').innerHTML,description=preview.slice(preview.indexOf('>Description</h3>'));
- assert(description.includes('Adults aged 21 or older.'));assert(description.includes('Case reports.'));assert(!preview.includes('>Pending clarification</h3>'));
+ assert.match(description,/adults aged 21 or older/i);assert.match(description,/case reports/i);assert(!preview.includes('>Pending clarification</h3>'));
  const mixed=grounding.decisions({rows:[],clarifications:[{item:'Population: Specify the intended scope.',kind:'question',domain:'Population'},{item:'Other: Specify a complete inclusion rule.',kind:'question',domain:'Other'},{item:'Population: Verify the conflicting rule "Adults"; it was removed from both inclusion and exclusion.',kind:'review',domain:'Other'},{item:'Intervention: Specify the intended scope.',kind:'question',domain:'Intervention'}]});
  assert.equal(mixed.length,0,'Old essential-scope and source-conflict tasks do not reopen required forms');
  assert.equal(grounding.reviewMap({items:[{id:'R',status:'contradicted',reason:'The original text contradicts the proposed rewrite.'}]},['R']).get('R').issueType,'unclassified');

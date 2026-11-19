@@ -3,7 +3,7 @@
 'use strict';
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
-const presentationVersion='20261119-author-decisions-2';
+const presentationVersion='20261119-framework-description-1';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -40,16 +40,17 @@ function issueText(issue,project,elements=issue.element_ids.map(id=>project.elem
  if(issue.reason_code==='UNRESOLVED_ROLE')return 'Should this information define eligibility or only the review focus?';
  return 'How should this requirement define eligibility'+(names?': '+names:'')+'?';
 }
-function projectToClassic(project){
+function projectToClassic(project,registry){
+ if(!registry&&typeof require==='function')registry=E.environment().frameworks;
  const output=E.render_output(project),rows=[];
  const displayedByElement=new Map();
  const elementsById=new Map(project.elements.map(element=>[element.element_id,element]));
- function add(target,dimension,side,text,criteria){
+ function add(target,dimension,side,text,criteria,bind=true){
   if(!text)return;
   let row=target.find(row=>row.dimension===dimension);
   if(!row){row={dimension,include:[],exclude:[]};target.push(row);}
   if(!row[side].includes(text))row[side].push(text);
-  if(target!==rows)return;
+  if(!bind)return;
   for(const criterion of criteria)for(const id of criterion.source_element_ids){
    const location={domain:dimension,section:side,rule:text};
    displayedByElement.set(id,location);
@@ -58,32 +59,51 @@ function projectToClassic(project){
   }
  }
  const multiple=output.questions.length>1;
+ const frameworkQuestions=[];
  const contexts=output.questions.map(q=>{
   const target=multiple?[]:rows,reference=Methods.interventionReference(q.elements.filter(e=>!e.source_occurrence_pending));
   const pending=q.logic?.pending_inclusion_branches;
+  const mapping=q.framework_mapping;
+  const customFrame=project.custom_frameworks?.find(item=>item.framework_id===mapping?.framework_id);
+  let frame=customFrame||registry?.get(mapping?.framework_id);
+  const slotLabel=slot=>(customFrame&&slot.display_label)||labels[slot.slot_id]||slot.display_label||label(slot.slot_id);
+  const dimensionLabel=dimension=>{
+   const root=dimension.split('.')[0],slot=frame?.slots.find(s=>s.slot_id===dimension||s.slot_id===root);
+   return slot?slotLabel(slot):label(dimension);
+  };
   for(const side of ['include','exclude']){
    const branches=side==='include'&&pending?pending:[q.logic?.[side]];
-   for(const branch of branches)for(const unit of Methods.splitDimensions(branch,q[side],label)){
+   for(const branch of branches)for(const unit of Methods.splitDimensions(branch,q[side],dimensionLabel)){
     add(target,unit.dimension,side,Methods.ageClause(unit.criteria)||Methods.clause(unit.dimension,unit.text,reference),unit.criteria);
    }
   }
+  // A draft whose framework was inferred historically displayed the S extension
+  // when its source specified a design. An explicit selection fixes the slots.
+  if(!customFrame&&!mapping?.explicit&&['pico','peco'].includes(frame?.framework_id)&&target.some(row=>row.dimension==='Study design')){
+   frame=registry.get(frame.framework_id+'s')||frame;
+  }
+  const slots=frame?.slots.map(slotLabel);
+  frameworkQuestions.push({display_number:q.display_number,framework:frame?.display_name||mapping?.display_name||'Other',frameworkSlots:slots||[],rows:target});
   const context=Methods.descriptionContext(q,project);
+  if(pending&&slots)context.pending_extra_conditions=target.filter(row=>!slots.includes(row.dimension)).flatMap(row=>row.include);
   return {...context,...(multiple?{rows:target,display_number:q.display_number}:{}),...(pending?{pending_inclusion_relation:true}:{})};
  });
  if(multiple){
   const overview=q=>q.display_number+': '+q.logic_text;
   if(output.questions.some(q=>q.logic?.pending_inclusion_branches)){
    for(const q of output.questions){
-    if(q.logic_text)add(rows,'Other','include',overview(q),[...q.include,...q.exclude]);
-    else for(const side of ['include','exclude'])for(const criterion of q[side])add(rows,label(criterion.dimension_id),side,q.display_number+': '+criterion.text,[criterion]);
+    if(q.logic_text)add(rows,'Other','include',overview(q),[...q.include,...q.exclude],false);
+    else for(const side of ['include','exclude'])for(const criterion of q[side])add(rows,label(criterion.dimension_id),side,q.display_number+': '+criterion.text,[criterion],false);
    }
   }else{
    const questions=output.questions.filter(q=>q.logic_text);
-   if(project.question_relation)add(rows,'Other','include',questions.map(overview).join(project.question_relation==='any_of'?' or ':' and '),project.criteria);
-   else for(const q of questions)add(rows,'Other','include',overview(q),[...q.include,...q.exclude]);
+   if(project.question_relation)add(rows,'Other','include',questions.map(overview).join(project.question_relation==='any_of'?' or ':' and '),project.criteria,false);
+   else for(const q of questions)add(rows,'Other','include',overview(q),[...q.include,...q.exclude],false);
   }
  }
- const order=['Population','Sample','Intervention','Exposure','Concept','Phenomenon of Interest','Comparison','Outcomes','Context','Study design','Other'];rows.sort((a,b)=>(order.includes(a.dimension)?order.indexOf(a.dimension):99)-(order.includes(b.dimension)?order.indexOf(b.dimension):99));
+ const frameNames=[...new Set(frameworkQuestions.map(q=>q.framework))],framework=frameNames.length===1?frameNames[0]:'Other';
+ const frameworkSlots=frameNames.length===1?frameworkQuestions[0].frameworkSlots:[];
+ const order=[...new Set([...frameworkSlots,'Population','Sample','Intervention','Exposure','Concept','Phenomenon of Interest','Comparison','Outcomes','Context','Study design','Other'])];rows.sort((a,b)=>(order.includes(a.dimension)?order.indexOf(a.dimension):99)-(order.includes(b.dimension)?order.indexOf(b.dimension):99));
  const descriptionContext={...(contexts.length===1?contexts[0]:{question_contexts:contexts,question_relation:project.question_relation,combined_rows:clone(rows)}),focus_sentence:contexts.map(c=>c.focus_sentence).filter(Boolean).join(' '),methods_sentence:contexts.map(c=>c.methods_sentence).filter(Boolean).join(' ')};
  const focusRows=[];for(const e of project.elements.filter(e=>e.active!==false&&e.information_status!=='missing'&&e.dimension_id!=='population.age'&&e.source_refs?.length&&!displayedByElement.has(e.element_id)&&['review_focus','undecided'].includes(e.semantic_role))){const analysis=e.decision_status==='confirmed_by_user'?null:Methods.classifyAnalysis(e,project.questions.find(q=>q.question_id===e.question_id)?.original_text||''),dimension=label(analysis?.dimension_id||e.dimension_id);let row=focusRows.find(row=>row.dimension===dimension);if(!row){row={dimension,values:[],role:e.semantic_role};focusRows.push(row);}if(e.normalized_text&&!row.values.includes(e.normalized_text))row.values.push(e.normalized_text);}
  for(const row of focusRows)if(row.dimension==='Analysis plan')row.values=row.values.filter(value=>!row.values.some(other=>other.length>value.length&&other.toLowerCase().includes(value.toLowerCase())));
@@ -112,12 +132,14 @@ function projectToClassic(project){
    options:authorChoices(issue).map(({label,option_id})=>({label,option_id})),
    evidence:[...new Map(elements.flatMap(element=>issue.trigger_rule_id==='source_occurrence'?(element.source_occurrence_alternatives||[]).flatMap(a=>[a.heading,a].filter(Boolean)):element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
  });
- return {manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows,framework:output.questions.length===1?output.questions[0].framework_mapping?.display_name||'Other':'Other',rows,reviewTopic:output.questions.map(q=>q.objective).join(' '),topicStyle:'sentence-v3',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
+ return {manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows,framework,frameworkSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v1',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
 }
 async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
  if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');
- const base=baseURL||new URL('.',root.location.href).href,version='20261118-criteria-actions-1';
+ const base=baseURL||new URL('.',root.location.href).href,version='20261119-framework-description-1';
  const configs=await Promise.all([frameworkConfig||root.fetch(new URL('config/eligibility-frameworks.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load framework definitions.');return r.json();}),profileConfig||root.fetch(new URL('config/eligibility-review-profiles.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load review profiles.');return r.json();})]);
+ const registry=E.environment(...configs).frameworks;
+ const projectView=project=>projectToClassic(project,registry);
  const keys=projectKeys(projectId);
  const read=key=>JSON.parse(storage.getItem(key)||'null');
  function current(){
@@ -128,7 +150,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   if(epoch)project.criteria_epoch=epoch;
   return project;
  }
- function staged(project,expectedRevision,expectedSignature,classic=projectToClassic(project)){return {project,expectedRevision,expectedSignature,classic};}
+ function staged(project,expectedRevision,expectedSignature,classic=projectView(project)){return {project,expectedRevision,expectedSignature,classic};}
  function validate(stage){requireEpoch(storage,projectId,stage.project.criteria_epoch);const saved=read(keys.project);if((saved?.revision??0)!==stage.expectedRevision||signature(read(keys.legacy))!==stage.expectedSignature)D.fail('VERSION_CONFLICT','background','The criteria changed while this request was running. Your newer edits have been kept.');}
  function transaction(stage,writeLegacy){
   validate(stage);
@@ -211,7 +233,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    }
   }
   if(saved.classic_author_source_ref){const ref=saved.classic_author_source_ref;for(const q of project.questions.filter(q=>q.active!==false))if(!q.additional_source_refs.some(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision))q.additional_source_refs.push(clone(ref));}
-  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});requireEpoch(storage,projectId,saved.criteria_epoch);onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);project.presentation_version=presentationVersion;const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected,visible);
+  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});requireEpoch(storage,projectId,saved.criteria_epoch);onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);project.presentation_version=presentationVersion;const visible=projectView(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected,visible);
  }
  async function decide({issue_id,option_id,answer_text,target_id,signal,criteriaEpoch}){
   requireEpoch(storage,projectId,criteriaEpoch);
@@ -256,7 +278,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   project.criteria=[];project.logic={questions:{},relation:project.question_relation};project.issues=[];project.elements.forEach(e=>e.active=false);next.eligibility_v3_revision=project.revision;next.eligibilityV3Snapshot={...next.eligibilityV3Snapshot,status:'input_saved',revision:project.revision,validation:clone(project.validation)};
   return {project,expectedRevision:saved.revision,expectedSignature:signature(previous)};
  }
- return {generate,decide,validate,transaction,recordEdit,refreshPresentation,current,projectToClassic,keys};
+ return {generate,decide,validate,transaction,recordEdit,refreshPresentation,current,projectToClassic:projectView,keys};
 }
 return {create,resetProject,currentEpoch,projectToClassic,signature,issueText,optionLabel,progressPercent,renderDescription:Methods.description};
 });

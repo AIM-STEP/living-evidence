@@ -140,5 +140,75 @@ class TransportTest(unittest.TestCase):
                 self.assertEqual(result['transport']['cache'], 'miss')
 
 
+class ElementEncodingTest(unittest.TestCase):
+    def setUp(self):
+        self.source = 'source_' + 'a' * 32
+        self.question = 'question_' + 'a' * 32
+        self.sources = [{'source_id': self.source, 'revision': 3, 'original_text': 'Teachers or nurses.'}]
+        required = ['candidate_id', 'dimension_id', 'normalized_text', 'structured_value', 'source_refs',
+                    'semantic_role', 'information_status', 'scope_status', 'disposition']
+        props = {name: {} for name in required}
+        props['scope_conditions'] = {'type': 'array'}
+        self.elements_schema = {'type': 'object', 'properties': props, 'required': required}
+        self.schema = {'properties': {'questions': {'items': {'properties': {'question_id': {'type': 'string'},
+                        'elements': {'items': self.elements_schema}}}}}}
+        self.element = {'id': 'c1', 'dimension': 'population', 'text': 'Teachers', 'citations': [True], 'kind': 'include'}
+
+    def call(self, elements, opt_in=True):
+        payload = {'question': {'question_id': self.question, 'sources': self.sources}}
+        if opt_in:
+            payload['extraction_encoding'] = 'compact-elements-v1'
+        messages = [{'role': 'system', 'content': 'Preserve all original scope and source evidence.'}, {'role': 'user',
+                    'content': json.dumps({'project_id': 'test', 'payload': payload, 'step': 'extract_elements'})}]
+        def model(wire, schema):
+            self.wire_fields = schema['properties']['questions']['items']['properties']['elements']['items']
+            self.system = wire[0]['content']
+            return {'message': {'content': json.dumps({'questions': [{'question_id': 'Q1', 'elements': elements}]})}}
+        reply = transport.chat(messages, 'stub', self.schema, None, model, criteria_workflow=True)
+        self.assertFalse(transport._entries)
+        return json.loads(reply['message']['content'])['questions'][0]['elements']
+
+    def test_single_source_elements_restore_values_classifications_and_exact_citations(self):
+        exceptions = ['except during leave']
+        row = dict(self.element, text='nurses', citations=[{'quote': 'nurses', 'start': 12, 'end': 18}],
+                   kind={'info': 'ambiguous', 'role': 'undecided', 'scope': 'unspecified', 'side': None},
+                   value={'operator': 'gte', 'value': 18, 'unit': 'year'}, scope_conditions=exceptions)
+        first, second, focus, excluded = self.call([self.element, row, dict(self.element, kind='focus', citations=['Teachers']),
+                                                    dict(self.element, kind='exclude')])
+        self.assertEqual(first, {'candidate_id': 'c1', 'dimension_id': 'population', 'normalized_text': 'Teachers',
+                                 'source_refs': [{'source_id': self.source, 'source_revision': 3, 'quote': 'Teachers'}],
+                                 'semantic_role': 'eligibility_condition', 'information_status': 'explicit',
+                                 'scope_status': 'restricted', 'disposition': 'include', 'structured_value': None})
+        self.assertEqual(second['source_refs'], [{'source_id': self.source, 'source_revision': 3,
+                                                  'quote': 'nurses', 'start': 12, 'end': 18}])
+        self.assertEqual(second['structured_value'], row['value'])
+        self.assertEqual((second['information_status'], second['semantic_role'], second['scope_conditions']),
+                         ('ambiguous', 'undecided', exceptions))
+        self.assertEqual((focus['semantic_role'], focus['disposition'], excluded['disposition']), ('review_focus', None, 'exclude'))
+        self.assertIn('compact element format', self.system)
+        self.assertIn('candidate_id', self.elements_schema['properties'], 'Caller schema is immutable.')
+
+    def test_multi_source_and_multi_revision_require_original_reference_identity(self):
+        for source, alias in [(self.source, 'S1'), ('source_' + 'b' * 32, 'S2')]:
+            self.sources = self.sources[:1] + [{'source_id': source, 'revision': 4, 'original_text': 'Teachers or nurses.'}]
+            canonical_ref = {'source_id': alias, 'source_revision': 4, 'quote': 'Teachers'}
+            element, = self.call([dict(self.element, citations=[canonical_ref])])
+            self.assertEqual(element['source_refs'], [dict(canonical_ref, source_id=source)])
+            self.assertEqual(self.wire_fields['properties']['citations'], self.elements_schema['properties']['source_refs'])
+
+    def test_old_clients_keep_the_original_schema_and_response(self):
+        row = {'candidate_id': 'c1', 'normalized_text': 'Teachers'}
+        self.assertEqual(self.call([row], opt_in=False), [row])
+        self.assertEqual(self.wire_fields, self.elements_schema)
+        self.assertNotIn('compact element format', self.system)
+
+    def test_malformed_classification_or_citation_cannot_supply_a_different_source(self):
+        for invalid in [dict(kind='pending'), dict(kind={'scope': 'restricted'}), dict(semantic_role='review_focus'),
+                        dict(citations=[False]), dict(citations=[{'source_id': 'invented', 'quote': 'Teachers'}])]:
+            with self.subTest(invalid=invalid), self.assertRaises(transport.OutputSyntaxError):
+                self.call([dict(self.element, **invalid)])
+            self.assertFalse(transport._entries)
+
+
 if __name__ == '__main__':
     unittest.main()

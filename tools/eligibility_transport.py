@@ -1,8 +1,7 @@
-"""Lossless eligibility transport: compact opaque IDs and share identical in-flight work.
+"""Compact the model's wire representation and restore canonical eligibility records.
 
-Source text, schemas, prompts, sampling and review rules are unchanged. In-flight
-work remains scoped to its project, model, full input and source revisions.
-Every response is restored to the caller's IDs before downstream validation.
+In-flight work is scoped to its project, model, input and source revisions.
+Restored records receive the same provenance checks and independent review.
 """
 import copy
 import hashlib
@@ -11,7 +10,7 @@ import re
 import threading
 import eligibility_legacy_citations as legacy_citations
 
-VERSION = 'eligibility-transport-v4'
+VERSION = 'eligibility-transport-v5'
 _lock = threading.Lock()
 _entries = {}
 _fields = {'source_id': 'S', 'source_ids': 'S', 'question_id': 'Q', 'question_ids': 'Q', 'answer_question_id': 'Q', 'id': 'R'}
@@ -23,6 +22,87 @@ class IdentityError(ValueError):
 
 class OutputSyntaxError(ValueError):
     """An upstream chat reply contained unreadable model output."""
+
+
+_element_names = {'candidate_id': 'id', 'dimension_id': 'dimension', 'normalized_text': 'text',
+                  'structured_value': 'value', 'source_refs': 'citations'}
+_classification = ('semantic_role', 'information_status', 'scope_status', 'disposition')
+_kind_names = dict(zip(_classification, ('role', 'info', 'scope', 'side')))
+_kinds = {'include': ('eligibility_condition', 'explicit', 'restricted', 'include'),
+          'exclude': ('eligibility_condition', 'explicit', 'restricted', 'exclude'),
+          'focus': ('review_focus', 'explicit', 'unspecified', None)}
+
+
+def _compact_elements(schema, sources):
+    """Only compact the known extraction schema, leaving other client contracts intact."""
+    try:
+        elements = schema['properties']['questions']['items']['properties']['elements']
+        item = elements['items']
+        properties = item['properties']
+        required = _element_names.keys() | set(_classification)
+        if set(item['required']) != required or not required <= properties.keys():
+            return None
+        source_keys = {(s['source_id'], s['revision']) for s in sources}
+        if not source_keys or not all(isinstance(s, str) and type(v) is int for s, v in source_keys):
+            return None
+    except (KeyError, TypeError):
+        return None
+    single = next(iter(source_keys)) if len(source_keys) == 1 else None
+    fields = {short: properties[name] for name, short in _element_names.items() if name != 'structured_value'}
+    fields['kind'] = {'anyOf': [{'type': 'string', 'enum': list(_kinds)},
+                                {'type': 'object', 'properties': {short: properties[name] for name, short in _kind_names.items()},
+                                 'required': list(_kind_names.values()), 'additionalProperties': False}]}
+    fields['value'] = properties['structured_value']
+    fields.update({name: spec for name, spec in properties.items() if name not in required})
+    instruction = (
+        ' For the compact element format use id=candidate_id, dimension=dimension_id, text=normalized_text, '
+        'citations=source_refs, value=structured_value (omit only if null). Omit empty optional fields. '
+        'kind "include"/"exclude" designates an explicit, restricted eligibility_condition with that disposition. '
+        'kind "focus" designates explicit review_focus, unspecified scope and null disposition. '
+        'For every other combination, including ambiguous or missing elements, give all four original fields '
+        'in the kind object as role=semantic_role, info=information_status, scope=scope_status, side=disposition.'
+    )
+    if single:
+        ref = {'type': 'object', 'properties': {'quote': {'type': 'string'}, 'start': {'type': 'integer'},
+                                                'end': {'type': 'integer'}},
+               'required': ['quote', 'start', 'end'], 'additionalProperties': False}
+        fields['citations'] = {'type': 'array', 'items': {'anyOf': [{'type': 'string'}, {'enum': [True]}, ref]}}
+        instruction += (' This part has one source and revision. Each citation is an exact quote string. '
+                        'The literal true copies text exactly as its source quote; use it only for verbatim text. '
+                        'To supply exact Unicode offsets use {quote,start,end}.')
+    elements['items'] = {'type': 'object', 'properties': fields,
+                         'required': ['id', 'dimension', 'text', 'citations', 'kind'], 'additionalProperties': False}
+    return instruction, single
+
+
+def _restore_elements(result, single):
+    aliases = {short: original for original, short in _element_names.items()}
+    for q in result['questions']:
+        for e in q['elements']:
+            if not isinstance(e, dict) or not {'id', 'dimension', 'text', 'citations', 'kind'} <= e.keys():
+                raise OutputSyntaxError('An extraction record is incomplete.')
+            if (_element_names.keys() | set(_classification)) & e.keys():
+                raise OutputSyntaxError('An extraction record has conflicting representations.')
+            for short, name in aliases.items():
+                if short in e:
+                    e[name] = e.pop(short)
+            e.setdefault('structured_value', None)
+            kind = e.pop('kind')
+            if isinstance(kind, str) and kind in _kinds:
+                e.update(zip(_classification, _kinds[kind]))
+            elif isinstance(kind, dict) and kind.keys() == set(_kind_names.values()):
+                e.update({name: kind[short] for name, short in _kind_names.items()})
+            else:
+                raise OutputSyntaxError('The model omitted the eligibility classification.')
+            if single:
+                if not isinstance(e['source_refs'], list):
+                    raise OutputSyntaxError('Invalid single-source citations.')
+                for index, citation in enumerate(e['source_refs']):
+                    if citation is True or isinstance(citation, str):
+                        citation = {'quote': e['normalized_text'] if citation is True else citation}
+                    elif not isinstance(citation, dict) or citation.keys() != {'quote', 'start', 'end'}:
+                        raise OutputSyntaxError('Invalid single-source citation.')
+                    e['source_refs'][index] = dict(citation, source_id=single[0], source_revision=single[1])
 
 
 def _group(key, value):
@@ -99,20 +179,27 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_w
                 compact_schema(child)
 
     compact_schema(wire_schema)
+    element_format = None
     if envelope['step'] == 'extract_elements' and isinstance(wire_schema, dict):
         questions = wire_schema.get('properties', {}).get('questions')
         expected = wire.get('payload', {}).get('question', {}).get('question_id')
         if isinstance(questions, dict) and expected:
             questions['minItems'] = questions['maxItems'] = 1
             questions['items']['properties']['question_id'] = {'type': 'string', 'enum': [expected]}
+        if (criteria_workflow and invoke_with_schema and expected and any(m.get('role') == 'system' for m in messages) and
+                wire['payload'].get('extraction_encoding') == 'compact-elements-v1'):
+            element_format = _compact_elements(wire_schema, wire['payload']['question'].get('sources', []))
     wire_messages = [{**m, 'content': json.dumps(wire, ensure_ascii=False, separators=(',', ':'))}
                      if m.get('role') == 'user' else m for m in messages]
+    if element_format:
+        wire_messages = [dict(m, content=m['content'] + element_format[0]) if m.get('role') == 'system' else m
+                         for m in wire_messages]
     # Revision is an optimistic-write guard, not a change to the model's task.
     # Source revisions, confirmed decisions and every payload field stay in key.
     cache_envelope = copy.deepcopy(wire)
     cache_envelope['base_revision'] = 0
     cache_messages = [{**m, 'content': json.dumps(cache_envelope, ensure_ascii=False, separators=(',', ':'))}
-                      if m.get('role') == 'user' else m for m in messages]
+                      if m.get('role') == 'user' else m for m in wire_messages]
     key = hashlib.sha256(json.dumps([VERSION, envelope.get('project_id'), model, wire_schema, cache_messages],
                                    ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     with _lock:
@@ -142,6 +229,10 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_w
                 if expected and (not isinstance(questions, list) or len(questions) != 1
                                  or not isinstance(questions[0], dict) or questions[0].get('question_id') != expected):
                     raise IdentityError('The model response did not preserve the requested question identifier. No result was saved or cached.')
+                if element_format:
+                    if not isinstance(questions[0].get('elements'), list):
+                        raise OutputSyntaxError('The model omitted the element list.')
+                    _restore_elements(result, element_format[1])
             entry['reply'], entry['result'] = reply, result
         except BaseException as error:
             entry['error'] = error
