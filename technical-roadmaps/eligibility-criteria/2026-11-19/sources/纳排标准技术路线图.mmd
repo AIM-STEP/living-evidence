@@ -1,0 +1,28 @@
+flowchart TD
+    Input[研究问题、语音转写、原始附件] --> Sources[读取文字或转录图片，登记来源与版本]
+    Sources --> Extract[本地模型按问题和原文批次提取要素、引文、逻辑及歧义]
+    Extract --> Structure{结构、问题 ID 与适用的覆盖检查通过？}
+    Structure -->|通过| EligibleJev{候选为明确陈述且附原文引文？}
+    Structure -->|可修复且尚未重试| Retry[反馈具体错误，重新抽取该批一次]
+    Retry --> Structure
+    Structure -->|仍失败| Error[报告错误，保留已有版本]
+    EligibleJev -->|是| Jev[Jev 批量复核六个分类字段]
+    EligibleJev -->|否| Local[本地模型复核候选及原文]
+    Jev -->|六项达标、表述受支持且无问题| Merge[汇总每个候选的复核结果及字段来源]
+    Jev -->|有待核实字段或问题| Local
+    Jev -->|服务不可用或整体响应无效| Full[恢复本批完整本地复核]
+    Full --> Merge
+    Local --> Merge
+    Merge --> Engine[验证来源与语义，映射框架，构建资格逻辑和待决定事项]
+    Engine -->|强制校验抛错| Error
+    Engine -->|构建后仍有校验错误| Invalid[记录 validation_error，保留诊断与来源]
+    Engine -->|构建校验通过| Draft{仍有影响筛选的待决定事项？}
+    Draft -->|有| Pending[保存可用草稿，在对应条件或问题旁显示作者核对项]
+    Pending --> Author{作者如何回答？}
+    Author -->|预设选项| Decision[登记原答、适用要素与决定]
+    Author -->|自由文字| Parse[本地模型解析答复，程序核对目标与修改范围]
+    Parse --> Decision
+    Decision --> Engine
+    Draft -->|无| Final[形成最终标准，按版本保存]
+    Pending --> View[预览和 Word 导出，Description 收尾]
+    Final --> View
