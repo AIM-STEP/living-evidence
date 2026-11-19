@@ -20,11 +20,12 @@
     }
     return result;
   }
-  function operator(prefix,suffix){
-    if(/(?:>=|≥|at least|no (?:less|fewer) than|not less than|minimum(?: of)?|至少|不少于|不低于)\s*$/i.test(prefix)||/^\s*(?:years?|months?|weeks?|days?|岁|年|个?月|周|天)?\s*(?:or (?:older|more|above|greater)|及以上|以上)/i.test(suffix))return '>=';
-    if(/(?:<=|≤|at most|no more than|not more than|up to|maximum(?: of)?|至多|不超过|不高于)\s*$/i.test(prefix)||/^\s*(?:years?|months?|weeks?|days?|岁|年|个?月|周|天)?\s*(?:or (?:younger|less|below)|及以下|以下)/i.test(suffix))return '<=';
+  function operator(prefix,suffix,unit){
+    if(/(?:>=|≥|at least|no (?:less|fewer) than|not less than|minimum(?: of)?|至少|不少于|不低于)\s*$/i.test(prefix)||/^\s*(?:(?:or|and) (?:older|more|above|greater|over)\b|及以上|以上)/i.test(suffix))return '>=';
+    if(/(?:<=|≤|at most|no (?:more|greater) than|not more than|up to|maximum(?: of)?|至多|不超过|不高于)\s*$/i.test(prefix)||/^\s*(?:(?:or|and) (?:younger|less|below|under)\b|及以下|以下)/i.test(suffix))return '<=';
     if(/(?:>|more than|greater than|older than|over|超过|大于|高于)\s*$/i.test(prefix))return '>';
     if(/(?:<|less than|fewer than|younger than|under|below|小于|低于|不足)\s*$/i.test(prefix))return '<';
+    if(['minute','hour','day','week','month','year'].includes(unit)&&(/\bwithin\s*$/i.test(prefix)||/^\s*(?:以内|内)/u.test(suffix)))return '<=';
     return '=';
   }
   function role(prefix){
@@ -32,17 +33,71 @@
     const last=matches.at(-1)?.[0]?.toLowerCase()||'';
     return /age|年龄/.test(last)?'age':/follow|随访/.test(last)?'follow-up':/duration|持续/.test(last)?'duration':/dose|dosage|剂量/.test(last)?'dose':'';
   }
+  const unitAliases={
+    year:'year',years:'year',yr:'year',yrs:'year',岁:'year',年:'year',month:'month',months:'month',mo:'month',mos:'month',月:'month',个月:'month',
+    week:'week',weeks:'week',wk:'week',wks:'week',周:'week',day:'day',days:'day',天:'day',日:'day',
+    hour:'hour',hours:'hour',hr:'hour',hrs:'hour',h:'hour',小时:'hour',minute:'minute',minutes:'minute',min:'minute',mins:'minute',分钟:'minute',
+    mg:'mg',g:'g',µg:'mcg',μg:'mcg',mcg:'mcg','%':'%'
+  };
+  const unitPattern=/^\s*[-‐‑]?\s*(years?|yrs?|months?|mos?|weeks?|wks?|days?|hours?|hrs?|h|minutes?|mins?|mg|mcg|μg|g|%|岁|年|个月|月|周|天|日|小时|分钟)(?![a-z])/i;
+  function unitName(unit){
+    const key=clean(unit).toLowerCase().replace(/\s*\/\s*/g,'/');
+    return unitAliases[key]||key;
+  }
+  // Store the event when it is adjacent to the direction. A different event may
+  // use exactly the same duration (e.g. 24 hours after birth or after discharge).
+  const eventPattern=/^\s+(?:the\s+)?((?:(?:hospital|ICU|study)\s+)?(?:birth|delivery|admission|discharge|surgery|randomi[sz]ation|enroll?ment|diagnosis|treatment|intervention|baseline|screening)\b(?:\s+(?:initiation|cessation|completion|discontinuation|onset))?)/i;
+  const chineseEvent={'出生':'birth','分娩':'delivery','入院':'admission','出院':'discharge','手术':'surgery','干预':'intervention','治疗':'treatment'};
+  const timeDirection=/^(before|prior to|after|following|since)\b/i;
+  function temporalAnchor(value){
+    const text=clean(value).toLowerCase().replace(/[_‐‑–-]/g,' ').trim();
+    const direction=text.match(timeDirection);
+    if(!direction)return chineseEvent[text]||text;
+    const word=direction[0],after=text.slice(word.length);
+    const event=after.trim().replace(/^the\s+/,'');
+    return [word==='prior to'?'before':word==='following'?'after':word,event].filter(Boolean).join(' ');
+  }
+  function timeAt(prefix,suffix){
+    const direction=suffix.trimStart().match(timeDirection);
+    if(direction){
+      const after=suffix.trimStart().slice(direction[0].length);
+      const event=after.match(eventPattern)?.[0]||after.match(/^\s+(?:the\s+)?[a-z]+(?:[-‐‑][a-z]+)*/i)?.[0]||'';
+      return temporalAnchor(direction[0]+event);
+    }
+    const zh=prefix.match(/(出生|分娩|入院|出院|手术|干预|治疗)(之?[前后])(?:至多|至少|不超过|超过|约|的)?\s*$/u);
+    if(zh)return (zh[2].endsWith('前')?'before ':'after ')+chineseEvent[zh[1]];
+    return '';
+  }
   function constraints(value){
     const text=clean(value),out=[];
-    const units={year:'year',years:'year',yr:'year',yrs:'year',岁:'year',年:'year',month:'month',months:'month',mo:'month',mos:'month',月:'month',个月:'month',week:'week',weeks:'week',wk:'week',wks:'week',周:'week',day:'day',days:'day',天:'day',日:'day',hour:'hour',hours:'hour',小时:'hour',mg:'mg',g:'g','%':'%'};
-    const pattern=/\d+(?:\.\d+)?/g;
-    for(const match of text.matchAll(pattern)){
-      const at=match.index,prefix=text.slice(Math.max(0,at-85),at),suffix=text.slice(at+match[0].length,at+match[0].length+70);
-      const unitMatch=suffix.match(/^\s*(years?|yrs?|months?|mos?|weeks?|wks?|days?|hours?|mg\b|g\b|%|岁|年|个月|月|周|天|日|小时)(?=\b|\s|[.,;)。！？]|$|[\u3400-\u9fff])/i);
-      const op=operator(prefix,suffix);
-      const temporal=(suffix.match(/\b(before|after|since|prior to|following)\b|之前|之后|以来/i)||prefix.match(/\b(before|after|since|prior to|following)\b|之前|之后|以来/i))?.[0]||'';
-      const anchor=/before|prior|之前/i.test(temporal)?'before':/after|following|之后/i.test(temporal)?'after':temporal?'since':'';
-      if(unitMatch||op!=='=')out.push({value:match[0],operator:op,unit:units[unitMatch?.[1]?.toLowerCase()]||'',role:role(prefix),anchor});
+    // A range shares its unit between its two endpoints. Resolve that relation
+    // only for adjacent quantities, so independent constraints keep their roles.
+    const amounts=[...text.matchAll(/\d+(?:\.\d+)?/g)].map(m=>{
+      const after=m.index+m[0].length,unit=text.slice(after).match(unitPattern);
+      let name=unitName(unit?.[1]),end=after+(unit?.[0].length||0);
+      const per=name&&text.slice(end).match(/^(?:\s*\/\s*[a-zA-Zμ]+\d*)+/);
+      if(per){name+=per[0].replace(/\s/g,'').toLowerCase();end+=per[0].length;}
+      return {at:m.index,end,number:m[0],unit:name};
+    });
+    for(let i=0;i<amounts.length;i++){
+      const cur=amounts[i],next=amounts[i+1];
+      const before=text.slice(Math.max(0,cur.at-85),cur.at).split(/[;；。!?！？\n]|\.(?=\s)/u).at(-1);
+      const interval=next&&text.slice(cur.end,next.at).trim();
+      const range=next&&next.unit&&(!cur.unit||cur.unit===next.unit)&&
+        (/^(?:[-‐‑‒–—]|to|through|至|到)$/i.test(interval)||/^and$/i.test(interval)&&/\bbetween\s*$/i.test(before));
+      const suffix=text.slice((range?next:cur).end,(range?next:cur).end+75);
+      const anchor=timeAt(before,suffix),scope=role(before);
+      // ASCII hyphen before a quantity is a sign unless consumed as a range separator.
+      const sign=/(?:^|[\s(<>=≤≥])[-−]$/u.test(before)?'-':'';
+      const prefix=sign?before.slice(0,-1):before;
+      if(range){
+        const lower=operator(prefix,'',next.unit);
+        out.push({value:sign+cur.number,operator:lower==='='?'>=':lower,unit:next.unit,role:scope,anchor},
+          {value:next.number,operator:'<=',unit:next.unit,role:scope,anchor});
+        i++;continue;
+      }
+      const op=operator(prefix,suffix,cur.unit);
+      if(cur.unit||op!=='=')out.push({value:sign+cur.number,operator:op,unit:cur.unit,role:scope,anchor});
     }
     return out;
   }
@@ -102,5 +157,5 @@
       return {id:source.id||'D'+String(index+1).padStart(3,'0'),name:source.name,page:source.page||null,kind:source.kind||'text',verification:source.verification||'original-text',text:source.text||'',sha256};
     }));
   }
-  return {VERSION,clean,segments,constraints,differences,reviewMap,decisions,batches,hashText,manifest};
+  return {VERSION,clean,segments,unitName,temporalAnchor,constraints,differences,reviewMap,decisions,batches,hashText,manifest};
 });

@@ -16,9 +16,11 @@
 - **复用原文措辞。** 利用 Ollama 的结构化输出，当单一、可核实的原文短语本身就是该要素的完整规范表述时，允许模型用短标记表示复用，程序从同一份来源恢复文字。需要改写的条件继续输出标准化措辞。独立核对始终接收恢复后的文字与证据。[Ollama 结构化输出](https://docs.ollama.com/capabilities/structured-outputs)
 - **按本题框架核对。** 同一批次的 Jev 核对共享结构化上下文，每项通过问题标识关联到自己的框架及字段。对于把条目改放到其他字段的建议，沿用现有置信门槛；证据不足时，候选留在原位置待作者处理。[TypeSafe 的结构化上下文](https://docs.typesafe.ai/concepts/state) · [TypeSafe 的引文核对示例](https://docs.typesafe.ai/cookbooks/citation_check)
 
+- **数值与时间校验。** 每条引文分别核对比较符、范围端点、单位及时间参照。完整要素原文与展示措辞一致、只有机器记录的数值属性不符时，先按原文修正属性，再交 Jev 核对。无法从同一处证据确定的差异，只影响该项。区分严格和非严格边界，并只使用有确定换算关系的单位。[比较符定义](https://hl7.org/fhir/R4/valueset-quantity-comparator.html) · [单位规范](https://ucum.org/ucum)
+
 ## 当前流程
 
-适用版本为 `20261119-criteria-release-10`。
+适用版本为 `20261119-criteria-release-11`。
 
 ### 第一阶段 · 从研究问题生成标准
 

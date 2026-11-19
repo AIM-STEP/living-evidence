@@ -21,7 +21,7 @@ const entries={
  scope_status:{trigger:/\b(?:no restrictions?|unrestricted|any language|language|publication date|no age limit)\b|不限|语言/i,
   tip:'Assign unrestricted only to a stated waiver. An unmentioned limit is unspecified; no optional confirmation is needed.'},
  age_bound:{trigger:/[<>≤≥]|\b(?:older|elderly|aged|at least|younger than|older than|months? of age)\b|年龄|老年/i,
-  tip:'Preserve the stated age wording, operator and unit. Keep qualitative age groups as stated and ask only when eligibility depends on an unresolved boundary.'},
+  tip:'Preserve the stated age wording, operator and unit. Retain a qualitative age group as stated. Ask only if the source itself leaves a consequential choice or conflict.'},
  logical_scope:{trigger:/\b(?:either|both|unless|except|only if|provided that|one another)\b|\b(?:we included|eligible studies)\b[^.!?]{0,300}\bcomparing\b|除非|或者|例外/i,
   tip:'Keep each alternative or exception attached to its original condition. In an inclusion sentence, distinguish design alternatives from the shared population and the two comparison arms.'},
  source_coverage:{trigger:/\b(?:we included|eligible studies|inclusion criteria|population|participants)\b|纳入标准|研究对象/i,
@@ -43,6 +43,7 @@ function errorLesson(error){
   if(/outcome/i.test(message))return 'outcome_role';
   return 'source_coverage';
  }
+ if(['NUMERIC_SCOPE_CHANGE','TEXT_VALUE_MISMATCH','UNSUPPORTED_NUMBER'].includes(code))return 'source_fidelity';
  if(/^(?:SEMANTIC_REVIEW_FAILED|QUOTE_.*|SOURCE_MISMATCH|UNSUPPORTED_.*)$/.test(code))return 'source_fidelity';
  if(/^(?:MODEL_UPSTREAM_ERROR|MODEL_UNAVAILABLE|MODEL_BUSY|MODEL_TIMEOUT)$/.test(code))return 'service_availability';
  if(['MODEL_SCHEMA_ERROR','MODEL_INVALID_JSON','INVALID_STRUCTURE','INVALID_ENUM'].includes(code)||

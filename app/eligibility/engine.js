@@ -138,6 +138,14 @@ function ensureAnalysisFocus(state,q){
   if(prior)Object.assign(prior,element);else state.elements.push(element);
  }
 }
+function numericReviewReason(error){
+ const c=error.details?.constraint;
+ const amount=c?[c.operator,c.value,c.unit,c.anchor].filter(x=>x!=null&&x!=='').join(' '):error.details?.number;
+ if(error.code==='TEXT_VALUE_MISMATCH')return 'Which numeric condition should apply? The proposed wording and its recorded value differ.';
+ if(error.code==='NUMERIC_SCOPE_CHANGE'||error.code==='UNSUPPORTED_NUMBER')
+  return 'Please confirm the value, unit or timing'+(amount!=null?' for “'+amount+'”':' for this condition')+' against the cited passage.';
+ return null;
+}
 function elementFromCandidate(state,q,c,env){
  D.validate_candidate_element(c);const refs=D.validate_provenance(state,c.source_refs,q.question_id,{allowEmpty:c.information_status==='missing'||c.scope_status==='not_applicable'&&!!c.applicability_basis});
  const sources=[...new Set(refs.map(r=>D.sourceAt(state,r)))];for(const source of sources)if(!sourceApplies(source,q)||source.source_type==='authorized_rule'&&!activeRuleSource(state,source))fail('RULE_OUTSIDE_SCOPE','provenance','An authorized rule is outside its declared scope.');
@@ -198,7 +206,15 @@ function elementFromCandidate(state,q,c,env){
  const analysis=Methods.classifyAnalysis(e,sources.map(s=>s.original_text).join(' '));
  if(analysis){if(e.semantic_role!=='review_focus'||e.dimension_id!==analysis.dimension_id||e.scope_status!=='unspecified'||e.disposition!==null)e.metadata_corrections=[...(e.metadata_corrections||[]),{field:'semantic_role',from:e.semantic_role,to:'review_focus',basis:'The source describes the analysis plan/data level, without an independent study eligibility requirement.'}];Object.assign(e,analysis,{semantic_role:'review_focus',scope_status:'unspecified',disposition:null,framework_bindings:[],methodology_rule_id:'analysis_plan_is_not_eligibility'});}
  Methods.restoreAge(e);
- D.check_semantics(e,refs);
+ try{D.check_semantics(e,refs);}
+ catch(error){
+  const reason=numericReviewReason(error);
+  if(!frameworkOnly(q)||!reason)throw error;
+  e.review_pending={reason,original_dimension:e.dimension_id,original_role:e.semantic_role,original_disposition:e.disposition};
+  e.semantic_review={...e.semantic_review,status:'uncertain',issue_type:'unsupported_rewrite',reason,validation_code:error.code};
+  e.decision_status='pending';e.information_status='ambiguous';
+  return e;
+ }
  if(e.dimension_id.split('.')[0]==='outcome'){
   e.outcome_use=e.outcome_use||'interest';if(!['interest','measurement_required','reporting_required'].includes(e.outcome_use))fail('INVALID_ENUM','schema','Invalid outcome use.');
   if(e.outcome_use!=='interest'&&!explicitOutcomeRequirement(refs)){e.semantic_role='undecided';e.information_status='ambiguous';e.decision_status='pending';e.role_issue=true;}
@@ -366,17 +382,31 @@ function sourceDefinesMinimumAge(group,known){
  return defined&&bounds.size===1;
 }
 function unrepresentedSourceOr(elements){
- return elements.some(e=>{
-  const predicate=key(e.normalized_text);
-  return e.source_refs.some(ref=>{
-   const quote=key(ref.quote);
-   if(!D.hasOr(quote))return false;
-   // Alternatives retained inside one criterion cannot imply that all of
-   // the question's population, intervention and comparison are alternatives.
-   if(!predicate||!D.hasOr(predicate))return true;
-   return !predicate.includes(quote)&&D.hasOr(quote.replace(predicate,' '));
-  });
- });
+ const withAlternatives=elements.filter(e=>D.hasOr(e.normalized_text));
+ return elements.some(e=>e.source_refs.some(ref=>{
+  if(!D.hasOr(ref.quote))return false;
+  // A broad citation can support several different fields. Mask alternatives
+  // already preserved by a predicate only at its own attested source location.
+  const chars=Array.from(ref.quote);
+  for(const owner of withAlternatives){
+   const wording=key(owner.normalized_text);
+   for(const source of owner.source_refs){
+    if(source.source_id!==ref.source_id||source.source_revision!==ref.source_revision||source.end<=ref.start||source.start>=ref.end)continue;
+    const sourceText=key(source.quote);
+    if(!D.hasOr(sourceText))continue;
+    let start=source.start,end=source.end;
+    if(!wording.includes(sourceText)){
+     const offset=source.quote.indexOf(owner.normalized_text);
+     if(offset<0||source.quote.indexOf(owner.normalized_text,offset+1)>=0)continue;
+     start+=Array.from(source.quote.slice(0,offset)).length;
+     end=start+Array.from(owner.normalized_text).length;
+    }
+    const left=Math.max(start,ref.start),right=Math.min(end,ref.end);
+    if(left<right)chars.fill(' ',left-ref.start,right-ref.start);
+   }
+  }
+  return D.hasOr(chars.join(''));
+ }));
 }
 function matchingRuleIssue(state,q,group,desired){
  const ids=group.elements.map(e=>e.element_id),text=key(group.issue.question_text);
@@ -418,7 +448,7 @@ function comparisonConflict(elements){const result=[];for(let i=0;i<elements.len
  if(key(a.normalized_text)===key(b.normalized_text)&&a.disposition!==b.disposition){result.push([a,b]);continue;}
  if(a.disposition==='include'&&b.disposition==='include'){
   const ac=D.structuredConstraints(a.structured_value,a.dimension_id).map(D.canonical),bc=D.structuredConstraints(b.structured_value,b.dimension_id).map(D.canonical);
-  for(const x of ac)for(const y of bc){if(x.unit!==y.unit)continue;const lower=['>','>='].includes(x.operator)?x:['>','>='].includes(y.operator)?y:null,upper=['<','<='].includes(x.operator)?x:['<','<='].includes(y.operator)?y:null;if(lower&&upper&&(lower.value>upper.value||lower.value===upper.value&&(lower.operator==='>'||upper.operator==='<')))result.push([a,b]);}
+  for(const x of ac)for(const y of bc){if(x.unit!==y.unit||x.anchor&&y.anchor&&key(x.anchor)!==key(y.anchor))continue;const lower=['>','>='].includes(x.operator)?x:['>','>='].includes(y.operator)?y:null,upper=['<','<='].includes(x.operator)?x:['<','<='].includes(y.operator)?y:null;if(lower&&upper&&(lower.value>upper.value||lower.value===upper.value&&(lower.operator==='>'||upper.operator==='<')))result.push([a,b]);}
  }
  }return result;}
 function frameworkAuthorIssue(q,e){
@@ -449,8 +479,8 @@ function detect_clarification_issues(state,env=environment()){
    const labels=state.output_language.startsWith('zh')?{primary_study:'原始研究',systematic_review:'系统评价',review:'综述',policy_document:'政策文件',other:'其他证据来源'}:{primary_study:'primary studies',systematic_review:'systematic reviews',review:'other reviews',policy_document:'policy documents',other:'other evidence sources'},e={element_id:D.stableId('element',q.question_id+'|evidence_source|'+JSON.stringify(q.context.evidence_units)+'|'+JSON.stringify(q.evidence_unit_source_ref||q.context_source_ref)),question_id:q.question_id,dimension_id:'evidence_source',context_managed:true,raw_text:q.context.evidence_units.join(', '),normalized_text:(state.output_language.startsWith('zh')?'证据单位：':'Evidence unit: ')+q.context.evidence_units.map(unit=>labels[unit]||unit).join(state.output_language.startsWith('zh')?'、':', '),structured_value:{values:clone(q.context.evidence_units)},source_refs:[clone(q.evidence_unit_source_ref||q.context_source_ref)],semantic_role:'eligibility_condition',information_status:'explicit',decision_status:q.evidence_unit_source_ref?'confirmed_by_user':'accepted_from_input',scope_status:'restricted',disposition:'include',framework_bindings:[],related_issue_ids:[],revision:1,source_decision_ids:q.evidence_unit_decision_id?[q.evidence_unit_decision_id]:[],source_rule_ids:[],active:true};state.elements.push(e);elements.push(e);q.element_ids.push(e.element_id);
   }
   if(!q.framework_mapping?.framework_id)createIssue(state,desired,issueData(q,'FRAMEWORK_AMBIGUITY',[],'case_sensitive_framework','请确认此问题使用的框架及字段含义。','影响问题字段的含义和必要决定。',true,(q.framework_mapping?.candidates||[]).map(f=>({option_id:f.framework_id,label:f.display_name,context_updates:{framework_id:f.framework_id}}))));
-  for(const slot of frame?.slots||[])if(!slot.definition)createIssue(state,desired,issueData(q,'FRAMEWORK_AMBIGUITY',[],'custom_definition:'+slot.slot_id,'请定义自定义字段“'+(slot.display_label||slot.slot_id)+'”的含义。','决定该字段如何组织研究范围。',true,[]));
   const known=elements.filter(e=>e.information_status!=='missing'&&withinEligibilityFramework(q,e));
+  for(const slot of frame?.slots||[])if(!slot.definition&&(!strict||known.some(e=>e.framework_bindings.some(b=>b.slot_id===slot.slot_id))))createIssue(state,desired,issueData(q,'FRAMEWORK_AMBIGUITY',[],'custom_definition:'+slot.slot_id,'请定义自定义字段“'+(slot.display_label||slot.slot_id)+'”的含义。','决定该字段如何组织研究范围。',true,[]));
   if(!strict)for(const dimension of [...(frame?.slots||[]).map(s=>s.slot_id),...OPTIONAL])if(!known.some(e=>e.dimension_id===dimension||e.dimension_id.startsWith(dimension+'.')))makeMissing(state,q,dimension,env);
   const modelGroups=strict?[]:modelIssueGroups(q,known.filter(e=>!e.review_pending),state);
   for(let e of known){
@@ -501,7 +531,7 @@ function detect_clarification_issues(state,env=environment()){
    if(rule.kind==='evidence_unit'&&!q.context.evidence_units.length&&!known.some(e=>e.dimension_id==='evidence_source'&&e.scope_status!=='unspecified'))createIssue(state,desired,issueData(q,'MISSING_REQUIRED_DECISION',[makeMissing(state,q,'evidence_source',env)],rule.rule_id,'本次伞状综述拟纳入哪些证据单位？','决定纳入系统评价、其他综述或其他证据来源。',true,[{option_id:'systematic_review',label:'系统评价',context_updates:{evidence_units:['systematic_review']}},{option_id:'review',label:'系统评价和其他综述',context_updates:{evidence_units:['systematic_review','review']}}]));
   }
   if(!strict)for(const type of q.context.question_types)for(const dimension of env.profiles.questionTypes[type]||[])if(!known.some(e=>e.dimension_id===dimension||e.dimension_id.startsWith(dimension+'.')))createIssue(state,desired,issueData(q,'MISSING_REQUIRED_DECISION',[makeMissing(state,q,dimension,env)],'question_type:'+type+':'+dimension,'请明确本问题中的 '+dimension+' 范围。','该要素用于确定本问题的核心研究范围。',true,[]));
-  const eligible=known.filter(e=>accepted(e)&&e.semantic_role==='eligibility_condition'&&e.scope_status==='restricted');
+  const eligible=known.filter(e=>accepted(e)&&e.semantic_role==='eligibility_condition'&&e.scope_status==='restricted'&&e.disposition==='include');
   const branches=q.logic||(q.unresolved_fragment_logic?{op:'any_of',children:q.unresolved_fragment_logic.branches}:null);
   for(const pair of comparisonConflict(known.filter(e=>accepted(e)&&e.semantic_role==='eligibility_condition'&&['restricted','unrestricted'].includes(e.scope_status)))){
    if(separateInclusionBranches(branches,...pair))continue;
@@ -820,6 +850,13 @@ function authorAnswer(state,issue,answer,option,env){
  return option;
 }
 function answerUpdate(state,q,e,update,answer,source,issue){
+ if(e.review_pending&&e.structured_value&&update.structured_value===undefined&&update.normalized_text){
+  try{D.check_semantics({...e,normalized_text:update.normalized_text},[{quote:update.normalized_text}],{human:true});}
+  catch(error){
+   if(!numericReviewReason(error))throw error;
+   update={...update,structured_value:null};
+  }
+ }
  const old=clone(e),value=update.structured_value===undefined?e.structured_value:clone(update.structured_value),newRef=ref(source),support=D.validate_provenance(state,answer.supporting_refs||[],q.question_id,{allowEmpty:true});
  if(e.source_occurrence_pending){
   if(!update.normalized_text?.trim()||!['eligibility_condition','review_focus','background_information'].includes(update.semantic_role)||!update.scope_status||
@@ -977,5 +1014,5 @@ function render_output(state,{snapshot_revision=null}={}){
  return {project_id:state.project_id,status:view.status,revision:view.revision,output_language:view.output_language||state.output_language,review_methods:view.review_methods||state.review_methods,question_relation:view.question_relation,questions:view.questions.filter(active).map(q=>({question_id:q.question_id,display_number:q.display_number,...(frameworkOnly(q)&&{eligibility_policy:q.eligibility_policy}),research_question:q.original_text,objective:q.review_topic||q.original_text,context:q.context,framework_mapping:q.framework_mapping,elements:es.filter(e=>e.question_id===q.question_id),include:view.criteria.filter(c=>c.question_ids.includes(q.question_id)&&c.disposition==='include'),exclude:view.criteria.filter(c=>c.question_ids.includes(q.question_id)&&c.disposition==='exclude'),logic:view.logic?.questions[q.question_id],logic_text:expression_text(view.logic?.questions[q.question_id]?.eligibility,view.criteria,view.output_language||state.output_language),focus:es.filter(e=>e.question_id===q.question_id&&e.semantic_role==='review_focus'),unrestricted:es.filter(e=>e.question_id===q.question_id&&e.scope_status==='unrestricted'),unspecified:es.filter(e=>e.question_id===q.question_id&&e.scope_status==='unspecified'),no_independent_exclusions:!view.criteria.some(c=>c.question_ids.includes(q.question_id)&&c.disposition==='exclude')})),issues:snap?(snap.issues||[]).filter(i=>i.status==='open'):state.issues.filter(i=>i.status==='open'),decisions:state.decisions.filter(d=>!snap||snap.decision_ids.includes(d.decision_id)),sources:state.sources,validation:view.validation,changes:state.changes.filter(c=>c.revision<=view.revision),config_versions:view.config_versions};
 }
 function render_text(state,options={}){const out=render_output(state,options),zh=out.output_language.startsWith('zh'),lines=[(zh?'纳入与排除标准':'Eligibility criteria')+' — v'+out.revision+' — '+out.status];for(const q of out.questions){lines.push('\n'+q.display_number+' '+q.objective,(zh?'框架：':'Framework: ')+(q.framework_mapping?.display_name||'待确定'),zh?'纳入标准':'Inclusion');q.include.forEach(c=>lines.push('- '+c.text));lines.push(zh?'排除标准':'Exclusion');q.exclude.forEach(c=>lines.push('- '+c.text));if(q.no_independent_exclusions&&!frameworkOnly(q))lines.push(zh?'无独立排除条款；资格范围由现有纳入条件确定。':'No independent exclusion clauses; eligibility is determined by the inclusion conditions.');if(q.logic_text)lines.push((zh?'逻辑关系：':'Logic: ')+q.logic_text);if(q.focus.length)lines.push((zh?'研究关注内容：':'Review focus: ')+q.focus.map(e=>e.normalized_text).join('；'));if(q.unrestricted.length)lines.push((zh?'明确不限：':'Explicitly unrestricted: ')+q.unrestricted.map(e=>e.dimension_id).join(', '));if(!frameworkOnly(q))lines.push((zh?'未设定的非必要限制：':'Unspecified optional limits: ')+q.unspecified.filter(e=>OPTIONAL.includes(e.dimension_id)).map(e=>e.dimension_id).join(', '));}if(out.issues.some(i=>i.blocking))lines.push(zh?'此版本为草案，仍有必要事项待确认。':'Draft: required decisions remain unresolved.');return lines.join('\n');}
-return {VERSION:'eligibility-v3.2.0',environment,create_project,save_input,addSource,ref,extraction_payload,resolve_review_context,explicitOutcomeRequirement,ingest_candidates,detect_clarification_issues,authorTargetGroups,passageWording,apply_decisions,edit_context,register_framework,build_criteria,validate_criteria,render_output,render_text,expression_text,rebuild,accepted,guard,SourceStore:{add:addSource,get:D.sourceAt,locate:D.locate},ProvenanceValidator:{validate:D.validate_provenance},ElementNormalizer:{validate:D.check_semantics},CriteriaBuilder:{build:build_criteria},CriteriaValidator:{validate:validate_criteria},DecisionApplier:{apply:apply_decisions}};
+return {VERSION:'eligibility-v3.2.0',environment,create_project,save_input,addSource,ref,extraction_payload,numericReviewReason,resolve_review_context,explicitOutcomeRequirement,ingest_candidates,detect_clarification_issues,authorTargetGroups,passageWording,apply_decisions,edit_context,register_framework,build_criteria,validate_criteria,render_output,render_text,expression_text,rebuild,accepted,guard,SourceStore:{add:addSource,get:D.sourceAt,locate:D.locate},ProvenanceValidator:{validate:D.validate_provenance},ElementNormalizer:{validate:D.check_semantics},CriteriaBuilder:{build:build_criteria},CriteriaValidator:{validate:validate_criteria},DecisionApplier:{apply:apply_decisions}};
 });

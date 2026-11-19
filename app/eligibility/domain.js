@@ -58,17 +58,32 @@ function validate_provenance(state,refs,questionId,{allowEmpty=false}={}){
  });
 }
 const numericOperators={gt:'>',gte:'>=',lt:'<',lte:'<=',eq:'=',between:'between'};
-const units={year:['month',12],years:['month',12],岁:['month',12],年:['month',12],month:['month',1],months:['month',1],月:['month',1],个月:['month',1],week:['day',7],weeks:['day',7],周:['day',7],day:['day',1],days:['day',1],天:['day',1],hour:['minute',60],hours:['minute',60],小时:['minute',60],minute:['minute',1],minutes:['minute',1],分钟:['minute',1],g:['mg',1000],mg:['mg',1]};
-function canonical(c){const [unit,factor]=units[c.unit]||[c.unit,1];return {...c,unit,value:Number(c.value)*factor};}
-function sameConstraint(a,b){const x=canonical(a),y=canonical(b);return x.value===y.value&&x.operator===y.operator&&(!x.unit||!y.unit||x.unit===y.unit)&&(!x.anchor||!y.anchor||x.anchor===y.anchor)&&(!x.role||!y.role||x.role===y.role);}
+const units={year:['month',12],month:['month',1],week:['minute',10080],day:['minute',1440],hour:['minute',60],minute:['minute',1],g:['mcg',1000000],mg:['mcg',1000],mcg:['mcg',1]};
+function canonical(c){
+ const name=grounding.unitName(c.unit),[unit,factor]=units[name]||[name,1];
+ return {...c,unit,value:Number(c.value)*factor,anchor:grounding.temporalAnchor(c.anchor)};
+}
+function sameConstraint(a,b){
+ const x=canonical(a),y=canonical(b);
+ return x.value===y.value&&x.operator===y.operator&&x.unit===y.unit&&(!x.anchor||!y.anchor||x.anchor===y.anchor)&&(!x.role||!y.role||x.role===y.role);
+}
 function structuredConstraints(value,dimension){if(!value||typeof value!=='object')return [];if(value.operator==='between')return [{value:value.lower,operator:value.lower_inclusive===false?'>':'>=',unit:value.unit||'',role:dimension.includes('age')?'age':''},{value:value.upper,operator:value.upper_inclusive===false?'<':'<=',unit:value.unit||'',role:dimension.includes('age')?'age':''}];if(typeof value.value==='number')return [{value:value.value,operator:numericOperators[value.operator]||value.operator||'=',unit:value.unit||'',anchor:value.anchor||'',role:dimension.includes('age')?'age':''}];return [];}
 function check_semantics(element,refs,{human=false}={}){
  const original=quoteText(refs),normalized=element.normalized_text||'';
- const known=grounding.constraints(original),textConstraints=grounding.constraints(normalized),valueConstraints=structuredConstraints(element.structured_value,element.dimension_id),actual=[...textConstraints,...valueConstraints];
- if(textConstraints.length&&valueConstraints.length&&textConstraints.some(c=>!valueConstraints.some(value=>sameConstraint(c,value))))fail('TEXT_VALUE_MISMATCH','normalization','The displayed numeric condition disagrees with its structured value.');
- for(const c of actual)if(!known.some(k=>sameConstraint(c,k)))fail('NUMERIC_SCOPE_CHANGE','normalization','A threshold, strict bound, unit or time anchor changed without a matching source.',{dimension_id:element.dimension_id,constraint:c});
- const originalNums=[...original.matchAll(/\d+(?:\.\d+)?/g)].map(m=>Number(m[0]));
- for(const match of normalized.matchAll(/\d+(?:\.\d+)?/g))if(!originalNums.includes(Number(match[0]))&&!actual.some(c=>Number(c.value)===Number(match[0])&&known.some(k=>sameConstraint(c,k))))fail('UNSUPPORTED_NUMBER','normalization','A number is absent from the source.');
+ const known=refs.flatMap(r=>grounding.constraints(r.quote)),textConstraints=grounding.constraints(normalized),valueConstraints=structuredConstraints(element.structured_value,element.dimension_id);
+ // A structured scalar may describe just one of several displayed conditions.
+ // Bind a direction-only or event-only metadata anchor to that quantity's full wording.
+ for(const c of valueConstraints){
+  const anchor=grounding.temporalAnchor(c.anchor);
+  const visible=textConstraints.filter(t=>sameConstraint({...c,anchor:''},t));
+  const anchors=new Set(visible.map(t=>t.anchor).filter(a=>a&&(!anchor||a===anchor||a.startsWith(anchor+' ')||a.slice(a.indexOf(' ')+1)===anchor)));
+  if(anchors.size===1)c.anchor=[...anchors][0];
+  if(textConstraints.length&&!visible.some(t=>sameConstraint(c,t)))fail('TEXT_VALUE_MISMATCH','normalization','The displayed numeric condition disagrees with its structured value.',{dimension_id:element.dimension_id,constraint:c});
+ }
+ for(const c of textConstraints)if(!known.some(k=>sameConstraint(c,k)&&grounding.temporalAnchor(c.anchor)===grounding.temporalAnchor(k.anchor)))fail('NUMERIC_SCOPE_CHANGE','normalization','A threshold, strict bound, unit or time anchor changed without a matching source.',{dimension_id:element.dimension_id,constraint:c});
+ for(const c of valueConstraints)if(!known.some(k=>sameConstraint(c,k)&&(!c.anchor||!!k.anchor)))fail('NUMERIC_SCOPE_CHANGE','normalization','A threshold, strict bound, unit or time anchor changed without a matching source.',{dimension_id:element.dimension_id,constraint:c});
+ const originalNums=[...grounding.clean(original).matchAll(/\d+(?:\.\d+)?/g)].map(m=>Number(m[0]));
+ for(const match of grounding.clean(normalized).matchAll(/\d+(?:\.\d+)?/g))if(!originalNums.includes(Number(match[0]))&&!textConstraints.some(c=>Math.abs(Number(c.value))===Number(match[0])&&known.some(k=>sameConstraint(c,k))))fail('UNSUPPORTED_NUMBER','normalization','A number is absent from the source.',{dimension_id:element.dimension_id,number:match[0]});
  const requiresLead=/护士主导|nurse[- ]led|led by nurses/i.test(original),hasLead=/主导|nurse[- ]led|led by nurses/i.test(normalized);
  if(requiresLead&&!hasLead&&!(human&&element.explicit_revision))fail('IMPLEMENTER_ROLE_CHANGED','normalization','Nurse-led cannot be weakened to nurse participation.');
  const hasException=/除非|除外|例外|但不包括|\bexcept\b|\bunless\b/i.test(original);
