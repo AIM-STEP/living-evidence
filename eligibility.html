@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261119-criteria-release-11"></script>
-<script src="app/secure-origin.js?v=20261119-criteria-release-11"></script>
+<script src="app/eligibility-release.js?v=20261119-criteria-release-12"></script>
+<script src="app/secure-origin.js?v=20261119-criteria-release-12"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -78,7 +78,7 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261119-criteria-release-11"></script>
+<script src="app/criteria-grounding.js?v=20261119-criteria-release-12"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
 <script defer src="app/tool-i18n-catalog.js?v=20261118-criteria-actions-1"></script>
@@ -98,19 +98,19 @@
 <nav class="tool-flow" aria-label="Research workflow" data-ui-preserve><a class="btn tool-flow-home" href="index.html?view=toolset" data-flow-home>Projects</a><div class="tool-flow-current"><label class="tool-flow-label" for="tool-flow-picker" data-flow-label>Choose a research step</label><select class="tool-flow-picker" id="tool-flow-picker" data-flow-picker><optgroup label="Tools"><option value="build-protocol.html">Proposal</option><option value="eligibility.html">Eligibility criteria</option><option value="search-strategy.html">Search strategy</option><option value="title-abstract-screening.html">Title and abstract screening</option><option value="full-text-screening.html">Full-text assess</option><option value="extraction.html">Extraction</option><option value="risk-of-bias.html">Risk of bias assessment</option><option value="analysis.html">Analysis</option><option value="certainty-of-evidence.html">Certainty of evidence</option><option value="drafting-manuscript.html">Report</option></optgroup></select></div><div class="tool-flow-actions"><a class="btn tool-flow-previous" href="build-protocol.html" data-flow-previous>Previous</a><a class="btn btn-primary tool-flow-next" href="search-strategy.html" id="next-search-strategy" data-flow-next>Next</a></div></nav>
 <div class="layout eligibility-workspace"><section class="panel editor" aria-label="Criteria editor">
 <div class="section"><label class="generation-method-label" for="generation-method" data-ui-localize>Generation Method</label><select class="select" id="generation-method"><option value="" hidden></option><option value="machine" data-ui-localize>Machine generate</option><option value="manual" data-ui-localize>Manual generate</option></select></div>
-<div class="section" id="machine-generate-panel" hidden><div class="section-head" data-collapse-name="Machine generate"><button class="btn btn-primary" id="start-machine" type="button" data-ui-localize>Generate</button><button class="btn" id="stop-machine" type="button" hidden data-ui-localize>Stop</button><button class="btn criteria-action" id="clear-question" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div class="machine-input"><textarea id="question" class="textarea" aria-label="Review question for automatic criteria generation" placeholder="What population, intervention or phenomenon are you studying?"></textarea><div class="machine-input-tools"><button class="machine-tool" id="add-source" type="button" aria-label="Upload Word, PDF, text or image" title="Upload a document or image">＋</button><button class="machine-tool" id="voice-toggle" type="button" aria-label="Start voice input" aria-pressed="false" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg></button><input id="source-files" type="file" accept=".docx,.pdf,.txt,.md,.csv,image/png,image/jpeg,image/webp" multiple hidden></div></div><div id="machine-attachments" class="machine-attachments" aria-live="polite" hidden></div><div id="generation-status" class="hint machine-status" role="status" aria-live="polite" hidden></div></div>
+<div class="section" id="machine-generate-panel" hidden><div class="section-head" data-collapse-name="Machine generate"><button class="btn btn-primary" id="start-machine" type="button" data-ui-localize>Generate</button><button class="btn" id="stop-machine" type="button" hidden data-ui-localize>Stop</button><button class="btn criteria-action" id="clear-question" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div class="machine-input"><textarea id="question" class="textarea" rows="10" aria-label="Review question for automatic criteria generation" placeholder="What population, intervention or phenomenon are you studying?"></textarea><div class="machine-input-tools"><button class="machine-tool" id="add-source" type="button" aria-label="Upload Word, PDF, text or image" title="Upload a document or image">＋</button><button class="machine-tool" id="voice-toggle" type="button" aria-label="Start voice input" aria-pressed="false" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg></button><input id="source-files" type="file" accept=".docx,.pdf,.txt,.md,.csv,image/png,image/jpeg,image/webp" multiple hidden></div></div><div id="machine-attachments" class="machine-attachments" aria-live="polite" hidden></div><div id="generation-status" class="hint machine-status" role="status" aria-live="polite" hidden></div></div>
 <div class="section" id="manual-generate-panel" hidden><div class="section-head" data-collapse-name="Manual generate"><div class="manual-actions"><button class="btn btn-primary" id="refine-manual" type="button" data-ui-localize>Generate</button><button class="btn criteria-action" id="manual-generate" type="button" aria-label="Clear all entered eligibility content" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker" data-ui-localize>＋ Add criterion</button></div></div><label class="field-label" data-ui-localize>Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden data-ui-localize><strong data-ui-localize>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PICOS">PICOS</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PECOS">PECOS</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other" data-ui-localize>Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading manual-limits-heading" style="margin-top:18px" data-ui-localize>Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label" data-ui-localize>Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date" data-ui-localize>Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date" data-ui-localize>End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language" data-ui-localize>Language</label><select id="language" class="select"><option value="" data-ui-localize>Select language</option><option value="Chinese" data-ui-localize>Chinese</option><option value="English" data-ui-localize>English</option></select></div><div><label class="field-label" for="limits-other" data-ui-localize>Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div id="description-criteria-list" hidden></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn small" id="update-criteria-version" type="button" hidden>Load updated Criteria</button><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div id="criteria-progress" class="criteria-progress" role="progressbar" aria-label="Criteria generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="criteria-progress-track"><div class="criteria-progress-fill"></div></div><span class="criteria-progress-percent">0%</span></div></div><p id="criteria-working" hidden><span data-ui-localize>Working</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
-<script src="app/eligibility/registries.js?v=20261119-criteria-release-11"></script>
-<script src="app/eligibility/domain.js?v=20261119-criteria-release-11"></script>
-<script src="app/eligibility/methodology.js?v=20261119-criteria-release-11"></script>
-<script src="app/eligibility/engine.js?v=20261119-criteria-release-11"></script>
-<script src="app/eligibility/lessons.js?v=20261119-criteria-release-11"></script>
-<script src="app/eligibility/model.js?v=20261119-criteria-release-11"></script>
-<script src="app/eligibility-reset.js?v=20261119-criteria-release-11"></script>
-<script src="app/eligibility/background.js?v=20261119-criteria-release-11"></script>
+<script src="app/eligibility/registries.js?v=20261119-criteria-release-12"></script>
+<script src="app/eligibility/domain.js?v=20261119-criteria-release-12"></script>
+<script src="app/eligibility/methodology.js?v=20261119-criteria-release-12"></script>
+<script src="app/eligibility/engine.js?v=20261119-criteria-release-12"></script>
+<script src="app/eligibility/lessons.js?v=20261119-criteria-release-12"></script>
+<script src="app/eligibility/model.js?v=20261119-criteria-release-12"></script>
+<script src="app/eligibility-reset.js?v=20261119-criteria-release-12"></script>
+<script src="app/eligibility/background.js?v=20261119-criteria-release-12"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -1110,10 +1110,12 @@ function supplementDescription(paragraph,extraRows,limits,refinement){
   }
   return paragraph;
 }
-// Number independent, structured rules without changing source text or decimal thresholds.
-function formatCriteriaRules(rules){
-  const items=(rules||[]).map(rule=>String(rule||'').trim()).filter(Boolean);
-  return items.map((rule,index)=>(items.length>1?(index+1)+'.':'')+rule).join(' ');
+function formatCriteriaRules(rules,render=(text)=>text){
+  const parts=rules.map((rule,index)=>({text:String(rule||'').trim(),index})).filter(part=>part.text);
+  return parts.map(({text,index},position)=>{
+    const value=position===parts.length-1?text:text.replace(/(?:[。;；]|(?<!\b[A-Z])\.)$/u,'');
+    return render(value,index);
+  }).join('；');
 }
 function summarizedRules(rows){
   const groups=new Map();for(const row of rows)for(const rule of row.exclude){const domain=[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · ');if(!groups.has(domain))groups.set(domain,[]);groups.get(domain).push(rule)}
@@ -1252,7 +1254,7 @@ function savePreviewEdits(notify=true){
     if(!Number.isInteger(index)||!full.rows[index]||!['include','exclude'].includes(kind))continue;
     const original=previewBase.data.rows[viewIndex]?.[kind]?.[position]||'';
     const value=String(el.innerText??el.textContent??'').replace(/\r\n?/g,'\n').trim();
-    if(value===original)continue;
+    if(value===(el.dataset.criteriaInitial??original))continue;
     const key=index+':'+kind;
     if(!edits.has(key))edits.set(key,{index,viewIndex,kind,rules:[...(previewBase.data.rows[viewIndex]?.[kind]||[''])]});
     edits.get(key).rules[position]=value;
@@ -1437,19 +1439,22 @@ function sourceConfirmationHtml({detail,index,context='',targetId}){
   }).join('');
   return '<div class="scope-suggestion source-confirmations"><p>'+escapeHtml(detail.text||detail.options?.[0]?.text||'Confirm this condition')+'</p>'+evidence+options+'</div>';
 }
+function criterionNotes(line){
+ const pending=line.position===null&&line.text?(line.linked?'Pending relationship · ':'Pending · ')+line.text:'';
+ return {pending,checks:line.checks};
+}
 function renderCriteriaSide(display,side){
  const markup=display.rows.filter(row=>row[side].length).map(row=>{
-  const count=row[side].filter(line=>line.position!==null).length;
-  const lines=row[side].map((line,lineIndex)=>{
-   const heading=[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · ');
-   const title=lineIndex===0&&heading?'<strong>'+escapeHtml(heading)+':</strong> ':'';
-   const number=row.unlabelledExclusion?'• ':line.position!==null&&count>1?(line.position+1)+'. ':'';
-   const value=line.position===null?(line.text?(line.linked?'Pending relationship · ':'Pending · ')+escapeHtml(line.text):''):row.index===null?escapeHtml(line.text):editableCriteriaText(line.text,
-    `data-criteria-row="${row.index}" data-criteria-kind="${side}" data-criteria-rule="${line.position}"`,
-    row.label+' '+side+' rule '+(line.position+1));
-   return '<div class="'+(row.unlabelledExclusion?'summary-independent-exclusion':'summary-inclusion')+'"><span>'+title+number+value+'</span>'+line.checks.map(sourceConfirmationHtml).join('')+'</div>';
+  const heading=[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · ');
+  const title=heading?'<strong>'+escapeHtml(heading)+':</strong> ':'';
+  const rules=row[side].filter(line=>line.position!==null);
+  const paragraph=formatCriteriaRules(rules.map(line=>line.text),(text,index)=>{
+   if(row.index===null)return escapeHtml(text);
+   const line=rules[index],initial=text===line.text?'':` data-criteria-initial="${escapeHtml(text)}"`;
+   return editableCriteriaText(text,`data-criteria-row="${row.index}" data-criteria-kind="${side}" data-criteria-rule="${line.position}"`+initial,row.label+' '+side+' rule '+(line.position+1));
   });
-  return lines.join('');
+  const notes=row[side].map(criterionNotes).map(({pending,checks})=>(pending?'<span>'+escapeHtml(pending)+'</span>':'')+checks.map(sourceConfirmationHtml).join('')).join('');
+  return '<div class="'+(row.unlabelledExclusion?'summary-independent-exclusion':'summary-inclusion')+'"><span>'+title+paragraph+'</span>'+notes+'</div>';
  }).join('');
  if(markup)return markup;
  const empty=side==='include'?'No explicit inclusion rules entered.':'No explicit exclusion rules entered.';
@@ -1465,7 +1470,8 @@ function renderPreview(){
     const extras=all.filter(row=>!withinFramework(row.title,slots)&&(row.include||row.exclude));
     const paragraph=extras.length?manuscriptDraft(extras.map(r=>({label:r.title,include:r.include.split('\n').filter(Boolean),exclude:r.exclude.split('\n').filter(Boolean)})),extras.filter(r=>r.exclude).map(r=>({rule:r.exclude,domains:[r.title]})),[]):'';
     const emptyExclusion='No explicit exclusion rules entered.';
-    const lines=field=>entries.filter(r=>r[field]).map(r=>`<div class="summary-inclusion"><span style="white-space:pre-wrap"><strong>${escapeHtml(r.title)}:</strong> ${escapeHtml(r[field])}</span></div>`).join('')+(field==='exclude'?extras.filter(r=>r.exclude).map(r=>'<div class="summary-inclusion"><span style="white-space:pre-wrap">'+escapeHtml(r.exclude)+'</span></div>').join(''):'');
+    const ruleText=value=>escapeHtml(formatCriteriaRules(value.split(/\r?\n+/)));
+    const lines=field=>entries.filter(r=>r[field]).map(r=>`<div class="summary-inclusion"><span><strong>${escapeHtml(r.title)}:</strong> ${ruleText(r[field])}</span></div>`).join('')+(field==='exclude'?extras.filter(r=>r.exclude).map(r=>'<div class="summary-inclusion"><span>'+ruleText(r.exclude)+'</span></div>').join(''):'');
     area.innerHTML='<div class="criteria-summary"><section class="summary-block"><h3 data-ui-localize>Inclusion</h3>'+(lines('include')||'<p class="summary-muted" data-ui-localize>Enter eligibility rules above to generate criteria.</p>')+'</section><section class="summary-block"><h3 data-ui-localize>Exclusion</h3>'+(lines('exclude')||'<p class="summary-muted" data-ui-localize>'+emptyExclusion+'</p>')+'</section>'+(paragraph?'<section class="summary-block"><h3 data-ui-localize>Description</h3><p class="summary-paragraph">'+escapeHtml(paragraph)+'</p></section>':'')+'</div>';
     return;
   }
@@ -1508,8 +1514,8 @@ function criteriaWordFile(){
  const widths=[3000,4200,2160],headers=['Domain','Include','Exclude'];
  const checkText=({detail,context})=>'Author check: '+[detail.questionNumber,context,detail.text].filter(Boolean).join(' · ');
  const sideText=lines=>{
-  const numbered=lines.filter(line=>line.position!==null).length>1;
-  return lines.flatMap(line=>[...(line.text?[(line.position===null?(line.linked?'Pending relationship · ':'Pending · '):numbered?(line.position+1)+'. ':'')+line.text]:[]),...line.checks.map(checkText)]);
+  const paragraph=formatCriteriaRules(lines.filter(line=>line.position!==null).map(line=>line.text));
+  return [paragraph,...lines.map(criterionNotes).flatMap(({pending,checks})=>[pending,...checks.map(checkText)])].filter(Boolean);
  };
  const rows=[headers,...display.rows.map(row=>[[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · '),sideText(row.include),sideText(row.exclude)])];
  const topicChecks=display.topic.map(check=>wordParagraph(checkText(check),false)).join('');

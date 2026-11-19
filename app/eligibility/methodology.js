@@ -169,21 +169,19 @@ function frameworkUnits(node,criteria,domain,relations){
  return units.flatMap(unit=>{
   if(!unit.criteria.length)return [];
   if(new Set(unit.criteria.map(c=>domain(c.dimension_id))).size===1)return [unit];
-  const group=relations.length+1;
   const relation={expression:naturalExpression(unit.node,criteria),fields:[]};
   relations.push(relation);
-  function fields(branch,path=[],negative=false){
+  function fields(branch,negative=false){
    const ids=leaves(branch),items=criteria.filter(c=>ids.includes(c.criterion_id));
    const dimensions=[...new Set(items.map(c=>domain(c.dimension_id)))];
    if(dimensions.length===1){
-    const prefix=path.length?'Alternative '+path.join('.')+' — ':'';
     const value=naturalExpression(branch,criteria);
-    const text=prefix+(negative?'not ('+value+')':value);
+    const text=negative?'not ('+value+')':value;
     relation.fields.push({dimension:dimensions[0],text});
     return [{dimension:dimensions[0],node:branch,criteria:items,text,linked:true}];
    }
-   if(branch.op==='not')return fields(branch.children[0],path,!negative);
-   return branch.children.flatMap((child,i)=>fields(child,branch.op==='any_of'?[...(path.length?path:[group]),i+1]:path,negative));
+   if(branch.op==='not')return fields(branch.children[0],!negative);
+   return branch.children.flatMap(child=>fields(child,negative));
   }
   return fields(unit.node);
  });
