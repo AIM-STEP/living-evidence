@@ -1,54 +1,27 @@
-flowchart TD
-    INPUT["当前研究问题<br/>可附原始文档或语音转写"]
-
-    subgraph STAGE1["阶段一　由研究问题生成纳排标准"]
-        READ["1　完整阅读研究问题与相关原文"]
-        FRAME["2　结合综述类型确定框架与要素维度"]
-        EXTRACT["3　本地模型提取明确要素、限制、例外及关注内容"]
-        RECORD["4　标准化表达，建立要素记录<br/>保留原文引文、范围与逻辑关系"]
-        ROUTE{"候选要素明确且有引文？"}
-        JEV["TypeSafe/Jev 按字段独立核对原文"]
-        LOCAL["本地模型复核待定字段或候选要素"]
-        FIDELITY{"独立复核结果"}
-        REPAIR["仅修正受影响要素的措辞或数值<br/>再独立核对一次"]
-        RECHECK{"修正后的复核结果"}
-        STOP["停止本次生成，提示来源问题"]
-        CHECK["5　检查歧义、缺失、冲突及需要新增假设之处"]
-        MERGE["6　合并重复问题，输出提取结果与人工确认清单"]
-
-        READ --> FRAME --> EXTRACT --> RECORD --> ROUTE
-        ROUTE -->|是| JEV
-        ROUTE -->|否| LOCAL
-        JEV -->|全部字段达到阈值且来源支持| FIDELITY
-        JEV -->|字段待定、结论存疑或服务不可用| LOCAL
-        LOCAL --> FIDELITY
-        FIDELITY -->|来源支持或原文确有歧义| CHECK
-        FIDELITY -->|标准化表述偏离原文| REPAIR --> RECHECK
-        RECHECK -->|来源支持或原文确有歧义| CHECK
-        RECHECK -->|原文仍无法支持改写| STOP
-        CHECK --> MERGE
+---
+title: 纳入与排除标准生成流程
+---
+flowchart TB
+    subgraph S1["第一阶段　从研究问题生成草案"]
+        direction TB
+        A["1　确定主题与框架<br/>本地模型通读问题，结合项目登记的研究类型选择匹配框架。<br/>Review topic 概括研究主题，省略对照组。"]
+        B["2　提取纳入与排除要素<br/>按所选框架逐项提取原文中的纳入条件和排除条件，记录引文与位置。<br/>保留显式限制、例外和原文歧义，区分资格条件与分析计划。"]
+        C["3　标准化表达<br/>逐项整理为简洁、连贯的表述，区分干预与对照。<br/>保留对象、方向、阈值、单位、时间点及其他限定条件。"]
+        D["4　JEV 核对原文<br/>按要素核对组别、准确性与来源。原文支持的条目直接确定。<br/>仍有实质歧义的条目归入对应要素；服务缺失的判定仅重试一次。"]
+        E["5　呈现标准草案及待确认项<br/>依次呈现 Review topic 与 Framework、Inclusion 与 Exclusion、Description。<br/>明确项与待确认项同栏。未报告排除条件时，Exclusion 显示 Not reporting."]
+        A --> B --> C --> D --> E
     end
-
-    INPUT -->|Generate| READ
-    MERGE --> PENDING{"有影响纳排判断的待确认项？"}
-    PENDING -->|无| OUTPUT["展示当前纳入标准、排除标准与描述"]
-    PENDING -->|有| INLINE["展示已核实的标准<br/>在相应要素下列出待确认项与原文"]
-
-    subgraph STAGE2["阶段二　作者确认后直接生效"]
-        AUTHOR{"作者如何处理本项？"}
-        ANSWER["选择选项或填写原答<br/>涉及多个不同要素时指定一项或全部"]
-        APPLY["本地校验目标与版本并保存原答<br/>立即更新对应标准及描述，模型调用为零"]
-        REMAIN{"还有其他待答项或未确认的目标？"}
-        HOLD["保留该项待答"]
-        AUTHOR -->|确认| ANSWER --> APPLY --> REMAIN
-        AUTHOR -->|暂缓| HOLD
+    subgraph S2["第二阶段　作者决定与最终标准"]
+        direction TB
+        F["6　作者决定直接生效<br/>作者在对应要素下接受、改写或舍弃待确认项，系统立即应用。"]
+        G["7　形成最终纳入与排除标准<br/>汇总已确定条目及作者决定，供页面展示、Word 导出与后续筛选使用。"]
+        F --> G
     end
-
-    INLINE --> AUTHOR
-    REMAIN -->|有| INLINE
-    REMAIN -->|无| OUTPUT
-    HOLD -->|稍后处理| INLINE
-
-    CLEAR["用户点击 Criteria 的 Clear 并确认"]
-    RESET["取消在途任务，清除标准、旧草稿、人工决定及附件<br/>保留问题框，阻止旧任务回写"]
-    CLEAR --> RESET --> INPUT
+    E -->|有待确认项| F
+    E -->|全部明确| G
+    classDef stageOne fill:#ffffff,stroke:#38847b,color:#142e3e;
+    classDef stageTwo fill:#ffffff,stroke:#6281a3,color:#142e3e;
+    class A,B,C,D,E stageOne;
+    class F,G stageTwo;
+    style S1 fill:#eaf5f1,stroke:#b3d9ca,color:#174e47
+    style S2 fill:#eef3f9,stroke:#c5d6e7,color:#284a70

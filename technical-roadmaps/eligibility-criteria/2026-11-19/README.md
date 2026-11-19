@@ -1,17 +1,32 @@
-# Eligibility Criteria 技术流程图 · 2026-11-19
+# Eligibility Criteria 技术路线图
 
-本图记录从研究问题生成纳排标准、再由作者处理待确认项的流程。对应应用版本 `20261119-criteria-release-3`。[查看实现版本 83e98f9](https://github.com/AIM-STEP/living-evidence/commit/83e98f9aa463383f39ecf78a8ae48eeac07bf715)
+适用版本为 `20261119-criteria-release-21`。图中实线展示从研究问题到最终纳排标准的两阶段七步流程。如果所有条件均已明确，第 5 步可直接进入第 7 步。[对应应用版本](https://github.com/AIM-STEP/living-evidence/commit/f2ad6c2f5787bd265949c0019bfd354047b6330a)
 
-![Eligibility Criteria 技术流程图。阶段一按六步提取并核对原文，仅将影响纳排判断的未决问题交给作者。阶段二提交后立即更新所选标准。Criteria 的 Clear 清除标准并保留研究问题。](figures/eligibility-workflow.png)
+[![从研究问题到最终纳排标准的两阶段七步流程图](figures/eligibility-workflow.png)](figures/eligibility-workflow.png)
 
 [打开高清 PNG](figures/eligibility-workflow.png) · [查看可编辑 Mermaid 源码](sources/eligibility-workflow.mmd)
 
-## 如何读图
+## 第一阶段 · 从原文生成标准
 
-**阶段一。** 先完整阅读研究问题，结合综述类型确定框架与维度。提取时分别记录人群、干预、对照、限制、例外和研究关注，再把标准化表述对应到原文。仅作为研究目的提及的结局或分析方法归入后台记录。只有原文明示其为资格条件时，才据此限定纳排。
+1. **确定主题和框架。** 本地模型通读研究问题，结合项目登记的研究类型，从框架库选择匹配框架。Review topic 用一句话概括研究对象和核心干预或暴露，省略对照组。
+2. **提取纳入与排除要素。** 按所选框架逐项定位原文明示的条件，记录引文、出处和纳排方向。区分干预与对照，保留例外，并区分资格条件、关注结局和分析安排。
+3. **标准化表达。** 将每个要素写成简洁、连续的表述。保留对象、否定、严格界值、单位、时间点和条件间的逻辑关系。例如，原文的 `'no exercise' control` 在 Comparison 中显示为 `no exercise`，原始引文保留。
+4. **由 JEV 核对。** 将明确候选与其原文一并送交 JEV，核对所属要素、方向和含义。原文足以支持的条目直接确定。只有影响纳排判断的实质歧义才交给作者。服务漏回判定时仅重试受影响的条目一次，持续失败时报告技术错误。
+5. **同时呈现确定项与待确认项。** 两类条目显示在对应的纳入或排除要素下。需要作者决定时，该条目旁才显示审核操作。预览同时生成 Description。
 
-**来源复核。** 明确且有引文的候选由 TypeSafe/Jev 核对六个字段。各字段均达到 0.95 的置信度门槛，且判定原文支持、无问题时，可直接通过。待定字段或存在歧义、冲突的候选交本地模型复核。Jev 整体不可用时，本地模型承接复核。系统针对偏离原文的表述修正并再次核对，然后合并重复提问。多题运行时，一题已归并完毕的完整复核批次可与其他题的抽取重叠，模型请求共享两个并发位置。[来源复核实现](https://github.com/AIM-STEP/living-evidence/blob/83e98f9aa463383f39ecf78a8ae48eeac07bf715/tools/eligibility_hybrid_review.py) · [抽取与调度实现](https://github.com/AIM-STEP/living-evidence/blob/83e98f9aa463383f39ecf78a8ae48eeac07bf715/app/eligibility/model.js)
+## 第二阶段 · 作者决定与最终标准
 
-**阶段二。** 作者在相应要素下选定选项，或输入答案并点击 Apply。若问题涉及多个不同要素，可指定其中一项或全部。程序核对目标与当前版本后保存作者原答，当次提交即更新相应标准和描述，模型调用为零。例如，作者确认年龄下限后，该年龄条件立即生效，而同一人群下尚未确认的诊断定义仍可稍后处理。[人工决定与标准更新实现](https://github.com/AIM-STEP/living-evidence/blob/83e98f9aa463383f39ecf78a8ae48eeac07bf715/app/eligibility/engine.js)
+6. **作者决定直接生效。** 作者在对应要素下接受、改写或舍弃待确认项，相关标准和 Description 随即更新，无需再次调用模型。
+7. **形成最终标准。** 页面和 Word 按同一组记录输出。后续筛选使用已生效的资格条件。仅供观察的结局和展示用的缺省提示不构成筛选规则。
 
-**清空与重启。** 在 Eligibility Criteria 主页面确认 Clear 后，程序取消在途和排队的任务，清除当前项目的标准、历史草稿、人工决定及所附材料。问题框保留原文。再次点击 Generate 时从当前输入重新开始。清空前已经启动的任务无法回写。[清空实现](https://github.com/AIM-STEP/living-evidence/blob/83e98f9aa463383f39ecf78a8ae48eeac07bf715/app/eligibility-reset.js)
+## 最终结果的三部分
+
+| 部分 | 呈现方式 |
+| --- | --- |
+| Review topic + Framework | 主题概括研究问题。框架仅显示名称，如 PICOS。 |
+| Inclusion + Exclusion | 按框架顺序展示原文涉及的要素。多项结局在同一行按 `1. …；2. …` 逐项列出。原文未报告排除条件时，保留 Exclusion 标题，正文为 `Not reporting.`。 |
+| Description | 按 BMJ 风格写成可用于稿件的方法段落，连贯交代研究对象、组别、设计及资格限制。原文提供时，说明主要和次要结局及随访分期。可识别的专业缩写首次出现时给出全称。 |
+
+**清空后重新生成。** Criteria 的 Clear 保留问题框内容，清除当前项目的标准、旧草稿和作者决定，并阻止清空前的任务回写。再次 Generate 时从当前输入开始。提取记录本保存可复用的错误类型和技巧。
+
+[详细技术说明](../source-grounded-extraction.md) · [提取记录本](../extraction-notebook.md)
