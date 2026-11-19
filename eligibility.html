@@ -267,7 +267,7 @@ function save(options={}){
     if(methodology)eligibilityBackgroundService.transaction(methodology,write);else write();
     pendingBackgroundStage=null;
   }catch(e){saved=false;pendingBackgroundStage=null;if(methodology&&previous)state=previous;}
-  if(saved&&previous&&completionKey&&criteriaSignature(previous)!==criteriaSignature(state)){
+  if(saved&&previous&&completionKey&&!options.presentationRefresh&&criteriaSignature(previous)!==criteriaSignature(state)){
     try{const done=JSON.parse(localStorage.getItem(completionKey)||'[]');if(Array.isArray(done))localStorage.setItem(completionKey,JSON.stringify(done.filter(step=>![1,2,3].includes(Number(step)))))}catch(e){}
   }
   renderPreview();return saved;
@@ -1426,15 +1426,24 @@ function criteriaDisplay(data,refinement){
   })):[{slots,context}];
   display.rows=layouts.flatMap(layout=>{
    const local=entries.filter(row=>!questions.length||row.questionNumber===layout.number);
+   const snapshot=state.eligibilityV3Snapshot;
+   const source=snapshot?.questions?.find(q=>!questions.length||q.display_number===layout.number);
+   const comparison=local.find(row=>dimensionKey(row.label)==='comparison');
+   if(comparison&&source&&snapshot.status!=='input_saved'&&!refinement?.editedAt&&window.AIMSTEPEligibilityMethodology?.comparatorDisplayText){
+    for(const side of ['include','exclude']){
+     const machineRules=new Set((source[side]||[]).filter(c=>c.dimension_id==='comparator'&&!c.source_decision_ids?.length).map(c=>c.text));
+     for(const line of comparison[side])if(line.position!==null&&machineRules.has(line.text)){
+      line.displayText=window.AIMSTEPEligibilityMethodology.comparatorDisplayText(line.text);
+     }
+    }
+   }
    const slotNames=(layout.slots||[]).map(dimensionKey),outcomeSlot=slotNames.indexOf('outcomes');
-   const groups=(layout.context?.outcome_groups||[]).filter(group=>group.items?.length);
-   if(outcomeSlot>=0&&groups.length){
+   const outcomes=[...new Set((layout.context?.outcome_groups||[]).flatMap(group=>group.items||[]).map(item=>item.trim()).filter(Boolean))];
+   if(outcomeSlot>=0&&outcomes.length){
     let row=local.find(r=>dimensionKey(r.label)==='outcomes');
     if(!row){row={label:layout.slots[outcomeSlot],index:null,questionNumber:layout.number,include:[],exclude:[]};local.push(row);}
-    for(const group of groups){
-     const label=group.label?group.label+' outcomes of interest':'Outcomes of interest';
-     row.include.push({text:label+': '+formatCriteriaRules(group.items),outcomeGroup:true,position:null,checks:[]});
-    }
+    const text=formatCriteriaRules(outcomes,(value,i)=>outcomes.length===1?value:(i+1)+'.'+value);
+    row.include.push({text,outcomeGroup:true,position:null,checks:[]});
    }
    const position=row=>{const i=slotNames.indexOf(dimensionKey(row.label));return i<0?slotNames.length:i;};
    return local.filter(row=>row.include.length||row.exclude.length).sort((a,b)=>position(a)-position(b));
@@ -1483,7 +1492,7 @@ function renderCriteriaSide(display,side){
   const heading=[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · ');
   const title=heading?'<strong>'+escapeHtml(heading)+':</strong> ':'';
   const rules=row[side].filter(line=>line.position!==null||line.outcomeGroup);
-  const paragraph=formatCriteriaRules(rules.map(line=>line.text),(text,index)=>{
+  const paragraph=formatCriteriaRules(rules.map(line=>line.displayText??line.text),(text,index)=>{
    const line=rules[index];
    if(row.index===null||line.outcomeGroup)return escapeHtml(text);
    const initial=text===line.text?'':` data-criteria-initial="${escapeHtml(text)}"`;
@@ -1550,7 +1559,7 @@ function criteriaWordFile(){
  const widths=[3000,4200,2160],headers=['Domain','Include','Exclude'];
  const checkText=({detail,context})=>'Author check: '+[detail.questionNumber,context,detail.text].filter(Boolean).join(' · ');
  const sideText=lines=>{
-  const paragraph=formatCriteriaRules(lines.filter(line=>line.position!==null||line.outcomeGroup).map(line=>line.text));
+  const paragraph=formatCriteriaRules(lines.filter(line=>line.position!==null||line.outcomeGroup).map(line=>line.displayText??line.text));
   return [paragraph,...lines.map(criterionNotes).flatMap(({pending,checks})=>[pending,...checks.map(checkText)])].filter(Boolean);
  };
  const rows=[headers,...display.rows.map(row=>[[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · '),sideText(row.include),sideText(row.exclude)])];
@@ -1562,7 +1571,7 @@ function criteriaWordFile(){
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';syncGenerationMethodOptions();$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';state.reviewType=reviewTypeForProject();document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});
-if(window.AIMSTEPEligibilityBackground&&!embeddedManual&&!embeddedPreview)getEligibilityBackground().then(service=>{if(generationController||previewDirty||state.activeGenerator!=='machine')return;const stage=service.refreshPresentation?.(state);if(!stage)return;const generatedAt=state.machineRun?.generatedAt;useBackgroundCriteria(stage,state.machineRun||{},false,{presentationRefresh:true});if(generatedAt){state.machineRun.generatedAt=generatedAt;state.machineRefinement.generatedAt=generatedAt;}save({updateEntry:true});}).catch(()=>{});
+if(window.AIMSTEPEligibilityBackground&&!embeddedManual&&!embeddedPreview)getEligibilityBackground().then(service=>{if(generationController||previewDirty||state.activeGenerator!=='machine')return;const stage=service.refreshPresentation?.(state);if(!stage)return;const generatedAt=state.machineRun?.generatedAt;useBackgroundCriteria(stage,state.machineRun||{},false,{presentationRefresh:true});if(generatedAt){state.machineRun.generatedAt=generatedAt;state.machineRefinement.generatedAt=generatedAt;}save({updateEntry:true,presentationRefresh:true});}).catch(()=>{});
 window.addEventListener('load',()=>{try{if(window.parent!==window)window.parent.AIMSTEP?.setLanguage?.('en');}catch(_){}window.AIMSTEP?.setLanguage?.('en');},{once:true});
 $('generation-method').addEventListener('change',()=>{const locked=lockedGenerationMethod();if(locked&&$('generation-method').value!==locked){syncGenerationMethodOptions();return;}stopMachineGeneration();stopManualRefinement();abortVoiceInput();setMachineStatus('');setManualStatus('');const mode=$('generation-method').value;syncProposalCriteria();state.generationMethodChoice=mode;state.activeGenerator=mode;state.generationMode=mode==='machine'?'machine':mode==='manual'?'manual':'';$('machine-generate-panel').hidden=mode!=='machine';$('manual-generate-panel').hidden=mode!=='manual';renderPreview();save()});
 $('start-machine').addEventListener('click',generateMachineCriteria);

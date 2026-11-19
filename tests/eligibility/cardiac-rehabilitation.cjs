@@ -37,7 +37,9 @@ async function replay() {
   const field=name=>view.rows.find(row=>row.dimension===name)?.include.join(' ');
   assert.equal(view.reviewTopic,'Clinical and cost-effectiveness of exercise-based cardiac rehabilitation in adults with coronary heart disease');
   assert.match(view.manuscriptParagraph,/compared with no exercise/i);
-  assert.deepEqual(field('Comparison'),"'no exercise' control");
+  assert.equal(field('Comparison'),'no exercise');
+  const comparison=saved.elements.find(e=>e.active!==false&&e.dimension_id==='comparator');
+  assert(comparison.source_refs.some(r=>r.quote==="'no exercise' control"&&Array.from(sourceText).slice(r.start,r.end).join('')===r.quote));
   assert.match(field('Population'),/^adults with coronary heart disease/i);
   assert.match(field('Intervention'),/exercise training alone or combined with psychosocial\/educational interventions/i);
   assert.match(field('Study design'),/six months or longer/i);
@@ -72,13 +74,16 @@ async function replay() {
       last=index;
     }
   }
-  inOrder(html,['Review topic:','Framework:','>Inclusion<','Population:','Intervention:','Comparison:','Outcomes:',
-    'Primary','mortality','Secondary','quality of life','Study design:','>Description<']);
+  const outcomeList=[...primary.items,...secondary.items].map((item,index)=>(index+1)+'.'+item).join('；');
+  inOrder(html,['Review topic:','Framework:','>Inclusion<','Population:','Intervention:','Comparison:','>no exercise<','Outcomes:',
+    outcomeList,'Study design:','>Description<']);
+  assert.doesNotMatch(html.slice(html.indexOf('Outcomes:'),html.indexOf('Study design:')),/primary|secondary/i);
   assert.doesNotMatch(html,/<strong>(?:Context|Other):/i);
   const file=Buffer.from(page.api.export()).toString('utf8');
   const xml=file.slice(file.indexOf('<w:document'),file.indexOf('</w:document>'));
   const table=xml.slice(xml.indexOf('<w:tbl>'),xml.indexOf('</w:tbl>'));
-  inOrder(table,['>Include<','>Population<','>Intervention<','>Comparison<','>Outcomes<','Primary','mortality','Secondary','quality of life','>Study design<']);
+  inOrder(table,['>Include<','>Population<','>Intervention<','>Comparison<','>no exercise<','>Outcomes<',outcomeList,'>Study design<']);
+  assert.doesNotMatch(table.slice(table.indexOf('>Outcomes<'),table.indexOf('>Study design<')), /primary|secondary/i);
   inOrder(xml,['Review topic:','Framework:','<w:tbl>','</w:tbl>','>Description<']);
   // The framework still contains an Outcomes slot when the source supplies none.
   delete page.api.state().machineRefinement.descriptionContext.outcome_groups;

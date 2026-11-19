@@ -48,7 +48,8 @@ async function cardiacRehabilitation() {
   assert.deepEqual(steps,['extract_elements','review_normalization']);
   const saved = E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision}).state;
   const displayed = B.projectToClassic(saved);
-  assert.deepEqual(displayed.rows.find(row=>row.dimension==='Comparison')?.include,[comparator]);
+  assert.deepEqual(displayed.rows.find(row=>row.dimension==='Comparison')?.include,['no exercise']);
+  assert.equal(Methods.criterionPhrase({dimension_id:'comparator',text:'control group'}),'control group');
   assert.deepEqual(displayed.rows.find(row=>row.dimension==='Intervention')?.include,[intervention]);
   assert.deepEqual(displayed.sourceConfirmations,[]);
 }

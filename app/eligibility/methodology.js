@@ -201,10 +201,19 @@ function normalizeComparators(elements,sources=[]){
 
 function join(items,op='any_of'){const list=items.filter(Boolean);if(list.length<2)return list[0]||'';const word=op==='any_of'?'or':'and';return list.length===2?list.join(' '+word+' '):list.slice(0,-1).join(', ')+', '+word+' '+list.at(-1);}
 function qualifierText(value){if(typeof value==='string')return value;for(const key of ['text','description','condition','quote'])if(typeof value?.[key]==='string')return value[key];D.fail('UNRENDERABLE_QUALIFIER','output','A scope qualifier needs readable source-preserving text before criteria can be displayed.');}
+function comparatorDisplayText(value){
+ // The field already identifies the comparator. Strip an explicit arm label
+ // while keeping treatment names such as “blood pressure control” intact.
+ return String(value||'')
+  .replace(/^(?:a |an |the )?control (?:group|arm)\s*\(([^()]+)\)$/iu,'$1')
+  .replace(/(?<![\p{L}\p{N}])(?:(?:a|an|the)\s+)?(?:'([^'\n]+)'|"([^"\n]+)"|‘([^’\n]+)’|“([^”\n]+)”)\s+control(?:\s+(?:group|arm))?\b/giu,
+    (_,single,double,curlySingle,curlyDouble)=>single||double||curlySingle||curlyDouble)
+  .replace(/^(?:(?:a|an|the)\s+)?(no (?:exercise|treatment|intervention|training)|placebo|usual care|standard care|sham(?: treatment)?|wait[- ]?list)\s+control(?:\s+(?:group|arm))?$/iu,'$1');
+}
 function criterionPhrase(c){
  // Keep the subject of a study-level exclusion. Removing “studies of” can
  // turn an excluded research objective into an excluded clinical procedure.
- let value=lower(c.disposition==='exclude'?String(c.text||'').trim().replace(/[.。]+$/,''):phrase(c.text));if(c.dimension_id==='comparator')value=value.replace(/^control\s+group\s*\(([^()]*)\)$/i,'$1');if(c.scope_conditions?.length&&!/\b(?:if|when|among|for)\b/i.test(value))value='For '+c.scope_conditions.map(x=>qualifierText(x)).join(' and ')+': '+value;if(c.exceptions?.length&&!/\bexcept\b|\bunless\b/i.test(value))value+=', except '+c.exceptions.map(x=>qualifierText(x)).join('; ');return value;}
+ let value=lower(c.disposition==='exclude'?String(c.text||'').trim().replace(/[.。]+$/,''):phrase(c.text));if(c.dimension_id==='comparator'&&!c.source_decision_ids?.length&&!c.explicit_revision&&c.decision_status!=='confirmed_by_user')value=comparatorDisplayText(value);if(c.scope_conditions?.length&&!/\b(?:if|when|among|for)\b/i.test(value))value='For '+c.scope_conditions.map(x=>qualifierText(x)).join(' and ')+': '+value;if(c.exceptions?.length&&!/\bexcept\b|\bunless\b/i.test(value))value+=', except '+c.exceptions.map(x=>qualifierText(x)).join('; ');return value;}
 function naturalExpression(node,criteria){
  if(!node)return '';
  if(node.op==='predicate'){
@@ -777,7 +786,7 @@ function description(rows,context={}){
  const studies=designs.length===1&&/\b(?:studies|trials|reviews|reports|RCTs)(?:\s*\([^()]+\))?$/i.test(designs[0])?take('Study design')[0]:'studies';
  const people=population?' in '+population:'';
  const aim=manuscript?.aim;
- if(aim&&armKey(intervention)===armKey(aim.intervention)&&armKey(comparison)===armKey(aim.comparison)&&designs.length===1){
+ if(aim&&armKey(intervention)===armKey(aim.intervention)&&armKey(comparatorDisplayText(comparison))===armKey(comparatorDisplayText(aim.comparison))&&designs.length===1){
   sentences.push(sentence((completed?'We assessed the ':'We will assess the ')+aim.goal+' of '+aim.name+' compared with '+aim.control+people));
   groups.delete('Study design');
   const design=designs[0].replace(/ with follow[-‐‑ ]up of ([\w -]+? (?:days?|weeks?|months?|years?)) or longer$/iu,' with at least $1 of follow-up');
@@ -837,5 +846,5 @@ function description(rows,context={}){
  return result;
 }
 
-return {ageClause,plan,classifyAnalysis,restoreAge,standaloneObjectiveArms,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,criterionPhrase,naturalExpression,splitDimensions,frameworkUnits,combinePopulationUnits,clause,topic,projectTopic,declaredFocus,outcomeGroups,descriptionContext,manuscriptContext,description};
+return {ageClause,plan,classifyAnalysis,restoreAge,standaloneObjectiveArms,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,comparatorDisplayText,criterionPhrase,naturalExpression,splitDimensions,frameworkUnits,combinePopulationUnits,clause,topic,projectTopic,declaredFocus,outcomeGroups,descriptionContext,manuscriptContext,description};
 });
