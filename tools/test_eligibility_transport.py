@@ -1,6 +1,7 @@
 import concurrent.futures
 import copy
 import json
+import threading
 import time
 import unittest
 
@@ -40,14 +41,15 @@ class TransportTest(unittest.TestCase):
         self.assertEqual(element['candidate_id'], 'S1')
         self.assertEqual(question['logic']['element_id'], 'S1')
 
-    def test_identical_project_work_reuses_results_and_restores_new_ids(self):
+    def test_identical_project_work_does_not_retain_completed_replies(self):
         transport.chat(self.messages(), 'same-model', {}, self.invoke)
         result = transport.chat(self.messages('b', 9), 'same-model', {}, self.invoke)
-        self.assertEqual(self.calls, 1)
-        self.assertEqual(result['transport']['cache'], 'hit')
+        self.assertEqual(self.calls, 2)
+        self.assertFalse(transport._entries)
+        self.assertEqual(result['transport']['cache'], 'miss')
         self.assertEqual(json.loads(result['message']['content'])['questions'][0]['question_id'], 'question_' + 'b' * 32)
         transport.chat(self.messages('b', 9, 'Children'), 'same-model', {}, self.invoke)
-        self.assertEqual(self.calls, 2, 'Changed sources must trigger fresh inference')
+        self.assertEqual(self.calls, 3, 'Changed sources must trigger fresh inference')
 
     def test_overlapping_identical_requests_share_inference(self):
         def invoke(messages):
@@ -57,12 +59,35 @@ class TransportTest(unittest.TestCase):
             results = list(pool.map(lambda _: transport.chat(self.messages(), 'same-model', {}, invoke), range(3)))
         self.assertEqual(self.calls, 1)
         self.assertTrue(all('questions' in json.loads(r['message']['content']) for r in results))
+        self.assertFalse(transport._entries)
 
     def test_failure_does_not_poison_retry(self):
         with self.assertRaises(ValueError):
             transport.chat(self.messages(), 'same-model', {}, lambda messages: dict(message=dict(content='bad JSON')))
         transport.chat(self.messages(), 'same-model', {}, self.invoke)
         self.assertEqual(self.calls, 1)
+
+    def test_after_clear_identical_input_cannot_join_the_old_inflight_request(self):
+        old_started, release_old = threading.Event(), threading.Event()
+        def old_model(messages):
+            old_started.set()
+            release_old.wait(3)
+            return self.invoke(messages)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            prior = pool.submit(transport.chat, self.messages(), 'same-model', {}, old_model)
+            try:
+                self.assertTrue(old_started.wait(1))
+                after = self.messages()
+                envelope = json.loads(after[-1]['content'])
+                envelope['project_id'] = json.dumps(['eligibility', envelope['project_id'], 'new-epoch'])
+                after[-1]['content'] = json.dumps(envelope)
+                fresh = pool.submit(transport.chat, after, 'same-model', {}, self.invoke).result(1)
+                self.assertEqual(fresh['transport']['cache'], 'miss')
+            finally:
+                release_old.set()
+            prior.result(1)
+        self.assertEqual(self.calls, 2)
+        self.assertFalse(transport._entries)
 
     def test_projects_and_schemas_do_not_share_cached_work(self):
         transport.chat(self.messages(), 'same-model', {}, self.invoke)

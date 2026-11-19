@@ -1,6 +1,6 @@
-"""Lossless eligibility transport: compact opaque IDs and reuse exact work.
+"""Lossless eligibility transport: compact opaque IDs and share identical in-flight work.
 
-Source text, schemas, prompts, sampling and review rules are unchanged. Cached
+Source text, schemas, prompts, sampling and review rules are unchanged. In-flight
 work remains scoped to its project, model, full input and source revisions.
 Every response is restored to the caller's IDs before downstream validation.
 """
@@ -9,14 +9,10 @@ import hashlib
 import json
 import re
 import threading
-import time
-from collections import OrderedDict
 
-VERSION = 'eligibility-transport-v3'
-TTL = 300
-MAX_ENTRIES = 32
+VERSION = 'eligibility-transport-v4'
 _lock = threading.Lock()
-_entries = OrderedDict()
+_entries = {}
 _fields = {'source_id': 'S', 'source_ids': 'S', 'question_id': 'Q', 'question_ids': 'Q', 'answer_question_id': 'Q', 'id': 'R'}
 
 
@@ -113,24 +109,13 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None):
                       if m.get('role') == 'user' else m for m in messages]
     key = hashlib.sha256(json.dumps([VERSION, envelope.get('project_id'), model, wire_schema, cache_messages],
                                    ensure_ascii=False, sort_keys=True).encode()).hexdigest()
-    now = time.monotonic()
     with _lock:
-        for stale in [k for k, v in _entries.items() if v['event'].is_set() and now - v['at'] > TTL]:
-            _entries.pop(stale, None)
         entry = _entries.get(key)
         owner = entry is None
         if owner:
-            # Never evict in-flight work: an overlapping caller joins it.
-            for stale in list(_entries):
-                if len(_entries) < MAX_ENTRIES:
-                    break
-                if _entries[stale]['event'].is_set():
-                    _entries.pop(stale)
-            entry = {'event': threading.Event(), 'at': now}
+            entry = {'event': threading.Event()}
             _entries[key] = entry
-        else:
-            _entries.move_to_end(key)
-        cache_status = 'miss' if owner else 'hit' if entry['event'].is_set() else 'shared'
+        cache_status = 'miss' if owner else 'shared'
     if owner:
         try:
             reply = invoke_with_schema(wire_messages, wire_schema) if invoke_with_schema else invoke(wire_messages)
@@ -149,20 +134,14 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None):
                                  or not isinstance(questions[0], dict) or questions[0].get('question_id') != expected):
                     raise IdentityError('The model response did not preserve the requested question identifier. No result was saved or cached.')
             entry['reply'], entry['result'] = reply, result
-            entry['at'] = time.monotonic()
-            # Failed/limited generations and structurally incomplete replies
-            # are returned for normal validation, but are never reused.
-            field = 'questions' if envelope['step'] == 'extract_elements' else 'answers' if envelope['step'] == 'interpret_human_answer' else 'items'
-            reusable = isinstance(result, dict) and isinstance(result.get(field), list) and bool(result[field]) and reply.get('done_reason') != 'length'
-            if not reusable:
-                with _lock:
-                    _entries.pop(key, None)
         except BaseException as error:
             entry['error'] = error
+        finally:
+            # Existing waiters hold their own reference. Drop the service's
+            # reference before waking them; the next request starts fresh.
             with _lock:
                 _entries.pop(key, None)
-        finally:
-            entry['event'].set()
+                entry['event'].set()
     elif not entry['event'].wait(600):
         raise TimeoutError('The existing eligibility request did not finish in time.')
     if 'error' in entry:

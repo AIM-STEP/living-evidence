@@ -241,6 +241,20 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(rec["messages"][1]["content"], "u")
         self.assertEqual(rec["attempts"], ["ok"])
 
+    def test_criteria_workflow_is_never_written_to_exchange_logs(self):
+        def log_sizes():
+            return {name: os.path.getsize(os.path.join(self.logs, name)) for name in os.listdir(self.logs)}
+        before = log_sizes()
+        FakeOllama.replies = ['{"text":"private transcription"}']
+        marked = {**self.MSG, 'workflow': 'eligibility-criteria'}
+        self.assertEqual(self.req('POST', '/api/eligibility/model', marked)[0], 200)
+        self.assertEqual(log_sizes(), before)
+        FakeOllama.replies = ['{"items":[]}']
+        old_client = {'messages': [{'role': 'user', 'content': json.dumps({
+            'step': 'review_normalization', 'project_id': 'project', 'payload': {'items': []}})}]}
+        self.assertEqual(self.req('POST', '/api/eligibility/model', old_client)[0], 200)
+        self.assertEqual(log_sizes(), before)
+
     # ------------------------------------------------------------- guards
 
     def test_malformed_bodies_are_refused_not_repaired(self):

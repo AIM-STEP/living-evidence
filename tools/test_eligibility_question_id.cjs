@@ -1,5 +1,10 @@
 const assert=require('node:assert/strict'),E=require('../app/eligibility/engine.js'),M=require('../app/eligibility/model.js');
 (async()=>{
+ const scoped={project_id:'registered-project',criteria_epoch:'new-run'};
+ assert.equal(M.modelProjectId({project_id:'registered-project'}),'registered-project');
+ assert.notEqual(M.modelProjectId(scoped),M.modelProjectId({...scoped,criteria_epoch:'previous-run'}));
+ assert.notEqual(M.modelProjectId(scoped),M.modelProjectId({...scoped,project_id:'other-project'}));
+ assert.equal(M.requestEnvelope('review_normalization',scoped,{},{}).project_id,M.modelProjectId(scoped));
  const state=E.save_input(E.create_project('question-identity-regression'),{research_question:'Include adults.',question_framework:'PICO',output_language:'en'}).state;
  let calls=0;
  const adapter={request:async(step,project,payload,schema)=>{

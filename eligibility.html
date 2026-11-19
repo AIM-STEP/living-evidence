@@ -100,13 +100,14 @@
 <div class="section" id="manual-generate-panel" hidden><div class="section-head" data-collapse-name="Manual generate"><div class="manual-actions"><button class="btn btn-primary" id="refine-manual" type="button" data-ui-localize>Generate</button><button class="btn criteria-action" id="manual-generate" type="button" aria-label="Clear all entered eligibility content" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker" data-ui-localize>＋ Add criterion</button></div></div><label class="field-label" data-ui-localize>Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden data-ui-localize><strong data-ui-localize>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other" data-ui-localize>Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading manual-limits-heading" style="margin-top:18px" data-ui-localize>Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label" data-ui-localize>Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date" data-ui-localize>Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date" data-ui-localize>End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language" data-ui-localize>Language</label><select id="language" class="select"><option value="" data-ui-localize>Select language</option><option value="Chinese" data-ui-localize>Chinese</option><option value="English" data-ui-localize>English</option></select></div><div><label class="field-label" for="limits-other" data-ui-localize>Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div id="criteria-progress" class="criteria-progress" role="progressbar" aria-label="Criteria generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="criteria-progress-track"><div class="criteria-progress-fill"></div></div><span class="criteria-progress-percent">0%</span></div></div><p id="criteria-working" hidden><span data-ui-localize>Working</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="app/eligibility-library.js?v=20261118-criteria-actions-1"></script>
+<script src="app/eligibility-library.js?v=20261119-clear-criteria-1"></script>
 <script src="app/eligibility/registries.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/domain.js?v=20261118-criteria-review-3"></script>
 <script src="app/eligibility/methodology.js?v=20261118-criteria-review-3"></script>
 <script src="app/eligibility/engine.js?v=20261118-criteria-review-3"></script>
-<script src="app/eligibility/model.js?v=20261119-semantic-repair-1"></script>
-<script src="app/eligibility/background.js?v=20261118-criteria-review-3"></script>
+<script src="app/eligibility/model.js?v=20261119-clear-criteria-1"></script>
+<script src="app/eligibility-reset.js?v=20261119-clear-criteria-1"></script>
+<script src="app/eligibility/background.js?v=20261119-clear-criteria-1"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -118,8 +119,16 @@ let embeddedPreviewSummary=null;
 if(embeddedPreview)document.documentElement.classList.add('embedded-preview');
 if(embeddedManual)document.documentElement.classList.add('embedded-manual');
 let lang='en';const $=id=>document.getElementById(id),list=$('criteria-list'),picker=$('criterion-picker');const criterionTypesByFramework={PICO:[{key:'pico-population',id:'INC-01',title:'Population'},{key:'pico-intervention',id:'INC-02',title:'Intervention'},{key:'pico-comparison',id:'INC-03',title:'Comparison'},{key:'pico-outcomes',id:'INC-04',title:'Outcomes'},{key:'pico-study-design',id:'INC-05',title:'Study design'}],PECO:[{key:'peco-population',id:'INC-01',title:'Population'},{key:'peco-exposure',id:'EXP-02',title:'Exposure'},{key:'peco-comparator',id:'CMP-03',title:'Comparator'},{key:'peco-outcomes',id:'OUT-04',title:'Outcomes'},{key:'peco-study-design',id:'SD-05',title:'Study design'}],PCC:[{key:'pcc-population',id:'INC-01',title:'Population'},{key:'pcc-concept',id:'CON-02',title:'Concept'},{key:'pcc-context',id:'CTX-03',title:'Context'}],PICo:[{key:'pico-population',id:'INC-01',title:'Population'},{key:'pico-interest',id:'INT-02',title:'Phenomenon of Interest'},{key:'pico-context',id:'CTX-03',title:'Context'}],Other:[{key:'other-custom',id:'OTH-01',title:'Other'}]};
-let state={framework:'PICO',question:'',reviewType:'Systematic Review',activeGenerator:'',generationMethodChoice:'',manualRefinement:null,machineRefinement:null,machineSourceRevision:0,machineRun:null,machineCriteria:[],criteria:[{id:'INC-01',title:'Population',condition:'Adults with the condition or population of interest',definition:'Define age threshold, diagnosis and how mixed populations are handled.',purpose:'Eligibility',stage:'',uncertain:''},{id:'INC-05',title:'Study design',condition:'Eligible study designs',definition:'Specify design features; distinguish design from report format.',purpose:'Eligibility',stage:'',uncertain:''}],outcomeGate:false,outcomeReason:'',years:'No restriction',language:'',dateRange:{start:{year:'',month:'',day:''},end:{year:'',month:'',day:''}},dateEnd:'Ongoing',reportType:'All formats',reportTypeOther:'',limitsReason:'',confirmed:false,versions:[]};
-try{const saved=(embeddedManual||embeddedPreview)?null:JSON.parse(localStorage.getItem(key)||'null');if(saved)state=Object.assign(state,saved)}catch(e){}if(!Array.isArray(state.machineCriteria))state.machineCriteria=[];if(state.generationMode==='machine'&&state.criteria.length&&state.criteria.every(c=>c.source==='machine')){state.machineCriteria=state.criteria;state.criteria=[{id:'INC-01',title:'Population',condition:'Adults with the condition or population of interest',definition:'Define age threshold, diagnosis and how mixed populations are handled.',purpose:'Eligibility',stage:'',uncertain:''},{id:'INC-05',title:'Study design',condition:'Eligible study designs',definition:'Specify design features; distinguish design from report format.',purpose:'Eligibility',stage:'',uncertain:''}]}if(!state.activeGenerator)state.activeGenerator=state.generationMode==='machine'?'machine':'manual';state.criteria.forEach(c=>{const known=criterionTypesByFramework.PICO.find(t=>t.title.toLowerCase()===String(c.title||'').toLowerCase());if(known)c.id=known.id;if(['Advance to full text','Human review','Contact author'].includes(c.uncertain))c.uncertain=''});
+let state={framework:'PICO',question:'',reviewType:'Systematic Review',activeGenerator:'',generationMethodChoice:'',manualRefinement:null,machineRefinement:null,machineSourceRevision:0,machineRun:null,machineCriteria:[],criteria:[],outcomeGate:false,outcomeReason:'',years:'No restriction',language:'',dateRange:{start:{year:'',month:'',day:''},end:{year:'',month:'',day:''}},dateEnd:'Ongoing',reportType:'All formats',reportTypeOther:'',limitsReason:'',confirmed:false,versions:[]};
+try{
+ const saved=(embeddedManual||embeddedPreview)?null:JSON.parse(localStorage.getItem(key)||'null');
+ if(!embeddedManual&&!embeddedPreview){
+  const epoch=window.AimstepEligibilityReset?.currentEpoch(localStorage,projectId)??null;
+  if(epoch&&saved?.criteria_epoch!==epoch)state={...window.AimstepEligibilityLibrary.blankWorkspace(state),criteria_epoch:epoch};
+  else if(saved)state=Object.assign(state,saved);
+ }
+}catch(e){}
+if(!Array.isArray(state.machineCriteria))state.machineCriteria=[];if(state.generationMode==='machine'&&state.criteria.length&&state.criteria.every(c=>c.source==='machine')){state.machineCriteria=state.criteria;state.criteria=[]}if(!state.activeGenerator)state.activeGenerator=state.generationMode==='machine'?'machine':'manual';state.criteria.forEach(c=>{const known=criterionTypesByFramework.PICO.find(t=>t.title.toLowerCase()===String(c.title||'').toLowerCase());if(known)c.id=known.id;if(['Advance to full text','Human review','Contact author'].includes(c.uncertain))c.uncertain=''});
 // The project registration supplies the review type for this workspace.
 function reviewTypeForProject(){
  try{
@@ -184,7 +193,7 @@ function backgroundErrorMessage(error){
 }
 function backgroundModelClient(model){return {get exchanges(){return model.auditTrail||[];},async request(step,project,payload,schema,instruction,signal){
   let abort;const cancelled=new Promise((_,reject)=>{abort=()=>{const error=new Error('Generation stopped.');error.name='AbortError';reject(error);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true});});
-  try{return await Promise.race([cancelled,Promise.resolve().then(()=>{if(signal?.aborted){const error=new Error('Generation stopped.');error.name='AbortError';throw error;}return callCriteriaJson(model,instruction,{step,project_id:project.project_id,base_revision:project.revision,config_versions:project.config_versions,output_language:'en',payload},signal,schema);})]);}
+  try{return await Promise.race([cancelled,Promise.resolve().then(()=>{if(signal?.aborted){const error=new Error('Generation stopped.');error.name='AbortError';throw error;}return callCriteriaJson(model,instruction,{step,project_id:window.AIMSTEPEligibilityModel.modelProjectId(project),base_revision:project.revision,config_versions:project.config_versions,output_language:'en',payload},signal,schema);})]);}
   finally{signal?.removeEventListener('abort',abort);}
 }};}
 
@@ -229,6 +238,7 @@ function syncGenerationMethodOptions(){
   if(locked)select.value=locked;
 }
 function save(options={}){
+  if(refreshAfterExternalClear())return false;
   syncGenerationMethodOptions();
   state.question=$('question').value;state.reviewType=reviewTypeForProject();state.generationMethodChoice=$('generation-method').value;
   state.dateRange={start:dateFromInput($('start-date').value),end:dateFromInput($('end-date').value)};
@@ -519,7 +529,7 @@ async function requestMachineCriteria(model,input,reviewType,signal,transcribe=f
   const user=ollama?{role:'user',content:prompt,...(input.images.length?{images:input.images.map(image=>image.dataUrl.split(',')[1])}:{})}:
     {role:'user',content:input.images.length?[{type:'text',text:prompt},...input.images.map(image=>({type:'image_url',image_url:{url:image.dataUrl}}))]:prompt};
   const messages=[{role:'system',content:system},user];
-  const body=backend?{messages,provider:'local'}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'},temperature:0};
+  const body=backend?{messages,provider:'local',workflow:'eligibility-criteria'}:ollama?{model:model.name,messages,stream:false,format:'json',options:{temperature:0}}:{model:model.name,messages,stream:false,response_format:{type:'json_object'},temperature:0};
   const headers={'Content-Type':'application/json'};
   const token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
@@ -558,7 +568,7 @@ async function requestCriteriaJson(model,system,payload,signal,schema=null){
   const backend=model.provider==='backend',ollama=model.provider!=='compatible';
   if(schema&&payload.step)system+=window.AIMSTEPEligibilityModel?.serializationInstruction||'';
   const messages=[{role:'system',content:system},{role:'user',content:JSON.stringify(payload)}];
-  const body=backend?{messages,provider:'local',...(schema?{format:schema}:{}),...(payload.step==='review_normalization'?{task:'eligibility-review-v1'}:{})}:ollama?{model:model.name,messages,stream:false,think:false,format:schema||'json',options:{temperature:0,num_ctx:16384}}:{model:model.name,messages,stream:false,response_format:schema?{type:'json_schema',json_schema:{name:'eligibility_rules',schema,strict:true}}:{type:'json_object'},temperature:0};
+  const body=backend?{messages,provider:'local',workflow:'eligibility-criteria',...(schema?{format:schema}:{}),...(payload.step==='review_normalization'?{task:'eligibility-review-v1'}:{})}:ollama?{model:model.name,messages,stream:false,think:false,format:schema||'json',options:{temperature:0,num_ctx:16384}}:{model:model.name,messages,stream:false,response_format:schema?{type:'json_schema',json_schema:{name:'eligibility_rules',schema,strict:true}}:{type:'json_object'},temperature:0};
   const headers={'Content-Type':'application/json'},token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
   async function post(){
@@ -892,9 +902,10 @@ function normalizeMachineCriteria(answer){
   return {framework,rows,questions,reviewTopic:String(answer.reviewTopic||'').trim(),suggestions:normalizeScopeSuggestions(answer.suggestions,types)};
 }
 async function generateMachineCriteria(){
-  if($('generation-method').value!=='machine')return;
+  if(refreshAfterExternalClear()||$('generation-method').value!=='machine')return;
+  const beforeVoice=generationNonce;
   await finishVoiceInput();
-  if($('generation-method').value!=='machine')return;
+  if(beforeVoice!==generationNonce||$('generation-method').value!=='machine')return;
   const question=$('question').value.trim(),reviewType=reviewTypeForProject(),files=attachedFiles.slice(),sourceRevision=Number(state.machineSourceRevision)||0;
   if(!question&&!files.length){setMachineStatus('Enter text, record speech, or attach a document or image before starting.',true);$('question').focus();return}
   if(!files.length&&state.machineRun?.sourceFiles?.length&&(state.machineRun.sourceRevision??0)===sourceRevision){setMachineStatus('Reattach the original files to regenerate these criteria, or clear the current criteria to start from text only. The saved draft and its source evidence have been kept.',true);return;}
@@ -1085,7 +1096,7 @@ function manuscriptDraft(rows,exclusions,limits,context={}){
 // from, so a later edit made elsewhere is never shown with an old summary.
 const summaryKey='aimstep-eligibility-summary:'+(projectId);
 function summaryRowsSig(rows){let h=2166136261;for(const c of JSON.stringify((rows||[]).map(r=>[String(r.title||''),String(r.condition||''),String(r.uncertain||''),String(r.definition||'')])))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0).toString(16)}
-function shareSummary(data){if(embeddedPreview){embeddedPreviewSummary=data?{version:1,savedAt:new Date().toISOString(),...data}:null;return}if(embeddedManual)return;try{if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
+function shareSummary(data){if(embeddedPreview){embeddedPreviewSummary=data?{version:1,savedAt:new Date().toISOString(),...data}:null;return}if(embeddedManual)return;try{if(window.AimstepEligibilityReset&&window.AimstepEligibilityReset.currentEpoch(localStorage,projectId)!==(state.criteria_epoch??null))return;if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
 let previewDirty=false,previewBase=null;
 function editableCriteriaText(value,attributes,label,placeholder=''){
   return `<span class="criteria-editable" contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="${escapeHtml(label)}" data-placeholder="${escapeHtml(placeholder)}" ${attributes}>${escapeHtml(value)}</span>`;
@@ -1144,19 +1155,39 @@ $('preview').addEventListener('input',event=>{
   $('save-criteria').title='Save edited criteria';
 });
 $('save-criteria').addEventListener('click',()=>savePreviewEdits());
-function clearPreviewCriteria(){
-  if(!confirm('Clear the current criteria and any unsaved edits? Your review question and attachments will be kept. Select Cancel to keep your criteria.'))return false;
-  const before=structuredClone(state),wasDirty=previewDirty,machine=state.activeGenerator==='machine';
+function resetCriteriaView(next){
   stopMachineGeneration();stopManualRefinement();abortVoiceInput();
-  state.criteriaClearHistory=[...(state.criteriaClearHistory||[]),{at:new Date().toISOString(),mode:state.activeGenerator,rows:structuredClone(machine?state.machineCriteria:state.criteria),refinement:structuredClone(machine?state.machineRefinement:state.manualRefinement),finalCriteria:structuredClone(state.finalCriteria||null)}].slice(-20);
-  if(state.protocolSource?.sharedCriteria){state.protocolSource.sharedCriteria=false;state.criteria=[];state.machineCriteria=[];state.manualRefinement=null;state.machineRefinement=null;state.machineRun=null;}
-  else if(machine){state.machineCriteria=[];state.machineRefinement=null;state.machineRun=null;}
-  else{state.criteria=[];state.manualRefinement=null;['start-date','end-date','limits-other','language'].forEach(id=>$(id).value='');}
-  state.finalCriteria=null;state.resolvedPending=[];state.pendingDecisions={};state.confirmed=false;
-  // Delay rendering until persistence succeeds, retaining an unsaved draft on failure.
-  previewDirty=true;
-  if(!save()){state=before;previewDirty=wasDirty;fill();toast('Could not clear criteria on this device. Your criteria are unchanged.');return false;}
-  previewDirty=false;previewBase=null;setMachineStatus('');setManualStatus('');fill();toast('Criteria cleared.');return true;
+  pendingBackgroundStage=null;previewDirty=false;previewBase=null;embeddedPreviewSummary=null;
+  attachedFiles.length=0;nextAttachmentId=0;$('source-files').value='';renderAttachments();
+  state=next;setMachineStatus('');setManualStatus('');fill();
+}
+function refreshAfterExternalClear(){
+  if(embeddedManual||embeddedPreview||!projectId)return false;
+  const reset=window.AimstepEligibilityReset;
+  if(!reset?.currentEpoch)return false;
+  const epoch=reset.currentEpoch(localStorage,projectId);
+  if(epoch===(state.criteria_epoch??null))return false;
+  const saved=JSON.parse(localStorage.getItem(key)||'null');
+  const blank=window.AimstepEligibilityLibrary.blankWorkspace(state);
+  const next=saved?.criteria_epoch===epoch?{...blank,...saved}:{...blank,criteria_epoch:epoch};
+  resetCriteriaView(next);
+  return true;
+}
+window.addEventListener('storage',event=>{if(projectId&&event.key==='aimstep-eligibility-epoch:'+projectId)refreshAfterExternalClear();});
+function clearPreviewCriteria(){
+  const isolated=embeddedManual||embeddedPreview;
+  const prompt=isolated?'Clear all criteria, the question, and attachments in this editor?':'Permanently clear this project’s eligibility criteria, all earlier drafts, the review question, and attached materials?';
+  if(!confirm(prompt)||refreshAfterExternalClear())return false;
+  const library=window.AimstepEligibilityLibrary;
+  const next=library.blankWorkspace({...state,generationMethodChoice:$('generation-method').value});
+  if(!isolated&&projectId){
+    try{
+      const changes=library.clearChanges(localStorage,projectId);
+      next.criteria_epoch=window.AimstepEligibilityReset.resetProject(localStorage,projectId,next,changes);
+    }catch(error){toast('Could not clear criteria on this device. Your criteria are unchanged.');return false;}
+    try{sessionStorage.removeItem('aimstep-eligibility-handoff:'+projectId);}catch(_){}
+  }
+  resetCriteriaView(next);toast('Criteria cleared.');return true;
 }
 $('clear-criteria').addEventListener('click',clearPreviewCriteria);
 
@@ -1218,7 +1249,7 @@ function renderCriteriaSide(display,side){
 function renderPreview(){
   const area=$('preview');
   if(previewDirty)return;
-  $('save-criteria').hidden=true;$('clear-criteria').hidden=true;
+  $('save-criteria').hidden=true;$('clear-criteria').hidden=embeddedManual||embeddedPreview||!projectId;
   if(embeddedManual){
     const entries=state.criteria.map(r=>({title:r.title,include:[r.condition,r.definition].filter(v=>String(v||'').trim()).join('\n'),exclude:String(r.uncertain||'').trim()}));
     const lines=field=>entries.filter(r=>r[field]).map(r=>`<div class="summary-inclusion"><span style="white-space:pre-wrap"><strong>${escapeHtml(r.title)}:</strong> ${escapeHtml(r[field])}</span></div>`).join('');
@@ -1287,9 +1318,9 @@ $('source-files').addEventListener('change',event=>{
   state.machineSourceRevision=(Number(state.machineSourceRevision)||0)+1;state.confirmed=false;setMachineStatus('');renderAttachments();save();
 });
 $('voice-toggle').addEventListener('click',toggleVoiceInput);
-$('clear-question').addEventListener('click',()=>{if(!confirm('Clear the review question? Your attachments and saved criteria will be kept.'))return;stopMachineGeneration();abortVoiceInput();$('question').value='';state.confirmed=false;setMachineStatus('');save();$('question').focus()});
+$('clear-question').addEventListener('click',()=>{if(clearPreviewCriteria())$('question').focus()});
 document.querySelectorAll('.framework').forEach(b=>b.addEventListener('click',()=>{markManual();state.framework=b.dataset.framework;state.confirmed=false;document.querySelectorAll('.framework').forEach(x=>x.classList.toggle('selected',x===b));renderPicker();save()}));
-$('manual-generate').addEventListener('click',()=>{if(!confirm('Clear all entered eligibility content, including criteria and source attachments?'))return;stopMachineGeneration();stopManualRefinement();abortVoiceInput();attachedFiles.length=0;state.machineSourceRevision=(Number(state.machineSourceRevision)||0)+1;renderAttachments();state.question='';$('question').value='';if(state.protocolSource)state.protocolSource.sharedCriteria=false;state.criteria=[];state.machineCriteria=[];state.finalCriteria=null;state.resolvedPending=[];state.pendingDecisions={};state.manualRefinement=null;state.machineRefinement=null;state.machineRun=null;state.dateRange={start:{year:'',month:'',day:''},end:{year:'',month:'',day:''}};['start-date','end-date','limits-other'].forEach(id=>$(id).value='');$('language').value='';state.years='';state.dateEnd='';state.reportType='';state.reportTypeOther='';state.limitsReason='';state.outcomeGate=false;state.outcomeReason='';state.generationMode='manual';state.activeGenerator='manual';state.generationMethodChoice='manual';$('generation-method').value='manual';state.confirmed=false;setMachineStatus('');setManualStatus('');picker.hidden=true;$('add-criterion').setAttribute('aria-expanded','false');renderCards();renderPicker();save();toast('All entered eligibility content cleared.')});
+$('manual-generate').addEventListener('click',clearPreviewCriteria);
 $('add-criterion').addEventListener('click',()=>{markManual();const open=picker.hidden;renderPicker();picker.hidden=!open;$('add-criterion').setAttribute('aria-expanded',String(open));save()});
 let composingQuestion=false;
 $('question').addEventListener('compositionstart',()=>{composingQuestion=true;stopMachineGeneration()});
@@ -1424,14 +1455,14 @@ async function confirmBackgroundIssue(detail,choice,answerField){
   try{
     const service=await getEligibilityBackground();let model;
     setMachineStatus('Applying your answer…');if(!option){model=await resolveLocalModel(false,controller.signal);model.auditTrail=[];}
-    const stage=await service.decide({issue_id:detail.issue_id,option_id:option?.option_id,answer_text:answer||option?.label,modelClient:model?backgroundModelClient(model):null,signal:controller.signal});
+    const stage=await service.decide({criteriaEpoch:state.criteria_epoch??null,issue_id:detail.issue_id,option_id:option?.option_id,answer_text:answer||option?.label,modelClient:model?backgroundModelClient(model):null,signal:controller.signal});
     if(run!==generationNonce||controller.signal.aborted)return false;
     const decision=stage.project.decisions.at(-1),confirmed=stage.project.criteria.filter(c=>c.source_decision_ids.includes(decision.decision_id));
     useBackgroundCriteria(stage,state.machineRun,false);
     state.finalCriteria={at:new Date().toISOString(),count:(state.finalCriteria?.count||0)+1,decisions:[...(state.finalCriteria?.decisions||[]),...confirmed.map(c=>({item:detail.text,domain:stage.classic.rows.find(row=>row[c.disposition].includes(c.text))?.dimension||detail.domain,rule:c.text,decision:c.disposition==='include'?'meets':'fails',side:c.disposition,kind:'proposal',at:new Date().toISOString(),provenance:'author-decision',decision_id:decision.decision_id}))]};
     if(!save({updateEntry:true}))throw Error('Could not save this decision. Your previous criteria have been kept.');
     toast('Criteria saved.');return true;
-  }catch(error){state=before;pendingBackgroundStage=null;renderPreview();setMachineStatus(error.name==='AbortError'?'Confirmation stopped.':backgroundErrorMessage(error),true);return false;}
+  }catch(error){if(run!==generationNonce||refreshAfterExternalClear())return false;state=before;pendingBackgroundStage=null;renderPreview();setMachineStatus(error.name==='AbortError'?'Confirmation stopped.':backgroundErrorMessage(error),true);return false;}
   finally{clearTimeout(timer);if(run===generationNonce){generationController=null;$('start-machine').disabled=false;$('stop-machine').hidden=true;}}
 }
 function confirmSourceRule(index,choice,answerField){
@@ -1462,7 +1493,7 @@ $('preview').addEventListener('click',event=>{
 });
 // Search uses this same preview and editing pipeline in an isolated draft.
 if(embeddedPreview){
-  const initial=structuredClone(state);
+  const initial=window.AimstepEligibilityLibrary.blankWorkspace(state);
   window.aimstepCriteriaPreview={
     load(saved){stopMachineGeneration();stopManualRefinement();previewDirty=false;state={...structuredClone(initial),...structuredClone(saved)};fill();},
     read(){if(!savePreviewEdits(false))throw new Error('Could not prepare edited criteria.');return {workspace:structuredClone(state),summary:structuredClone(embeddedPreviewSummary)};},

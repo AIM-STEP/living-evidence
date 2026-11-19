@@ -90,20 +90,43 @@ def upstream(route, payload=None):
         return 502, {'error': 'The AIM-STEP model service is unavailable. Contact the administrator.'}
 
 class Jobs:
+    delivery_ttl = 1200
+
     def __init__(self, worker=upstream):
         self.worker, self.lock, self.jobs = worker, threading.Lock(), {}
         self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix='aimstep-model')
     def submit(self, uid, route, body):
         with self.lock:
             now = time.monotonic()
-            self.jobs = {k: v for k, v in self.jobs.items() if not v['future'].done() or (not v['cancelled'] and now - v['at'] < 1200)}
             own = [v for v in self.jobs.values() if v['uid'] == uid]
             if len(self.jobs) >= 64 or len(own) >= 32 or sum(not v['future'].done() for v in own) >= 8:
                 raise AccessError(429, 'Too many pending requests. Wait for existing requests to finish.')
             key = secrets.token_urlsafe(24)
-            self.jobs[key] = {'uid': uid, 'at': now, 'cancelled': False,
-                              'future': self.pool.submit(self.worker, route, body)}
-            return key
+            future = self.pool.submit(self.worker, route, body)
+            self.jobs[key] = {'uid': uid, 'at': now, 'cancelled': False, 'future': future}
+        # add_done_callback may run synchronously for a completed job. Register
+        # it outside the lock, and never capture body or future in the closure.
+        future.add_done_callback(lambda _: self.finish(key))
+        return key
+
+    def finish(self, key):
+        with self.lock:
+            job = self.jobs.get(key)
+            if not job:
+                return
+            if job['cancelled']:
+                self.jobs.pop(key, None)
+                return
+            # A lost submission/poll can leave a completed job undelivered.
+            # Expire it even if there are no subsequent requests to the gateway.
+            timer = threading.Timer(max(0, job['at'] + self.delivery_ttl - time.monotonic()), self.expire, (key,))
+            timer.daemon = True
+            job['timer'] = timer
+            timer.start()
+
+    def expire(self, key):
+        with self.lock:
+            self.jobs.pop(key, None)
     def get(self, uid, key, cancel=False):
         with self.lock:
             job = self.jobs.get(key)
@@ -112,16 +135,20 @@ class Jobs:
             future = job['future']
             if cancel:
                 job['cancelled'] = True
-                if future.cancel() or future.done():
+                if future.done():
                     self.jobs.pop(key, None)
-                # Running upstream calls finish within their timeout. They still
-                # count toward concurrency limits until they finish.
-                return 200, {'cancelled': True}
-            if not future.done():
+                    if 'timer' in job:
+                        job['timer'].cancel()
+            elif not future.done():
                 return 202, {'jobId': key, 'status': 'running'}
-            status, result = future.result()
-            # Poll result is retained briefly to permit retry after a lost response.
-            return 200, {'status': 'complete', 'httpStatus': status, 'result': result}
+            else:
+                status, result = future.result()
+                # Retain pending delivery to permit retry after a lost response.
+                return 200, {'status': 'complete', 'httpStatus': status, 'result': result}
+        # A queued future may immediately run callbacks inside cancel(). Active
+        # jobs remain counted until completion, when their reply is discarded.
+        future.cancel()
+        return 200, {'cancelled': True}
 
 class Handler(BaseHTTPRequestHandler):
     server_version = 'AIMSTEP-Online/1'

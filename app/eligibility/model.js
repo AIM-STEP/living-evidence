@@ -16,7 +16,15 @@ const reviewSchema=obj({items:list(obj({id:str,status:{enum:['supported','uncert
 const updateSchema=obj({element_id:str,normalized_text:str,structured_value:valueSchema,scope_status:{enum:D.ENUMS.scope_status},semantic_role:{enum:D.ENUMS.semantic_role},disposition:{enum:['include','exclude']}},['element_id']);
 const answerSchema=obj({answers:list(obj({issue_ids:list(str),answer_text:str,action:{enum:['confirm','modify','defer']},updates:list(updateSchema),context_updates:{type:'object'}},['issue_ids','answer_text','action','updates']))});
 const serializationInstruction='\nJSON serialization only: emit compact JSON without indentation or optional whitespace outside string values. Keep every field and all string contents complete.';
-function requestEnvelope(step,state,payload,schema){return {step,project_id:state.project_id,base_revision:state.revision,config_versions:state.config_versions,output_language:state.output_language,payload,schema};}
+// Both inference caches key on project_id. A clear changes only the model's
+// namespace; stored project records, decisions and source IDs keep their IDs.
+function modelProjectId(state){
+ return state.criteria_epoch ? JSON.stringify(['eligibility',state.project_id,state.criteria_epoch]) : state.project_id;
+}
+function requestEnvelope(step,state,payload,schema){
+ return {step,project_id:modelProjectId(state),
+  base_revision:state.revision,config_versions:state.config_versions,output_language:state.output_language,payload,schema};
+}
 function client(options={}){
  let base=options.base||null,model=options.model||null;const exchanges=[];
  const fetcher=options.fetch||((url,init)=>{if(typeof window==='object'&&window.AIMSTEPOnlineModel?.online)return window.AIMSTEPOnlineModel.request(url,init);return fetch(url,/^http:\/\/(?:127\.0\.0\.1|localhost)/.test(url)?{...init,targetAddressSpace:'loopback'}:init);});
@@ -28,7 +36,7 @@ function client(options={}){
  }
  async function request(step,state,payload,schema,instruction,signal){
   const endpoint=await discover(signal),controller=new AbortController(),abort=()=>controller.abort(signal?.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(()=>controller.abort(),options.timeout_ms||600000);
-  const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',messages,format:schema,...(step==='review_normalization'?{task:'eligibility-review-v1'}:{})};
+  const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',workflow:'eligibility-criteria',messages,format:schema,...(step==='review_normalization'?{task:'eligibility-review-v1'}:{})};
   try{
    const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let error;try{error=await r.json();}catch(_){error={error:'HTTP '+r.status};}D.fail(error.code==='MODEL_SCHEMA_ERROR'?'MODEL_SCHEMA_ERROR':'MODEL_HTTP_ERROR',step,error.error||'Model request failed.');}
    const data=await r.json(),raw=data.message?.content||data.choices?.[0]?.message?.content;if(typeof raw!=='string')D.fail('MODEL_EMPTY_RESPONSE',step,'模型返回空内容。');
@@ -262,5 +270,5 @@ async function parse_answers(state,answerText,issueIds,adapter,options={}){
  }
  return {base_revision:state.revision,request_id:options.request_id||D.id('answer_request'),answers:result.answers,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
 }
-return {client,analyze,extract_elements,review_elements,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,requestEnvelope,serializationInstruction};
+return {client,analyze,extract_elements,review_elements,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,serializationInstruction};
 });

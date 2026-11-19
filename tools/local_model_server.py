@@ -423,12 +423,15 @@ class Handler(SimpleHTTPRequestHandler):
         used_model = api_model.config()["model"] if provider == "api" else reply.get("model", self.model)
         used_provider = reply.get("provider", provider)
         content = reply.get("message", {}).get("content", "")
-        write_log(self.log_dir, {
-            "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "seconds": round(time.time() - started, 1),
-            "model": used_model, "provider": used_provider, "options": {} if provider == "api" else ollama_body(self.model, [])["options"], "attempts": attempts,
-            "messages": [{k: (v if k != "images" else ["<%d base64 chars>" % len(i) for i in v])
-                          for k, v in m.items()} for m in messages],
-            "reply": content})
+        # Structured Criteria calls from older clients already carry a transport
+        # or hybrid response. The workflow marker also covers image transcription.
+        if payload.get('workflow') != 'eligibility-criteria' and 'transport' not in reply and payload.get('task') != eligibility_hybrid_review.TASK:
+            write_log(self.log_dir, {
+                "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "seconds": round(time.time() - started, 1),
+                "model": used_model, "provider": used_provider, "options": {} if provider == "api" else ollama_body(self.model, [])["options"], "attempts": attempts,
+                "messages": [{k: (v if k != "images" else ["<%d base64 chars>" % len(i) for i in v])
+                              for k, v in m.items()} for m in messages],
+                "reply": content})
         return self._send_json(200, {"message": {"role": "assistant", "content": content},
                                      "model": used_model, "provider": used_provider,
                                      **({"review": reply["review"]} if "review" in reply else {}),

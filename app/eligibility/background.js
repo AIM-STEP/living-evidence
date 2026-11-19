@@ -1,7 +1,8 @@
 /* Headless adapter: use the versioned eligibility engine behind the established UI. */
-(function(root,factory){const api=factory(root,typeof module==='object'&&module.exports?require('./domain.js'):root.AIMSTEPEligibilityDomain,typeof module==='object'&&module.exports?require('./engine.js'):root.AIMSTEPEligibilityEngine,typeof module==='object'&&module.exports?require('./model.js'):root.AIMSTEPEligibilityModel,typeof module==='object'&&module.exports?require('./methodology.js'):root.AIMSTEPEligibilityMethodology);if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSTEPEligibilityBackground=api;})(typeof window==='object'?window:globalThis,function(root,D,E,M,Methods){
+(function(root,factory){const api=factory(root,typeof module==='object'&&module.exports?require('./domain.js'):root.AIMSTEPEligibilityDomain,typeof module==='object'&&module.exports?require('./engine.js'):root.AIMSTEPEligibilityEngine,typeof module==='object'&&module.exports?require('./model.js'):root.AIMSTEPEligibilityModel,typeof module==='object'&&module.exports?require('./methodology.js'):root.AIMSTEPEligibilityMethodology,typeof module==='object'&&module.exports?require('../eligibility-reset.js'):root.AimstepEligibilityReset);if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSTEPEligibilityBackground=api;})(typeof window==='object'?window:globalThis,function(root,D,E,M,Methods,Reset){
 'use strict';
 const clone=D.clone;
+const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const presentationVersion='20261118-criteria-review-3';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
@@ -89,14 +90,37 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');
  const base=baseURL||new URL('.',root.location.href).href,version='20261118-criteria-actions-1';
  const configs=await Promise.all([frameworkConfig||root.fetch(new URL('config/eligibility-frameworks.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load framework definitions.');return r.json();}),profileConfig||root.fetch(new URL('config/eligibility-review-profiles.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load review profiles.');return r.json();})]);
- const keys={project:'aimstep-eligibility-v3:'+projectId,legacy:'aimstep-eligibility:'+projectId,library:'aimstep-eligibility-library:'+projectId,summary:'aimstep-eligibility-summary:'+projectId};
+ const keys=projectKeys(projectId);
  const read=key=>JSON.parse(storage.getItem(key)||'null');
- function current(){const saved=read(keys.project);if(saved&&(saved.schema_version!==3||saved.project_id!==projectId))D.fail('INVALID_PROJECT','background','The saved methodology record is invalid; it has been preserved.');return saved||E.create_project(projectId);}
+ function current(){
+  const saved=read(keys.project),epoch=currentEpoch(storage,projectId);
+  if(saved&&(saved.schema_version!==3||saved.project_id!==projectId))D.fail('INVALID_PROJECT','background','The saved methodology record is invalid; it has been preserved.');
+  if(saved&&(saved.criteria_epoch??null)===epoch)return saved;
+  const project=E.create_project(projectId);
+  if(epoch)project.criteria_epoch=epoch;
+  return project;
+ }
  function staged(project,expectedRevision,expectedSignature,classic=projectToClassic(project)){return {project,expectedRevision,expectedSignature,classic};}
- function validate(stage){const saved=read(keys.project);if((saved?.revision??0)!==stage.expectedRevision||signature(read(keys.legacy))!==stage.expectedSignature)D.fail('VERSION_CONFLICT','background','The criteria changed while this request was running. Your newer edits have been kept.');}
- function transaction(stage,writeLegacy){validate(stage);const names=Object.values(keys),before=names.map(key=>storage.getItem(key));try{const result=writeLegacy();stage.project.last_published_legacy_signature=signature(read(keys.legacy));storage.setItem(keys.project,JSON.stringify(stage.project));return result;}catch(error){names.forEach((key,i)=>{try{before[i]==null?storage.removeItem(key):storage.setItem(key,before[i]);}catch(_){}});throw error;}}
+ function validate(stage){requireEpoch(storage,projectId,stage.project.criteria_epoch);const saved=read(keys.project);if((saved?.revision??0)!==stage.expectedRevision||signature(read(keys.legacy))!==stage.expectedSignature)D.fail('VERSION_CONFLICT','background','The criteria changed while this request was running. Your newer edits have been kept.');}
+ function transaction(stage,writeLegacy){
+  validate(stage);
+  const names=Object.values(keys),before=names.map(key=>storage.getItem(key));
+  try{
+   const result=writeLegacy();
+   requireEpoch(storage,projectId,stage.project.criteria_epoch);
+   stage.project.last_published_legacy_signature=signature(read(keys.legacy));
+   storage.setItem(keys.project,JSON.stringify(stage.project));return result;
+  }catch(error){
+   // A reset that superseded this stage must never be undone by an old rollback.
+   if(currentEpoch(storage,projectId)===(stage.project.criteria_epoch??null)){
+    names.forEach((key,i)=>{try{before[i]==null?storage.removeItem(key):storage.setItem(key,before[i]);}catch(_){}});
+   }
+   throw error;
+  }
+ }
  function refreshPresentation(legacy){
-  const saved=read(keys.project);if(!saved||saved.presentation_version===presentationVersion||saved.last_published_legacy_signature!==signature(legacy))return null;
+  requireEpoch(storage,projectId,legacy.criteria_epoch);
+  const saved=read(keys.project);if(!saved||(saved.criteria_epoch??null)!==(legacy.criteria_epoch??null)||saved.presentation_version===presentationVersion||saved.last_published_legacy_signature!==signature(legacy))return null;
   const project=clone(saved);
   if(!project.elements.some(e=>e.active!==false)){
    // Earlier versions retired the whole projection even for a title-only or prose-only edit.
@@ -125,22 +149,27 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   return staged(project,saved.revision,signature(read(keys.legacy)));
  }
  async function generate({legacy,question,reviewType,sources=[],modelClient,signal,onProgress}){
+  requireEpoch(storage,projectId,legacy?.criteria_epoch);
   const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs),methods={'Systematic Review':'systematic_review','Scoping Review':'scoping_review','Umbrella Review':'umbrella_review'};
   const raw=question||sources.map(source=>source.text).join('\n\n');
-  let project=E.save_input(saved,{research_question:raw,review_method:methods[reviewType]||null,output_language:'en',legacy_archive:legacy},{base_revision:revision},env).state;
+  let project=E.save_input(saved,{research_question:raw,review_method:methods[reviewType]||null,output_language:'en',legacy_archive:saved.criteria_epoch?null:legacy},{base_revision:revision},env).state;
   for(const [index,source]of sources.entries()){if(source.name==='Question / voice input'&&source.text===question)continue;const questions=project.questions.filter(q=>q.active!==false),stored=E.addSource(project,'user_input',source.text,questions.map(q=>q.question_id),'classic_document:'+index,{input_kind:'original_document',name:source.name,page:source.page||null,verification:source.verification||'original-text'});for(const q of questions)q.imported_source_refs=[...(q.imported_source_refs||[]),E.ref(stored)];}
   if(saved.classic_author_source_ref){const ref=saved.classic_author_source_ref;for(const q of project.questions.filter(q=>q.active!==false))if(!q.additional_source_refs.some(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision))q.additional_source_refs.push(clone(ref));}
-  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);project.presentation_version=presentationVersion;const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected,visible);
+  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});requireEpoch(storage,projectId,saved.criteria_epoch);onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);project.presentation_version=presentationVersion;const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected,visible);
  }
- async function decide({issue_id,option_id,answer_text,modelClient,signal}){
+ async function decide({issue_id,option_id,answer_text,modelClient,signal,criteriaEpoch}){
+  requireEpoch(storage,projectId,criteriaEpoch);
   const project=current(),issue=project.issues.find(issue=>issue.issue_id===issue_id&&issue.status==='open');if(!issue)D.fail('ISSUE_NOT_FOUND','background','This clarification has already changed. Reload the saved criteria.');
   const expected=signature(read(keys.legacy));let request;
   if(option_id)request={base_revision:project.revision,request_id:D.id('answer'),answers:[{issue_id,option_id,answer_text:answer_text||optionLabel(issue.options.find(o=>o.option_id===option_id))}]};
   else request=await M.parse_answers(project,answer_text,[issue_id],modelClient,{signal});
+  requireEpoch(storage,projectId,criteriaEpoch);
   return staged(E.apply_decisions(project,request,E.environment(...configs)).state,project.revision,expected);
  }
  function recordEdit(previous,next){
-  const saved=read(keys.project);if(!saved||signature(previous)===signature(next))return null;
+  requireEpoch(storage,projectId,next.criteria_epoch);
+  requireEpoch(storage,projectId,previous.criteria_epoch);
+  const saved=read(keys.project);if(!saved||(saved.criteria_epoch??null)!==(next.criteria_epoch??null)||signature(previous)===signature(next))return null;
   const before=previous.machineRefinement,after=next.machineRefinement;
   const displayEdit=before&&after?.editedAt&&
    (after.reviewTopic!==before.reviewTopic||after.manuscriptParagraph!==before.manuscriptParagraph)&&
@@ -166,5 +195,5 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  }
  return {generate,decide,validate,transaction,recordEdit,refreshPresentation,current,projectToClassic,keys};
 }
-return {create,projectToClassic,signature,issueText,optionLabel,progressPercent,renderDescription:Methods.description};
+return {create,resetProject,currentEpoch,projectToClassic,signature,issueText,optionLabel,progressPercent,renderDescription:Methods.description};
 });

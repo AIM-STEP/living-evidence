@@ -90,5 +90,20 @@ class Tests(unittest.TestCase):
             jobs.get('u',keys[0],True)
             with self.assertRaises(g.AccessError):jobs.get('u',keys[0])
         finally:event.set();jobs.pool.shutdown()
+        self.assertNotIn(keys[0], jobs.jobs, 'Discard cancelled work immediately at completion')
+
+    def test_lost_poll_can_be_retried_then_expires_without_another_submission(self):
+        expired = []
+        class Timer:
+            def __init__(self, delay, callback, args): expired.append(lambda: callback(*args))
+            def start(self): pass
+            def cancel(self): pass
+        with patch.object(g.threading, 'Timer', Timer):
+            key = self.jobs.submit('owner', '/model', {})
+            self.jobs.pool.shutdown()
+        self.assertEqual(self.jobs.get('owner', key), self.jobs.get('owner', key))
+        self.assertEqual(len(expired), 1)
+        expired[0]()
+        with self.assertRaises(g.AccessError): self.jobs.get('owner', key)
 
 if __name__=='__main__': unittest.main()

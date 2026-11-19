@@ -379,7 +379,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=20261116-feedback-prompt-v2"></script>
 <script src="app/screening-prompt.js?v=20261116-ai-four-sections-v2"></script>
 <script src="app/screening-prompt-editor.js?v=20261116-ai-four-sections-v1"></script>
-<script src="app/search-criteria-editor.js?v=20261116-clear-v3"></script><script src="app/screening-criteria-dialog.js?v=20261119-criteria-display-1"></script><script>
+<script src="app/eligibility-reset.js?v=20261119-clear-criteria-1"></script><script src="app/eligibility-library.js?v=20261119-clear-criteria-1"></script><script src="app/search-criteria-editor.js?v=20261119-clear-criteria-1"></script><script src="app/screening-criteria-dialog.js?v=20261119-clear-criteria-1"></script><script>
 window.AIMSTEPProjectAccess?.run(function(){
 
 'use strict';
@@ -2104,7 +2104,7 @@ function openImportedCriteria(upload){
   pendingCriteriaImport=structuredClone(upload);pendingCriteriaImport.snapshot.framework ||= inferFramework(pendingCriteriaImport.snapshot.rows);manualEditorReady=false;criteriaEditError('');
   $('crit-question').value=upload.snapshot.question||'';$('criteria-editor').hidden=false;$('criteria-view').hidden=true;
   const frame=$('crit-manual-frame');frame.hidden=true;$('crit-editor-loading').hidden=false;
-  const url=new URL(pageLink('eligibility.html'));url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261119-criteria-display-1');frame.src=url.href;
+  const url=new URL(pageLink('eligibility.html'));url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261119-clear-criteria-1');frame.src=url.href;
 }
 $('crit-manual-frame').addEventListener('load',()=>{
   if(!pendingCriteriaImport)return;

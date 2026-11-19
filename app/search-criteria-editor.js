@@ -22,14 +22,5 @@
     catch(error){let rollbackFailed=false;for(const [key,value]of before.reverse()){if(!written.includes(key))continue;try{value===null?storage.removeItem(key):storage.setItem(key,value)}catch(e){rollbackFailed=true}}
       throw new Error(rollbackFailed?'Saving was interrupted. Keep your edits here and check both tools before retrying.':'Could not save criteria on this device. Your edits are still available; please retry.');}
   }
-  function clear(previous,at){
-    const value=copy(previous),machine=value.activeGenerator==='machine';
-    value.criteriaClearHistory=[...(value.criteriaClearHistory||[]),{at,mode:value.activeGenerator,rows:copy((machine?value.machineCriteria:value.criteria)||[]),refinement:copy(value[machine?'machineRefinement':'manualRefinement']||null),finalCriteria:copy(value.finalCriteria||null)}].slice(-20);
-    if(value.protocolSource?.sharedCriteria){value.protocolSource.sharedCriteria=false;value.criteria=[];value.machineCriteria=[];value.manualRefinement=null;value.machineRefinement=null;value.machineRun=null;}
-    else if(machine){value.machineCriteria=[];value.machineRefinement=null;value.machineRun=null;}
-    else{value.criteria=[];value.manualRefinement=null;value.dateRange={start:{year:'',month:'',day:''},end:{year:'',month:'',day:''}};value.language='';value.limitsOther='';}
-    value.finalCriteria=null;value.resolvedPending=[];value.pendingDecisions={};value.confirmed=false;value.criteriaLibraryId=null;
-    return value;
-  }
-  const api={workspace,commit,clear};if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSearchCriteriaEditor=api;
+  const api={workspace,commit};if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSearchCriteriaEditor=api;
 })(globalThis);

@@ -14,7 +14,7 @@ function setup(storage=new Map()){
  const ctx={console,URL,URLSearchParams,AbortController,structuredClone,TextEncoder,Blob,setTimeout(){},clearTimeout(){},navigator:{},confirm:()=>true,
   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},sessionStorage:{getItem(){return null}},
   location:{search:'?projectId=synthetic-method-lock',href:'http://localhost/eligibility.html?projectId=synthetic-method-lock',pathname:'/eligibility.html'},
-  document:{getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{addEventListener(){},AIMSTEPProjectAccess:{run:fn=>fn()}}};
+  document:{getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{addEventListener(){},AimstepEligibilityLibrary:require('../app/eligibility-library.js'),AimstepEligibilityReset:require('../app/eligibility-reset.js'),AIMSTEPProjectAccess:{run:fn=>fn()}}};
  const code=source.replace('// Reuse this exact manual editor',`globalThis.methodTest={state:()=>state,save,fill,clear:clearPreviewCriteria,
   stub(fail=false){
    resolveLocalModel=async()=>({name:'Synthetic model'});
@@ -40,6 +40,7 @@ function setup(storage=new Map()){
   assert.equal(test.select.value,mode,'Inputs alone must allow switching methods');
   assert(!test.disabled(other));
   test.el('question').value='Synthetic question';
+  if(mode==='manual')test.api.state().criteria=[{title:'Population',condition:'Adults',source:'manual'}];
   await test.el(mode==='machine'?'start-machine':'refine-manual').handlers.click();
   assert(test.disabled(other),'Successful generation disables the opposite option');
   assert(!test.disabled(mode));
@@ -61,6 +62,7 @@ function setup(storage=new Map()){
   assert(!reloaded.disabled('machine'));assert(!reloaded.disabled('manual'));
   reloaded.choose(other);assert.equal(reloaded.select.value,other,'Successful Clear permits changing methods');
   const failed=setup();failed.api.stub(true);failed.choose(mode);failed.el('question').value='Synthetic question';
+  if(mode==='manual')failed.api.state().criteria=[{title:'Population',condition:'Adults',source:'manual'}];
   await failed.el(mode==='machine'?'start-machine':'refine-manual').handlers.click();
   assert(!failed.disabled(other),'Failed generation must not lock the method');
   failed.choose(other);assert.equal(failed.select.value,other);

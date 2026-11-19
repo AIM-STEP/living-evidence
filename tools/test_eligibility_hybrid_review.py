@@ -8,7 +8,6 @@ import eligibility_hybrid_review as hybrid
 
 class HybridReviewTest(unittest.TestCase):
     def setUp(self):
-        hybrid._jev_cache.clear()
         self.items = [dict(id='c%d' % i, question_id='q1', dimension_id='population',
                            normalized_text='Adults', structured_value=None,
                            information_status='explicit', semantic_role='eligibility_condition',
@@ -139,7 +138,7 @@ class HybridReviewTest(unittest.TestCase):
         self.assertEqual(result['review']['typesafe_fields_used'], 11)
         self.assertEqual(self.local_ids, [])
 
-    def test_unchanged_input_reuses_jev_decisions_and_partial_local_work(self):
+    def test_unchanged_input_starts_fresh_after_a_completed_review(self):
         import eligibility_transport as transport
         transport._entries.clear()
         local_calls = []
@@ -161,11 +160,12 @@ class HybridReviewTest(unittest.TestCase):
              patch.object(hybrid.ts, 'request', side_effect=uncertain_field) as request:
             first = hybrid.review(self.messages(), self.local, 'local-test', partial_review=partial)
             second = hybrid.review(self.messages(), self.local, 'local-test', partial_review=partial)
-        self.assertEqual(request.call_count, 1)
-        self.assertEqual(len(local_calls), 1)
+        self.assertEqual(request.call_count, 2)
+        self.assertEqual(len(local_calls), 2)
         self.assertEqual(first['message']['content'], second['message']['content'])
-        self.assertEqual(second['review']['typesafe_cache'], 'hit')
-        self.assertEqual(second['review']['local_transport']['cache'], 'hit')
+        self.assertEqual(second['review']['typesafe_cache'], 'disabled')
+        self.assertEqual(second['review']['local_transport']['cache'], 'miss')
+        self.assertFalse(transport._entries)
 
 
 if __name__ == '__main__':
