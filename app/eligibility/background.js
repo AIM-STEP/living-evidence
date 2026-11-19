@@ -204,6 +204,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   if(option?.requires_interpretation)request=await M.parse_answers(project,option.label,[issue_id],modelClient,{signal});
   else if(option_id)request={base_revision:project.revision,request_id:D.id('answer'),answers:[{issue_id,option_id,answer_text:answer_text||optionLabel(issue.options.find(o=>o.option_id===option_id))}]};
   else request=await M.parse_answers(project,answer_text,[issue_id],modelClient,{signal});
+  if(request.answers.some(answer=>answer.from_model&&(answer.issue_ids.length!==1||answer.issue_ids[0]!==issue_id)))D.fail('ISSUE_TARGET_MISMATCH','background','The answer could not be matched to the selected author check.');
   requireEpoch(storage,projectId,criteriaEpoch);
   return staged(E.apply_decisions(project,request,E.environment(...configs)).state,project.revision,expected);
  }

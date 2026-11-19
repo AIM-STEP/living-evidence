@@ -190,8 +190,10 @@ function modelIssueGroups(q,known){
   const elements=array(issue.element_ids).map(id=>byId.get(id)).filter(Boolean);
   if(issue.element_ids?.length&&!elements.length)continue;
   // Equivalent targets in separate source passages can have different element IDs.
-  const scope=issue.original_decision_scope||[...new Set(elements.map(issueTarget))].sort();
-  issue.original_decision_scope=scope;
+  const scope=[...new Set(elements.map(e=>{
+   if(e.source_decision_target?.dimension!==e.dimension_id)e.source_decision_target={dimension:e.dimension_id,key:issueTarget(e)};
+   return e.source_decision_target.key;
+  }))].sort();
   const decision=[decisionWording(issue.question_text),decisionWording(issue.scope_impact),scope,issue.reason_code==='PROPOSED_RESTRICTION'];
   const identity=JSON.stringify(decision),group=groups.get(identity)||{identity,issue,elements:new Map(),options:new Map(),aliases:[]};
   for(const e of elements)group.elements.set(e.element_id,e);
