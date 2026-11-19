@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <base href="/">
-<script src="app/secure-origin.js?v=20261020-1"></script>
+<script src="app/eligibility-release.js?v=20261119-criteria-release-2"></script>
+<script src="app/secure-origin.js?v=20261119-criteria-release-2"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="AIM-STEP workflow: start a project and work through the evidence-based research toolkit." />
@@ -3380,7 +3381,9 @@ body.project-page-mode .toolset-layout { display: none; }
             if (target) url.searchParams.set("page", target.pathname.slice(home.pathname.lastIndexOf("/") + 1) + target.search + target.hash);
           }
           // An explicit project survives refresh, sharing and opening in a new tab.
-          ["project", "id", "appVersion"].forEach(function (key) { url.searchParams.delete(key); });
+          ["project", "id"].forEach(function (key) { url.searchParams.delete(key); });
+          var release = window.AIMSTEPCriteriaRelease, requested = url.searchParams.get("appVersion");
+          if (!release?.tool(file) || !requested || requested !== release.newest(release.current, requested)) url.searchParams.delete("appVersion");
           var owner = target && (target.searchParams.get('projectId') || target.searchParams.get('project') || target.searchParams.get('id'));
           if (view === 'page' && owner) url.searchParams.set('projectId', owner);
           if (view === "project" && activeProject) {
@@ -3560,7 +3563,9 @@ body.project-page-mode .toolset-layout { display: none; }
           if (view === "page" && target) {
             var frameTarget = new URL(target.href);
             // Refresh internal tool documents without changing public links.
-            if (frameTarget.pathname.endsWith(".html")) frameTarget.searchParams.set("appVersion", "20261119-citation-context-1");
+            var release = window.AIMSTEPCriteriaRelease, tool = frameTarget.pathname.split("/").pop();
+            if (release?.tool(tool)) frameTarget = release.editorURL(frameTarget.href);
+            else if (tool.endsWith(".html")) frameTarget.searchParams.set("appVersion", "20261119-citation-context-1");
             // Keep proposal documents mounted so in-flight generation survives tool navigation.
             var selectedFrame = defaultFrame;
             if (/\/build-protocol\.html$/i.test(frameTarget.pathname)) {

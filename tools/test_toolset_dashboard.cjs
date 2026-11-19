@@ -30,7 +30,7 @@ function setup(query = '') {
     page: element(), otherPage: element(), toolset: element(), frame: element(),
     document: {title:'', body:{classList:{toggle(k,v){if(v)classes.add(k);else classes.delete(k);}}},
       getElementById(id) {return nodes[id];}, querySelectorAll() {return [];},createElement(){return element();}},
-    window: {AIMSTEP_ROUTES:routeWindow.AIMSTEP_ROUTES,AIMSTEP:{t:k=>k}, scrollTo(){}},
+    window: {AIMSTEPCriteriaRelease:require('../app/eligibility-release.js'),AIMSTEP_ROUTES:routeWindow.AIMSTEP_ROUTES,AIMSTEP:{t:k=>k}, scrollTo(){}},
     history: {state:null,pushState(state,_,url){this.state=state;this.url=url;},replaceState(state,_,url){this.state=state;this.url=String(url);}},
     renderSetupStatus(){},refreshProject(){},readContext(){return null;},
     rememberProject(id,name){env.activeProject={id,name};},
@@ -145,3 +145,19 @@ console.log('PASS: all ten clean tool routes, static reload entries, legacy link
  assert.equal(env.page.hidden,true);
 }
 console.log('PASS: explicit project URLs survive refresh and history without an implicit active-project fallback');
+
+{
+ const {env}=setup(),version='20991231-criteria-release-14';
+ for(const url of [
+  'https://aimsetp.com/eligibility/?appVersion='+version+'&projectId=p&lang=zh#rules',
+  'https://aimsetp.com/?view=page&page=eligibility.html&appVersion='+version+'&projectId=p&lang=zh#rules',
+ ]){
+  env.location=new URL(url);env.restoreRoute();
+  const frame=new URL(env.frame.src);
+  assert.equal(frame.searchParams.get('appVersion'),version);
+  assert.equal(frame.searchParams.get('projectId'),'p');
+  assert.equal(frame.searchParams.get('lang'),'zh');
+  assert.equal(frame.hash,'#rules');
+  assert.equal(new URL(env.history.url,env.location).searchParams.get('appVersion'),version);
+ }
+}

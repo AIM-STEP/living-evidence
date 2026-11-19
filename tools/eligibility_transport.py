@@ -9,6 +9,7 @@ import hashlib
 import json
 import re
 import threading
+import eligibility_legacy_citations as legacy_citations
 
 VERSION = 'eligibility-transport-v4'
 _lock = threading.Lock()
@@ -42,7 +43,7 @@ def _walk(value, transform, key=None):
     return transform(key, value)
 
 
-def chat(messages, model, schema, invoke, invoke_with_schema=None):
+def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_workflow=False):
     users = [m for m in messages if m.get('role') == 'user']
     if len(users) != 1 or any(m.get('images') for m in messages):
         return invoke(messages)
@@ -52,6 +53,7 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None):
         return invoke(messages)
     if not isinstance(envelope, dict) or envelope.get('step') not in {'extract_elements', 'review_normalization', 'interpret_human_answer'}:
         return invoke(messages)
+    legacy_checker = criteria_workflow and legacy_citations.applies(messages, schema, envelope)
 
     tables = {g: {} for g in ('S', 'Q', 'R')}
     reverse = {g: {} for g in tables}
@@ -161,6 +163,8 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None):
         return value
 
     restored = _walk(entry['result'], restore)
+    if legacy_checker:
+        legacy_citations.locate_legacy_repeats(envelope, restored)
     reply = copy.deepcopy(entry['reply'])
     reply['message']['content'] = json.dumps(restored, ensure_ascii=False, separators=(',', ':'))
     reply['transport'] = {'version': VERSION, 'cache': cache_status,

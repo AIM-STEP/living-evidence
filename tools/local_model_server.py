@@ -50,6 +50,7 @@ import typesafe_model
 import eligibility_hybrid_review
 import eligibility_hybrid_answer
 import eligibility_transport
+import eligibility_legacy_citations
 from model_service_errors import public_error
 import fulltext_sources
 import fulltext_assistant
@@ -401,7 +402,8 @@ class Handler(SimpleHTTPRequestHandler):
         attempts = []
         local_chat = lambda subset, selected_format=fmt: eligibility_transport.chat(subset, self.model, selected_format,
             lambda wire: chat(self.ollama, self.model, wire, attempts=attempts, fmt=selected_format),
-            invoke_with_schema=lambda wire, wire_format: chat(self.ollama, self.model, wire, attempts=attempts, fmt=wire_format))
+            invoke_with_schema=lambda wire, wire_format: chat(self.ollama, self.model, wire, attempts=attempts, fmt=wire_format),
+            criteria_workflow=payload.get('workflow') == 'eligibility-criteria')
         try:
             if provider == "local" and payload.get("task") == eligibility_hybrid_review.TASK:
                 reply = eligibility_hybrid_review.review(messages,
@@ -411,6 +413,8 @@ class Handler(SimpleHTTPRequestHandler):
                 reply = eligibility_hybrid_answer.interpret(messages, local_chat)
             else:
                 reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else local_chat(messages)
+        except eligibility_legacy_citations.ClientUpdateRequired:
+            return self._model_error('MODEL_CLIENT_UPDATE_REQUIRED')
         except (eligibility_transport.IdentityError, eligibility_transport.OutputSyntaxError):
             return self._model_error('MODEL_SCHEMA_ERROR')
         except eligibility_hybrid_review.ReviewInputError:

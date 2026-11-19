@@ -25,6 +25,8 @@
     target.search = url.search;
     target.searchParams.set('view', 'page');
     target.searchParams.set('page', file);
+    const release = window.AIMSTEPCriteriaRelease;
+    if (release?.tool(file)) target.searchParams.set('appVersion', release.newest(release.current, target.searchParams.get('appVersion')));
     target.hash = url.hash;
     location.replace(target.href);
   } else if (file === 'index.html') {

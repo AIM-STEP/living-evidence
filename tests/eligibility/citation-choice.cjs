@@ -52,5 +52,34 @@ const element_id = issue.element_ids[0];
   const chosen = resolved.elements.find(e=>e.element_id===element_id);
   assert(!chosen.source_occurrence_pending);
   assert.deepEqual(chosen.source_refs.filter(r=>r.source_id===source.source_id).map(r=>r.quote), [alternatives[1].quote]);
+  // An older draft may have stored the full compound sentence in both options.
+  // Applying either must still bind the evidence to that occurrence's instruction.
+  const compound = 'Include adults during admission, but exclude adults during follow-up.';
+  const input = E.save_input(E.create_project('compound-passage'), {
+    research_question: compound, question_framework: 'PICO', output_language: 'en',
+  }).state;
+  const question = input.questions[0], originalSource = D.sourceAt(input, question.source_refs[0]);
+  const passages = [compound.indexOf('adults'), compound.lastIndexOf('adults')].map(start => ({
+    ...E.ref(originalSource), match_start:start, match_end:start+6, match_quote:'adults', reference_index:0,
+  }));
+  const draft = E.ingest_candidates(input, {questions:[{
+    question_id:question.question_id, framework_candidates:[], issues:[], logic:null,
+    elements:[{...candidate, source_refs:passages.map(p=>({...E.ref(originalSource,'adults'),start:p.match_start,end:p.match_end})),source_occurrence_alternatives:passages}],
+  }]}).state;
+  const check = draft.issues.find(i=>i.trigger_rule_id==='source_occurrence');
+  const option = check.options[1];
+  assert.equal(option.label, 'exclude «adults» during follow-up.');
+  const updated = E.apply_decisions(draft, {base_revision:draft.revision,request_id:'choose-follow-up',answers:[{
+    issue_ids:[check.issue_id],option_id:option.option_id,answer_text:option.label,from_model:true,action:'confirm',
+    updates:[{element_id:check.element_ids[0],semantic_role:'eligibility_condition',scope_status:'restricted',disposition:'exclude',normalized_text:'adults during follow-up'}],
+  }]}).state;
+  assert.deepEqual(updated.criteria.map(c=>c.disposition), ['exclude']);
+  const refs=updated.elements.find(e=>e.element_id===check.element_ids[0]).source_refs;
+  assert.deepEqual(refs.filter(r=>r.source_id===originalSource.source_id).map(r=>r.quote), ['exclude adults during follow-up.']);
+  const chinese='😀纳入入院时的成人，但排除随访期的成人；以末次访视为准。';
+  const start=Array.from(chinese.slice(0,chinese.lastIndexOf('成人'))).length;
+  const clause=D.occurrenceClause({source_id:'source',source_revision:1,quote:chinese,start:0,end:Array.from(chinese).length,match_start:start,match_end:start+2});
+  assert.equal(clause.quote,'排除随访期的成人；以末次访视为准。');
+  assert.equal(Array.from(chinese).slice(clause.start,clause.end).join(''),clause.quote);
   console.log('PASS: selected passage binds the clarified criterion, direction, exception and exact evidence.');
 })().catch(error=>{console.error(error);process.exitCode=1});

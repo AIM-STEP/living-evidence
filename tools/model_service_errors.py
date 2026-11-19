@@ -2,6 +2,7 @@
 
 ERRORS = {
     'MODEL_REQUEST_INVALID': (400, 'The service could not read the structured model request.'),
+    'MODEL_CLIENT_UPDATE_REQUIRED': (409, 'This Criteria tab uses an older source checker. Reload Criteria in this project and select Generate again. Reattach any local files you were using.'),
     'MODEL_SCHEMA_ERROR': (422, 'The model returned a result with an invalid structure or question identifier.'),
     'MODEL_REVIEW_INCOMPLETE': (422, 'The model did not complete the required semantic assessments.'),
     'MODEL_BUSY': (429, 'The model service is busy. Try again shortly.'),

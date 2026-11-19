@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/secure-origin.js?v=20261020-1"></script>
+<script src="app/eligibility-release.js?v=20261119-criteria-release-2"></script>
+<script src="app/secure-origin.js?v=20261119-criteria-release-2"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -402,7 +403,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js?v=20261006-queue1"></script>
 <script src="app/fulltext-assistant.js?v=20261006-queue1"></script>
-<script src="app/eligibility-reset.js?v=20261119-independent-clear-1"></script><script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script><script src="app/search-criteria-editor.js?v=20261119-clear-criteria-1"></script><script src="app/screening-criteria-dialog.js?v=20261119-independent-clear-1"></script><script>
+<script src="app/eligibility-reset.js?v=20261119-independent-clear-1"></script><script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script><script src="app/search-criteria-editor.js?v=20261119-clear-criteria-1"></script><script src="app/screening-criteria-dialog.js?v=20261119-criteria-release-2"></script><script>
 window.AIMSTEPProjectAccess?.run(function(){
 
 'use strict';
@@ -420,7 +421,7 @@ function pageLink(file,view){
   const u=new URL(file,location.href);
   if(projectId)u.searchParams.set('projectId',projectId);
   if(view)u.searchParams.set('view',view);
-  return u.href;
+  return file==='eligibility.html'&&window.AIMSTEPCriteriaRelease?window.AIMSTEPCriteriaRelease.editorURL(u,new URL(location.href).searchParams.get('appVersion')).href:u.href;
 }
 document.querySelectorAll('[data-home]').forEach(a=>a.href=pageLink('index.html'));
 document.querySelectorAll('[data-workflow]').forEach(a=>a.href=pageLink('index.html','project'));
@@ -2071,8 +2072,7 @@ function loadManualCriteriaEditor(snapshot){
   manualEditorReady=false;manualEditorDraft=structuredClone(snapshot||{});
   manualEditorDraft.framework||=inferFramework(manualEditorDraft.rows||[]);
   const frame=$('crit-manual-frame');frame.hidden=true;$('crit-editor-loading').hidden=false;
-  const url=new URL('eligibility.html',location.href);url.searchParams.set('embedded','fulltext-criteria');url.searchParams.set('editorVersion','20261119-clear-criteria-1');
-  if(projectId)url.searchParams.set('projectId',projectId);
+  const url=new URL(pageLink('eligibility.html'));url.searchParams.set('embedded','fulltext-criteria');
   frame.src=url.href;
 }
 $('crit-manual-frame').addEventListener('load',()=>{

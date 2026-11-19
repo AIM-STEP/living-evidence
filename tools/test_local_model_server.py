@@ -118,6 +118,14 @@ class ServerTest(unittest.TestCase):
         interpret.assert_called_once()
         write_log.assert_not_called()
 
+    def test_legacy_duplicate_citation_retry_returns_upgrade_before_inference(self):
+        envelope = {'step': 'extract_elements', 'payload': {'validation_feedback': {
+            'code': 'QUOTE_OFFSET_MISMATCH', 'message': 'Candidate c5' + srv.eligibility_legacy_citations._OLD_ERROR_END}}}
+        payload = {'workflow': 'eligibility-criteria', 'messages': [{'role': 'user', 'content': json.dumps(envelope)}]}
+        with patch.object(srv, 'chat') as ollama:
+            self.assertEqual(self.req('POST', srv.MODEL, payload), srv.public_error('MODEL_CLIENT_UPDATE_REQUIRED'))
+            ollama.assert_not_called()
+
     def test_criteria_reports_fixed_error_types_without_leaking_content(self):
         payload = {**self.MSG, 'task': srv.eligibility_hybrid_review.TASK}
         cases = [

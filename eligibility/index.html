@@ -1,2 +1,7 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AIM-STEP</title><script>const target=new URL('../',location.href);target.search=location.search;target.searchParams.set('view','page');target.searchParams.set('page',"eligibility.html");target.searchParams.set('appVersion',"20261119-citation-context-1");target.hash=location.hash;location.replace(target.href);</script></head><body><a href="../?view=page&amp;page=eligibility.html">Open tool</a></body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AIM-STEP</title><script>const target=new URL('../',location.href);target.search=location.search;target.searchParams.set('view','page');target.searchParams.set('page',"eligibility.html");target.searchParams.set('appVersion',(function newest(current,requested){
+    const pattern=/^(\d{8})-criteria-release-(\d{1,6})$/;
+    const next=pattern.exec(requested||''),local=pattern.exec(current||'');
+    if(!next)return current;
+    return !local||next[1]>local[1]||(next[1]===local[1]&&Number(next[2])>Number(local[2]))?requested:current;
+  })("20261119-criteria-release-2",target.searchParams.get('appVersion')));target.hash=location.hash;location.replace(target.href);</script></head><body><a href="../?view=page&amp;page=eligibility.html">Open tool</a></body></html>

@@ -14,6 +14,23 @@ function text(value,field,max=20000){if(typeof value!=='string'||value.length>ma
 function sourceAt(state,ref){return state.sources.find(s=>s.source_id===ref.source_id&&s.revision===ref.source_revision);}
 function locate(source,quote){const at=source.indexOf(quote);return at<0?null:{start:Array.from(source.slice(0,at)).length,end:Array.from(source.slice(0,at+quote.length)).length};}
 function quoteText(refs,separator=' '){return [...new Set(refs.map(ref=>ref.quote))].join(separator);}
+function occurrenceClause(passage){
+ const {quote,start,source_id,source_revision,match_start,match_end}=passage;
+ const points=Array.from(quote);
+ const matchFrom=points.slice(0,match_start-start).join('').length;
+ const matchTo=matchFrom+points.slice(match_start-start,match_end-start).join('').length;
+ // Split only at an explicit new include/exclude instruction. A semicolon
+ // introducing a time limit, condition or exception stays with the selected rule.
+ const boundary=/(?:[,，]?\s*\b(?:whereas|but)\s+|[;；]\s*|[,，]?\s*(?:但是|但|而)\s*)(?=(?:we\s+)?(?:(?:will|must|should|do)\s+)?(?:not\s+)?(?:include|exclude)\b|(?:不予|不得|不)?(?:纳入|排除))/giu;
+ let from=0,to=quote.length;
+ for(const separator of quote.matchAll(boundary)){
+  const next=separator.index+separator[0].length;
+  if(next<=matchFrom)from=next;
+  else if(separator.index>=matchTo){to=separator.index;break;}
+ }
+ const exact=quote.slice(from,to),offset=start+Array.from(quote.slice(0,from)).length;
+ return {source_id,source_revision,quote:exact,start:offset,end:offset+Array.from(exact).length};
+}
 function validate_provenance(state,refs,questionId,{allowEmpty=false}={}){
  if(!Array.isArray(refs)||!refs.length&&!allowEmpty)fail('MISSING_SOURCE','provenance','A supported requirement needs a source.');
  const characters=new Map();
@@ -80,5 +97,5 @@ function validate_candidate_element(candidate){
  if(candidate.semantic_review&&!['supported','uncertain','contradicted'].includes(candidate.semantic_review.status))fail('INVALID_ENUM','semantic_review','Invalid semantic review status.');
  return candidate;
 }
-return {clone,array,ENUMS,EligibilityError,fail,id,stableId,now,key,object,text,enumValue,sourceAt,locate,quoteText,validate_provenance,sourceDifferences:grounding.differences,canonical,sameConstraint,structuredConstraints,check_semantics,hasOr,hasAnd,treeHas,validate_expression,mapExpression,walkLeaves,validate_candidate_element};
+return {clone,array,ENUMS,EligibilityError,fail,id,stableId,now,key,object,text,enumValue,sourceAt,locate,quoteText,occurrenceClause,validate_provenance,sourceDifferences:grounding.differences,canonical,sameConstraint,structuredConstraints,check_semantics,hasOr,hasAnd,treeHas,validate_expression,mapExpression,walkLeaves,validate_candidate_element};
 });

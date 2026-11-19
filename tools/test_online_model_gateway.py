@@ -46,6 +46,8 @@ class Tests(unittest.TestCase):
     def test_valid_signed_identity(self): self.assertEqual(self.identity('Bearer '+self.token()),'synthetic-owner')
     def test_model_error_codes_are_allowlisted_and_raw_error_bodies_stay_private(self):
         for status, supplied, expected in [(422, 'MODEL_REVIEW_INCOMPLETE', 'MODEL_REVIEW_INCOMPLETE'),
+                                           (409, 'MODEL_CLIENT_UPDATE_REQUIRED', 'MODEL_CLIENT_UPDATE_REQUIRED'),
+                                           (409, 'untrusted', None),
                                            (422, 'MODEL_SCHEMA_ERROR', 'MODEL_SCHEMA_ERROR'),
                                            (502, 'MODEL_SCHEMA_ERROR', 'MODEL_UPSTREAM_ERROR'),
                                            (422, 'unknown', None), (503, None, 'MODEL_UNAVAILABLE')]:

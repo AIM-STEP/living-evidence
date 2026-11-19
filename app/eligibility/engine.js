@@ -201,7 +201,8 @@ function sourceOccurrenceIssue(q,e){
  const alternatives=e.source_occurrence_alternatives,groups=new Set(alternatives.map(a=>a.reference_index));
  const text=groups.size===1?'Which passage defines the intended rule, and how should it be applied?':'What rule should apply across these passages? Include any limits or exceptions.';
  const options=groups.size===1?alternatives.map(a=>{
-  const characters=Array.from(a.quote),before=characters.slice(0,a.match_start-a.start).join(''),after=characters.slice(a.match_end-a.start).join('');
+  const clause=D.occurrenceClause(a),characters=Array.from(clause.quote);
+  const before=characters.slice(0,a.match_start-clause.start).join(''),after=characters.slice(a.match_end-clause.start).join('');
   return {option_id:D.stableId('passage',JSON.stringify([a.source_id,a.source_revision,a.match_start,a.match_end])),
    label:(a.heading?a.heading.quote+' — ':'')+before+'«'+a.match_quote+'»'+after,source_occurrence_ref:a,requires_interpretation:true};
  }):[];
@@ -428,10 +429,9 @@ function valueText(value,language){if(!value)return '';const ops={gt:'>',gte:'�
 function checkSelectedPassage(passage,update){
  // Consider the passage the author actually selected. Two occurrences can be
  // in different clauses of the same sentence ("include X, but exclude X ...").
- const chars=Array.from(passage.quote),prefix=chars.slice(0,passage.match_start-passage.start).join(''),suffix=chars.slice(passage.match_end-passage.start).join('');
- const boundary=/\b(?:whereas|but)\s+(?=(?:do not |must |should |will )?(?:includ|exclud))|[;；](?=\s*(?:includ|exclud|纳入|排除))/i;
- const before=prefix.split(boundary).at(-1),after=suffix.split(boundary)[0];
- const text=(before+passage.match_quote+after).trim();
+ const clause=D.occurrenceClause(passage),chars=Array.from(clause.quote);
+ const before=chars.slice(0,passage.match_start-clause.start).join(''),after=chars.slice(passage.match_end-clause.start).join('');
+ const text=clause.quote.trim();
  const directive=text.match(/^(?:we\s+)?(?:(?:will|must|should)\s+)?(do not include|do not exclude|exclude|include|inclusion criteria|exclusion criteria|纳入标准|排除标准|不纳入|排除|纳入)(?=\s|[:：]|[\u3400-\u9fff])/i);
  const heading=passage.heading?.quote.trim().replace(/^#+\s*|[:：]$/g,'').trim();
  const governing=directive?.[1]||(/^(?:(?:inclusion|exclusion)(?: criteria)?|纳入(?:条件|标准)?|排除(?:条件|标准)?)$/i.test(heading)?heading:null);
@@ -534,7 +534,7 @@ function apply_decisions(original,request,env=environment()){
    const e=state.elements.find(e=>e.element_id===update.element_id&&active(e));if(!e)fail('ELEMENT_NOT_FOUND','update','The update target does not exist or is obsolete.');if(qids.length&&!qids.includes(e.question_id))fail('CROSS_QUESTION_UPDATE','update','This answer was not linked to the target question.');
    if(issues.length&&issues.some(i=>i.element_ids.length)&&!issues.some(i=>i.element_ids.includes(e.element_id))&&!option?.updates?.some(u=>u.element_id===e.element_id))fail('ISSUE_TARGET_MISMATCH','update','The proposed update targets a different Element than the answered issue.');
    const q=state.questions.find(q=>q.question_id===e.question_id),passage=option?.source_occurrence_ref;
-   const adjusted={...answer,explicit_revision:answer.explicit_revision||option?.explicit_revision,selected_passage:passage,supporting_refs:passage?[passage.heading,passage].filter(Boolean):option?.explicit_revision&&primary?.proposed_source_ref?[primary.proposed_source_ref]:answer.supporting_refs};
+   const adjusted={...answer,explicit_revision:answer.explicit_revision||option?.explicit_revision,selected_passage:passage,supporting_refs:passage?[passage.heading,D.occurrenceClause(passage)].filter(Boolean):option?.explicit_revision&&primary?.proposed_source_ref?[primary.proposed_source_ref]:answer.supporting_refs};
    const change=answerUpdate(state,q,e,update,adjusted,source,primary);allApplied=allApplied&&change.applied;decision.changes.push({element_id:e.element_id,old:change.old,new:change.new,applied:change.applied});if(change.applied){e.source_decision_ids=[...(e.source_decision_ids||[]),decision.decision_id];if(e.dimension_id==='population.age'&&e.scope_status==='unrestricted')for(const parent of state.elements.filter(p=>active(p)&&p.age_boundary_element_id===e.element_id)){const old=clone(parent);parent.normalized_text=parent.normalized_text.replace(/老年/g,'').replace(/\b(?:elderly|older)\s+(adults?|patients?|people)/gi,'$1');parent.source_refs.push(ref(source));parent.source_decision_ids=[...(parent.source_decision_ids||[]),decision.decision_id];parent.decision_status='confirmed_by_user';parent.explicit_revision=true;parent.revision++;decision.changes.push({element_id:parent.element_id,old,new:clone(parent),applied:true});}}
   }
   if(allApplied&&decision.status==='applied')for(const issue of issues){issue.status='resolved';issue.resolved_by_decision_id=decision.decision_id;issue.resolved_at_revision=state.revision+1;}

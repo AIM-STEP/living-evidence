@@ -227,6 +227,7 @@ function citationContext(hit){
  return {context,group:JSON.stringify([span.start,h?.start,...group])};
 }
 const reviewCitations=Symbol('repeated source quotations for independent review');
+const locatedContexts=Symbol('original context of resolved repeated quotations');
 function checkExtractedSources(state,candidate,questionId,ranges){
  delete candidate.source_occurrence_alternatives;
  delete candidate.source_occurrence_pending;
@@ -265,7 +266,10 @@ function checkExtractedSources(state,candidate,questionId,ranges){
    if(!groups.has(group))groups.set(group,{...context,match_start:hit.ref.start,match_end:hit.ref.end,match_quote:ref.quote,reference_index});
   }
   for(const passage of groups.values()){
-   review.push({source_id:ref.source_id,source_revision:ref.source_revision,quote:ref.quote,start:passage.match_start,end:passage.match_end,context:passage.quote,context_start:passage.start,...(passage.heading?{heading:passage.heading}:{})});
+   // Preserve all readings for clarification. Once a passage is identified,
+   // an opposing clause in the same sentence cannot support its conditions.
+   const context=groups.size===1?D.occurrenceClause(passage):passage;
+   review.push({source_id:ref.source_id,source_revision:ref.source_revision,quote:ref.quote,start:passage.match_start,end:passage.match_end,context:context.quote,context_start:context.start,...(passage.heading?{heading:passage.heading}:{})});
    if(groups.size>1)alternatives.push(passage);
   }
  }
@@ -273,12 +277,27 @@ function checkExtractedSources(state,candidate,questionId,ranges){
  candidate.source_refs=D.validate_provenance(state,uniqueRefs,questionId,{allowEmpty:candidate.information_status==='missing'||candidate.scope_status==='not_applicable'&&!!candidate.applicability_basis});
  if(alternatives.length)candidate.source_occurrence_alternatives=alternatives;
  if(entries.some(entry=>entry.hits.length>1)){
+  if(!alternatives.length)candidate[locatedContexts]=review.filter(ref=>ref.context);
   // Highly repetitive documents can repeat the same long context dozens of
   // times. Send the presented ranges once in that case, preserving the full text.
-  if(JSON.stringify(review).length>6500){
+  const large=JSON.stringify(review).length>6500;
+  if(large&&alternatives.length){
    const used=new Set(entries.flatMap(entry=>entry.hits.map(hit=>hit.span)));
    candidate[reviewCitations]=[...used].map(span=>({source_id:span.id,source_revision:span.revision,quote:span.text,start:span.start,end:span.end,
     matched_quotes:[...new Set(entries.filter(entry=>entry.hits.some(hit=>hit.span===span)).map(entry=>entry.ref.quote))]}));
+  }else if(large){
+   // Reuse only the located clauses. Quoting the entire batch here would
+   // reintroduce other occurrences during normalization and wording repair.
+   const excerpts=new Map();
+   for(const ref of review){
+    const start=ref.context_start??ref.start,quote=ref.context??ref.quote;
+    const key=JSON.stringify([ref.source_id,ref.source_revision,quote,ref.heading?.start]);
+    if(!excerpts.has(key))excerpts.set(key,{source_id:ref.source_id,source_revision:ref.source_revision,start,
+     end:start+Array.from(quote).length,quote,matched_quotes:[],...(ref.heading?{heading:ref.heading}:{})});
+    const terms=excerpts.get(key).matched_quotes;
+    if(!terms.includes(ref.quote))terms.push(ref.quote);
+   }
+   candidate[reviewCitations]=[...excerpts.values()];
   }else candidate[reviewCitations]=review;
  }
 }
@@ -493,6 +512,26 @@ function needsWordingRepair(a){
  if(a.status==='contradicted'||a.issue_type==='unsupported_rewrite')return true;
  return a.status==='uncertain'&&a.issue_type!=='ambiguous_source'&&a.information_status==='explicit';
 }
+function retainReviewedBounds(candidate){
+ const contexts=candidate[locatedContexts];
+ if(!contexts?.length||candidate.semantic_review.status!=='supported'||!(candidate.structured_value||/\d/u.test(candidate.normalized_text)))return;
+ try{D.check_semantics(candidate,candidate.source_refs);return;}
+ catch(error){if(!['NUMERIC_SCOPE_CHANGE','UNSUPPORTED_NUMBER'].includes(error.code))return;}
+ // Save the same exact passage or governing heading that the independent
+ // reviewer saw. A different occurrence in the document cannot supply a bound.
+ const extra=contexts.flatMap(ref=>{
+  const citations=ref.heading?[ref.heading]:[];
+  if(ref.context!==ref.quote)citations.push({source_id:ref.source_id,source_revision:ref.source_revision,quote:ref.context,
+   start:ref.context_start,end:ref.context_start+Array.from(ref.context).length});
+  return citations;
+ });
+ if(!extra.length)return;
+ const refs=[...new Map([...candidate.source_refs,...extra].map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end]),ref])).values()];
+ // If the proposed rule still fails a content check, the normal ingest path
+ // reports that error against the original citations.
+ try{D.check_semantics(candidate,refs);}catch(error){if(!(error instanceof D.EligibilityError))throw error;return;}
+ candidate.source_refs=refs;
+}
 function unverifiedWording(item,assessment){
  const reason=String(assessment.reason||'').trim();
  D.fail('SEMANTIC_REVIEW_FAILED','review_normalization','The proposed wording could not be verified against its source.',{candidate_id:item.id,dimension_id:item.dimension_id,wording:item.normalized_text,reason});
@@ -508,7 +547,9 @@ async function repairWording(state,adapter,questions,items,first,signal){
  const evidence=items.map(item=>{
   if(!item.source_quotes.length)unverifiedWording(item,first.get(item.id));
   const refs=D.validate_provenance(state,item.source_quotes,item.question_id);
-  const source_quotes=refs.map(ref=>{
+  const source_quotes=refs.map((ref,index)=>{
+   const located=item.source_quotes[index];
+   if((located.context&&Number.isInteger(located.context_start))||located.matched_quotes)return located;
    const source=D.sourceAt(state,ref);
    if(questions.some(q=>q.original_question===source.original_text))return ref;
    const characters=Array.from(source.original_text);
@@ -574,6 +615,7 @@ async function review_elements(state,candidates,adapter,options={}){
    e.semantic_review={status:assessment.status,reason:assessment.reason||'',issue_type:assessment.issue_type,...(assessment.reviewer?{reviewer:D.clone(assessment.reviewer)}:{})};
    e.initial_information_status=e.information_status;
    e.information_status=assessment.status==='uncertain'&&assessment.issue_type==='ambiguous_source'?'ambiguous':assessment.information_status;
+   retainReviewedBounds(e);
   }
   completed++;
   options.onProgress?.('Source checks complete ('+completed+'/'+batches.length+').',{phase:'review',completed,total:batches.length,waiting:completed<batches.length});
