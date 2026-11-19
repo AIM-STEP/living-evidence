@@ -6,7 +6,6 @@
 
 | 模块 | 日期 | 内容 | 在线查看 |
 |---|---|---|---|
-| [Eligibility criteria](eligibility-criteria/2026-11-19/README.md) | 2026-11-19 | 从研究问题生成纳排标准，涵盖本地模型抽取、Jev 复核、作者核对和结果保存 | [查看高清路线图](eligibility-criteria/2026-11-19/figures/纳排标准技术路线图.png) |
 | [Eligibility criteria](eligibility-criteria/2026-11-16/README.md) | 2026-11-16 | 输入、原子规则与证据、人工澄清、标准库与下游交接；四张图 | [打开四张图](https://aimsetp.com/eligibility-criteria-flowcharts.html) |
 | [Search strategy](search-strategy/2026-11-16/README.md) | 2026-11-16 | 标准和种子、词汇扩展、Boolean编译、检索与保存；四张图 | [打开四张图](https://aimsetp.com/search-strategy-flowcharts.html) |
 | [Screening source](screening-source/2026-11-16/README.md) | 2026-11-16 | 完整数据流、报告级去重、同研究多报告关联、同步导出及 Pilot 交接 | [打开四张图](https://aimsetp.com/screening-source-flowcharts.html) |
