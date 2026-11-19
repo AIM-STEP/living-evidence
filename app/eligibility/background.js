@@ -4,7 +4,7 @@
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
-const presentationVersion='framework-display-v5';
+const presentationVersion='framework-display-v6';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -204,7 +204,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
     const elements=visible.find(q=>q.question_id===question.question_id).elements;
     question.review_topic=Methods.topic(question,elements);
    }
-  }else E.rebuild(project,E.environment(...configs));
+  }else if(saved.presentation_version!=='framework-display-v5'||!saved.elements.some(e=>e.active!==false))E.rebuild(project,E.environment(...configs));
   project.presentation_version=presentationVersion;
   project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_criteria_presentation',at:project.updated_at,changes:[]});
   return staged(project,saved.revision,signature(read(keys.legacy)));

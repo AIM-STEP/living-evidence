@@ -19,7 +19,7 @@
 | 数值与时间 | 起止年龄、小时缩写及时间参照在标准化后被误判为阈值改变。 | 逐条从同一处原文核对范围两端、严格程度、单位和参照事件。仅机器数值属性与完整原文措辞相冲突时，先按原文校正。 |
 | `source_fidelity` | 候选措辞改变了受试人群、干预实施者或条件，出现引用与表述不符。 | 由 Jev 一次核对候选措辞与对应原文。存疑或核对未完成的候选进入相应位置供作者决定，作者答复立即生效。[独立核对与定向修正](../../tests/eligibility/semantic-repair.cjs) |
 | `question_identity` | 模型遗漏或更改问题 ID。 | 复用该请求提供的标识；由结构约束绑定问题，检查返回的引用属于当前问题。[问题标识](../../tools/test_eligibility_question_id.cjs) |
-| `topic_wording` | 标题只说“某人群的干预”，或主题、人群和干预描述重复整句研究目的。 | 主题概括主要干预或暴露、临床用途和关键人群；对照组在 Comparison 和 Description 中交代；依 BMJ 的写法把人群和限定词写在一起，使用具体临床用语，删去重复的目的或通用开场。[标题](../../tests/eligibility/concise-topic.cjs) · [各要素描述](../../tests/eligibility/neonatal-clinical-prose.cjs) |
+| `topic_wording` | 标题只说“某人群的干预”，或主题、人群和干预描述重复整句研究目的。 | 主题概括主要干预或暴露、临床用途和关键人群；对照组在 Comparison 和 Description 中交代；首次使用含义明确的缩写时写出全称，Description 单独处理首次使用；依 BMJ 的写法把人群和限定词写在一起，使用具体临床用语，删去重复的目的或通用开场。[标题](../../tests/eligibility/concise-topic.cjs) · [各要素描述](../../tests/eligibility/neonatal-clinical-prose.cjs) |
 
 ## 生成流程中已发生的其他问题
 

@@ -299,16 +299,7 @@ function comparisonTitleTerms(value,original){
  let text=value.replace(/[‐‑]/gu,'-')
   .replace(/\s+\([^()]*\balone or (?:combined |in combination )?with\b[^()]*\)$/iu,'')
   .replace(/^['‘“"](.+)['’”"] (?:control|control group)$/iu,'$1');
- // Use a spelled-out clinical group where the source defines its acronym.
- for(const match of original.matchAll(/\s+\(([A-Z]{2,8})\)/gu)){
-  const acronym=match[1];
-  if(!text.includes(acronym))continue;
-  const words=original.slice(0,match.index).match(/[\p{L}-]+/gu)?.slice(-acronym.length)||[];
-  if(words.map(w=>w[0].toUpperCase()).join('')!==acronym)continue;
-  const name=words.join(' ');
-  text=text.replace(' ('+acronym+')','').replace(new RegExp('\\b'+acronym+'\\b','g'),name);
- }
- if(/\bcoronary heart disease\b/iu.test(original))text=text.replace(/\bexercise-based CR\b/giu,'exercise-based cardiac rehabilitation');
+ text=abbreviationFormatter(abbreviationDefinitions(original),{longOnly:true})(text);
  return text.replace(/\bCoronary heart disease\b/gu,'coronary heart disease');
 }
 function clinicalComparisonTitle(original,intervention,comparison,populations){
@@ -459,7 +450,7 @@ function topic(question,elements){
  return result.replace(/^./u,c=>c.toUpperCase());
 }
 function projectTopic(questions){
- const titles=[...new Set(questions.map(q=>q.objective?.trim()).filter(Boolean))];
+ const titles=[...new Set(questions.map(q=>abbreviationFormatter(abbreviationDefinitions(q.research_question||''),{longOnly:true})(q.objective?.trim()||'')).filter(Boolean))];
  if(titles.length<2)return titles[0]||'';
  const combined=titles.join(' · ');
  return compactTitle(combined)?combined:titles[0]+' (+'+(titles.length-1)+' other '+(titles.length===2?'topic':'topics')+')';
@@ -524,25 +515,81 @@ function outcomeGroups(source){
 // embedded "and", time range or qualification stays with its endpoint.
 function outcomeAbbreviations(source){
  const abbreviations=new Map();
+ const remember=(short,long)=>{
+  const prior=abbreviations.get(short);
+  const key=s=>s.toLowerCase().replace(/[‐‑]/gu,'-').replace(/\s+/gu,' ');
+  abbreviations.set(short,prior===undefined?long:key(prior)===key(long)?prior:'');
+ };
+ const initialsOf=words=>words.map(w=>w[0]).join('').toUpperCase();
+ const matches=(words,short)=>{
+  const caps=short.replace(/s$/u,'').toUpperCase(),initials=initialsOf(words);
+  return initials===short.toUpperCase()||initials===caps||
+   words.length===2&&caps.length===3&&words[0][0].toUpperCase()===caps[0]&&
+   words[0].slice(1).toUpperCase().includes(caps[1])&&words[1][0].toUpperCase()===caps[2];
+ };
  for(const match of source.matchAll(/\s+\(([A-Z][A-Za-z0-9]{1,8})\)/g)){
   const short=match[1];
   const tail=source.slice(Math.max(0,match.index-120),match.index);
   const words=[...tail.matchAll(/[\p{L}]+/gu)].slice(-6);
   for(let i=0;i<words.length;i++){
    const name=words.slice(i).map(m=>m[0]);
-   const initials=name.map(w=>w[0]).join('').toUpperCase();
-   // Compound words can contribute two letters to a supplied initialism.
-   const compound=name.length===2&&short.length===3&&name[0][0].toUpperCase()===short[0]&&
-    name[0].slice(1).toUpperCase().includes(short[1])&&name[1][0].toUpperCase()===short[2];
-   if(initials!==short.toUpperCase()&&!compound)continue;
+   if(!matches(name,short))continue;
    const long=tail.slice(words[i].index);
    if(/[^\p{L}\s‐‑–-]/u.test(long))continue;
-   const prior=abbreviations.get(short);
-   abbreviations.set(short,prior===undefined||prior===long?long:'');
+   remember(short,long);
    break;
   }
  }
+ for(const match of source.matchAll(/\b([A-Z][A-Za-z0-9]{1,8})\s+\(([\p{L}][\p{L} ‐‑–-]{3,90})\)/gu)){
+  const words=match[2].match(/[\p{L}]+/gu);
+  if(matches(words,match[1]))remember(match[1],match[2]);
+ }
  return abbreviations;
+}
+function abbreviationDefinitions(source){
+ source=Array.isArray(source)?source.join('\n'):String(source||'');
+ const definitions=outcomeAbbreviations(source);
+ if(!definitions.has('CR')&&/\bexercise[-‐‑ ]based CR\b/u.test(source)&&
+    /\b(?:coronary heart disease|cardiac rehabilitation)\b/iu.test(source))definitions.set('CR','cardiac rehabilitation');
+ // Some sources give the full design in prose and use only the acronym in a field.
+ const trials=source.match(/\brandomi[sz]ed controlled trials?\b/iu);
+ if(trials||/\bRCTs\b/u.test(source)||/\b(?:study design|randomised|randomized|trial)\b[\s\S]{0,70}\bRCT\b/iu.test(source)){
+  const name=trials?trials[0].toLowerCase().replace(/s$/u,''):'randomised controlled trial';
+  if(!definitions.has('RCT')&&!definitions.has('RCTs')){definitions.set('RCT',name);definitions.set('RCTs',name+'s');}
+  else if(definitions.get('RCTs')?.toLowerCase()===name+'s'&&!definitions.has('RCT'))definitions.set('RCT',name);
+  else if(definitions.get('RCT')?.toLowerCase()===name&&!definitions.has('RCTs'))definitions.set('RCTs',name+'s');
+ }
+ for(const [id,long] of [['HRQoL','health-related quality of life'],['COPD','chronic obstructive pulmonary disease']]){
+  if(!definitions.has(id)&&new RegExp('\\b'+id+'\\b','u').test(source))definitions.set(id,long);
+ }
+ return [...definitions].filter(([short,long])=>long&&!/^(?:AND|OR|NOT|IU|SI|CIU|Hz|Pa|Gy|Sv|mL|mmHg)$/u.test(short));
+}
+function abbreviationFormatter(definitions,{longOnly=false}={}){
+ const names=new Map(),seen=new Set(),conflicts=new Set();
+ const key=text=>text.toLowerCase().replace(/[‐‑–]/gu,'-').replace(/\s+/gu,' ').trim();
+ for(const [id,long] of definitions||[]){
+  if(!long||conflicts.has(id))continue;
+  if(names.has(id)&&key(names.get(id))!==key(long)){names.delete(id);conflicts.add(id);}
+  else names.set(id,long);
+ }
+ if(!names.size)return text=>text;
+ const ids=[...names.keys()].filter(short=>/^[A-Z][A-Za-z0-9]{1,8}$/u.test(short)).sort((a,b)=>b.length-a.length).join('|');
+ if(!ids)return text=>text;
+ const pattern=new RegExp('\\(('+ids+')\\)|\\b('+ids+')\\b','gu');
+ return value=>{
+  const text=value.replace(/\b([A-Z][A-Za-z0-9]{1,8})\s+\(([\p{L}][\p{L} ‐‑–-]{3,90})\)/gu,(pair,id,long)=>
+   names.has(id)&&key(names.get(id))===key(long)?long+' ('+id+')':pair);
+  return text.replace(pattern,(token,parenthesised,bare,index)=>{
+  const short=parenthesised||bare,name=names.get(short),prefix=key(text.slice(Math.max(0,index-2*name.length-10),index));
+  if(parenthesised&&prefix.endsWith(key(name))){
+   const repeat=seen.has(short);seen.add(short);return longOnly||repeat?'':token;
+  }
+  if(!longOnly&&seen.has(short))return token;
+  seen.add(short);
+  if(longOnly)return name;
+  return parenthesised?'('+name+' ('+short+'))':name+' ('+short+')';
+  }).replace(/[ \t]+(?=[.,)]|$)/gu,'').replace(/ {2,}/gu,' ');
+ };
 }
 function outcomeSentences(list,source){
  let text=list;
@@ -745,7 +792,7 @@ function manuscriptContext(source){
   aim={goal,intervention:pair.intervention,comparison:pair.comparator,name,control:comparisonTitleTerms(pair.comparator,source),variants:variants?.[2]};
  }
  const intervals=source.match(/(?:^|[.!?]\s+)we (?:categorised|categorized|classified|grouped) follow[-‐‑ ]up (?:as|into) ([^.!?\n]+(?:\.\d+[^.!?\n]*)*)[.]?(?=\s|$)/iu)?.[1];
- return {completed,...(aim&&{aim}),...(intervals&&{intervals})};
+ return {completed,abbreviations:abbreviationDefinitions(source),...(aim&&{aim}),...(intervals&&{intervals})};
 }
 function description(rows,context={}){
  if(context.pending_inclusion_relation){
@@ -841,10 +888,10 @@ function description(rows,context={}){
  if(manuscript){
   for(const [short,long] of outcomeAbbreviations(result))if(long&&result.match(new RegExp('\\b'+short+'\\b','g'))?.length===1)result=result.replace(' ('+short+')','');
   if((result.match(/\bRCTs\b/gu)||[]).length===1)result=result.replace(/(randomi[sz]ed controlled trials) \(RCTs\)/iu,'$1');
-  result=result.replace(/[‐‑]/gu,'-').replace(/([<>])\s+(?=\d)/gu,'$1');
+  result=abbreviationFormatter(manuscript.abbreviations)(result).replace(/[‐‑]/gu,'-').replace(/([<>])\s+(?=\d)/gu,'$1');
  }
  return result;
 }
 
-return {ageClause,plan,classifyAnalysis,restoreAge,standaloneObjectiveArms,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,comparatorDisplayText,criterionPhrase,naturalExpression,splitDimensions,frameworkUnits,combinePopulationUnits,clause,topic,projectTopic,declaredFocus,outcomeGroups,descriptionContext,manuscriptContext,description};
+return {ageClause,plan,classifyAnalysis,restoreAge,standaloneObjectiveArms,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,comparatorDisplayText,criterionPhrase,naturalExpression,splitDimensions,frameworkUnits,combinePopulationUnits,clause,topic,projectTopic,declaredFocus,outcomeGroups,abbreviationDefinitions,abbreviationFormatter,descriptionContext,manuscriptContext,description};
 });

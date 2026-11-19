@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const E = require('../../app/eligibility/engine');
 const M = require('../../app/eligibility/model');
 const B = require('../../app/eligibility/background');
+const Methods = require('../../app/eligibility/methodology');
 const {setup} = require('../../tools/test_eligibility_grounding.cjs');
 
 const sourceText = "To assess the clinical and cost‐effectiveness of exercise‐based CR (exercise training alone or combined with psychosocial/educational interventions) compared with 'no exercise' control, on mortality, morbidity and health‐related quality of life (HRQoL) in people with Coronary heart disease (CHD). We included randomised controlled trials (RCTs) of exercise‐based CR, compared with 'no exercise' control, with follow‐up of six months or longer, in adults with CHD. Primary outcomes included mortality (all‐cause and cardiovascular), fatal and non‐fatal myocardial infarction (MI), revascularisation (coronary artery bypass graft (CABG) and percutaneous coronary intervention (PCI)), and hospitalisation (all‐cause and cardiovascular). Secondary outcomes included HRQoL and cost‐effectiveness. We categorised follow‐up as short‐term (6 to 12 months), medium‐term (> 12 to 36 months), and long‐term (> 36 months).";
@@ -11,7 +12,31 @@ const project = E.save_input(E.create_project('cardiac-review'), {
 }).state;
 const question = project.questions[0], source = project.sources.find(s=>s.input_kind==='research_question');
 
+function checkFirstUse(text){
+  const plain=text.replace(/<[^>]+>/g,' ').replace(/[‐‑–]/gu,'-').replace(/\s+/g,' ').trim();
+  const terms=[
+    ['CR',/cardiac rehabilitation$/i],['CHD',/coronary heart disease$/i],
+    ['RCTs',/randomi[sz]ed controlled trials$/i],['MI',/myocardial infarction$/i],
+    ['CABG',/coronary artery bypass graft(?:ing)?$/i],['PCI',/percutaneous coronary intervention$/i],
+    ['HRQoL',/health-related quality of life$/i]
+  ];
+  for(const [abbreviation,fullName] of terms){
+    const first=plain.search(new RegExp('\\b'+abbreviation+'\\b'));
+    if(first<0)continue;
+    const before=plain.slice(0,first);
+    assert(before.endsWith('(')&&fullName.test(before.slice(0,-1).trimEnd()),
+      'First occurrence of '+abbreviation+' requires its full name');
+    assert.equal((plain.match(new RegExp('\\('+abbreviation+'\\)','g'))||[]).length,1,
+      abbreviation+' should be defined once in this passage');
+  }
+}
+
 async function replay() {
+  const defined=Methods.abbreviationFormatter(Methods.abbreviationDefinitions('We used respiratory support (RS).'));
+  assert.match(defined('RS'),/^respiratory support \(RS\)$/i);
+  assert.equal(defined('RS'),'RS');
+  const ambiguous=Methods.abbreviationFormatter(Methods.abbreviationDefinitions('Respiratory support (RS). Renal screening (RS).'));
+  assert.equal(ambiguous('RS and QZX'),'RS and QZX');
   const records = [
     ['population','adults or people with coronary heart disease',sourceText],
     ['intervention','exercise-based cardiac rehabilitation (exercise training alone or combined with psychosocial/educational interventions)',sentences[0]],
@@ -85,6 +110,11 @@ async function replay() {
   inOrder(table,['>Include<','>Population<','>Intervention<','>Comparison<','>no exercise<','>Outcomes<',outcomeList,'>Study design<']);
   assert.doesNotMatch(table.slice(table.indexOf('>Outcomes<'),table.indexOf('>Study design<')), /primary|secondary/i);
   inOrder(xml,['Review topic:','Framework:','<w:tbl>','</w:tbl>','>Description<']);
+  const descriptionStart=html.indexOf('>Description<');
+  checkFirstUse(html.slice(0,descriptionStart));
+  checkFirstUse(html.slice(descriptionStart));
+  checkFirstUse(xml.slice(0,xml.indexOf('</w:tbl>')));
+  checkFirstUse(xml.slice(xml.indexOf('>Description<')));
   // The framework still contains an Outcomes slot when the source supplies none.
   delete page.api.state().machineRefinement.descriptionContext.outcome_groups;
   page.api.fill();
