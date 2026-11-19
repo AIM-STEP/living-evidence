@@ -28,7 +28,7 @@ function authorChoices(issue){
 }
 function issueText(issue,project,elements=issue.element_ids.map(id=>project.elements.find(e=>e.element_id===id)).filter(Boolean)){
  const names=elements.map(e=>e.normalized_text).filter(Boolean).join('; '),domain=label(elements[0]?.dimension_id);
- if(issue.author_scope_review)return issue.question_text;
+ if(issue.author_scope_review||elements.some(e=>e.review_pending))return issue.question_text;
  if(issue.trigger_rule_id==='population_age_boundary')return 'The source specifies older people without a numeric age threshold. Define the age boundary below, or confirm whether to retain the original wording.';
  if(issue.trigger_rule_id?.startsWith('model_issue:')&&issue.question_text&&!/[\u3400-\u9fff]/u.test(issue.question_text))return issue.question_text;
  if(issue.trigger_rule_id?.startsWith('fragment_relation:'))return issue.question_text;
@@ -86,7 +86,7 @@ function projectToClassic(project,registry){
   }
   // A draft whose framework was inferred historically displayed the S extension
   // when its source specified a design. An explicit selection fixes the slots.
-  if(!customFrame&&!mapping?.explicit&&['pico','peco'].includes(frame?.framework_id)&&target.some(row=>row.dimension==='Study design')){
+  if(!customFrame&&!mapping?.explicit&&['pico','peco'].includes(frame?.framework_id)&&target.some(row=>row.dimension==='Study design'&&row.include.length)){
    frame=registry.get(frame.framework_id+'s')||frame;
   }
   const slots=frame?.slots.map(slotLabel);
@@ -120,9 +120,13 @@ function projectToClassic(project,registry){
   const answerTargets=pendingGroups.length>1?pendingGroups.map(([id])=>({id,label:elementsById.get(id).normalized_text})):[];
   const locations=[];
   for(const element of elements){
+   let section=element.source_occurrence_section;
+   if(!section&&element.review_pending)section=element.disposition;
+   if(!section)section=['review_focus','undecided'].includes(element.semantic_role)?'focus':element.disposition||'include';
    const location=displayedByElement.get(element.element_id)||{
     domain:label(element.dimension_id),
-    section:element.source_occurrence_section||(['review_focus','undecided'].includes(element.semantic_role)?'focus':element.disposition==='exclude'?'exclude':'include'),
+    section,
+    ...(element.review_pending&&{pendingReview:true}),
     subject:element.information_status==='missing'?'':element.normalized_text
    };
    const target=answerTargets.length?pendingGroups.find(group=>group.includes(element.element_id))?.[0]:null;
@@ -205,14 +209,15 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_comparison_and_clarification_display',at:project.updated_at,changes:[]});
   return staged(project,saved.revision,signature(read(keys.legacy)));
  }
- async function generate({legacy,question,reviewType,sources=[],modelClient,signal,onProgress}){
+ async function generate({legacy,question,reviewType,questionType,sources=[],modelClient,signal,onProgress}){
   requireEpoch(storage,projectId,legacy?.criteria_epoch);
   const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs);
   const methods={'Systematic Review':'systematic_review','Scoping Review':'scoping_review','Rapid Review':'rapid_review',
    'Umbrella Review':'umbrella_review','Narrative Literature Review':'narrative_literature_review',
    'Integrative Review':'integrative_review','Other Review':'other_review'};
   const raw=question||sources.map(source=>source.text).join('\n\n');
-  let project=E.save_input(saved,{research_question:raw,document_input_only:!question&&sources.length>0,review_method:methods[reviewType]||reviewType||null,output_language:'en',legacy_archive:saved.criteria_epoch?null:legacy},{base_revision:revision},env).state;
+  const questionTypes={effectiveness:'intervention_effect',etiology:'exposure_outcome',qualitative:'experience',diagnosis:'diagnostic_accuracy'};
+  let project=E.save_input(saved,{research_question:raw,document_input_only:!question&&sources.length>0,review_method:methods[reviewType]||reviewType||null,question_type:questionTypes[questionType]||questionType||null,output_language:'en',legacy_archive:saved.criteria_epoch?null:legacy},{base_revision:revision},env).state;
   const activeQuestions=project.questions.filter(q=>q.active!==false);
   let questionOffset=0,documentOffset=0;
   const ranges=activeQuestions.map(q=>{

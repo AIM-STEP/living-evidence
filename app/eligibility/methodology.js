@@ -194,7 +194,17 @@ function clinicalComparisonTitle(original,intervention,comparison,populations){
  const contains=(whole,part)=>(' '+whole.toLowerCase()+' ').includes(' '+part.toLowerCase()+' ');
  const groups=populations.map(e=>({value:lower(titlePhrase(e.normalized_text)),confirmed:e.explicit_revision||e.decision_status==='confirmed_by_user'}));
  let candidate=intervention+' versus '+pair[3]+' '+use;
- if(groups.length&&!groups.some(g=>g.value&&contains(use,populationTitleHead(g.value)))){
+ function matchesPopulation(g){
+  const head=populationTitleHead(g.value);
+  if(!head)return false;
+  if(contains(use,head))return true;
+  // The title states the primary objective in its original terms. An eligibility
+  // sentence may enumerate the same descriptors with "and" instead of "or".
+  // Only use this allowance for wording actually present in the same source.
+  return !g.confirmed&&/\band\b/i.test(head)&&contains(original.replace(/[.,;:!?]/g,' '),head)&&
+   contains(use,head.replace(/\band\b/i,'or'));
+ }
+ if(groups.length&&!groups.some(matchesPopulation)){
   if(groups.length!==1||/\b(?:among|in|patients?|adults?|children|people|infants?|neonates?|participants?|women|men|adolescents?|newborns?)\b/i.test(use))return '';
   candidate+=' in '+groups[0].value;
  }
@@ -202,7 +212,7 @@ function clinicalComparisonTitle(original,intervention,comparison,populations){
  return compactTitle(candidate,19,135)?candidate:'';
 }
 function topic(question,elements){
- const scope=elements.filter(e=>e.active!==false&&!e.source_occurrence_pending&&e.information_status!=='missing'&&
+ const scope=elements.filter(e=>e.active!==false&&!e.source_occurrence_pending&&(!e.review_pending||e.decision_status==='confirmed_by_user')&&e.information_status!=='missing'&&
   e.disposition!=='exclude'&&e.semantic_review?.status!=='contradicted'&&e.semantic_role!=='background_information'&&e.normalized_text);
  const frame=question.framework_mapping?.framework_id;
  // Project only the named dimension onto the original logic tree. Alternatives
@@ -228,19 +238,34 @@ function topic(question,elements){
  let subject=dimension?wording(dimension):'';
  const original=norm(question.original_text||'');
  let comparison=wording('comparator');
- // Older saved summaries may contain the identical objective in both arm
- // fields. Recover its named pair for the title only when it is source-verbatim.
- if(dimension==='intervention'&&subject&&subject===comparison){
-  const arms=scope.filter(e=>['intervention','comparator'].includes(e.dimension_id));
-  const value=arms[0]?.normalized_text;
-  const pair=arms.every(e=>!e.explicit_revision&&e.decision_status!=='confirmed_by_user'&&armKey(e.normalized_text)===armKey(value))&&armKey(original).includes(armKey(value))&&objectiveArms(value);
+ // Either arm can independently contain the copied primary objective. Recover
+ // the affected arm from that objective and keep every other named arm intact.
+ let primaryTitle='';
+ if(dimension==='intervention'||titleDimensions[frame]==='intervention'){
+  const primary=original.split(/[.!?](?=\s+[A-Z]|$)|[;\n]/u)[0];
+  const pair=objectiveArms(primary);
   if(pair&&compactTitle(pair.intervention)&&compactTitle(pair.comparator)&&armKey(pair.intervention)!==armKey(pair.comparator)){
-   subject=lower(titlePhrase(pair.intervention));
-   comparison=lower(titlePhrase(pair.comparator));
+   function recover(dimension,value,arm){
+    const records=scope.filter(e=>e.dimension_id===dimension);
+    const copied=e=>!e.explicit_revision&&e.decision_status!=='confirmed_by_user'&&armKey(e.normalized_text)===armKey(primary);
+    const key=text=>armKey(text).replace(/^any /,'');
+    return records.some(copied)&&records.every(e=>copied(e)||key(e.normalized_text)===key(arm))?lower(titlePhrase(arm)):value;
+   }
+   subject=recover('intervention',subject,pair.intervention);
+   comparison=recover('comparator',comparison,pair.comparator);
+   // A review title describes the whole question even if an eligibility field
+   // still awaits review. Use the stated primary objective only when no settled
+   // treatment or author decision conflicts with it.
+   const matches=(value,arm)=>!value||armKey(value).replace(/^any /,'')===armKey(arm).replace(/^any /,'');
+   const protectedArm=elements.some(e=>e.active!==false&&['intervention','comparator'].includes(e.dimension_id)&&
+    (e.decision_status==='confirmed_by_user'||e.explicit_revision)&&(e.scope_status==='not_applicable'||e.scope_status==='unrestricted'));
+   if(!protectedArm&&(dimension!=='intervention'||matches(subject,pair.intervention))&&matches(comparison,pair.comparator)){
+    primaryTitle=clinicalComparisonTitle(original,lower(titlePhrase(pair.intervention)),lower(titlePhrase(pair.comparator)),scope.filter(e=>['population','sample'].includes(e.dimension_id)));
+   }
   }
  }
  const routine=/^(?:(?:a |the )?control(?: group| arm)?|usual care|standard care|placebo|sham|no (?:treatment|intervention)|wait[- ]?list|another .+ intervention|each other|one another)(?:(?:,? (?:or|and) |, )(?:usual care|standard care|placebo|another .+ intervention))*$/i;
- const clinicalTitle=dimension==='intervention'&&clinicalComparisonTitle(original,subject,comparison,scope.filter(e=>e.dimension_id==='population'||e.dimension_id==='sample'));
+ const clinicalTitle=primaryTitle||(dimension==='intervention'&&clinicalComparisonTitle(original,subject,comparison,scope.filter(e=>e.dimension_id==='population'||e.dimension_id==='sample')));
  // Named active contrasts are part of the subject, even when the population is long.
  if(subject&&comparison&&['intervention','exposure'].includes(dimension)&&!routine.test(comparison)&&armKey(subject)!==armKey(comparison)&&!armKey(subject).endsWith(' versus '+armKey(comparison)))subject+=' versus '+comparison;
  if(dimension==='index_test'){
@@ -292,6 +317,10 @@ function topic(question,elements){
   const trials=[name&&shortPopulation&&name+' in '+shortPopulation,population,shortPopulation,primary,name];
   result=trials.find(value=>compactTitle(value))||'Review population and scope';
  }
+ // Retain the local model's wording when it expresses the same source-backed
+ // subject, comparison (in the same direction) and clinical scope.
+ const titleKey=value=>armKey(value).replace(/\b(?:compared (?:with|to)|vs\.?)\s+/g,'versus ').replace(/\s+/gu,' ');
+ if(question.review_topic&&compactTitle(suggested,19,135)&&titleKey(suggested)===titleKey(result))result=suggested;
  return result.replace(/^./u,c=>c.toUpperCase());
 }
 function projectTopic(questions){
@@ -366,7 +395,7 @@ function descriptionContext(question,project){
  const original=project?.questions?.find(q=>q.question_id===question.question_id);
  // Only an explicit review focus may supplement the accepted eligibility rows.
  // Exclusions, uncertain conditions and retired decisions must not become review aims.
- const focus=(question.focus||[]).filter(e=>e.active!==false&&e.information_status==='explicit'&&e.disposition!=='exclude'&&e.normalized_text).map(e=>{
+ const focus=(question.focus||[]).filter(e=>e.active!==false&&!e.review_pending&&e.information_status==='explicit'&&e.disposition!=='exclude'&&e.normalized_text).map(e=>{
   const analysis=e.decision_status==='confirmed_by_user'?null:classifyAnalysis(e,originalText);
   return analysis?{...e,...analysis}:e;
  });

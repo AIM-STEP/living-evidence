@@ -51,6 +51,47 @@ class HybridReviewTest(unittest.TestCase):
             result = hybrid.review(self.messages(), self.local, 'local-test', partial_review=partial_review)
         return json.loads(result['message']['content'])['items'], result['review']
 
+    def single_review(self, selections=None, outage=False):
+        messages = self.messages()
+        envelope = json.loads(messages[-1]['content'])
+        envelope['payload']['review_policy'] = 'jev-once-v1'
+        messages[-1]['content'] = json.dumps(envelope)
+
+        def decide(path, key, body, timeout):
+            self.assertEqual(path, '/systemone')
+            if outage:
+                raise TimeoutError('Synthetic unavailable Jev')
+            self.assertEqual(list(body['questions']), list(selections))
+            answers = {}
+            for name, (choice, confidence) in selections.items():
+                if choice is not None:
+                    answers[name] = dict(type='choice', choice=choice, confidence=confidence, probabilities={
+                        verdict: float(choice == verdict) for verdict in body['questions'][name]['criteria']})
+            return dict(model='jev-test', answers=answers)
+        with patch.object(hybrid.ts, 'server_config', return_value=dict(model='jev-test')), \
+             patch.object(hybrid.ts, 'resolve_key', return_value='synthetic-key'), \
+             patch.object(hybrid.ts, 'request', side_effect=decide) as remote:
+            result = hybrid.review(messages, self.local, 'local-test')
+        self.assertLessEqual(remote.call_count, 1)
+        self.assertEqual(self.local_ids, [])
+        self.assertEqual(result['review']['policy'], 'jev-once-v1')
+        return json.loads(result['message']['content'])['items'], result['review']
+
+    def test_one_jev_verdict_per_explicit_item_does_not_repeat_review(self):
+        rows, audit = self.single_review(dict(c0=('supported', 1), c1=('wrong_field', 1)))
+        self.assertEqual(audit['typesafe_checked'], 2)
+        self.assertEqual([row['status'] for row in rows], ['supported', 'uncertain'])
+        self.assertEqual(rows[1]['reviewer']['verdict'], 'wrong_field')
+
+    def test_single_review_never_accepts_unchecked_or_low_confidence_items(self):
+        rows, _ = self.single_review(dict(c0=('supported', .7), c1=(None, 0)))
+        self.assertEqual([row['reviewer']['verdict'] for row in rows], ['low_confidence', 'unavailable'])
+        rows, _ = self.single_review(outage=True)
+        self.assertTrue(all(row['status'] == 'uncertain' and row['reviewer']['verdict'] == 'unavailable' for row in rows))
+        self.items[1]['source_occurrence_pending'] = True
+        rows, _ = self.single_review(dict(c0=('supported', 1)))
+        self.assertEqual(rows[1]['reviewer']['verdict'], 'ambiguous')
+
     def test_confident_agreement_avoids_local_review_and_keeps_metadata(self):
         before = copy.deepcopy(self.items)
         items, audit = self.run_review()

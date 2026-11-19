@@ -10,7 +10,7 @@ function setup(initialStorage=new Map()){
   location:{search:'?projectId=synthetic-grounding',href:'http://localhost/eligibility.html?projectId=synthetic-grounding',pathname:'/eligibility.html'},
   document:{getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{AIMSTEPEligibilityMethodology:require('../app/eligibility/methodology.js'),AIMSTEPEligibilityModel:require('../app/eligibility/model.js'),AIMSTEPCriteriaGrounding:grounding,AIMSTEPProjectAccess:{run:fn=>fn()},addEventListener(){}}};
  const code=source.replace('// Reuse this exact manual editor',`globalThis.testAPI={progressClient:backgroundModelClient,validate:validateAcademicDraft,extract:processExtracts,segments:sourceSegments,pipeline:autoCriteriaPipeline,state:()=>state,fill,pending:currentPending,normalized:standardizedCriteria,signature:machineSourceSignature,confirm:confirmSourceRule,sourceConfirmation,mergeConfirmations:mergeSourceConfirmations,topic:summaryTopic,validTopic:validatedReviewTopic,normalize:normalizeMachineCriteria,suggest:applyScopeSuggestion,normalizeSuggestions:normalizeScopeSuggestions,export:criteriaWordFile,sourceImages:originalMachineSources,navigate:saveBeforeToolNavigation,
-  transport(fn){localFetch=fn;resolveLocalModel=async()=>({name:'Synthetic model',provider:'ollama',base:'http://synthetic.invalid',slot:'synthetic'});},
+  transport(fn,provider='ollama'){localFetch=fn;resolveLocalModel=async()=>({name:'Synthetic model',provider,base:'http://synthetic.invalid',slot:'synthetic'});},
   manualInput(input){prepareSources=async()=>input;},
   readSources:prepareSources,resolveModel:resolveLocalModel,
   denyModelAccess(){localFetch=resolveLocalModel=()=>{throw Error('Unexpected model access');};},

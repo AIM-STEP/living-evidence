@@ -20,6 +20,14 @@ const neonatalGroup=[item('population','term or late preterm infants'),item('pop
 const neonatalTitle='Air versus supplemental oxygen for resuscitation of term or late preterm infants at birth';
 assert.equal(Methods.topic(neonatalQuestion,[...neonatalGroup,item('intervention','air'),item('comparator','any supplemental oxygen')]),neonatalTitle);
 assert.equal(Methods.topic(neonatalQuestion,[...neonatalGroup,item('intervention',neonatalAim),item('comparator',neonatalAim)]),neonatalTitle);
+const reported={...neonatalQuestion,original_text:neonatalAim+'. We included randomised trials in term and late preterm infants who received respiratory support at birth comparing air with any supplemental oxygen.',review_topic:'Interventions compared with supplemental oxygen in term and late preterm infants or infants'};
+const group=[item('population','term and late preterm infants who received respiratory support at birth')];
+for(const [i,c] of [[neonatalAim,'supplemental oxygen'],['air',neonatalAim],['air','any supplemental oxygen']]){
+ assert.equal(Methods.topic(reported,[...group,item('intervention',i),item('comparator',c)]),neonatalTitle);
+}
+assert.equal(Methods.topic(reported,[...group,item('intervention','unverified treatment',{review_pending:true}),item('comparator','unverified control',{review_pending:true})]),neonatalTitle);
+const proposed='Air compared with supplemental oxygen for resuscitation of term or late preterm infants at birth';
+assert.equal(Methods.topic({...reported,review_topic:proposed},[...group,item('intervention','air'),item('comparator','any supplemental oxygen')]),proposed);
 assert.equal(Methods.topic(neonatalQuestion,[item('population','term or late preterm infants who received respiratory support at birth'),item('intervention','air'),item('comparator','any supplemental oxygen')]),neonatalTitle);
 assert.equal(Methods.topic(neonatalQuestion,[item('population','adults',{decision_status:'confirmed_by_user'}),item('intervention','air'),item('comparator','supplemental oxygen')]),'Air versus supplemental oxygen in adults');
 assert.equal(Methods.topic(neonatalQuestion,[item('population','adults',{decision_status:'confirmed_by_user'}),item('intervention','air'),item('comparator','high-flow oxygen',{explicit_revision:true})]),'Air versus high-flow oxygen in adults');

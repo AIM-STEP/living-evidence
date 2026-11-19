@@ -15,8 +15,8 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
     logic:{op:'all_of',children:[{op:'predicate',element_id:'p'},{op:'predicate',element_id:'i'},{op:'any_of',children:[{op:'predicate',element_id:'c1'},{op:'predicate',element_id:'c2'}]}]}}]};
   }else if(envelope.step==='review_normalization')result={items:payload.items.map(item=>({id:item.id,status:'supported',reason:'Simulated source review',issue_type:'none',information_status:item.information_status,semantic_role:item.semantic_role,scope_status:item.scope_status,disposition:item.disposition}))};
   else throw Error('Unexpected step');
-  return {ok:true,json:async()=>({message:{content:JSON.stringify(result)},model:'Simulated'})};
- });
+  return {ok:true,json:async()=>({message:{content:JSON.stringify(result)},...(envelope.step==='review_normalization'?{provider:'typesafe',review:{policy:'jev-once-v1'}}:{}),model:'Simulated'})};
+ },'backend');
  t.el('generation-method').value='machine';t.el('generation-method').handlers.change();t.el('question').value=fixture.research_question;await t.el('start-machine').handlers.click();
  let state=t.api.state();assert(state.machineRun,t.el('generation-status').textContent);const rows=state.machineRefinement.rows;
  assert(!rows.some(r=>r.dimension==='Other'));assert(rows.find(r=>r.dimension==='Comparison').include.join(' ').includes('another nutritional intervention'));

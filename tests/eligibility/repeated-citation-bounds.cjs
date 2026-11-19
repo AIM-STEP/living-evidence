@@ -29,10 +29,8 @@ async function generate({ value = 65, operator = 'gte', repair = false, sourceTe
       }] };
     }
     const item = payload.items[0];
-    // Only the chosen original context may be used to repair and recheck this item.
+    // Verify only against the selected occurrence.
     inspectContext(item.source_quotes[0]);
-    if (step === 'repair_candidate_wording') return { items: [{ id: item.id,
-      normalized_text: wording(65, 'gte'), structured_value: { operator: 'gte', value: 65, unit: 'year' } }] };
     assert.equal(step, 'review_normalization');
     const wrong = repair && item.structured_value.value !== 65;
     return { items: [{ id: item.id, reason: 'Simulated source check', status: wrong ? 'contradicted' : 'supported',
@@ -56,13 +54,19 @@ test('a supported threshold in the located passage survives final source validat
 });
 
 test('a different occurrence cannot supply a threshold even when a simulated reviewer approves it', async () => {
-  await assert.rejects(generate({ value: 18, operator: 'lt' }), { code: 'NUMERIC_SCOPE_CHANGE' });
+  const {project}=await generate({ value: 18, operator: 'lt' });
+  assert.equal(project.criteria.length,0);
+  assert.equal(project.elements.find(e=>e.review_pending)?.semantic_review.validation_code,'NUMERIC_SCOPE_CHANGE');
 });
 
-test('a targeted wording repair keeps the selected context through the second review and save', async () => {
+test('a failed Jev check keeps the selected source and asks the author once', async () => {
   const { project, calls } = await generate({ value: 70, repair: true });
-  assert.equal(project.criteria[0].text, 'Adults aged at least 65 years');
-  assert.deepEqual(calls, ['extract_elements', 'review_normalization', 'repair_candidate_wording', 'review_normalization']);
+  assert.equal(project.criteria.length,0);
+  const check=project.issues.find(i=>i.trigger_rule_id==='independent_source_check'&&i.status==='open');
+  assert(check?.blocking);
+  const pending=project.elements.find(e=>check.element_ids.includes(e.element_id));
+  assert.equal(pending.source_refs[0].start,text.indexOf('adults'));
+  assert.deepEqual(calls, ['extract_elements','review_normalization']);
 });
 
 test('English and Chinese opposing clauses in one sentence cannot supply each other’s cutoff', async () => {
@@ -77,7 +81,9 @@ test('English and Chinese opposing clauses in one sentence cannot supply each ot
     const options = { sourceText, shortQuote, inspectContext };
     const { project } = await generate(options);
     assert.match(project.criteria[0].text, /65/);
-    await assert.rejects(generate({ ...options, value: 18 }), { code: 'NUMERIC_SCOPE_CHANGE' });
+    const {project:rejected}=await generate({ ...options, value: 18 });
+    assert.equal(rejected.criteria.length,0);
+    assert.equal(rejected.elements.find(e=>e.review_pending)?.semantic_review.validation_code,'NUMERIC_SCOPE_CHANGE');
   }
 });
 

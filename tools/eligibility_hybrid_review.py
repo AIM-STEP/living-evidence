@@ -1,9 +1,4 @@
-"""Jev reviews routine eligibility candidates; the local model handles exceptions.
-
-The original extraction, semantic review rules and final program checks remain
-in place. Jev only accepts unchanged, explicit candidates when every requested
-classification agrees with their metadata at high confidence.
-"""
+"""Check explicit source-linked criteria with Jev and return item-level verdicts for author routing."""
 import copy
 import json
 import time
@@ -11,7 +6,7 @@ import time
 from eligibility_transport import OutputSyntaxError
 import typesafe_model as ts
 
-VERSION = 'eligibility-hybrid-v6'
+VERSION = 'eligibility-hybrid-v7'
 TASK = 'eligibility-review-v1'
 MIN_CONFIDENCE = .95
 TIMEOUT = 20
@@ -180,11 +175,84 @@ def _valid_field(name, value):
     return isinstance(value, str) and value in CHOICES[name]
 
 
+def _review_once(envelope, messages):
+    """One independent verdict per explicit item. Each decision stays bound to its source and ID."""
+    payload = envelope['payload']
+    items = payload['items']
+    verdicts = {
+        'supported': 'The wording, values, dimension, role, direction and qualifications all agree with the original.',
+        'wording_or_scope': 'The draft changes, invents, omits or reverses a source condition, comparison, limit, or logical relationship.',
+        'wrong_field': 'The claim belongs in another framework field or has the wrong role or inclusion/exclusion direction.',
+        'ambiguous': 'The original does not determine the proposed interpretation.',
+    }
+    reasons = {
+        'supported': 'Jev verified this item against its original passage.',
+        'wording_or_scope': 'The proposed wording or scope does not match the cited passage.',
+        'wrong_field': 'The assigned field or eligibility role needs confirmation.',
+        'ambiguous': 'The cited passage leaves the proposed interpretation uncertain.',
+        'low_confidence': 'The source check could not establish the proposed interpretation confidently.',
+        'unavailable': 'The independent source check was unavailable.',
+    }
+    entries = {f'c{i}': i for i, item in enumerate(items)
+               if item['information_status'] == 'explicit' and item.get('source_quotes') and not item.get('source_occurrence_pending')}
+    decisions = {}
+    fallback = None
+    actual_model = None
+    checked = 0
+    started = time.monotonic()
+    if entries:
+        try:
+            model = ts.server_config().get('model') or 'jev-latest'
+            key = ts.resolve_key()
+            questions = {name: {'type': 'choice', 'criteria': verdicts,
+                                'instructions': f'Check state.items[{i}] against its own cited source in context. '
+                                'Select the most specific applicable verdict.'} for name, i in entries.items()}
+            response = ts.request('/systemone', key, {'model': model,
+                'state': {'review_rules': '\n'.join(m['content'] for m in messages if m.get('role') == 'system'),
+                          'questions': payload['questions'], 'items': items},
+                'questions': questions}, timeout=TIMEOUT)
+            answers = response.get('answers')
+            if not isinstance(answers, dict) or answers.keys() - questions.keys():
+                raise ValueError('Invalid source-check identifiers.')
+            actual_model = response.get('model') or model
+            for name, i in entries.items():
+                try:
+                    match = ts.choice(answers.get(name), verdicts)
+                except (KeyError, TypeError, ValueError, AttributeError):
+                    continue
+                checked += 1
+                choice = match['choice']
+                if choice == 'supported' and min(match['confidence'], match['probabilities'][choice]) < MIN_CONFIDENCE:
+                    choice = 'low_confidence'
+                decisions[i] = (choice, match['confidence'])
+        except (ts.ConfigurationError, OSError, ValueError, KeyError, TypeError, AttributeError):
+            fallback = 'typesafe_unavailable_or_invalid'
+    reviewed = []
+    for i, item in enumerate(items):
+        choice, confidence = decisions.get(i, ('unavailable' if i in entries.values() else 'ambiguous', None))
+        reviewer = {'provider': 'typesafe', 'version': VERSION, 'verdict': choice}
+        if confidence is not None:
+            reviewer.update(model=actual_model, confidence=confidence)
+        reviewed.append({'id': item['id'], 'status': 'supported' if choice == 'supported' else 'uncertain',
+                         'issue_type': 'none' if choice == 'supported' else 'unsupported_rewrite' if choice in
+                         ('wording_or_scope', 'wrong_field') else 'ambiguous_source',
+                         'reason': reasons[choice], 'reviewer': reviewer,
+                         **{field: item[field] for field in ('semantic_role', 'scope_status', 'information_status', 'disposition')}})
+    return {'message': {'role': 'assistant', 'content': json.dumps({'items': reviewed}, ensure_ascii=False, separators=(',', ':'))},
+            'provider': 'typesafe', 'model': actual_model or 'Jev',
+            'review': {'version': VERSION, 'policy': 'jev-once-v1', 'typesafe_checked': checked,
+                       'typesafe_accepted': sum(r['status'] == 'supported' for r in reviewed),
+                       'local_reviewed': 0, 'typesafe_ms': round((time.monotonic() - started)*1000),
+                       'fallback_reason': fallback}}
+
+
 def review(messages, local_review, local_model, partial_review=None):
     try:
         envelope = _envelope(messages)
     except (ValueError, TypeError, KeyError) as error:
         raise ReviewInputError('Invalid eligibility review request.') from error
+    if envelope['payload'].get('review_policy') == 'jev-once-v1':
+        return _review_once(envelope, messages)
     payload, accepted, decisions, verified_fields = envelope['payload'], {}, {}, {}
     items = payload['items']
     rules = '\n'.join(m['content'] for m in messages if m.get('role') == 'system')

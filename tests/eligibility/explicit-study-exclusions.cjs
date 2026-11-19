@@ -5,7 +5,7 @@ const M=require('../../app/eligibility/model');
 const B=require('../../app/eligibility/background');
 const Methods=require('../../app/eligibility/methodology');
 
-async function run(exclusionText,grouped=false,{language='en',extractOnly=false,translatedCandidate=null,misclassified=null,excludedIntervention=null}={}){
+async function run(exclusionText,grouped=false,{language='en',extractOnly=false,translatedCandidate=null,misclassified=null,excludedIntervention=null,settings=[]}={}){
  const question='👶 Eligible infants received respiratory support at birth. We examined whether oxygen was titrated to saturation targets. '+exclusionText;
  const state=E.save_input(E.create_project('neonatal-exclusions'),{research_question:question,question_framework:'PICOS',output_language:language}).state;
  const lessons=[],options={onLesson:id=>lessons.push(id)};
@@ -27,6 +27,9 @@ async function run(exclusionText,grouped=false,{language='en',extractOnly=false,
   if(translatedCandidate)elements.push({...el('t','study_design',exclusionText,'exclude'),normalized_text:translatedCandidate});
   if(misclassified)elements.push(el('wrong','study_design',misclassified,'exclude'));
   if(excludedIntervention)elements.push(el('target','intervention',excludedIntervention,'exclude'));
+  for(const [index,[quote,text]] of settings.entries()){
+   elements.push({...el('setting'+index,'context',quote,'exclude'),normalized_text:text});
+  }
   if(grouped)elements.push(el('all','other',exclusionText,'exclude'));
   else{
    if(question.includes('delivery room'))elements.push(el('room','population','delivery room','include'));
@@ -58,6 +61,26 @@ test('mixed explicit exclusions retain their direction, independent domains, stu
  for(const e of project.elements.filter(e=>e.disposition==='exclude')){
   const ref=e.source_refs[0];assert.equal(source.slice(ref.start,ref.end).join(''),ref.quote);
  }
+});
+
+test('equivalent setting exclusions at one source occurrence are reviewed and shown once',async()=>{
+ const excluded='studies not taking place in the delivery room',outside='outside the delivery room';
+ for(const text of ['We excluded '+excluded+'.','We excluded studies of twins, '+excluded+' and case reports.']){
+  const settings=[[excluded,excluded],['delivery room',outside],[text,'studies conducted outside the delivery room']];
+  const {view,reviewed,project}=await run(text,false,{settings});
+  assert.deepEqual(view.rows.find(r=>r.dimension==='Context').exclude,[excluded]);
+  assert.equal(reviewed.filter(e=>e.dimension_id==='context'&&e.disposition==='exclude').length,1);
+  assert.equal(project.criteria.filter(c=>c.disposition==='exclude'&&c.dimension_id==='context').length,1);
+  assert.equal(view.manuscriptParagraph.match(/delivery room/gi).length,1);
+ }
+});
+
+test('a separate exclusion in another setting keeps its own scope',async()=>{
+ const a='studies not taking place in the delivery room',b='studies outside neonatal wards';
+ const {view}=await run('We excluded '+a+'. We excluded '+b+'.',false,{
+  settings:[['delivery room','outside the delivery room'],[b,'outside neonatal wards']]
+ });
+ assert.deepEqual(view.rows.find(r=>r.dimension==='Context').exclude.sort(),[a,b].sort());
 });
 
 test('a therapeutic strategy misfiled as study design reaches independent review in Intervention',async()=>{

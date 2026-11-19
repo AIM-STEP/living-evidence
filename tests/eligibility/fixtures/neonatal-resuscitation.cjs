@@ -1,0 +1,8 @@
+const objective='To assess the benefits and harms of air compared with supplemental oxygen for resuscitation of term or late preterm infants at birth in reducing rates of mortality and long‐term neurodevelopmental impairment (NDI).';
+const modifiers='To assess whether the benefits and harms of air compared with supplemental oxygen differ according to different oxygen concentrations, gestational age (GA), whether oxygen was titrated to saturation targets and the income of the study country.';
+const eligible='We included randomised controlled trials (RCTs), quasi‐RCTs or cluster‐RCTs in term and late preterm infants who received respiratory support at birth comparing air with any supplemental oxygen.';
+const excluded='We excluded studies of oxygen saturation targeting, studies not taking place in the delivery room and studies of infants with antenatally diagnosed congenital anomalies.';
+const outcomes=['all‐cause mortality prior to discharge','in‐hospital hypoxic‐ischaemic encephalopathy (HIE) (Sarnat stage II to III)','post‐discharge moderate to severe NDI based on pre‐specified criteria','number of days on invasive (endotracheal) respiratory support','length of hospitalisation (days)','all‐cause mortality of infants followed beyond hospital discharge','moderate to severe NDI based on best available data'];
+const declaration='Our outcomes of interest were '+outcomes.slice(0,-1).join(', ')+' and '+outcomes.at(-1)+'.';
+const question=[objective,modifiers,eligible,excluded,declaration].join(' ');
+module.exports={objective,modifiers,eligible,excluded,outcomes,declaration,question};

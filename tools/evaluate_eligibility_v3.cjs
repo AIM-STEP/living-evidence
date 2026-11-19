@@ -1,9 +1,11 @@
-/* Real model evaluation. All bundled inputs/answers are synthetic developer cases with specification-derived expectations. */
+/* Real model evaluation using reported examples and synthetic cases with source-derived expectations. */
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),E=require('../app/eligibility/engine.js'),M=require('../app/eligibility/model.js'),D=require('../app/eligibility/domain.js');
 const args=process.argv.slice(2),arg=(name,fallback)=>{const i=args.indexOf(name);return i<0?fallback:args[i+1];};
 const chosen=arg('--case','all'),base=arg('--base',process.env.AIMSTEP_ELIGIBILITY_MODEL_BASE||'http://127.0.0.1:8765/api/eligibility'),output=path.resolve(arg('--output','/tmp/aimstep-eligibility-real-evaluation')),exchange=arg('--exchange-dir',null),replay=arg('--replay',null);
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
+const neonatal=require('../tests/eligibility/fixtures/neonatal-resuscitation.cjs');
 const cases=[
+ {id:'neonatal-resuscitation',input:{research_question:neonatal.question,review_method:'systematic_review',question_type:'intervention_effect',output_language:'en'},expected:{neonatal:true}},
  {id:'nutrition-ipd-nma',input:{research_question:require('../tests/eligibility/fixtures/nutrition-ipd-nma.json').research_question,question_framework:'PICO',review_method:'systematic_review',output_language:'en'},expected:{framework:'pico',no_rct_default:true,eligibility_dimensions:['population','intervention','comparator'],nutrition_scope:true}},
  {id:'strict-age',input:{research_question:'Include people aged >18 years.',question_framework:'PICO',output_language:'en'},expected:{strict_bound:'gt',value:18,no_rct_default:true}},
  {id:'eligibility-directions',input:{research_question:'Compare exercise with education for adults with knee pain. Include randomised trials. We excluded studies of children, studies conducted outside outpatient clinics and studies of postoperative rehabilitation.',question_framework:'PICOS',output_language:'en'},expected:{framework:'picos',eligibility_dimensions:['population','intervention','comparator','study_design'],arms:['exercise','education'],study_exclusions:['studies of children','studies conducted outside outpatient clinics','studies of postoperative rehabilitation']}},
@@ -24,6 +26,22 @@ async function run(def){
  try{
   const extracted=await M.analyze(state,E.environment(),adapter,{retries:Number(arg('--retries','1')),onProgress:message=>console.log(def.id,message)});state=E.ingest_candidates(state,extracted.candidates,{base_revision:extracted.base_revision}).state;result.stage_one_status=state.status;result.metadata_corrections=state.elements.flatMap(e=>e.metadata_corrections||[]);result.raw_model_clean=!result.metadata_corrections.length;result.stage_one_elements=D.clone(state.elements.filter(e=>e.active!==false&&e.information_status!=='missing'));result.stage_one_issues=D.clone(state.issues.filter(i=>i.status==='open'));
   const es=state.elements.filter(e=>e.active!==false),errors=[];
+  if(def.expected.neonatal){
+   const view=require('../app/eligibility/background.js').projectToClassic(state);
+   result.classic_output=view;
+   const accepted=name=>view.rows.find(r=>r.dimension===name)?.include.join(' ')||'';
+   if(view.framework!=='PICOS')errors.push('Unexpected inferred framework '+view.framework);
+   if(!/\bair\b/i.test(view.reviewTopic)||!/supplemental oxygen/i.test(view.reviewTopic)||!/resuscitation/i.test(view.reviewTopic)||!/late preterm/i.test(view.reviewTopic))errors.push('Title does not identify the clinical comparison and population.');
+   if(!/term.+late preterm/i.test(accepted('Population'))||!/respiratory support at birth/i.test(accepted('Population')))errors.push('Population missing its source qualifications.');
+   if(!/^air\.?$/i.test(accepted('Intervention'))||!/^any supplemental oxygen\.?$/i.test(accepted('Comparison')))errors.push('Incorrect or missing treatment arms.');
+   if(!['random','quasi','cluster'].every(type=>accepted('Study design').toLowerCase().includes(type)))errors.push('Eligible trial designs missing or in the wrong field.');
+   if(view.rows.some(row=>row.dimension==='Other'&&row.include.length)||/eligibility requires .+?\bor\b/i.test(view.manuscriptParagraph))errors.push('Cross-domain requirements rendered as alternatives.');
+   const lines=view.rows.flatMap(row=>row.exclude);
+   if(lines.length!==3||!['saturation targeting','delivery room','congenital anomalies'].every(term=>lines.filter(x=>x.includes(term)).length===1))errors.push('Missing or duplicated explicit exclusions.');
+   if(!view.rows.find(r=>r.dimension==='Intervention')?.exclude.some(s=>s.includes('saturation targeting')))errors.push('Incorrect exclusion domain.');
+   const prose=view.manuscriptParagraph.replace('neurodevelopmental impairment (NDI)','NDI');
+   for(const term of [...neonatal.outcomes,'oxygen concentration','gestational age','titrated to saturation targets','income of the study country'])if(!prose.includes(term))errors.push('Missing review focus '+term);
+  }
   if(def.expected.strict_bound&&!es.some(e=>e.structured_value?.operator===def.expected.strict_bound&&e.structured_value.value===def.expected.value))errors.push('Strict bound not represented faithfully.');
   if(def.expected.no_rct_default&&state.criteria.some(c=>/randomi[sz]ed|RCT/i.test(c.text)))errors.push('An unprovided design restriction appeared.');
   if(def.expected.framework&&state.questions[0].framework_mapping.framework_id!==def.expected.framework)errors.push('Wrong framework mapping.');
