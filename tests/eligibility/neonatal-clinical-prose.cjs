@@ -27,7 +27,7 @@ test('reproduce the neonatal example through analysis, independent review and pr
  const analyzed=await M.analyze(state,E.environment(),adapter);
  const project=E.ingest_candidates(state,analyzed.candidates).state;
  const view=B.projectToClassic(project);
- assert.equal(view.reviewTopic,'Air versus supplemental oxygen for resuscitation of term or late preterm infants at birth');
+ assert.equal(view.reviewTopic,'Air for resuscitation of term or late preterm infants at birth');
  const included=name=>view.rows.find(r=>r.dimension===name).include;
  assert.deepEqual(included('Population'),['term and late preterm infants who received respiratory support at birth']);
  assert.deepEqual(included('Intervention'),['air']);
@@ -39,7 +39,8 @@ test('reproduce the neonatal example through analysis, independent review and pr
  assert(!project.criteria.some(c=>/titrated to saturation targets/.test(c.text)));
  assert(!view.rows.some(r=>r.dimension==='Outcomes'));
  assert.deepEqual(view.rows.find(r=>r.dimension==='Population').exclude.map(s=>s.includes('antenatally diagnosed congenital anomalies')),[true]);
- assert.doesNotMatch(view.manuscriptParagraph,/delivery room|income of the study country|neurodevelopmental impairment|mortality/i);
+ assert.doesNotMatch(view.manuscriptParagraph,/delivery room|income of the study country|(?:required|must report)[^.]*mortality/i);
+ assert.match(view.manuscriptParagraph,/mortality prior to discharge/i);
  assert(!view.manuscriptParagraph.includes('We will include studies comparing To assess'));
  if(process.argv.includes('--show'))console.log(view.reviewTopic+'\n'+view.manuscriptParagraph);
 });
