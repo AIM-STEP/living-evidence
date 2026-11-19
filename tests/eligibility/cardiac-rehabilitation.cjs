@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const E = require('../../app/eligibility/engine');
 const M = require('../../app/eligibility/model');
 const B = require('../../app/eligibility/background');
+const {setup} = require('../../tools/test_eligibility_grounding.cjs');
 
 const sourceText = "To assess the clinical and cost‐effectiveness of exercise‐based CR (exercise training alone or combined with psychosocial/educational interventions) compared with 'no exercise' control, on mortality, morbidity and health‐related quality of life (HRQoL) in people with Coronary heart disease (CHD). We included randomised controlled trials (RCTs) of exercise‐based CR, compared with 'no exercise' control, with follow‐up of six months or longer, in adults with CHD. Primary outcomes included mortality (all‐cause and cardiovascular), fatal and non‐fatal myocardial infarction (MI), revascularisation (coronary artery bypass graft (CABG) and percutaneous coronary intervention (PCI)), and hospitalisation (all‐cause and cardiovascular). Secondary outcomes included HRQoL and cost‐effectiveness. We categorised follow‐up as short‐term (6 to 12 months), medium‐term (> 12 to 36 months), and long‐term (> 36 months).";
 const sentences = sourceText.split(/(?<=\.) /u);
@@ -46,8 +47,44 @@ async function replay() {
   assert.match(primary.items[2],/CABG.+PCI/);
   assert.equal(secondary.label,'Secondary');assert.equal(secondary.items.length,2);
   assert.match(secondary.items[0],/quality of life \(HRQoL\)/i);
-  assert.doesNotMatch(view.manuscriptParagraph,/required outcome|to assess the clinical|adults or people/i);
+  assert.doesNotMatch(view.manuscriptParagraph,/required outcome|adults or people/i);
+  for(const term of [/randomised controlled trials/i,/six months|6 months/i,/primary outcomes/i,/secondary outcomes/i,
+    /myocardial infarction/i,/quality of life/i,/cost[‐‑-]effectiveness/i]){
+    assert.match(view.manuscriptParagraph,term);
+  }
+  assert((view.manuscriptParagraph.match(/We will include/gi)||[]).length<=1);
   assert.deepEqual(view.sourceConfirmations,[]);
+  const page=setup();
+  const state=page.api.state();
+  const machineCriteria=view.rows.map(row=>({title:row.dimension,condition:row.include.join('\n'),uncertain:row.exclude.join('\n')}));
+  Object.assign(state,{question:sourceText,framework:view.framework,generationMethodChoice:'machine',activeGenerator:'machine',
+    machineCriteria,machineRun:{question:sourceText,reviewType:state.reviewType},
+    machineRefinement:{...view,signature:page.api.signature(sourceText,state.reviewType,0,machineCriteria)}});
+  page.api.fill();
+  const html=page.el('preview').innerHTML;
+  const sections=[...html.matchAll(/<h3[^>]*>([^<]+)<\/h3>/g)].map(m=>m[1]);
+  assert.deepEqual(sections,['Inclusion','Description']);
+  function inOrder(text,labels){
+    let last=-1;
+    for(const label of labels){
+      const index=text.indexOf(label,last+1);
+      assert(index>last,'Missing or misplaced '+label);
+      last=index;
+    }
+  }
+  inOrder(html,['Review topic:','Framework:','>Inclusion<','Population:','Intervention:','Comparison:','Outcomes:',
+    'Primary','mortality','Secondary','quality of life','Study design:','>Description<']);
+  assert.doesNotMatch(html,/<strong>(?:Context|Other):/i);
+  const file=Buffer.from(page.api.export()).toString('utf8');
+  const xml=file.slice(file.indexOf('<w:document'),file.indexOf('</w:document>'));
+  const table=xml.slice(xml.indexOf('<w:tbl>'),xml.indexOf('</w:tbl>'));
+  inOrder(table,['>Include<','>Population<','>Intervention<','>Comparison<','>Outcomes<','Primary','mortality','Secondary','quality of life','>Study design<']);
+  inOrder(xml,['Review topic:','Framework:','<w:tbl>','</w:tbl>','>Description<']);
+  // The framework still contains an Outcomes slot when the source supplies none.
+  delete page.api.state().machineRefinement.descriptionContext.outcome_groups;
+  page.api.fill();
+  assert.doesNotMatch(page.el('preview').innerHTML,/<strong>Outcomes:<\/strong>/);
+  assert.doesNotMatch(Buffer.from(page.api.export()).toString('utf8'),/>Outcomes</);
 }
 
 replay().catch(error=>{console.error(error);process.exitCode=1;});

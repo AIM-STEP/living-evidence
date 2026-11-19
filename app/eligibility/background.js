@@ -4,7 +4,7 @@
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
-const presentationVersion='framework-display-v2';
+const presentationVersion='framework-display-v3';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -95,7 +95,7 @@ function projectToClassic(project,registry){
    add(rows,row.dimension,side,q.display_number+' · '+rule,[],false);
   }
   const outcomes=fields.has('outcome')?Methods.outcomeGroups(q.research_question):[];
-  return {display_number:q.display_number,...(outcomes.length?{outcome_groups:outcomes}:{}),...(multiple?{rows:target}:{}),...(pending&&!awaiting.size?{pending_inclusion_relation:true}:{}),...(linked.length?{linked_conditions:linked}:{})};
+  return {display_number:q.display_number,manuscript:Methods.manuscriptContext(q.research_question||''),...(outcomes.length?{outcome_groups:outcomes}:{}),...(multiple?{rows:target}:{}),...(pending&&!awaiting.size?{pending_inclusion_relation:true}:{}),...(linked.length?{linked_conditions:linked}:{})};
  });
  const frameNames=[...new Set(frameworkQuestions.map(q=>q.framework))],framework=frameNames.length===1?frameNames[0]:'Other';
  const frameworkSlots=frameNames.length===1?frameworkQuestions[0].frameworkSlots:[];
@@ -197,8 +197,10 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    project.elements=project.elements.map(element=>activeById.get(element.element_id)||element);
    project.issues=clone(snapshot.issues);
   }
-  project.revision++;project.updated_at=D.now();E.rebuild(project,E.environment(...configs));project.presentation_version=presentationVersion;
-  project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_comparison_and_clarification_display',at:project.updated_at,changes:[]});
+  project.revision++;project.updated_at=D.now();
+  if(saved.presentation_version!=='framework-display-v2'||!saved.elements.some(e=>e.active!==false))E.rebuild(project,E.environment(...configs));
+  project.presentation_version=presentationVersion;
+  project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_criteria_presentation',at:project.updated_at,changes:[]});
   return staged(project,saved.revision,signature(read(keys.legacy)));
  }
  async function generate({legacy,question,reviewType,questionType,sources=[],modelClient,signal,onProgress}){
