@@ -3,7 +3,7 @@
 'use strict';
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
-const presentationVersion='20261119-source-exclusions-1';
+const presentationVersion='20261119-intervention-exclusions-1';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}

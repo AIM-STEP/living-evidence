@@ -21,6 +21,7 @@ test('reproduce the neonatal example through analysis, independent review and pr
   semantic_role:side?'eligibility_condition':'review_focus',scope_status:side?'restricted':'unspecified'});
  const elements=[candidate('p','population','term or late preterm infants'),candidate('p2','population','received respiratory support at birth'),
   candidate('i','intervention',objective),candidate('c','comparator',objective),candidate('d','study_design','randomised controlled trials (RCTs), quasi‐RCTs or cluster‐RCTs'),
+  candidate('target','study_design','studies of oxygen saturation targeting','exclude'),
   candidate('room','population','delivery room'),candidate('anomaly','population','infants with antenatally diagnosed congenital anomalies','exclude'),
   candidate('o1','outcome','mortality',null),candidate('o2','outcome','long‐term neurodevelopmental impairment (NDI)',null),candidate('o3','outcome',outcomes[0],null)];
  const adapter={async request(step,project,payload){
@@ -38,6 +39,10 @@ test('reproduce the neonatal example through analysis, independent review and pr
  assert.deepEqual(included('Intervention'),['air']);
  assert.deepEqual(included('Comparison'),['any supplemental oxygen']);
  assert.equal(view.rows.flatMap(r=>r.exclude).length,3);
+ assert.deepEqual(view.rows.find(r=>r.dimension==='Intervention').exclude,['studies of oxygen saturation targeting']);
+ assert.deepEqual(view.rows.find(r=>r.dimension==='Study design').exclude,[]);
+ assert.deepEqual(included('Study design'),['randomised controlled trials (RCTs), quasi‐RCTs or cluster‐RCTs']);
+ assert(!project.criteria.some(c=>/titrated to saturation targets/.test(c.text)));
  assert(!view.rows.some(r=>r.dimension==='Outcomes'));
  const paragraph=view.manuscriptParagraph.replace('neurodevelopmental impairment (NDI)','NDI');
  for(const outcome of outcomes)assert(paragraph.includes(outcome),outcome);

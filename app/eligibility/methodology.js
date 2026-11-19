@@ -10,7 +10,33 @@ function dataGate(text){const t=norm(text),data='(?:IPD|individual\\s+(?:partici
 function plan(original){const text=norm(original),nma=original.match(/network\s+meta[-– ]analysis(?:\s*\(NMA\))?|\bNMA\b/i),ipd=original.match(/individual\s+(?:participant|patient)\s+data(?:\s*\(IPD\))?|\bIPD\b/i);const analysis=/\b(?:using|conduct|perform|based\s+on|analyse|analyze)\b[\s\S]{0,160}(?:network\s+meta[- ]analysis|\bNMA\b|individual\s+(?:participant|patient)\s+data|\bIPD\b)|(?:network\s+meta[- ]analysis|\bNMA\b)[\s\S]{0,100}\bbased\s+on\b/i.test(text);return {nma:analysis&&nma?nma[0]:null,ipd:analysis&&ipd?ipd[0]:null,rank:analysis&&/\brank(?:ing)?\b/i.test(text)?original.match(/\brank(?:ing)?\b[^.!?;]*?(?=\s+using\b|\s+by\b|[.!?;]|$)/i)?.[0]:null};}
 function classifyAnalysis(element,context){const text=norm(element.normalized_text),dimension=element.dimension_id||'',pureIPD=/^(?:studies (?:based on|using|with)\s+|based on\s+|using\s+)?(?:individual\s+(?:participant|patient)(?:[- ]level)?\s+data|IPD)(?:\s*\(IPD\))?\.?$/i.test(text),pureNMA=/^(?:using\s+)?(?:network\s+meta[- ]analysis|NMA)(?:\s*\(NMA\))?\.?$/i.test(text);if(dataGate(context)&&/IPD|individual\s+(?:participant|patient)\s+data/i.test(text))return null;if((pureIPD&&plan(context).ipd)||dimension==='analysis_data_unit')return {dimension_id:'analysis_data_unit',normalized_text:pureIPD?'individual participant data (IPD)':element.normalized_text};if(((pureNMA||/^network\s+meta[-– ]analysis[\s\S]*\bbased\s+on\b[\s\S]*(?:individual\s+(?:participant|patient)\s+data|IPD)/i.test(text))&&plan(context).nma)||dimension==='analysis_method')return {dimension_id:'analysis_method',normalized_text:pureNMA?'network meta-analysis (NMA)':element.normalized_text};if(dimension==='analysis_objective')return {dimension_id:dimension,normalized_text:element.normalized_text};return null;}
 function restoreAge(element){if(element.dimension_id.split('.')[0]!=='population'||element.dimension_id==='population.age'||!older.test(element.raw_text)||older.test(element.normalized_text)||element.explicit_revision)return;const word=/\belderly\b/i.test(element.raw_text)?'elderly':'older';if(/\b(?:people|patients|adults|participants)\b/i.test(element.normalized_text)){const previous=element.normalized_text;element.normalized_text=element.normalized_text.replace(/\b(people|patients|adults|participants)\b/i,word+' $1');element.metadata_corrections=[...(element.metadata_corrections||[]),{field:'normalized_text',from:previous,to:element.normalized_text,basis:'Restore the age qualification explicitly present in the source; no numeric threshold inferred.'}];}}
-function interventionReference(elements){const candidates=elements.filter(e=>e.active!==false&&e.dimension_id==='intervention'&&e.information_status!=='missing'&&e.normalized_text),i=candidates.find(e=>e.scope_status==='restricted')||candidates[0];if(!i)return null;const value=lower(phrase(i.normalized_text));return /interventions?$/i.test(value)?value.replace(/interventions$/i,'intervention'):'eligible intervention';}
+function interventionReference(elements){const candidates=elements.filter(e=>e.active!==false&&e.dimension_id==='intervention'&&e.disposition!=='exclude'&&e.information_status!=='missing'&&e.normalized_text),i=candidates.find(e=>e.scope_status==='restricted')||candidates[0];if(!i)return null;const value=lower(phrase(i.normalized_text));return /interventions?$/i.test(value)?value.replace(/interventions$/i,'intervention'):'eligible intervention';}
+function studyExclusionSubject(value){
+ return norm(value).toLowerCase().trim().replace(/[.。]+$/u,'').replace(/^(?:(?:we (?:also )?(?:will )?)?excluded?|excluding)\s+/u,'')
+  .replace(/^(?:studies|trials|reports) (?:of|testing|evaluating|investigating)\s+/u,'').replace(/[‐‑–-]/gu,' ').replace(/\s+/gu,' ');
+}
+function isInterventionStudyExclusion(wording){
+ const subject=studyExclusionSubject(wording);
+ // Targeting a clinical measure is an intervention strategy. Measuring the
+ // same variable, describing participants or assessing effect modifiers is not.
+ return /^(?:oxygen saturation|blood (?:pressure|glucose)) targeting(?: strateg(?:y|ies))?$/u.test(subject)||
+  /^(?:studies|trials) (?:testing|evaluating) [\p{L}\d-]+(?: [\p{L}\d-]+){0,8} as (?:the|an?) (?:assigned )?intervention[.]?$/iu.test(String(wording||'').trim());
+}
+function normalizeExcludedIntervention(e){
+ if(e.active===false||e.information_status!=='explicit'||e.disposition!=='exclude'||e.semantic_role!=='eligibility_condition'||
+    !['design','study_design','other'].includes(e.dimension_id)||e.explicit_revision||e.decision_status==='confirmed_by_user'||
+    e.source_occurrence_pending||e.source_occurrence_alternatives?.length||e.semantic_review?.status==='contradicted'||
+    !isInterventionStudyExclusion(e.normalized_text))return false;
+ const subject=studyExclusionSubject(e.normalized_text);
+ const supported=e.source_refs?.some(({quote})=>{
+  if(studyExclusionSubject(quote)===subject)return true;
+  if(!/^(?:we (?:also )?(?:will )?)?excluded?\s+/iu.test(quote)||/\b(?:except|unless|from|if|when)\b/iu.test(quote))return false;
+  return quote.split(/,\s*(?:(?:and|or) )?|\s+(?:and|or) (?=(?:studies|trials|reports) )/iu).some(item=>studyExclusionSubject(item)===subject);
+ });
+ if(!supported)return false;
+ e.metadata_corrections=[...(e.metadata_corrections||[]),{field:'dimension_id',from:e.dimension_id,to:'intervention',basis:'The excluded studies evaluate an intervention strategy.'}];
+ e.dimension_id='intervention';return true;
+}
 // Only repair an arm when its own citation contains the misplaced comparison.
 // An explicit eligibility clause can supply a broader qualifier such as "any".
 const armContrast=/\s+(?:compared (?:with|to)|versus|vs\.?)\s+/i;
@@ -571,5 +597,5 @@ function description(rows,context={}){
  return [...new Set([...sentences,...(context.supplemental_sentences||[]),focus,methods].filter(Boolean))].join(' ');
 }
 
-return {ageClause,plan,classifyAnalysis,restoreAge,normalizeComparisonArms,normalizeComparators,interventionReference,phrase,join,criterionPhrase,naturalExpression,splitDimensions,combinePopulationUnits,clause,topic,projectTopic,descriptionContext,description};
+return {ageClause,plan,classifyAnalysis,restoreAge,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,criterionPhrase,naturalExpression,splitDimensions,combinePopulationUnits,clause,topic,projectTopic,descriptionContext,description};
 });

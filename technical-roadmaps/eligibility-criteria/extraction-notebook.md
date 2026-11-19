@@ -6,6 +6,7 @@
 
 | 记录代码 | 已观察到的错误 | 处理方法与复现检查 |
 | --- | --- | --- |
+| `excluded_intervention` | 以氧饱和度目标为干预的研究被排除，曾误归入 Study design 或 Other。 | 先识别排除所依据的特征。目标导向治疗策略归入 Intervention，保留整项研究为排除对象；随机分配等研究方法归入 Study design。原文另外提到的按目标滴定给氧仍用作亚组分析因素。[排除要素归类](../../tests/eligibility/explicit-study-exclusions.cjs) |
 | `exclusion_list` | 原文列举多项排除，结果漏项、反转方向，或页面显示无排除。 | 从排除动词或小标题读到列举结束。逐条保留被排除的对象及相关否定，并核对页面与导出中的条数。区分研究资格与仅从某一分析中剔除。[排除列举](../../tests/eligibility/explicit-study-exclusions.cjs) |
 | `source_coverage` | 原文明示的要素未提取，或同类多个选项只留下一个。 | 逐项对应原文段落、列举和要素记录。发现缺项时保留原文出处，恢复其范围后送既有核对流程。[来源覆盖](../../tools/test_eligibility_source_coverage.cjs) |
 | `comparison_arms` | Intervention 与 Comparison 都照抄了整句目的，或比较组落入 Other。 | 定位每组接受的处理，保留剂量、主动对照、自身组间比较及“任何”等范围词，再分别命名。[组别方向](../../tests/eligibility/comparison-arms.cjs) · [对照选项](../../tests/eligibility/comparison-review.cjs) |

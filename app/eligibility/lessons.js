@@ -8,6 +8,8 @@ const version=1;
 // Entries without a trigger describe interface or transport faults; they are
 // documented and may be counted, but do not consume extraction prompt space.
 const entries={
+ excluded_intervention:{trigger:/\b(?:exclud(?:e|ed|ing)|exclusion)\b[^.!?。]{0,160}\b(?:studies|trials) (?:of|evaluating|testing) (?:[\w-]+\s+){0,5}(?:targeting|titration|dosing|treatments?|therap(?:y|ies)|regimens?|interventions?)\b|排除[^。！？]{0,80}(?:治疗策略|干预措施|滴定策略|氧饱和度目标)/i,
+  tip:'Classify an excluded study by what defines the exclusion. A treatment strategy belongs under Intervention. Reserve Study design for methods such as randomisation. Keep subgroup factors in the analysis plan.'},
  exclusion_list:{trigger:/\b(?:exclud(?:e|es|ed|ing)|exclusion|ineligible)\b|排除/i,
   tip:'Locate every explicitly excluded unit. Carry its governing verb and negation across enumerated items; keep exclusions from an analysis separate from study exclusions.'},
  comparison_arms:{trigger:/\b(?:compar(?:ed|ing) (?:with|to)|comparing\b|versus|vs\.?\s|placebo|control group|each other)\b|安慰剂|对照/i,
@@ -54,6 +56,7 @@ function correctedLessons(elements){
   if(e.wording_repair)found.add('source_fidelity');
   for(const fix of e.metadata_corrections||[]){
    if(fix.field==='disposition'&&fix.to==='exclude')found.add('exclusion_list');
+   else if(fix.field==='dimension_id'&&fix.to==='intervention'&&fix.from&&fix.from!=='intervention'&&e.disposition==='exclude')found.add('excluded_intervention');
    else if((fix.field==='dimension_id'&&fix.to==='comparator')||(fix.field==='normalized_text'&&fix.basis==='Separate the two arms of the explicit comparison in the original source.'))found.add('comparison_arms');
    else if(fix.field==='scope_status'&&fix.from==='unrestricted')found.add('scope_status');
    else if(fix.field==='semantic_role'&&fix.to==='review_focus'&&e.dimension_id==='outcome')found.add('outcome_role');

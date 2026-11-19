@@ -3,15 +3,18 @@ const assert=require('node:assert/strict');
 const E=require('../../app/eligibility/engine');
 const M=require('../../app/eligibility/model');
 const B=require('../../app/eligibility/background');
+const Methods=require('../../app/eligibility/methodology');
 
-async function run(exclusionText,grouped=false,{language='en',extractOnly=false,translatedCandidate=null}={}){
+async function run(exclusionText,grouped=false,{language='en',extractOnly=false,translatedCandidate=null,misclassified=null,excludedIntervention=null}={}){
  const question='👶 Eligible infants received respiratory support at birth. We examined whether oxygen was titrated to saturation targets. '+exclusionText;
  const state=E.save_input(E.create_project('neonatal-exclusions'),{research_question:question,question_framework:'PICOS',output_language:language}).state;
  const lessons=[],options={onLesson:id=>lessons.push(id)};
  let requests=0;
+ const reviewed=[];
  const adapter={request:async(step,s,payload)=>{
   if(step==='review_normalization'){
    requests++;
+   reviewed.push(...payload.items);
    return {items:payload.items.map(({id,semantic_role,scope_status,disposition,information_status})=>({
     id,semantic_role,scope_status,disposition,information_status,status:'supported',issue_type:'none',reason:'Simulated source assessment.'
    }))};
@@ -22,6 +25,8 @@ async function run(exclusionText,grouped=false,{language='en',extractOnly=false,
    information_status:'explicit',semantic_role:side?'eligibility_condition':'review_focus',scope_status:side?'restricted':'unspecified',disposition:side,source_refs:[E.ref(source,quote)]});
   const elements=[el('p','population','infants received respiratory support at birth','include'),el('a','analysis_objective','whether oxygen was titrated to saturation targets',null)];
   if(translatedCandidate)elements.push({...el('t','study_design',exclusionText,'exclude'),normalized_text:translatedCandidate});
+  if(misclassified)elements.push(el('wrong','study_design',misclassified,'exclude'));
+  if(excludedIntervention)elements.push(el('target','intervention',excludedIntervention,'exclude'));
   if(grouped)elements.push(el('all','other',exclusionText,'exclude'));
   else{
    if(question.includes('delivery room'))elements.push(el('room','population','delivery room','include'));
@@ -32,7 +37,7 @@ async function run(exclusionText,grouped=false,{language='en',extractOnly=false,
  if(extractOnly)return M.extract_elements(state,E.environment(),adapter,options);
  const result=await M.analyze(state,E.environment(),adapter,options);
  const project=E.ingest_candidates(state,result.candidates).state;
- return {view:B.projectToClassic(project),project,requests,lessons};
+ return {view:B.projectToClassic(project),project,requests,lessons,reviewed};
 }
 
 test('mixed explicit exclusions retain their direction, independent domains, study subjects and exact offsets',async()=>{
@@ -44,7 +49,7 @@ test('mixed explicit exclusions retain their direction, independent domains, stu
  assert.deepEqual(row('Population').exclude,['studies of infants with antenatally diagnosed congenital anomalies']);
  assert(!row('Population').include.some(rule=>rule.includes('room')));
  assert.deepEqual(row('Context').exclude,['studies not taking place in the delivery room']);
- assert.deepEqual(row('Other').exclude,['studies of oxygen saturation targeting']);
+ assert.deepEqual(row('Intervention').exclude,['studies of oxygen saturation targeting']);
  assert(!view.frameworkSlots.includes('Other')&&!view.frameworkSlots.includes('Context'));
  for(const row of view.rows)for(const rule of row.exclude)assert(view.manuscriptParagraph.includes(rule));
  assert(!project.criteria.some(c=>c.text.includes('titrated')));
@@ -53,6 +58,38 @@ test('mixed explicit exclusions retain their direction, independent domains, stu
  for(const e of project.elements.filter(e=>e.disposition==='exclude')){
   const ref=e.source_refs[0];assert.equal(source.slice(ref.start,ref.end).join(''),ref.quote);
  }
+});
+
+test('a therapeutic strategy misfiled as study design reaches independent review in Intervention',async()=>{
+ const target='studies of oxygen saturation targeting';
+ const {project,view,lessons,requests,reviewed}=await run('We excluded '+target+' and case reports.',false,{misclassified:target});
+ assert.equal(requests,1);
+ assert(reviewed.some(e=>e.dimension_id==='intervention'&&e.normalized_text===target&&e.disposition==='exclude'));
+ assert.deepEqual(view.rows.find(r=>r.dimension==='Intervention').exclude,[target]);
+ assert.deepEqual(view.rows.find(r=>r.dimension==='Study design').exclude,['case reports']);
+ const rule=project.elements.find(e=>e.normalized_text===target);
+ assert(rule.metadata_corrections.some(f=>f.field==='dimension_id'&&f.from==='study_design'&&f.to==='intervention'));
+ assert(lessons.includes('excluded_intervention'));
+ assert.equal(Methods.interventionReference([rule]),null);
+ const included={dimension_id:'intervention',disposition:'include',scope_status:'restricted',normalized_text:'Nutritional interventions'};
+ assert.equal(Methods.interventionReference([rule,included]),'nutritional intervention');
+});
+
+test('study-design, measurement and subgroup wordings do not identify excluded treatments',()=>{
+ for(const wording of ['randomised trials of oxygen saturation targeting','studies of oxygen saturation measurement',
+  'studies of infants receiving oxygen saturation targeting','whether oxygen was titrated to saturation targets',
+  'studies of oxygen saturation targeting from the sensitivity analysis']){
+  assert.equal(Methods.isInterventionStudyExclusion(wording),false,wording);
+ }
+ assert(Methods.isInterventionStudyExclusion('studies of blood pressure targeting'));
+ assert(Methods.isInterventionStudyExclusion('trials testing exercise as the assigned intervention'));
+});
+
+test('a study excluded for comparing two treatment strategies keeps its whole comparison',async()=>{
+ const target='studies comparing high versus low oxygen saturation targets';
+ const {view,requests}=await run('We excluded '+target+'.',false,{excludedIntervention:target});
+ assert.deepEqual(view.rows.find(r=>r.dimension==='Intervention').exclude,[target]);
+ assert.equal(requests,1);
 });
 
 test('an exclusion from a sensitivity analysis or with a shared exception remains with the original extractor',async()=>{

@@ -156,23 +156,28 @@ console.log('PASS: editable criteria save/export/handoff/reload, framework-only 
   'Studies of infants with antenatally diagnosed congenital anomalies.'
  ];
  project.framework='PICOS';
- project.machineCriteria=[{title:'Other',uncertain:rules[0]},{title:'Context',uncertain:rules[1]},
+ project.machineCriteria=[{title:'Intervention',condition:'Air.',uncertain:rules[0]},{title:'Context',uncertain:rules[1]},
   {title:'Population',condition:'Term or late preterm infants.',uncertain:rules[2]}];
  api.set(project);
  const exclusions=el('preview').innerHTML.split('>Exclusion</h3>')[1].split('</section>')[0];
  const table=docXml().split('<w:tbl>')[1].split('</w:tbl>')[0];
  for(const rule of rules){assert(exclusions.includes(rule),rule);assert(table.includes(rule),rule);}
+ const interventionLine=exclusions.split('<div class="summary-inclusion">').find(line=>line.includes(rules[0]));
+ assert(interventionLine.includes('>Intervention:</strong>'));
+ const interventionRow=table.split('<w:tr>').find(row=>row.includes(rules[0]));
+ assert(interventionRow.includes('>Intervention<'));
  assert(!exclusions.includes('>Context:</strong>')&&!exclusions.includes('>Other:</strong>'));
  assert(!/>(Other|Context)</.test(table));
  assert(!/No explicit exclusion|See Description/.test(exclusions));
  const share=JSON.parse(storage.get('aimstep-eligibility-summary:synthetic-project'));
+ assert(share.screeningCriteria.exclusions.some(item=>item.domain==='Intervention'&&item.text===rules[0]));
  for(const rule of rules){
   assert(share.exclusions.some(item=>item.text.includes(rule)));
   assert(share.screeningCriteria.exclusions.some(item=>item.text.includes(rule)));
  }
  const edited='Studies conducted outside the delivery room.';
- // The displayed Context exclusion follows Population and Other, while its
- // underlying source row is between them.
+ // The displayed Context exclusion follows the two framework rows, while
+ // its underlying source row is between them.
  edit([node(2,'exclude',0,edited)]);assert(api.savePreviewEdits());
  assert.equal(api.get().machineCriteria[1].uncertain,edited);
  assert.equal(api.get().machineCriteria[0].uncertain,rules[0]);

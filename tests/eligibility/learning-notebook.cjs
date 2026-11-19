@@ -82,3 +82,14 @@ test('only recognised corrections and counters are kept; author confirmations do
  L.recordRun(storage,key,['comparison_arms','comparison_arms','unknown','private case']);
  assert.deepEqual(JSON.parse(storage.getItem(key)),{version:1,counts:{comparison_arms:4}});
 });
+
+test('a treatment-based exclusion retrieves the relevant tip and counts only actual misclassifications',()=>{
+ const input=text=>({question:{sources:[{original_text:text}]}});
+ const tip=L.entries.excluded_intervention.tip;
+ assert(L.prompt('extract_elements',input('We excluded studies of oxygen saturation targeting.')).includes(tip));
+ assert(!L.prompt('extract_elements',input('We excluded observational studies.'),{excluded_intervention:8}).includes(tip));
+ assert(!L.prompt('extract_elements',input('We examined whether oxygen was titrated to saturation targets.'),{excluded_intervention:8}).includes(tip));
+ const corrected={dimension_id:'intervention',disposition:'exclude',metadata_corrections:[{field:'dimension_id',from:'study_design',to:'intervention'}]};
+ assert.deepEqual([...L.correctedLessons([corrected])],['excluded_intervention']);
+ assert.deepEqual([...L.correctedLessons([{...corrected,disposition:'include'},{...corrected,decision_status:'confirmed_by_user'},{...corrected,metadata_corrections:[]}])],[]);
+});
