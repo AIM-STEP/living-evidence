@@ -94,7 +94,8 @@ function projectToClassic(project,registry){
   if(multiple)for(const row of target)for(const side of ['include','exclude'])for(const rule of row[side]){
    add(rows,row.dimension,side,q.display_number+' · '+rule,[],false);
   }
-  return {display_number:q.display_number,...(multiple?{rows:target}:{}),...(pending&&!awaiting.size?{pending_inclusion_relation:true}:{}),...(linked.length?{linked_conditions:linked}:{})};
+  const outcomes=fields.has('outcome')?Methods.outcomeGroups(q.research_question):[];
+  return {display_number:q.display_number,...(outcomes.length?{outcome_groups:outcomes}:{}),...(multiple?{rows:target}:{}),...(pending&&!awaiting.size?{pending_inclusion_relation:true}:{}),...(linked.length?{linked_conditions:linked}:{})};
  });
  const frameNames=[...new Set(frameworkQuestions.map(q=>q.framework))],framework=frameNames.length===1?frameNames[0]:'Other';
  const frameworkSlots=frameNames.length===1?frameworkQuestions[0].frameworkSlots:[];

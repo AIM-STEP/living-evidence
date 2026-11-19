@@ -356,10 +356,65 @@ function needsSourceTranslation(value,language){
 // An explicit comparative eligibility statement binds its participant group,
 // design and two arms together. A conjunction or disjunction *inside* one of
 // those spans does not alter that relationship.
-function comparisonEligibilityFields(passage){
+function quotedField(ref,text,from=0){
+ const index=ref.quote.indexOf(text,from);
+ if(index<0)return null;
+ const start=ref.start+Array.from(ref.quote.slice(0,index)).length;
+ return {source_id:ref.source_id,source_revision:ref.source_revision,quote:text,start,end:start+Array.from(text).length};
+}
+// Trials of I, compared with C, with a stated follow-up, in P. The time
+// requirement belongs to the eligible studies and remains attached to design.
+function classifyFollowUpGroups(elements){
+ for(const e of elements){
+  if(e.explicit_revision||e.decision_status==='confirmed_by_user'||e.source_occurrence_alternatives?.length)continue;
+  const citations=e[locatedContexts]?.length?e[locatedContexts]:e.source_refs;
+  if(!citations.length||!citations.every(r=>
+   /^(?:(?:we|the authors) (?:categori[sz]ed|classified|grouped) follow[-‐‑ ]up|follow[-‐‑ ]up (?:was|periods were) (?:categori[sz]ed|classified|grouped)) (?:as|into)\b/iu.test((r.context||r.quote).trim())&&
+   !/\b(?:includ(?:e|ed)|exclud(?:e|ed)|eligible|eligibility|unless|except)\b/iu.test(r.context||r.quote)))continue;
+  e.semantic_role='review_focus';e.scope_status='unspecified';e.disposition=null;
+ }
+}
+function trialComparisonFields(passage,passages){
+ const match=passage.value.match(/^((?:(?:randomi[sz]ed|quasi[-‐‑ ]randomi[sz]ed|cluster[-‐‑ ]randomi[sz]ed|controlled|clinical|prospective|retrospective|cohort|observational)\s+)*(?:trials?|studies|RCTs?)(?:\s*\([^()]+\))?) of (.+?),?\s+(?:compared (?:with|to)|versus)\s+([^,]+?)(?:, (with (?:a )?(?:minimum )?follow[-‐‑ ]up of (?:at least |at most |more than |less than )?(?:\d+(?:\.\d+)?|[a-z]+(?:[- ][a-z]+)?) (?:days?|weeks?|months?|years?)(?: or (?:longer|more|less|shorter))?))?, (?:in|among) ((?:adults?|patients?|people|participants?|children|infants?|women|men)\b[^,;]+)$/iu);
+ if(!match)return null;
+ const [,design,intervention,comparator,followUp,population]=match;
+ if([intervention,comparator,population].some(value=>/\b(?:otherwise|or (?:studies|trials|adults|children)|excluding|unless|if|depending|whereas|compared (?:with|to)|versus)\b|[!?;]/iu.test(value)))return null;
+ const fields=[];
+ let cursor=0;
+ for(const [dimension,value] of [['study_design',design],['intervention',intervention],['comparator',comparator],['study_design',followUp],['population',population]]){
+  if(!value)continue;
+  const ref=quotedField(passage.ref,value,cursor);
+  if(!ref)return null;
+  cursor=passage.ref.quote.indexOf(value,cursor)+value.length;
+  if(value===followUp){
+   fields[0].quote+=' '+value;fields[0].refs.push(ref);fields[0].forms.push(value);
+  }else fields.push({dimension,quote:value,ref,refs:[ref],forms:[value]});
+ }
+ const key=value=>literalWording(value).toLowerCase();
+ const objectives=passages.filter(p=>p.kind==='comparison_clause').map(p=>({p,arms:Methods.standaloneObjectiveArms(p.ref)})).filter(({arms})=>
+  arms&&key(arms.intervention.quote.replace(/\s*\([^()]*\)\s*$/u,''))===key(intervention)&&key(arms.comparator.quote)===key(comparator));
+ if(objectives.length===1){
+  const {p,arms}=objectives[0],i=fields.find(f=>f.dimension==='intervention'),c=fields.find(f=>f.dimension==='comparator');
+  i.quote=arms.intervention.quote;i.refs.push(arms.intervention);i.forms.push(i.quote);
+  c.matchRefs=[arms.comparator];
+  const pop=fields.find(f=>f.dimension==='population');
+  const diagnosis=p.ref.quote.match(/\b(?:in|among) ((?:people|patients|adults|participants) with ([\p{L} -]+) \(([A-Z][A-Z0-9-]+)\))\.?$/u);
+  const eligible=population.match(/^((?:adults|children|infants|people|participants|patients) with )([A-Z][A-Z0-9-]+)$/u);
+  if(diagnosis&&eligible&&diagnosis[3]===eligible[2]){
+   const [mention,disease]=diagnosis.slice(1,3);
+   const full=disease.trim().replace(/^(?:Coronary|Chronic|Acute|Congenital|Obstructive|Ischaemic|Ischemic)\b/u,word=>word.toLowerCase());
+   pop.quote=eligible[1]+full;
+   pop.refs.push(quotedField(p.ref,mention));
+   pop.forms.push(mention,mention.replace(/\s*\([^()]+\)$/u,''),eligible[1].split(' ')[0],full,pop.quote,pop.quote+' ('+eligible[2]+')');
+  }
+ }
+ return fields;
+}
+function comparisonEligibilityFields(passage,passages){
  if(passage.kind!=='include'||!passage.value)return null;
  const value=passage.value.trim();
  if(/\b(?:except|unless|provided|if|either of the following|respectively|alternatively|whereas|otherwise|or (?:in|among|comparing|trials?|studies))\b|[;:]/i.test(value))return null;
+ const trials=trialComparisonFields(passage,passages);if(trials)return trials;
  const parts=value.split(/\s+(?:comparing|(?:that|which) compar(?:e|ed))\s+/i);
  if(parts.length!==2)return null;
  let [design,population]=parts[0].split(/\s+(?:in|among|enrolling|involving|recruiting)\s+(.+)$/i);
@@ -397,6 +452,75 @@ function markLiteralField(e,dimension,side,wording){
     /[?？]|\b(?:to be (?:defined|decided|determined)|uncertain|unclear|if applicable|unless|except)\b|待定|待确认|不明确|除非/u.test(wording.toLowerCase()))return;
  e[literalField]={dimension,side,wording:e.normalized_text};
 }
+// A source label is not a quote. Replace it only when a complete field, or
+// the entire reported outcome list, independently matches the current source.
+function recoverLabelCitations(elements,ranges,passages){
+ const key=text=>literalWording(text).toLowerCase();
+ for(const e of elements){
+  const [ref]=e.source_refs;
+  if(e.source_refs.length!==1||!/^S[1-9]\d*$/u.test(ref.quote)||ref.start!=null||ref.end!=null||
+     e.explicit_revision||e.decision_status==='confirmed_by_user'||e.disposition==='exclude'||
+     e.scope_conditions?.length||e.exceptions?.length)continue;
+  const sources=ranges.filter(r=>r.id===ref.source_id&&r.revision===ref.source_revision);
+  if(sources.length!==1)continue;
+  const source=sources[0];
+  const own=passages.filter(p=>p.ref.source_id===ref.source_id&&p.ref.source_revision===ref.source_revision);
+  const inclusions=own.filter(p=>p.kind==='include'&&p.value),wording=key(e.normalized_text);
+  const fields=inclusions.length===1?comparisonEligibilityFields(inclusions[0],own):null;
+  const matches=[];
+  for(const f of fields||[]){
+   const refs=f.refs||[f.ref];
+   if(f.dimension==='study_design'&&refs.length>1&&['study_design','outcome','follow_up','duration'].includes(e.dimension_id)&&
+      key(refs[1].quote).replace(/^with /u,'')===wording.replace(/^with /u,'')){
+    matches.push([refs[1]]);continue;
+   }
+   if(f.dimension!==e.dimension_id)continue;
+   const forms=f.forms||[f.quote];
+   if(forms.some(v=>key(v)===wording)||f.dimension==='intervention'&&sameArmWithExpandedAcronym(f.quote,e.normalized_text))matches.push(refs);
+  }
+  if(!matches.length&&e.dimension_id==='outcome'){
+   const declared=Methods.declaredFocus(source.text).filter(d=>d.dimension==='outcome');
+   const groups=Methods.outcomeGroups(source.text);
+   if(declared.length&&groups.length&&groups.length===declared.length){
+    const slices=declared.map(d=>({source_id:ref.source_id,source_revision:ref.source_revision,
+     start:source.start+d.start,end:source.start+d.end,quote:Array.from(source.text).slice(d.start,d.end).join('')}));
+    const matchesList=items=>{
+     let tail=wording;
+     for(const [i,item] of items.entries()){
+      if(i){const separator=tail.match(/^(?:, (?:and )?| and |; )/u);if(!separator)return false;tail=tail.slice(separator[0].length);}
+      const term=key(item);if(!tail.startsWith(term))return false;
+      tail=tail.slice(term.length);
+     }
+     return !tail;
+    };
+    if(matchesList(groups.flatMap(g=>g.items)))matches.push(slices);
+    else for(const [i,g] of groups.entries())if(matchesList(g.items)||g.items.some(item=>key(item)===wording))matches.push([slices[i]]);
+   }
+  }
+  if(matches.length===1)e.source_refs=matches[0];
+ }
+}
+function classifyDeclaredOutcomes(question,ranges){
+ const declarations=ranges.flatMap(r=>Methods.declaredFocus(r.text).filter(d=>d.dimension==='outcome').map(d=>({
+  source_id:r.id,source_revision:r.revision,start:r.start+d.start,end:r.start+d.end+1
+ })));
+ if(!declarations.length)return;
+ const focusIds=new Set();
+ for(const e of question.elements){
+  if(e.dimension_id.split('.')[0]!=='outcome'||!e.source_refs?.length||e.explicit_revision||
+     e.decision_status==='confirmed_by_user'||e.disposition==='exclude')continue;
+  const evidence=e[locatedContexts]||e.source_refs;
+  if(E.explicitOutcomeRequirement(evidence.map(r=>({quote:r.context||r.quote}))))continue;
+  if(!e.source_refs.every(ref=>declarations.some(d=>ref.source_id===d.source_id&&ref.source_revision===d.source_revision&&ref.start<d.end&&ref.end>d.start)))continue;
+  e.semantic_role='review_focus';e.scope_status='unspecified';e.disposition=null;e.outcome_use='interest';
+  focusIds.add(e.candidate_id);
+ }
+ if(question.logic&&focusIds.size){
+  const ids=question.elements.map(e=>e.candidate_id);
+  D.validate_expression(question.logic,new Set(ids));
+  question.logic=D.mapExpression(question.logic,new Map(ids.filter(id=>!focusIds.has(id)).map(id=>[id,id])),'element_id');
+ }
+}
 // A complete population in a clinical objective or a standalone eligibility
 // directive supplies its own field and direction without a "Population:" label.
 function markNarrativeField(e,state){
@@ -425,9 +549,21 @@ function markNarrativeField(e,state){
   /^(?:(?:randomi[sz]ed|controlled|clinical|cluster|quasi|cohort|case[-‐‑ ]control|prospective|retrospective|observational|cross[-‐‑ ]sectional|parallel|double[-‐‑ ]blind)[\s-]+)+(?:trials?|studies)(?:\s*\(RCTs?\))?$/iu.test(value)?'study_design':null;
  if(dimension===e.dimension_id)markLiteralField(e,dimension,side,value);
 }
+// The model may spell out an acronym in otherwise identical wording. This can
+// identify the corresponding source field; only the source wording is emitted.
+function sameArmWithExpandedAcronym(source,wording){
+ const tokens=s=>literalWording(s).match(/[\p{L}\d]+/gu)||[];
+ const long=tokens(wording).map(w=>w.toLowerCase());let i=0,expanded=false;
+ for(const token of tokens(source)){
+  if(token.toLowerCase()===long[i]){i++;continue;}
+  if(!/^[A-Z]{2,6}$/u.test(token)||long.slice(i,i+token.length).map(w=>w[0]).join('')!==token.toLowerCase())return false;
+  i+=token.length;expanded=true;
+ }
+ return expanded&&i===long.length;
+}
 function reconcileEligibilityFields(state,result,q,ranges,passages,onLesson,frame){
  if(!['PICO','PICOS','PICOs','pico','picos'].includes(frame)||q.confirmed_elements?.length)return;
- const matched=passages.map(p=>({p,fields:comparisonEligibilityFields(p)})).filter(x=>x.fields);
+ const matched=passages.map(p=>({p,fields:comparisonEligibilityFields(p,passages)})).filter(x=>x.fields);
  if(matched.length!==1||passages.some(p=>p.kind==='include'&&p.value&&p!==matched[0].p)||/\b(?:alternatively|or we (?:also )?included|either of the following)\b/i.test(q.original_text||''))return;
  const {p,fields}=matched[0];
  const key=s=>s.normalize('NFKC').toLowerCase().replace(/[‐‑–]/g,'-').replace(/[.,()]/g,' ').replace(/\s+/g,' ').trim();
@@ -449,22 +585,29 @@ function reconcileEligibilityFields(state,result,q,ranges,passages,onLesson,fram
   }
   const fullAim=arm&&/^(?:to (?:assess|compare|evaluate|determine)|we (?:aim|assess|compare))/i.test(primary)&&
     value===key(primary)&&fields.filter(f=>['intervention','comparator'].includes(f.dimension)).every(f=>contains(key(primary),key(f.quote).replace(/^any /,'')))&&
-    e.source_refs.every(r=>sameClause(r)||contains(key(primary),key(r.quote))||key(r.quote)===key(primary));
+    e.source_refs.every(r=>sameClause(r)||contains(key(primary),key(r.quote))||contains(key(r.quote),key(primary)));
   const field=fields.find(f=>{
    const domain=e.dimension_id==='design'?'study_design':e.dimension_id==='comparison'?'comparator':e.dimension_id;
-   const citedInside=e.source_refs.every(r=>r.start>=f.ref.start&&r.end<=f.ref.end);
+   const spans=[...(f.refs||[f.ref]),...(f.matchRefs||[])];
+   const citedInside=e.source_refs.every(r=>spans.some(span=>r.start>=span.start&&r.end<=span.end));
    if(domain!==f.dimension&&domain!=='other'&&!citedInside)return false;
    if(fullAim)return domain===f.dimension;
-   if(!e.source_refs.every(r=>sameClause(r)||contains(key(primary),key(r.quote))))return false;
    if(citedInside)return true;
+   const forms=(f.forms||[f.quote]).map(groupKey);
+   const broad=e.source_refs.every(r=>sameClause(r)||contains(key(primary),key(r.quote))||contains(key(r.quote),key(primary))||contains(key(r.quote),key(p.value)));
+   if(!broad)return false;
+   if(arm&&domain===f.dimension&&sameArmWithExpandedAcronym(f.quote,e.normalized_text))return true;
    const fragments=groupKey(e.normalized_text).split(/ \| /);
-   return contains(groupKey(f.quote),groupKey(e.normalized_text))||
-    (f.dimension==='population'&&fragments.length>1&&fragments.every(part=>contains(groupKey(f.quote),part)));
+   return forms.some(form=>contains(form,groupKey(e.normalized_text)))||
+    (f.dimension==='population'&&fragments.length>1&&fragments.every(part=>forms.some(form=>contains(form,part))));
   });
   if(!field)continue;
   // Other author/source qualifications on a candidate must survive even if
   // they resemble one of these slots.
-  if(blocked(e)||e.structured_value||e.information_status!=='explicit')return;
+  const explicitTiming=field.forms?.length>1&&field.dimension==='study_design'&&field.refs.slice(1).some(time=>
+   e.source_refs.every(r=>r.start>=time.start&&r.end<=time.end));
+  if(blocked(e)||e.structured_value&&!explicitTiming||!['explicit','ambiguous'].includes(e.information_status))return;
+  if(e.information_status==='ambiguous'&&!fullAim&&!(field.forms||[field.quote]).some(form=>key(form)===value))return;
   if(e.source_occurrence_alternatives?.some(alt=>/\b(?:exclude|excluded|excluding|ineligible|unless|except)\b/i.test(alt.quote+' '+(alt.heading?.quote||''))))return;
   fieldById.set(e.candidate_id,field);candidatesByField.get(field).push(e);
  }
@@ -486,7 +629,7 @@ function reconcileEligibilityFields(state,result,q,ranges,passages,onLesson,fram
   let id=entries[0]?.candidate_id;
   if(!id){id='source_'+field.dimension;while(used.has(id))id+='_';used.add(id);}
   if(entries.length!==1||entries[0].normalized_text!==field.quote||entries[0].dimension_id!==field.dimension)changed=true;
-  const entry={...entries[0],candidate_id:id,normalized_text:field.quote,dimension_id:field.dimension,source_refs:[field.ref],
+  const entry={...entries[0],candidate_id:id,normalized_text:field.quote,dimension_id:field.dimension,source_refs:field.refs||[field.ref],
    semantic_role:'eligibility_condition',disposition:'include',information_status:'explicit',scope_status:'restricted',structured_value:null};
   delete entry[reviewCitations];delete entry[locatedContexts];
   if(needsSourceTranslation(field.quote,state.output_language))entry.source_wording_needs_translation=true;
@@ -1066,8 +1209,9 @@ async function extract_elements(state,env,adapter,options={},review=null){
    for(const e of answer.questions[0].elements){
     delete e.source_wording_needs_translation;
     D.validate_candidate_element(e);
-    checkExtractedSources(state,e,q.question_id,ranges);
    }
+   recoverLabelCitations(answer.questions[0].elements,ranges,passages);
+   for(const e of answer.questions[0].elements)checkExtractedSources(state,e,q.question_id,ranges);
    retainStudyExclusions(state,answer.questions[0],q.question_id,ranges,sources,options.onLesson);
    for(const e of answer.questions[0].elements){
     if(Methods.normalizeExcludedIntervention(e))options.onLesson?.('excluded_intervention');
@@ -1079,6 +1223,8 @@ async function extract_elements(state,env,adapter,options={},review=null){
     if(literalDimension&&sources.every(source=>source.input_kind==='research_question'))markLiteralField(element,literalDimension,'include',element.normalized_text);
    }
    const result=answer.questions[0];
+   classifyDeclaredOutcomes(result,ranges);
+   classifyFollowUpGroups(result.elements);
    const frameId=E.resolve_review_context(originals.get(q.question_id),result,env).framework_mapping.framework_id;
    if(batches.length===1)reconcileEligibilityFields(state,result,q,ranges,passages,options.onLesson,frameId);
    retainUncitedPassages(state,answer.questions[0],q.question_id,ranges,passages,options.onLesson);
