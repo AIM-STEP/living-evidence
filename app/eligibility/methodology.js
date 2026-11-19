@@ -529,7 +529,7 @@ function outcomeAbbreviations(source){
  };
  for(const match of source.matchAll(/\s+\(([A-Z][A-Za-z0-9]{1,8})\)/g)){
   const short=match[1];
-  const tail=source.slice(Math.max(0,match.index-120),match.index);
+  const tail=source.slice(Math.max(0,match.index-120),match.index).split(/[\n!?。；;]/u).at(-1);
   const words=[...tail.matchAll(/[\p{L}]+/gu)].slice(-6);
   for(let i=0;i<words.length;i++){
    const name=words.slice(i).map(m=>m[0]);
@@ -549,7 +549,7 @@ function outcomeAbbreviations(source){
 function abbreviationDefinitions(source){
  source=Array.isArray(source)?source.join('\n'):String(source||'');
  const definitions=outcomeAbbreviations(source);
- if(!definitions.has('CR')&&/\bexercise[-‐‑ ]based CR\b/u.test(source)&&
+ if(!definitions.has('CR')&&/\b[Ee]xercise[-‐‑ ]based CR\b/u.test(source)&&
     /\b(?:coronary heart disease|cardiac rehabilitation)\b/iu.test(source))definitions.set('CR','cardiac rehabilitation');
  // Some sources give the full design in prose and use only the acronym in a field.
  const trials=source.match(/\brandomi[sz]ed controlled trials?\b/iu);
