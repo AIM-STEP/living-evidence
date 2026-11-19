@@ -38,8 +38,12 @@ function scenario(mode) {
   const steps = [];
   let affectedId, reviewPass = 0;
 
-  const adapter = {async request(step, ignored, payload) {
+  const adapter = {async request(step, ignored, payload, schema, instruction) {
     steps.push(step);
+    if (step === 'extract_elements' || step === 'review_normalization') {
+      assert.doesNotMatch(instruction, /malnutrition|nutritional (?:risk|interventions)|hospitali[sz]ation|air pollution/i,
+        'An unrelated question must not receive clinical facts or a title from an example case.');
+    }
     if (step === 'extract_elements') return {questions: [structuredClone(question)]};
     if (step === 'repair_candidate_wording') {
       assert.deepEqual(payload.items.map(item => item.id), [affectedId]);

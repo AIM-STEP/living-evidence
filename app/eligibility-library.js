@@ -23,13 +23,15 @@ function clearChanges(storage,id){
  const changes=[],backupKey='aimstep-protocol-backups:'+id,searchKey='aimstep-search-strategy:'+id,completionKey='aimstep-setup-completed:'+encodeURIComponent(id);
  const backups=JSON.parse(storage.getItem(backupKey)||'null');
  if(Array.isArray(backups)){
-  const cleaned=backups.map(backup=>{
-   if(!backup||typeof backup!=='object')return backup;
+  const cleaned=backups.flatMap(backup=>{
+   if(!backup||typeof backup!=='object')return [backup];
    const {eligibility,summary,...keep}=backup;
    if(keep.search)keep.search=stripLinkedSearchCriteria(keep.search);
-   return keep;
+   // A criteria-only handoff has no remaining work to restore, including its source filename.
+   if(Object.keys(keep).every(field=>['date','source'].includes(field)||keep[field]==null))return [];
+   return [keep];
   });
-  changes.push([backupKey,JSON.stringify(cleaned)]);
+  changes.push([backupKey,cleaned.length?JSON.stringify(cleaned):null]);
  }
  const search=JSON.parse(storage.getItem(searchKey)||'null'),cleanSearch=stripLinkedSearchCriteria(search);
  if(cleanSearch!==search)changes.push([searchKey,JSON.stringify(cleanSearch)]);

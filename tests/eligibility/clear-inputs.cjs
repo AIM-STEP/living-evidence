@@ -15,6 +15,7 @@ function page(storage){
  for(const button of ['clear-criteria','clear-question','manual-generate']){
   const store=new Map([[key,JSON.stringify(old)],['aimstep-eligibility-v3:'+project,JSON.stringify(old)],['aimstep-eligibility-summary:'+project,'previous summary']]);
   const t=page(store),stale=page(store);
+  store.set('aimstep-protocol-backups:'+project,JSON.stringify([{source:'prior.pdf',date:'2026-10-01',eligibility:old,summary:'previous summary'}]));
   const file={name:'prior.txt',size:3,text(){throw Error('A cleared attachment was reused');}};
   t.el('source-files').handlers.change({target:{files:[file],value:'old filename'}});
   t.el(button).handlers.click();
