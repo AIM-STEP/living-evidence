@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261119-criteria-release-19"></script>
-<script src="app/secure-origin.js?v=20261119-criteria-release-19"></script>
+<script src="app/eligibility-release.js?v=20261119-criteria-release-20"></script>
+<script src="app/secure-origin.js?v=20261119-criteria-release-20"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -78,7 +78,7 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261119-criteria-release-19"></script>
+<script src="app/criteria-grounding.js?v=20261119-criteria-release-20"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
 <script defer src="app/tool-i18n-catalog.js?v=20261118-criteria-actions-1"></script>
@@ -103,14 +103,14 @@
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn small" id="update-criteria-version" type="button" hidden>Load updated Criteria</button><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div id="criteria-progress" class="criteria-progress" role="progressbar" aria-label="Criteria generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="criteria-progress-track"><div class="criteria-progress-fill"></div></div><span class="criteria-progress-percent">0%</span></div></div><p id="criteria-working" hidden><span data-ui-localize>Working</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
-<script src="app/eligibility/registries.js?v=20261119-criteria-release-19"></script>
-<script src="app/eligibility/domain.js?v=20261119-criteria-release-19"></script>
-<script src="app/eligibility/methodology.js?v=20261119-criteria-release-19.1"></script>
-<script src="app/eligibility/engine.js?v=20261119-criteria-release-19"></script>
-<script src="app/eligibility/lessons.js?v=20261119-criteria-release-19"></script>
-<script src="app/eligibility/model.js?v=20261119-criteria-release-19"></script>
-<script src="app/eligibility-reset.js?v=20261119-criteria-release-19"></script>
-<script src="app/eligibility/background.js?v=20261119-criteria-release-19"></script>
+<script src="app/eligibility/registries.js?v=20261119-criteria-release-20"></script>
+<script src="app/eligibility/domain.js?v=20261119-criteria-release-20"></script>
+<script src="app/eligibility/methodology.js?v=20261119-criteria-release-20"></script>
+<script src="app/eligibility/engine.js?v=20261119-criteria-release-20"></script>
+<script src="app/eligibility/lessons.js?v=20261119-criteria-release-20"></script>
+<script src="app/eligibility/model.js?v=20261119-criteria-release-20"></script>
+<script src="app/eligibility-reset.js?v=20261119-criteria-release-20"></script>
+<script src="app/eligibility/background.js?v=20261119-criteria-release-20"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -1372,16 +1372,6 @@ function clearQuestionInput(){
 
 window.addEventListener('beforeunload',event=>{if(previewDirty){event.preventDefault();event.returnValue='';}});
 // Keep one display model for the editable preview and the Word export.
-function frameworkDisplayName(name){
- const names={
-  PICO:'population, intervention, comparator and outcome',PICOS:'population, intervention, comparator, outcome and study design',
-  PECO:'population, exposure, comparator and outcome',PECOS:'population, exposure, comparator, outcome and study design',
-  PEO:'population, exposure and outcome',PCC:'population, concept and context',PICo:'population, phenomenon of interest and context',
-  CoCoPop:'condition, context and population',PIRD:'population, index test, reference test and diagnosis of interest',
-  SPIDER:'sample, phenomenon of interest, design, evaluation and research type'
- };
- return Object.hasOwn(names,name)?name+' ('+names[name]+')':name;
-}
 function criteriaDisplay(data,refinement,tableOrder=false){
  const {rows,slots,questions}=data;
  const entries=rows.map((row,index)=>({
@@ -1390,9 +1380,7 @@ function criteriaDisplay(data,refinement,tableOrder=false){
   exclude:row.exclude.map((text,position)=>({text,position,checks:[]}))
  }));
  const display={rows:entries,topic:[],framework:[],focus:[],description:[],
-  reviewTopic:data.topic||summaryTopic(rows,data.framework),
-  frameworkText:questions.some(q=>q.framework!==questions[0].framework)?
-   questions.map(q=>q.display_number+' · '+frameworkDisplayName(q.framework)).join(' / '):frameworkDisplayName(data.framework)
+  reviewTopic:data.topic||summaryTopic(rows,data.framework)
  };
  for(const [index,detail] of (refinement?.sourceConfirmations||[]).entries()){
   if(detail.status!=='suggested')continue;
@@ -1583,7 +1571,7 @@ function renderPreview(){
   const shown=(side,html)=>!page.strict||display.rows.some(row=>row[side].length)?html:'';
   const prose=paragraph?'<p class="summary-paragraph">'+editableCriteriaText(paragraph,'data-criteria-text="paragraph"','Description')+'</p>':
     (hasConfirmations?'<p class="summary-muted" data-ui-localize>Description updates when a rule is confirmed.</p>':'');
-  area.innerHTML=`<div class="criteria-summary">${legacyNote}<div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> ${editableCriteriaText(display.reviewTopic,'data-criteria-text="topic" data-criteria-initial="'+escapeHtml(display.reviewTopic)+'"','Review topic')}</p>${display.topic.map(sourceConfirmationHtml).join('')}${focusChecks}<p><strong data-ui-localize>Framework:</strong> ${escapeHtml(display.frameworkText)}</p>${display.framework.map(sourceConfirmationHtml).join('')}</div>${section('Inclusion',shown('include',includes))}${section('Exclusion',shown('exclude',exclusionHtml))}${section('Description',descriptionChecks+prose)}</div>`;
+  area.innerHTML=`<div class="criteria-summary">${legacyNote}<div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> ${editableCriteriaText(display.reviewTopic,'data-criteria-text="topic" data-criteria-initial="'+escapeHtml(display.reviewTopic)+'"','Review topic')}</p>${display.topic.map(sourceConfirmationHtml).join('')}${focusChecks}<p><strong data-ui-localize>Framework:</strong> ${escapeHtml(framework)}</p>${display.framework.map(sourceConfirmationHtml).join('')}</div>${section('Inclusion',shown('include',includes))}${section('Exclusion',shown('exclude',exclusionHtml))}${section('Description',descriptionChecks+prose)}</div>`;
 
 }
 function xmlEscape(value){return String(value==null?'':value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
@@ -1608,7 +1596,7 @@ function criteriaWordFile(){
  const frameworkChecks=display.framework.map(check=>wordParagraph(check.domain+' · '+checkText(check),false)).join('');
  const contextualCheck=check=>wordParagraph(checkText(check)+' ('+[check.domain,check.subject].filter(Boolean).join(' · ')+')',false);
  const focusChecks=display.focus.map(contextualCheck).join(''),descriptionChecks=display.description.map(contextualCheck).join('');
- const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>',tableRows=rows.map((row,index)=>'<w:tr>'+row.map((cell,column)=>wordCell(cell,widths[column],index===0)).join('')+'</w:tr>').join('');const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+display.reviewTopic,false)+topicChecks+focusChecks+wordParagraph('Framework: '+display.frameworkText,false)+frameworkChecks+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+(normalized.paragraph||descriptionChecks?wordParagraph('Description',true)+descriptionChecks+(normalized.paragraph?wordParagraph(normalized.paragraph,false):''):'')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
+ const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>',tableRows=rows.map((row,index)=>'<w:tr>'+row.map((cell,column)=>wordCell(cell,widths[column],index===0)).join('')+'</w:tr>').join('');const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+display.reviewTopic,false)+topicChecks+focusChecks+wordParagraph('Framework: '+normalized.framework,false)+frameworkChecks+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+(normalized.paragraph||descriptionChecks?wordParagraph('Description',true)+descriptionChecks+(normalized.paragraph?wordParagraph(normalized.paragraph,false):''):'')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';syncGenerationMethodOptions();$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';state.reviewType=reviewTypeForProject();document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});

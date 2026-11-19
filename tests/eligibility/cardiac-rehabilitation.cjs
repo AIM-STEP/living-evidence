@@ -89,6 +89,7 @@ async function replay() {
     machineRefinement:{...view,signature:page.api.signature(sourceText,state.reviewType,0,machineCriteria)}});
   page.api.fill();
   const html=page.el('preview').innerHTML;
+  assert.match(html,/Framework:<\/strong> PICOS<\/p>/);
   const sections=[...html.matchAll(/<h3[^>]*>([^<]+)<\/h3>/g)].map(m=>m[1]);
   assert.deepEqual(sections,['Inclusion','Description']);
   function inOrder(text,labels){
@@ -106,6 +107,7 @@ async function replay() {
   assert.doesNotMatch(html,/<strong>(?:Context|Other):/i);
   const file=Buffer.from(page.api.export()).toString('utf8');
   const xml=file.slice(file.indexOf('<w:document'),file.indexOf('</w:document>'));
+  assert.match(xml,/>Framework: PICOS<\/w:t>/);
   const table=xml.slice(xml.indexOf('<w:tbl>'),xml.indexOf('</w:tbl>'));
   inOrder(table,['>Include<','>Population<','>Intervention<','>Comparison<','>no exercise<','>Outcomes<',outcomeList,'>Study design<']);
   assert.doesNotMatch(table.slice(table.indexOf('>Outcomes<'),table.indexOf('>Study design<')), /primary|secondary/i);
