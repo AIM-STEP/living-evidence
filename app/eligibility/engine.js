@@ -84,7 +84,7 @@ function resolve_review_context(q,candidate,env){
  if(!context.framework_requested){const options=array(candidate.framework_candidates).map(x=>typeof x==='string'?{framework_id:x,basis:'model_mapping_suggestion'}:x).filter(x=>env.frameworks.get(x.framework_id));const selected=options[0]||{framework_id:'pico',basis:'provisional_presentation_only'};resolved={framework:env.frameworks.get(selected.framework_id),candidates:options.map(x=>env.frameworks.get(x.framework_id)),basis:selected.basis||'candidate_mapping',explicit:false};}
  return {context,framework_mapping:{framework_id:resolved.framework?.framework_id||null,display_name:resolved.framework?.display_name||null,version:resolved.framework?.version||null,candidates:resolved.candidates.map(f=>({framework_id:f.framework_id,display_name:f.display_name})),basis:resolved.basis,explicit:resolved.explicit,provisional:!resolved.explicit,source_refs:resolved.explicit&&q.context_source_ref?[clone(q.context_source_ref)]:clone(q.source_refs)}};
 }
-function explicitOutcomeRequirement(refs){return /必须.{0,12}(?:测量|报告|提供)|仅纳入.{0,18}(?:测量|报告)|\b(?:must|required to|only studies that)\b.{0,35}\b(?:measure|report|provide)\b/i.test(refs.map(r=>r.quote).join(' '));}
+function explicitOutcomeRequirement(refs){return /必须.{0,12}(?:测量|报告|提供)|仅纳入.{0,18}(?:测量|报告)|\b(?:must|required to|only studies that)\b.{0,35}\b(?:measure|report|provide)\b/i.test(D.quoteText(refs));}
 function positiveRestriction(text){return /仅.{0,10}(?:阳性|显著|有效)|\b(?:only|must).{0,25}(?:positive|significant|effective results)/i.test(text);}
 function normalizeTopic(value,original,language){
  let text=String(value||original).trim().replace(/[.。\s]+$/,'');
@@ -101,11 +101,36 @@ function ensureAnalysisFocus(state,q){
 }
 function elementFromCandidate(state,q,c,env){
  D.validate_candidate_element(c);const refs=D.validate_provenance(state,c.source_refs,q.question_id,{allowEmpty:c.information_status==='missing'||c.scope_status==='not_applicable'&&!!c.applicability_basis});
- const sources=refs.map(r=>D.sourceAt(state,r));for(const source of sources)if(!sourceApplies(source,q)||source.source_type==='authorized_rule'&&!activeRuleSource(state,source))fail('RULE_OUTSIDE_SCOPE','provenance','An authorized rule is outside its declared scope.');
- const identity=JSON.stringify([q.question_id,c.dimension_id,refs.map(r=>[r.source_id,r.source_revision,r.quote]),c.normalized_text,c.semantic_role,c.disposition,c.scope_conditions||[],c.exceptions||[]]);
- const old=state.elements.find(e=>e.original_candidate_key===identity);
+ const sources=[...new Set(refs.map(r=>D.sourceAt(state,r)))];for(const source of sources)if(!sourceApplies(source,q)||source.source_type==='authorized_rule'&&!activeRuleSource(state,source))fail('RULE_OUTSIDE_SCOPE','provenance','An authorized rule is outside its declared scope.');
+ // Equivalent occurrences add evidence locations, not distinct eligibility conditions.
+ const citations=refs.map(r=>[r.source_id,r.source_revision,r.quote]);
+ const distinct=[...new Map(citations.map(citation=>[JSON.stringify(citation),citation])).values()];
+ const candidateKey=links=>JSON.stringify([q.question_id,c.dimension_id,links,c.normalized_text,c.semantic_role,c.disposition,c.scope_conditions||[],c.exceptions||[]]);
+ const identity=candidateKey(distinct);
+ let old=state.elements.find(e=>e.original_candidate_key===identity);
+ if(!old&&distinct.length<citations.length){
+  const legacyKey=candidateKey(citations);
+  old=state.elements.find(e=>e.original_candidate_key===legacyKey);
+ }
  if(old?.decision_status==='confirmed_by_user')return {...clone(old),active:true};
- const e={...clone(c),element_id:old?.element_id||D.stableId('element',identity),original_candidate_key:identity,question_id:q.question_id,raw_text:refs.map(r=>r.quote).join('\n'),source_refs:refs,framework_bindings:[],related_issue_ids:[],revision:(old?.revision||0)+1,active:true,scope_conditions:clone(c.scope_conditions||[]),exceptions:clone(c.exceptions||[]),source_rule_ids:sources.filter(s=>s.source_type==='authorized_rule').map(s=>s.rule_id),source_decision_ids:sources.filter(s=>s.legacy_decision_id).map(s=>s.legacy_decision_id)};
+ const e={...clone(c),element_id:old?.element_id||D.stableId('element',identity),original_candidate_key:identity,question_id:q.question_id,raw_text:D.quoteText(refs,'\n'),source_refs:refs,framework_bindings:[],related_issue_ids:[],revision:(old?.revision||0)+1,active:true,scope_conditions:clone(c.scope_conditions||[]),exceptions:clone(c.exceptions||[]),source_rule_ids:sources.filter(s=>s.source_type==='authorized_rule').map(s=>s.rule_id),source_decision_ids:sources.filter(s=>s.legacy_decision_id).map(s=>s.legacy_decision_id)};
+ if(c.source_occurrence_alternatives?.length){
+  e.source_occurrence_alternatives=c.source_occurrence_alternatives.map(alternative=>{
+   const [context]=D.validate_provenance(state,[alternative],q.question_id);
+   const match=refs.find(r=>r.source_id===context.source_id&&r.source_revision===context.source_revision&&r.start===alternative.match_start&&r.end===alternative.match_end&&r.quote===alternative.match_quote);
+   if(!match||match.start<context.start||match.end>context.end)fail('QUOTE_OFFSET_MISMATCH','provenance','A candidate occurrence must lie within its quoted source context.');
+   const [heading]=alternative.heading?D.validate_provenance(state,[alternative.heading],q.question_id):[];
+   if(heading&&(heading.source_id!==context.source_id||heading.source_revision!==context.source_revision||heading.end>context.start))fail('QUOTE_OFFSET_MISMATCH','provenance','A passage heading must precede the passage in the same source revision.');
+   return {...context,match_start:match.start,match_end:match.end,match_quote:match.quote,reference_index:alternative.reference_index,...(heading&&{heading})};
+  });
+  e.source_occurrence_pending=true;
+  e.source_occurrence_section=e.disposition==='exclude'?'exclude':['review_focus','background_information'].includes(e.semantic_role)?'focus':'include';
+  // Only the literal quotation can be stated until the author clarifies its use.
+  e.normalized_text=[...new Set(e.source_occurrence_alternatives.map(a=>a.match_quote))].join(' / ');
+  e.decision_status='pending';e.information_status='ambiguous';e.semantic_role='background_information';e.scope_status='unspecified';
+  e.disposition=null;e.structured_value=null;e.scope_conditions=[];e.exceptions=[];
+  return e;
+ }
  delete e.confidence;e.decision_status=c.information_status==='explicit'&&c.semantic_review?.status==='supported'?(sources.some(s=>s.legacy_decision_id)?'confirmed_by_user':sources.some(s=>s.source_type==='authorized_rule')?'accepted_by_authorized_rule':'accepted_from_input'):'pending';
  if(e.semantic_role==='eligibility_condition'&&e.scope_status==='unspecified'&&e.information_status!=='missing'&&refs.length){e.initial_scope_status=e.scope_status;e.scope_status='restricted';e.metadata_corrections=[...(e.metadata_corrections||[]),{field:'scope_status',from:'unspecified',to:'restricted',basis:'A present source-backed eligibility condition is a restriction; its unresolved boundaries remain separate.'}];}
  if(c.information_status==='missing'){e.scope_status='unspecified';e.decision_status='proposed';}
@@ -172,6 +197,16 @@ function createIssue(state,desired,data){
  desired.add(issue.issue_id);for(const eid of issue.element_ids){const e=state.elements.find(e=>e.element_id===eid);if(e&&!e.related_issue_ids.includes(issue.issue_id))e.related_issue_ids.push(issue.issue_id);}return issue;
 }
 function issueData(question,reason,elements,rule,text,impact,blocking=true,options=[]){return {question_id:question?.question_id||null,element_ids:elements.map(e=>e.element_id),reason_code:reason,trigger_rule_id:rule,question_text:text,scope_impact:impact,blocking,options};}
+function sourceOccurrenceIssue(q,e){
+ const alternatives=e.source_occurrence_alternatives,groups=new Set(alternatives.map(a=>a.reference_index));
+ const text=groups.size===1?'Which passage defines the intended rule, and how should it be applied?':'What rule should apply across these passages? Include any limits or exceptions.';
+ const options=groups.size===1?alternatives.map(a=>{
+  const characters=Array.from(a.quote),before=characters.slice(0,a.match_start-a.start).join(''),after=characters.slice(a.match_end-a.start).join('');
+  return {option_id:D.stableId('passage',JSON.stringify([a.source_id,a.source_revision,a.match_start,a.match_end])),
+   label:(a.heading?a.heading.quote+' — ':'')+before+'«'+a.match_quote+'»'+after,source_occurrence_ref:a,requires_interpretation:true};
+ }):[];
+ return {...issueData(q,'AMBIGUOUS_MEANING',[e],'source_occurrence',text,'The same words occur in different contexts. Clarify the meaning before applying this item.',true,options),author_scope_review:true};
+}
 // Match the requested decision, its effect on eligibility and its scope. Shared elements alone
 // only identify where to present questions; they do not make two decisions interchangeable.
 function decisionWording(value){
@@ -271,6 +306,7 @@ function detect_clarification_issues(state,env=environment()){
   for(const dimension of [...(frame?.slots||[]).map(s=>s.slot_id),...OPTIONAL])if(!known.some(e=>e.dimension_id===dimension||e.dimension_id.startsWith(dimension+'.')))makeMissing(state,q,dimension,env);
   const modelGroups=modelIssueGroups(q,known);
   for(let e of known){
+   if(e.source_occurrence_pending){createIssue(state,desired,sourceOccurrenceIssue(q,e));continue;}
    const hasAge=D.structuredConstraints(e.structured_value,e.dimension_id).some(c=>c.unit==='year'||c.unit==='岁')||/\d+\s*(?:岁|years?|year.old)/i.test(e.normalized_text);
    const older=/老年|elderly|older (?:adults?|patients?|people)/i.test(e.raw_text+' '+e.normalized_text);
    if(e.dimension_id.split('.')[0]==='population'&&older&&!hasAge&&e.scope_status==='restricted'&&!e.age_factored&&!e.qualitative_definition_confirmed){
@@ -304,7 +340,7 @@ function detect_clarification_issues(state,env=environment()){
    createIssue(state,desired,issueData(q,'CONFLICTING_REQUIREMENTS',pair,'same_scope_conflict','这些条件在同一适用范围内相互冲突，应采用哪一项？','不能在最终标准中同时采用互相排斥的要求。',true,pair.map(e=>({option_id:e.element_id,label:e.normalized_text,keep_element_id:e.element_id,retire_element_ids:pair.filter(other=>other!==e).map(other=>other.element_id)}))));
   }
   if(q.logic)D.validate_expression(q.logic,new Set(known.map(e=>e.element_id)));
-  const refs=eligible.flatMap(e=>e.source_refs),raw=refs.map(r=>r.quote).join(' ');
+  const refs=eligible.flatMap(e=>e.source_refs),raw=D.quoteText(refs);
   if(q.unresolved_fragment_logic){
    const elementIds=new Set(q.unresolved_fragment_logic.branches.flatMap(D.walkLeaves));
    const pending=q.unresolved_fragment_logic,branchKey=D.stableId('branches',JSON.stringify(pending));
@@ -387,10 +423,39 @@ function validate_criteria(state){
  const completeness={framework:state.questions.filter(active).map(q=>({question_id:q.question_id,mapped:!!q.framework_mapping?.framework_id,missing_slots:state.elements.filter(e=>active(e)&&e.question_id===q.question_id&&e.information_status==='missing'&&e.framework_bindings.length).map(e=>e.dimension_id)})),eligibility:{blocking_issues:blocking,all_scope_information_accounted_for:!unchecked.length||unchecked.every(e=>e.related_issue_ids.length)}};
  return {valid:!errors.length&&!blocking.length,errors,blocking_issues:blocking,completeness,semantic_accuracy:'Program checks plus a separate model review; not a formal equivalence proof or expert validation.'};
 }
-function rebuild(state,env=environment(),{recordTopicNormalization=false}={}){for(const q of state.questions.filter(active)){const elements=currentElements(state,q);Methods.normalizeComparators(elements);const frame=env.frameworks.get(q.framework_mapping?.framework_id);for(const e of elements)e.framework_bindings=env.frameworks.map(e.dimension_id,frame);}detect_clarification_issues(state,env);for(const q of state.questions.filter(active)){const objective=Methods.topic(q,currentElements(state,q));if(objective){if(recordTopicNormalization)q.topic_normalization={previous:q.review_topic,basis:'Source-defined scope and analysis objectives',rule_id:'source_grounded_analysis_topic'};q.review_topic=objective;}}build_criteria(state);state.validation=validate_criteria(state);state.status=state.validation.errors.length?'validation_error':state.validation.blocking_issues.length?'needs_clarification':'final';const snapshot={snapshot_id:id('snapshot'),revision:state.revision,output_language:state.output_language,review_methods:clone(state.review_methods),created_at:now(),status:state.status,config_versions:clone(state.config_versions),question_relation:state.question_relation,questions:clone(state.questions.filter(active)),criteria:clone(state.criteria),elements:clone(state.elements.filter(active)),logic:clone(state.logic),issue_ids:state.issues.filter(i=>i.status==='open').map(i=>i.issue_id),issues:clone(state.issues),decision_ids:state.decisions.map(d=>d.decision_id),validation:clone(state.validation)};state.snapshots.push(snapshot);return state;}
+function rebuild(state,env=environment(),{recordTopicNormalization=false}={}){for(const q of state.questions.filter(active)){const elements=currentElements(state,q);Methods.normalizeComparators(elements.filter(e=>!e.source_occurrence_pending));const frame=env.frameworks.get(q.framework_mapping?.framework_id);for(const e of elements)e.framework_bindings=env.frameworks.map(e.dimension_id,frame);}detect_clarification_issues(state,env);for(const q of state.questions.filter(active)){const objective=Methods.topic(q,currentElements(state,q));if(objective){if(recordTopicNormalization)q.topic_normalization={previous:q.review_topic,basis:'Source-defined scope and analysis objectives',rule_id:'source_grounded_analysis_topic'};q.review_topic=objective;}}build_criteria(state);state.validation=validate_criteria(state);state.status=state.validation.errors.length?'validation_error':state.validation.blocking_issues.length?'needs_clarification':'final';const snapshot={snapshot_id:id('snapshot'),revision:state.revision,output_language:state.output_language,review_methods:clone(state.review_methods),created_at:now(),status:state.status,config_versions:clone(state.config_versions),question_relation:state.question_relation,questions:clone(state.questions.filter(active)),criteria:clone(state.criteria),elements:clone(state.elements.filter(active)),logic:clone(state.logic),issue_ids:state.issues.filter(i=>i.status==='open').map(i=>i.issue_id),issues:clone(state.issues),decision_ids:state.decisions.map(d=>d.decision_id),validation:clone(state.validation)};state.snapshots.push(snapshot);return state;}
 function valueText(value,language){if(!value)return '';const ops={gt:'>',gte:'≥',lt:'<',lte:'≤',eq:'='};if(value.operator==='between')return (value.lower_inclusive===false?'(':'[')+value.lower+', '+value.upper+(value.upper_inclusive===false?')':']')+' '+(value.unit||'');return (ops[value.operator]||value.operator||'')+String(value.value??'')+(language.startsWith('zh')&&['year','years'].includes(value.unit)?'岁':value.unit?' '+value.unit:'');}
+function checkSelectedPassage(passage,update){
+ // Consider the passage the author actually selected. Two occurrences can be
+ // in different clauses of the same sentence ("include X, but exclude X ...").
+ const chars=Array.from(passage.quote),prefix=chars.slice(0,passage.match_start-passage.start).join(''),suffix=chars.slice(passage.match_end-passage.start).join('');
+ const boundary=/\b(?:whereas|but)\s+(?=(?:do not |must |should |will )?(?:includ|exclud))|[;；](?=\s*(?:includ|exclud|纳入|排除))/i;
+ const before=prefix.split(boundary).at(-1),after=suffix.split(boundary)[0];
+ const text=(before+passage.match_quote+after).trim();
+ const directive=text.match(/^(?:we\s+)?(?:(?:will|must|should)\s+)?(do not include|do not exclude|exclude|include|inclusion criteria|exclusion criteria|纳入标准|排除标准|不纳入|排除|纳入)(?=\s|[:：]|[\u3400-\u9fff])/i);
+ const heading=passage.heading?.quote.trim().replace(/^#+\s*|[:：]$/g,'').trim();
+ const governing=directive?.[1]||(/^(?:(?:inclusion|exclusion)(?: criteria)?|纳入(?:条件|标准)?|排除(?:条件|标准)?)$/i.test(heading)?heading:null);
+ const direction=governing&&(/^(?:do not include|exclude|exclusion|不纳入|排除)/i.test(governing)?'exclude':'include');
+ const content=directive?text.slice(directive[0].length).trim():text;
+ const issues=D.sourceDifferences(update.normalized_text,[content],true);
+ const qualifiers=/\b(?:with|without|who|whose|receiving|during|after|before|only|if|unless|except|among|aged|at risk)\b|仅|如果|除非|除外|伴有|合并|接受|期间|之后|之前/iu;
+ const reducedToMatch=key(update.normalized_text)===key(passage.match_quote)&&qualifiers.test(before+' '+after+' '+(heading||''));
+ if((direction&&(update.semantic_role!=='eligibility_condition'||update.disposition!==direction||update.scope_status!=='restricted'))||issues.length||reducedToMatch){
+  fail('SOURCE_DECISION_INCOMPLETE','update','Please state the full intended rule, including its inclusion or exclusion direction and any limits or exceptions.');
+ }
+}
 function answerUpdate(state,q,e,update,answer,source,issue){
  const old=clone(e),value=update.structured_value===undefined?e.structured_value:clone(update.structured_value),newRef=ref(source),support=D.validate_provenance(state,answer.supporting_refs||[],q.question_id,{allowEmpty:true});
+ if(e.source_occurrence_pending){
+  if(!update.normalized_text?.trim()||!['eligibility_condition','review_focus','background_information'].includes(update.semantic_role)||!update.scope_status||
+   (update.semantic_role==='eligibility_condition'&&update.scope_status==='restricted'&&!['include','exclude'].includes(update.disposition))){
+   fail('SOURCE_DECISION_INCOMPLETE','update','Please state the intended rule and whether it is an inclusion, exclusion or review focus.');
+  }
+  if(answer.selected_passage)checkSelectedPassage(answer.selected_passage,update);
+  const choices=e.source_occurrence_alternatives;
+  e.source_refs=e.source_refs.filter(r=>!choices.some(a=>r.source_id===a.source_id&&r.source_revision===a.source_revision&&r.quote===a.match_quote));
+  delete e.source_occurrence_pending;delete e.source_occurrence_alternatives;delete e.source_occurrence_section;
+ }
  if(update.structured_value!==undefined&&value){const probe={dimension_id:e.dimension_id,normalized_text:'',structured_value:value,semantic_review:{status:'supported'}};D.check_semantics(probe,[newRef,...support],{human:true});}
  if(update.normalized_text!==undefined)D.text(update.normalized_text,'normalized_text',2000);
  const numericChange=JSON.stringify(value)!==JSON.stringify(e.structured_value),explicitChange=(answer.action==='modify'||answer.explicit_revision===true||!!answer.modifies_decision_id)&&(!answer.from_model||/修改|改为|替换|修订|instead|replace|change .{0,20}to|revise/i.test(answer.answer_text));
@@ -403,6 +468,7 @@ function answerUpdate(state,q,e,update,answer,source,issue){
  if(update.disposition)D.enumValue('disposition',update.disposition);
  const beforeText=e.base_normalized_text||(e.dimension_id==='population.age'?(state.output_language.startsWith('zh')?'年龄':'Age'):e.normalized_text);e.base_normalized_text=beforeText;
  e.structured_value=value;e.scope_status=update.scope_status||(e.information_status==='missing'?'restricted':e.scope_status);e.semantic_role=update.semantic_role|| (e.information_status==='missing'?'eligibility_condition':e.semantic_role);e.disposition=update.disposition||e.disposition||'include';
+ if(old.source_occurrence_pending&&e.semantic_role!=='eligibility_condition'&&!update.disposition)e.disposition=null;
  e.normalized_text=update.normalized_text??(numericChange&&value?beforeText.replace(/（[^）]*）$|\s*\([^)]*\)$/,'')+(state.output_language.startsWith('zh')?'（':' (')+valueText(value,state.output_language)+(state.output_language.startsWith('zh')?'）':')'):e.normalized_text||answer.answer_text);
  if(e.scope_status==='unrestricted'||e.scope_status==='not_applicable')e.normalized_text=update.normalized_text||answer.answer_text;
  if(update.exceptions!==undefined)e.exceptions=clone(update.exceptions);if(update.scope_conditions!==undefined)e.scope_conditions=clone(update.scope_conditions);e.explicit_revision=explicitChange;e.source_refs=[...e.source_refs,...support,newRef];e.information_status='explicit';e.decision_status='confirmed_by_user';e.role_issue=false;e.revision++;e.active=true;
@@ -423,10 +489,13 @@ function apply_decisions(original,request,env=environment()){
    option=primary.options.find(item=>key(item.label)===text||op&&item.logic_op===op);
    if(!option)fail('UNRESOLVED_LOGIC','update','Select the grouping that should apply to these conditions.');
   }
-  if(option?.requires_interpretation)fail('ANSWER_NEEDS_INTERPRETATION','update','Interpret this choice against its source before applying it.');
+  if(option?.requires_interpretation&&!(option.source_occurrence_ref&&answer.from_model))fail('ANSWER_NEEDS_INTERPRETATION','update','Interpret this choice against its source before applying it.');
   if(answer.action==='defer'||option?.action==='defer'){decision.status='deferred';state.decisions.push(decision);changes.push(decision);continue;}
   if(option?.project_relation){state.question_relation=option.project_relation;state.question_relation_source=ref(source);}
   const targets=answer.updates||option?.updates||[];const rawContext=answer.context_updates||option?.context_updates,context=rawContext&&Object.keys(rawContext).length?rawContext:null;
+  if(primary?.trigger_rule_id==='source_occurrence'&&(targets.length!==1||targets[0].element_id!==primary.element_ids[0])){
+   fail('SOURCE_DECISION_INCOMPLETE','update','Please state the intended rule and whether it is an inclusion, exclusion or review focus.');
+  }
   if(context){const q=state.questions.find(q=>q.question_id===(primary?.question_id||context.answer_question_id));if(!q)fail('QUESTION_NOT_FOUND','update','A context answer needs a specific question.');
    if(context.answer_question_id){state.issues.push({issue_id:id('issue'),signature:'mapped-answer|'+source.source_id,question_id:q.question_id,element_ids:[],reason_code:'UNRESOLVED_ROLE',question_text:'对应关系已确定，请明确这条回答如何更新本问题的具体条件。',scope_impact:'在语义更新尚不明确时，保留已有标准。',blocking:true,trigger_rule_id:'mapped_answer_requires_application',status:'open',persistent:true,created_at_revision:state.revision+1,source_refs:clone(primary.source_refs||[]),options:[]});decision.changes.push({original_answer_refs:clone(primary.source_refs||[]),mapped_question_id:q.question_id});}
    const previous=clone(q.context);if(context.framework_id){const frame=env.frameworks.get(context.framework_id);if(!frame)fail('FRAMEWORK_NOT_FOUND','update','Unknown framework.');q.context.framework_requested=frame.display_name;q.framework_mapping={framework_id:frame.framework_id,display_name:frame.display_name,version:frame.version,basis:'human_selection',explicit:true,provisional:false,candidates:[],source_refs:[ref(source)]};for(const e of currentElements(state,q))e.framework_bindings=env.frameworks.map(e.dimension_id,frame);}
@@ -464,7 +533,8 @@ function apply_decisions(original,request,env=environment()){
   let allApplied=true;for(const update of targets){
    const e=state.elements.find(e=>e.element_id===update.element_id&&active(e));if(!e)fail('ELEMENT_NOT_FOUND','update','The update target does not exist or is obsolete.');if(qids.length&&!qids.includes(e.question_id))fail('CROSS_QUESTION_UPDATE','update','This answer was not linked to the target question.');
    if(issues.length&&issues.some(i=>i.element_ids.length)&&!issues.some(i=>i.element_ids.includes(e.element_id))&&!option?.updates?.some(u=>u.element_id===e.element_id))fail('ISSUE_TARGET_MISMATCH','update','The proposed update targets a different Element than the answered issue.');
-   const q=state.questions.find(q=>q.question_id===e.question_id),adjusted={...answer,explicit_revision:answer.explicit_revision||option?.explicit_revision,supporting_refs:option?.explicit_revision&&primary?.proposed_source_ref?[primary.proposed_source_ref]:answer.supporting_refs};
+   const q=state.questions.find(q=>q.question_id===e.question_id),passage=option?.source_occurrence_ref;
+   const adjusted={...answer,explicit_revision:answer.explicit_revision||option?.explicit_revision,selected_passage:passage,supporting_refs:passage?[passage.heading,passage].filter(Boolean):option?.explicit_revision&&primary?.proposed_source_ref?[primary.proposed_source_ref]:answer.supporting_refs};
    const change=answerUpdate(state,q,e,update,adjusted,source,primary);allApplied=allApplied&&change.applied;decision.changes.push({element_id:e.element_id,old:change.old,new:change.new,applied:change.applied});if(change.applied){e.source_decision_ids=[...(e.source_decision_ids||[]),decision.decision_id];if(e.dimension_id==='population.age'&&e.scope_status==='unrestricted')for(const parent of state.elements.filter(p=>active(p)&&p.age_boundary_element_id===e.element_id)){const old=clone(parent);parent.normalized_text=parent.normalized_text.replace(/老年/g,'').replace(/\b(?:elderly|older)\s+(adults?|patients?|people)/gi,'$1');parent.source_refs.push(ref(source));parent.source_decision_ids=[...(parent.source_decision_ids||[]),decision.decision_id];parent.decision_status='confirmed_by_user';parent.explicit_revision=true;parent.revision++;decision.changes.push({element_id:parent.element_id,old,new:clone(parent),applied:true});}}
   }
   if(allApplied&&decision.status==='applied')for(const issue of issues){issue.status='resolved';issue.resolved_by_decision_id=decision.decision_id;issue.resolved_at_revision=state.revision+1;}

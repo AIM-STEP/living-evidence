@@ -10,6 +10,7 @@ function signature(value){return D.stableId('legacy',JSON.stringify(value?{quest
 function progressPercent(event={}){const stages={extract:[15,60],review:[60,90],validate:[94,94],ready:[98,98]},range=stages[event.phase];if(!range)return undefined;const fraction=event.total?Math.max(0,Math.min(1,event.completed/event.total)):0;return Math.round(range[0]+(range[1]-range[0])*fraction);}
 function optionLabel(option){
  if(!option)return 'Confirm';
+ if(option.source_occurrence_ref)return option.label;
  if(option.label&&!/[\u3400-\u9fff]/u.test(option.label))return option.label;
  const names={unrestricted:'No age restriction',defer:'Keep pending',ignore:'Keep the existing scope',keep:'Keep the previous decision',replace:'Use the revised decision',focus:'Review focus only',eligibility:'Eligibility requirement',any_of:'Any condition',all_of:'All conditions',systematic_review:'Systematic reviews',review:'Systematic reviews and other reviews',pico:'PICO',pico_qualitative:'PICo'};
  return names[option.option_id]||option.updates?.[0]?.normalized_text||option.option_id;
@@ -47,7 +48,7 @@ function projectToClassic(project){
  }
  const multiple=output.questions.length>1;
  const contexts=output.questions.map(q=>{
-  const target=multiple?[]:rows,reference=Methods.interventionReference(q.elements);
+  const target=multiple?[]:rows,reference=Methods.interventionReference(q.elements.filter(e=>!e.source_occurrence_pending));
   const pending=q.logic?.pending_inclusion_branches;
   for(const side of ['include','exclude']){
    const branches=side==='include'&&pending?pending:[q.logic?.[side]];
@@ -81,7 +82,7 @@ function projectToClassic(project){
   for(const element of elements){
    const location=displayedByElement.get(element.element_id)||{
     domain:label(element.dimension_id),
-    section:['review_focus','undecided'].includes(element.semantic_role)?'focus':element.disposition==='exclude'?'exclude':'include',
+    section:element.source_occurrence_section||(['review_focus','undecided'].includes(element.semantic_role)?'focus':element.disposition==='exclude'?'exclude':'include'),
     subject:element.information_status==='missing'?'':element.normalized_text
    };
    if(!locations.some(prior=>prior.domain===location.domain&&prior.section===location.section&&prior.rule===location.rule&&prior.subject===location.subject))locations.push(location);
@@ -93,7 +94,7 @@ function projectToClassic(project){
    reviewOnly:false,focusOnly:primary.section==='focus',locations,issue_id:issue.issue_id,
    questionNumber:output.questions.length>1?output.questions.find(q=>q.question_id===issue.question_id)?.display_number:null,
    options:issue.options.map(option=>({label:optionLabel(option),option_id:option.option_id,...(option.requires_interpretation?{requires_interpretation:true}:{})})),
-   evidence:[...new Map(elements.flatMap(element=>element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
+   evidence:[...new Map(elements.flatMap(element=>issue.trigger_rule_id==='source_occurrence'?(element.source_occurrence_alternatives||[]).flatMap(a=>[a.heading,a].filter(Boolean)):element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
  });
  return {manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows,framework:output.questions.length===1?output.questions[0].framework_mapping?.display_name||'Other':'Other',rows,reviewTopic:output.questions.map(q=>q.objective).join(' '),topicStyle:'sentence-v3',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
 }
@@ -207,7 +208,10 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    const matches=issue.options.filter(item=>[item.label,optionLabel(item)].some(text=>typeof text==='string'&&text.trim().normalize('NFC')===wording));
    if(matches.length===1&&M.executableOption(matches[0]))option=matches[0];
   }
-  if(option?.requires_interpretation)request=await M.parse_answers(project,option.label,[issue_id],modelClient,{signal,selected_option_id:option.option_id});
+  if(option?.requires_interpretation){
+   request=await M.parse_answers(project,option.label,[issue_id],modelClient,{signal,selected_option_id:option.option_id});
+   if(option.source_occurrence_ref)for(const answer of request.answers)answer.option_id=option.option_id;
+  }
   else if(option)request={base_revision:project.revision,request_id:D.id('answer'),answers:[{issue_id,option_id:option.option_id,answer_text:answer_text||optionLabel(option)}]};
   else request=await M.parse_answers(project,answer_text,[issue_id],modelClient,{signal});
   if(request.answers.some(answer=>answer.from_model&&(answer.issue_ids.length!==1||answer.issue_ids[0]!==issue_id)))D.fail('ISSUE_TARGET_MISMATCH','background','The answer could not be matched to the selected author check.');

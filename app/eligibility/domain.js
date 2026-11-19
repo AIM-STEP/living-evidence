@@ -13,14 +13,30 @@ function object(value,step='schema'){if(!value||typeof value!=='object'||Array.i
 function text(value,field,max=20000){if(typeof value!=='string'||value.length>max)fail('INVALID_STRUCTURE','schema','Invalid '+field);return value;}
 function sourceAt(state,ref){return state.sources.find(s=>s.source_id===ref.source_id&&s.revision===ref.source_revision);}
 function locate(source,quote){const at=source.indexOf(quote);return at<0?null:{start:Array.from(source.slice(0,at)).length,end:Array.from(source.slice(0,at+quote.length)).length};}
+function quoteText(refs,separator=' '){return [...new Set(refs.map(ref=>ref.quote))].join(separator);}
 function validate_provenance(state,refs,questionId,{allowEmpty=false}={}){
  if(!Array.isArray(refs)||!refs.length&&!allowEmpty)fail('MISSING_SOURCE','provenance','A supported requirement needs a source.');
+ const characters=new Map();
  return refs.map(ref=>{
   object(ref,'provenance');const source=sourceAt(state,ref);if(!source)fail('SOURCE_REVISION_NOT_FOUND','provenance','Source or revision does not exist.',{source_id:ref.source_id,revision:ref.source_revision});
   if(source.question_ids?.length&&!source.question_ids.includes(questionId))fail('CROSS_QUESTION_REFERENCE','provenance','This source belongs to a different research question.');
-  const quote=text(ref.quote,'quote');if(!quote)fail('EMPTY_QUOTE','provenance','An empty quote is not evidence.');const found=locate(source.original_text,quote);if(!found)fail('QUOTE_NOT_FOUND','provenance','The quotation is absent from the specified source revision.',{source_id:source.source_id,quote});
-  const start=ref.start??found.start,end=ref.end??found.end;
-  if(!Number.isInteger(start)||!Number.isInteger(end)||start<0||end<start||Array.from(source.original_text).slice(start,end).join('')!==quote)fail('QUOTE_OFFSET_MISMATCH','provenance','Quote offsets must use Unicode code points in the referenced revision.');
+  const quote=text(ref.quote,'quote');if(!quote)fail('EMPTY_QUOTE','provenance','An empty quote is not evidence.');
+  let {start,end}=ref;
+  if(start==null&&end==null){
+   const found=locate(source.original_text,quote);
+   start=found?.start;
+   end=found?.end;
+  }else if(start==null||end==null){
+   const length=Array.from(quote).length;
+   if(start==null)start=end-length;else end=start+length;
+  }
+  // Multiple exact occurrences in a document share this index within one validation.
+  if(!characters.has(source))characters.set(source,Array.from(source.original_text));
+  const points=characters.get(source);
+  if(!Number.isInteger(start)||!Number.isInteger(end)||start<0||end>points.length||end<=start||points.slice(start,end).join('')!==quote){
+   if(!source.original_text.includes(quote))fail('QUOTE_NOT_FOUND','provenance','The quotation is absent from the specified source revision.',{source_id:source.source_id,quote});
+   fail('QUOTE_OFFSET_MISMATCH','provenance','Quote offsets must use Unicode code points in the referenced revision.');
+  }
   return {source_id:source.source_id,source_revision:source.revision,quote,start,end};
  });
 }
@@ -30,7 +46,7 @@ function canonical(c){const [unit,factor]=units[c.unit]||[c.unit,1];return {...c
 function sameConstraint(a,b){const x=canonical(a),y=canonical(b);return x.value===y.value&&x.operator===y.operator&&(!x.unit||!y.unit||x.unit===y.unit)&&(!x.anchor||!y.anchor||x.anchor===y.anchor)&&(!x.role||!y.role||x.role===y.role);}
 function structuredConstraints(value,dimension){if(!value||typeof value!=='object')return [];if(value.operator==='between')return [{value:value.lower,operator:value.lower_inclusive===false?'>':'>=',unit:value.unit||'',role:dimension.includes('age')?'age':''},{value:value.upper,operator:value.upper_inclusive===false?'<':'<=',unit:value.unit||'',role:dimension.includes('age')?'age':''}];if(typeof value.value==='number')return [{value:value.value,operator:numericOperators[value.operator]||value.operator||'=',unit:value.unit||'',anchor:value.anchor||'',role:dimension.includes('age')?'age':''}];return [];}
 function check_semantics(element,refs,{human=false}={}){
- const original=refs.map(ref=>ref.quote).join(' '),normalized=element.normalized_text||'';
+ const original=quoteText(refs),normalized=element.normalized_text||'';
  const known=grounding.constraints(original),textConstraints=grounding.constraints(normalized),valueConstraints=structuredConstraints(element.structured_value,element.dimension_id),actual=[...textConstraints,...valueConstraints];
  if(textConstraints.length&&valueConstraints.length&&textConstraints.some(c=>!valueConstraints.some(value=>sameConstraint(c,value))))fail('TEXT_VALUE_MISMATCH','normalization','The displayed numeric condition disagrees with its structured value.');
  for(const c of actual)if(!known.some(k=>sameConstraint(c,k)))fail('NUMERIC_SCOPE_CHANGE','normalization','A threshold, strict bound, unit or time anchor changed without a matching source.',{dimension_id:element.dimension_id,constraint:c});
@@ -64,5 +80,5 @@ function validate_candidate_element(candidate){
  if(candidate.semantic_review&&!['supported','uncertain','contradicted'].includes(candidate.semantic_review.status))fail('INVALID_ENUM','semantic_review','Invalid semantic review status.');
  return candidate;
 }
-return {clone,array,ENUMS,EligibilityError,fail,id,stableId,now,key,object,text,enumValue,sourceAt,locate,validate_provenance,canonical,sameConstraint,structuredConstraints,check_semantics,hasOr,hasAnd,treeHas,validate_expression,mapExpression,walkLeaves,validate_candidate_element};
+return {clone,array,ENUMS,EligibilityError,fail,id,stableId,now,key,object,text,enumValue,sourceAt,locate,quoteText,validate_provenance,sourceDifferences:grounding.differences,canonical,sameConstraint,structuredConstraints,check_semantics,hasOr,hasAnd,treeHas,validate_expression,mapExpression,walkLeaves,validate_candidate_element};
 });
