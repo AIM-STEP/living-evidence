@@ -19,7 +19,12 @@ function setup(storage=new Map()){
   stub(fail=false){
    resolveLocalModel=async()=>({name:'Synthetic model'});
    prepareSources=async question=>({texts:[{name:'Question',text:question}],images:[]});
-   requestMachineCriteria=async()=>({framework:'PICO',criteria:[{dimension:'Population',eligibilityRule:'Adults',exclusionRule:'Children'}]});
+   window.AIMSTEPEligibilityBackground={progressPercent:()=>50};
+   window.AIMSTEPEligibilityEngine={VERSION:'fixture'};
+   generationService=async()=>eligibilityBackgroundService={
+    generate:async()=>{if(fail)throw Error('Synthetic generation failure');return {project:{revision:1},classic:{framework:'PICO',rows:[{dimension:'Population',include:['Adults'],exclude:['Children']}],reviewTopic:'Synthetic review',manuscriptParagraph:'Adults are eligible.',snapshot:{questions:[]},sourceConfirmations:[],uncertainties:[],clarifications:[],scopeSuggestions:[],trace:[]}};},
+    transaction:(stage,write)=>write(),recordEdit:()=>null
+   };
    autoCriteriaPipeline=async(model,input,signature)=>{
     if(fail)throw Error('Synthetic generation failure');
     return {signature,generatedAt:'2026-11-17T00:00:00Z',reviewTopic:'Synthetic review',manuscriptParagraph:'Adults are eligible.',uncertainties:[],trace:[],

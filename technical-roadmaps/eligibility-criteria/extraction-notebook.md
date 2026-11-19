@@ -10,21 +10,21 @@
 | `exclusion_list` | 原文列举多项排除，结果漏项、反转方向，或页面显示无排除。 | 从排除动词或小标题读到列举结束。逐条保留被排除的对象及相关否定。同一条产房限制曾出现两次，合并时核对原文位置、对象和例外，再检查展示条数。区分研究资格与仅从某一分析中剔除。[排除列举](../../tests/eligibility/explicit-study-exclusions.cjs) |
 | `source_coverage` | 原文明示的要素未提取，或同类多个选项只留下一个。 | 逐项对应原文段落、列举和要素记录。发现缺项时保留原文出处，恢复其范围后送既有核对流程。[来源覆盖](../../tools/test_eligibility_source_coverage.cjs) |
 | `comparison_arms` | Intervention 与 Comparison 都照抄了整句目的，或比较组落入 Other。 | 定位每组接受的处理，保留剂量、主动对照、自身组间比较及“任何”等范围词，再分别命名。[组别方向](../../tests/eligibility/comparison-arms.cjs) · [对照选项](../../tests/eligibility/comparison-review.cjs) |
-| `outcome_role` | 宽泛目的与明细结局重复，随访时间和判定依据丢失，或结局被误写为必须报告。 | 按作者逐项列出的结局保留时间点与定义。有明确测量或报告门槛时，另立资格条件。[完整结局](../../tests/eligibility/neonatal-clinical-prose.cjs) |
-| `analysis_role` | 亚组因素遗漏，分析方法或数据层级变成筛选条件。 | 把效应修饰因素、数据层级与合并方法写入分析描述。另查作者是否明确以数据可用性作为门槛。[分析计划与独立数据要求](../../tests/eligibility/nutrition.cjs) |
+| `outcome_role` | 宽泛目的与明细结局重复，随访时间和判定依据丢失，或结局被误写为必须报告。 | 仅当所选框架含结局维度且原文将测量或报告某结局作为资格门槛，才纳入该条件，保留时间点和定义。[完整结局](../../tests/eligibility/neonatal-clinical-prose.cjs) |
+| `analysis_role` | 亚组因素遗漏，分析方法或数据层级变成筛选条件。 | 区分分析计划与纳排要求。仅当作者明示筛选门槛且属于所选框架时，才记录相应条件。[分析计划与独立数据要求](../../tests/eligibility/nutrition.cjs) |
 | `scope_status` | 原文没有设限，却被标作明确不限，随后核对失败。 | 区分未提及、明确不限、范围已限定和不适用。只有来源含有相应表述，才录入明确的豁免。[限制状态](../../tests/eligibility/scope-status.cjs) |
 | `age_bound` | 年龄限定在改写时消失，严格不等号改变，或模型自行补上年龄界值。 | 保留年龄原词、运算符、单位和比较方向。仅在未确定的界值确实影响筛选时询问作者。[年龄与必需确认](../../tests/eligibility/nutrition.cjs) · [阈值核验记录](../../docs/eligibility-evaluation/strict-age-recorded-real.json) |
-| `logical_scope` | 分段后把并列备选条件合并为全部须满足，或把例外附到错误分支。 | 曾将“可纳入三种试验设计”错读为研究设计、人群、干预和对照任选其一。先确定连接词管辖的短语，再按原文重建各字段与共同条件。[明确纳入句](../../tests/eligibility/explicit-inclusion-logic.cjs)若跨段关系确实未交代，保留针对这一关系的确认。[分段逻辑](../../tests/eligibility/fragment-logic.cjs) |
+| `logical_scope` | 分段后把并列备选条件合并为全部须满足，或把例外附到错误分支。 | 曾将“可纳入三种试验设计”错读为研究设计、人群、干预和对照任选其一。先确定连接词管辖的短语，再按原文重建各字段与共同条件。[明确纳入句](../../tests/eligibility/explicit-inclusion-logic.cjs) 若跨段关系确实未交代，保留针对这一关系的确认。[分段逻辑](../../tests/eligibility/fragment-logic.cjs) |
 | `repeated_passage` | 相同短语在不同段落出现，引用歧义引发中断或选错方向。 | 核对来源版本、Unicode 位置、小标题和否定。上下文相同的引文可共享依据；相反语义的出现位置须分开。[重复引文与上下文](../../tests/eligibility/repeated-citations.cjs) |
 | `source_fidelity` | 候选措辞改变了受试人群、干预实施者或条件，出现引用与表述不符。 | 由 Jev 一次核对候选措辞与对应原文。存疑或核对未完成的候选进入相应位置供作者决定，作者答复立即生效。[独立核对与定向修正](../../tests/eligibility/semantic-repair.cjs) |
 | `question_identity` | 模型遗漏或更改问题 ID。 | 复用该请求提供的标识；由结构约束绑定问题，检查返回的引用属于当前问题。[问题标识](../../tools/test_eligibility_question_id.cjs) |
-| `topic_wording` | 标题只说“某人群的干预”，或主题、人群和干预描述重复整句研究目的。 | 主题概括明确比较、临床用途和关键人群；来源定义的同一人群限定写成连贯的表达。[标题](../../tests/eligibility/concise-topic.cjs) · [各要素描述](../../tests/eligibility/neonatal-clinical-prose.cjs) |
+| `topic_wording` | 标题只说“某人群的干预”，或主题、人群和干预描述重复整句研究目的。 | 主题概括明确比较、临床用途和关键人群；依 BMJ 的写法把人群和限定词写在一起，使用具体临床用语，删去重复的目的或通用开场。[标题](../../tests/eligibility/concise-topic.cjs) · [各要素描述](../../tests/eligibility/neonatal-clinical-prose.cjs) |
 
 ## 生成流程中已发生的其他问题
 
 | 记录代码 | 现象与处理 | 复现检查 |
 | --- | --- | --- |
-| `framework_display` | 框架外信息落入 Context 或 Other 显示行，或在隐藏这些行时从预览、导出消失。显示所选框架的原生维度，描述保留额外信息，显式排除同时在排除区交代。 | [框架投影](../../tests/eligibility/framework-projection.cjs) |
+| `framework_display` | 框架外信息落入 Context 或 Other 显示行，或在隐藏这些行时从预览、导出消失。标准与 Description 只展示所选框架内、有原文依据的纳排条件。PICOS 下单独的场所限制不归入人群或干预。框架本身含 Context 且原文明示地点条件时，才呈现场所。 | [框架投影](../../tests/eligibility/framework-projection.cjs) |
 | `clear_project` | 旧草稿或来源污染新任务。清除项目标准、旧记录和反馈，保留有独立清除键的研究问题，拒绝清除前发出的旧请求回写。 | [Clear 与并发保护](../../tests/eligibility/clear-project.cjs) |
 | `author_decision` | 确认项离开对应要素，作者明确回答后仍要等待再次推理。把确认定位到规则，并直接应用作者决定。 | [作者决定路由](../../tests/eligibility/author-answer-routing.cjs) · [确认目标](../../tests/eligibility/author-targets.cjs) |
 | `progress_display` | 工作期间进度停在 0% 或 15%，用户无法判断是否仍在运行。显示阶段进度、等待状态及实际完成的批次。 | [进度反馈](../../tests/eligibility/wait-progress.cjs) |

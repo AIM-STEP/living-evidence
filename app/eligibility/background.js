@@ -3,7 +3,7 @@
 'use strict';
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
-const presentationVersion='20261119-intervention-exclusions-1';
+const presentationVersion='framework-only-v1';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -19,7 +19,9 @@ function authorChoices(issue){
  return issue.options.flatMap(option=>{
   const label=optionLabel(option);
   if(option.source_occurrence_ref&&!E.passageWording(option.source_occurrence_ref).direction){
-   return [['include','Include'],['exclude','Exclude'],['focus','Review focus']].map(([role,name])=>({
+   const roles=[['include','Include'],['exclude','Exclude']];
+   if(issue.eligibility_policy!=='framework-only-v1')roles.push(['focus','Review focus']);
+   return roles.map(([role,name])=>({
     option_id:option.option_id+'/'+role,stored_id:option.option_id,passage_role:role,label:name+' — '+label
    }));
   }
@@ -59,72 +61,60 @@ function projectToClassic(project,registry){
   }
  }
  const multiple=output.questions.length>1;
- const frameworkQuestions=[];
+ const frameworkQuestions=[],pendingLogicRows=[],bindings=new Map();
  const contexts=output.questions.map(q=>{
-  const target=multiple?[]:rows,reference=Methods.interventionReference(q.elements.filter(e=>!e.source_occurrence_pending));
-  const pending=q.logic?.pending_inclusion_branches;
+  const target=multiple?[]:rows;
   const mapping=q.framework_mapping;
-  const customFrame=project.custom_frameworks?.find(item=>item.framework_id===mapping?.framework_id);
-  let frame=customFrame||registry?.get(mapping?.framework_id);
-  const slotLabel=slot=>(customFrame&&slot.display_label)||labels[slot.slot_id]||slot.display_label||label(slot.slot_id);
-  const dimensionLabel=dimension=>{
-   const root=dimension.split('.')[0],slot=frame?.slots.find(s=>s.slot_id===dimension||s.slot_id===root);
-   return slot?slotLabel(slot):label(dimension);
-  };
+  const custom=project.custom_frameworks?.find(item=>item.framework_id===mapping?.framework_id);
+  const frame=custom||registry?.get(mapping?.framework_id);
+  const fields=new Map((frame?.slots||[]).map(slot=>[slot.slot_id,(custom&&slot.display_label)||labels[slot.slot_id]||slot.display_label||label(slot.slot_id)]));
+  const domain=id=>fields.get(id)||fields.get(id.split('.')[0]);
+  bindings.set(q.question_id,domain);
+  const pending=q.logic?.pending_inclusion_branches,linked=[];
+  const awaiting=new Set(q.logic?.pending_logic_element_ids||[]);
+  for(const e of q.elements.filter(e=>awaiting.has(e.element_id)&&domain(e.dimension_id))){
+   pendingLogicRows.push({domain:domain(e.dimension_id),subject:e.normalized_text,questionNumber:multiple?q.display_number:null,side:'include'});
+  }
   for(const side of ['include','exclude']){
+   const criteria=q[side].filter(c=>domain(c.dimension_id));
    const expression=q.logic?.[side];
-   // Each top-level exclusion independently disqualifies a study. Projecting
-   // their union as a single condition hides all domains in a mixed list.
    const branches=side==='exclude'&&expression?.op==='any_of'?expression.children:side==='include'&&pending?pending:[expression];
    for(const branch of branches){
-    const units=Methods.splitDimensions(branch,q[side],dimensionLabel);
+    const units=Methods.frameworkUnits(branch,criteria,domain,linked);
     for(const unit of side==='include'?Methods.combinePopulationUnits(units):units){
-     const wording=side==='exclude'?unit.text:Methods.clause(unit.dimension,unit.text,reference);
-     add(target,unit.dimension,side,Methods.ageClause(unit.criteria)||wording,unit.criteria);
+     const wording=unit.linked?unit.text:Methods.ageClause(unit.criteria)||unit.text;
+     add(target,unit.dimension,side,wording,unit.criteria);
     }
    }
   }
-  // A draft whose framework was inferred historically displayed the S extension
-  // when its source specified a design. An explicit selection fixes the slots.
-  if(!customFrame&&!mapping?.explicit&&['pico','peco'].includes(frame?.framework_id)&&target.some(row=>row.dimension==='Study design'&&row.include.length)){
-   frame=registry.get(frame.framework_id+'s')||frame;
+  const slots=[...fields.values()];
+  target.sort((a,b)=>slots.indexOf(a.dimension)-slots.indexOf(b.dimension));
+  frameworkQuestions.push({display_number:q.display_number,framework:frame?.display_name||mapping?.display_name||'Pending',frameworkSlots:slots,rows:target});
+  if(multiple)for(const row of target)for(const side of ['include','exclude'])for(const rule of row[side]){
+   add(rows,row.dimension,side,q.display_number+' · '+rule,[],false);
   }
-  const slots=frame?.slots.map(slotLabel);
-  frameworkQuestions.push({display_number:q.display_number,framework:frame?.display_name||mapping?.display_name||'Other',frameworkSlots:slots||[],rows:target});
-  const context=Methods.descriptionContext(q,project);
-  if(pending&&slots)context.pending_extra_conditions=target.filter(row=>!slots.includes(row.dimension)).flatMap(row=>row.include);
-  return {...context,...(multiple?{rows:target,display_number:q.display_number}:{}),...(pending?{pending_inclusion_relation:true}:{})};
+  return {display_number:q.display_number,...(multiple?{rows:target}:{}),...(pending&&!awaiting.size?{pending_inclusion_relation:true}:{}),...(linked.length?{linked_conditions:linked}:{})};
  });
- if(multiple){
-  const overview=q=>q.display_number+': '+q.logic_text;
-  if(output.questions.some(q=>q.logic?.pending_inclusion_branches)){
-   for(const q of output.questions){
-    if(q.logic_text)add(rows,'Other','include',overview(q),[...q.include,...q.exclude],false);
-    else for(const side of ['include','exclude'])for(const criterion of q[side])add(rows,label(criterion.dimension_id),side,q.display_number+': '+criterion.text,[criterion],false);
-   }
-  }else{
-   const questions=output.questions.filter(q=>q.logic_text);
-   if(project.question_relation)add(rows,'Other','include',questions.map(overview).join(project.question_relation==='any_of'?' or ':' and '),project.criteria,false);
-   else for(const q of questions)add(rows,'Other','include',overview(q),[...q.include,...q.exclude],false);
-  }
- }
  const frameNames=[...new Set(frameworkQuestions.map(q=>q.framework))],framework=frameNames.length===1?frameNames[0]:'Other';
  const frameworkSlots=frameNames.length===1?frameworkQuestions[0].frameworkSlots:[];
- const order=[...new Set([...frameworkSlots,'Population','Sample','Intervention','Exposure','Concept','Phenomenon of Interest','Comparison','Outcomes','Context','Study design','Other'])];rows.sort((a,b)=>(order.includes(a.dimension)?order.indexOf(a.dimension):99)-(order.includes(b.dimension)?order.indexOf(b.dimension):99));
- const descriptionContext={...(contexts.length===1?contexts[0]:{question_contexts:contexts,question_relation:project.question_relation,combined_rows:clone(rows)}),focus_sentence:contexts.map(c=>c.focus_sentence).filter(Boolean).join(' '),methods_sentence:contexts.map(c=>c.methods_sentence).filter(Boolean).join(' ')};
- const focusRows=[];for(const e of project.elements.filter(e=>e.active!==false&&e.information_status!=='missing'&&e.dimension_id!=='population.age'&&e.source_refs?.length&&!displayedByElement.has(e.element_id)&&['review_focus','undecided'].includes(e.semantic_role))){const analysis=e.decision_status==='confirmed_by_user'?null:Methods.classifyAnalysis(e,project.questions.find(q=>q.question_id===e.question_id)?.original_text||''),dimension=label(analysis?.dimension_id||e.dimension_id);let row=focusRows.find(row=>row.dimension===dimension);if(!row){row={dimension,values:[],role:e.semantic_role};focusRows.push(row);}if(e.normalized_text&&!row.values.includes(e.normalized_text))row.values.push(e.normalized_text);}
- for(const row of focusRows)if(row.dimension==='Analysis plan')row.values=row.values.filter(value=>!row.values.some(other=>other.length>value.length&&other.toLowerCase().includes(value.toLowerCase())));
- const confirmations=project.issues.filter(issue=>issue.status==='open'&&issue.blocking).map(issue=>{
-  const elements=(issue.linked_element_ids||issue.element_ids).filter(id=>!issue.answered_element_ids?.includes(id)).map(id=>elementsById.get(id)).filter(Boolean);
-  const pendingGroups=E.authorTargetGroups(project,issue).filter(group=>!group.every(id=>issue.answered_element_ids?.includes(id)));
+ const descriptionContext=contexts.length===1?contexts[0]:{question_contexts:contexts,question_relation:project.question_relation,combined_rows:clone(rows)};
+ const confirmations=project.issues.filter(issue=>issue.status==='open'&&issue.blocking).flatMap(issue=>{
+  const field=bindings.get(issue.question_id);
+  const linkedIds=issue.linked_element_ids||issue.element_ids;
+  const elements=linkedIds.filter(id=>!issue.answered_element_ids?.includes(id)).map(id=>elementsById.get(id)).filter(e=>
+   e&&field?.(e.dimension_id)&&e.information_status!=='missing'&&e.source_refs?.length&&
+   (e.semantic_role==='eligibility_condition'||e.semantic_role==='undecided'||e.role_issue||e.source_occurrence_pending));
+  if(!elements.length&&issue.reason_code!=='FRAMEWORK_AMBIGUITY'&&!(multiple&&issue.trigger_rule_id==='between_question_relation'))return [];
+  const visible=new Set(elements.map(e=>e.element_id));
+  const pendingGroups=E.authorTargetGroups(project,issue).map(group=>group.filter(id=>visible.has(id))).filter(group=>group.length);
   const answerTargets=pendingGroups.length>1?pendingGroups.map(([id])=>({id,label:elementsById.get(id).normalized_text})):[];
   const locations=[];
   for(const element of elements){
    let section=element.source_occurrence_section;
    if(!section&&element.review_pending)section=element.disposition;
-   if(!section)section=['review_focus','undecided'].includes(element.semantic_role)?'focus':element.disposition||'include';
+   if(section!=='exclude'&&section!=='include')section=element.disposition==='exclude'?'exclude':'include';
    const location=displayedByElement.get(element.element_id)||{
-    domain:label(element.dimension_id),
+    domain:field(element.dimension_id),
     section,
     ...(element.review_pending&&{pendingReview:true}),
     subject:element.information_status==='missing'?'':element.normalized_text
@@ -143,7 +133,7 @@ function projectToClassic(project,registry){
    options:authorChoices(issue).map(({label,option_id})=>({label,option_id})),
    evidence:[...new Map(elements.flatMap(element=>issue.trigger_rule_id==='source_occurrence'?(element.source_occurrence_alternatives||[]).flatMap(a=>[a.heading,a].filter(Boolean)):element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
  });
- return {manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows,framework,frameworkSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v2',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
+ return {eligibilityPolicy:presentationVersion,manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows:[],pendingLogicRows,framework,frameworkSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v2',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
 }
 async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
  if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');

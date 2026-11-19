@@ -156,6 +156,38 @@ function factorSharedConditions(node){
  return common.length===1?common[0]:{op:'all_of',children:common};
 }
 function splitDimensions(node,criteria,domain){node=factorSharedConditions(node);if(!node)return [];if(node.op==='all_of')return node.children.flatMap(n=>splitDimensions(n,criteria,domain));const ids=[...new Set(leaves(node))],items=ids.map(id=>criteria.find(c=>c.criterion_id===id)).filter(Boolean),names=[...new Set(items.map(c=>domain(c.dimension_id)))];return [{dimension:names.length===1?names[0]:'Other',node,criteria:items,text:naturalExpression(node,criteria)}];}
+// Keep a real alternative across fields attached to its branch. Displaying the
+// whole disjunction under Other hides the fields; independent rows would change it to AND.
+function frameworkUnits(node,criteria,domain,relations){
+ const projected=node=>{
+  if(!node)return null;
+  if(node.op==='predicate')return criteria.some(c=>c.criterion_id===node.criterion_id)?node:null;
+  const children=node.children.map(projected).filter(Boolean);
+  return !children.length?null:children.length===1&&node.op!=='not'?children[0]:{...node,children};
+ };
+ const units=splitDimensions(projected(node),criteria,domain);
+ return units.flatMap(unit=>{
+  if(!unit.criteria.length)return [];
+  if(new Set(unit.criteria.map(c=>domain(c.dimension_id))).size===1)return [unit];
+  const group=relations.length+1;
+  const relation={expression:naturalExpression(unit.node,criteria),fields:[]};
+  relations.push(relation);
+  function fields(branch,path=[],negative=false){
+   const ids=leaves(branch),items=criteria.filter(c=>ids.includes(c.criterion_id));
+   const dimensions=[...new Set(items.map(c=>domain(c.dimension_id)))];
+   if(dimensions.length===1){
+    const prefix=path.length?'Alternative '+path.join('.')+' — ':'';
+    const value=naturalExpression(branch,criteria);
+    const text=prefix+(negative?'not ('+value+')':value);
+    relation.fields.push({dimension:dimensions[0],text});
+    return [{dimension:dimensions[0],node:branch,criteria:items,text,linked:true}];
+   }
+   if(branch.op==='not')return fields(branch.children[0],path,!negative);
+   return branch.children.flatMap((child,i)=>fields(child,branch.op==='any_of'?[...(path.length?path:[group]),i+1]:path,negative));
+  }
+  return fields(unit.node);
+ });
+}
 function ageClause(criteria){if(criteria.length!==1||criteria[0].dimension_id!=='population.age')return null;const value=criteria[0].structured_value;if(!value)return null;const unit=['year','years'].includes(value.unit)?'years':value.unit;if(value.operator==='between')return 'aged '+(value.lower_inclusive===false?'>':'≥')+value.lower+' and '+(value.upper_inclusive===false?'<':'≤')+value.upper+' '+unit;const symbols={gt:'>',gte:'≥',lt:'<',lte:'≤',eq:'='};return symbols[value.operator]?'aged '+symbols[value.operator]+value.value+' '+unit:null;}
 function clause(dimension,value,reference){return lower(phrase(value));}
 const titleDimensions={pico:'intervention',picos:'intervention',peco:'exposure',pecos:'exposure',peo:'exposure',
@@ -314,7 +346,7 @@ function topic(question,elements){
   let name=names[dimension]||'';
   if(comparison&&name)name=!routine.test(comparison)&&compactTitle(comparison)?name+' compared with '+comparison:'Comparison of '+name.toLowerCase();
   const primary=titlePhrase((question.original_text||'').split(/[.!?;]\s+|,\s+and to\s+|\s+using (?:a |an )?(?:network )?meta.analysis/iu)[0]);
-  const trials=[name&&shortPopulation&&name+' in '+shortPopulation,population,shortPopulation,primary,name];
+  const trials=[primary,subject&&shortPopulation&&subject+' in '+shortPopulation,subject,population,shortPopulation,name];
   result=trials.find(value=>compactTitle(value))||'Review population and scope';
  }
  // Retain the local model's wording when it expresses the same source-backed
@@ -504,7 +536,7 @@ function populationProse(parts){
 // Rejoin a participant group with its own relative clauses only when the
 // eligibility expression requires all of them. Keep each underlying criterion.
 function combinePopulationUnits(units){
- const population=units.filter(unit=>unit.criteria.length&&unit.criteria.every(c=>c.dimension_id==='population'));
+ const population=units.filter(unit=>!unit.linked&&unit.criteria.length&&unit.criteria.every(c=>c.dimension_id==='population'));
  if(population.length<2||population.some(unit=>unit.node.op!=='predicate'||unit.criteria.some(c=>c.exceptions?.length||c.scope_conditions?.length)))return units;
  const relative=/^(?:who\s+|whose\s+|(?:received|required|underwent|were|had)\s+|(?:with|without)\s+)/i;
  const heads=population.filter(unit=>!relative.test(unit.text));
@@ -544,9 +576,13 @@ function extraRule(dimension,value){
   case 'Study design':case 'Evidence source':case 'Research type':return sentence('We will include '+value.replace(/^evidence unit:\s*/i,''));
   case 'Context':return sentence('Studies must take place '+(/^(?:in|at|within|outside)\b/i.test(value)?'':'in ')+value);
   case 'Comparison':return sentence('Eligible comparators include '+value);
-  case 'Outcomes':return sentence('Eligibility requires '+value);
+  case 'Outcomes':return sentence(/^(?:measure|report|assess|record)\b/i.test(value)?'Eligible studies must '+value:'The required outcome is '+value);
   case 'Language':return sentence('Eligible reports must be '+(/^(?:written|published|in)\b/i.test(value)?'':'in ')+value);
   case 'Publication date':return sentence('Eligible reports must be published '+(/^(?:between|from|through|in|after|before|on|since|during|by)\b/i.test(value)?'':'in ')+value);
+  case 'Sample':return sentence('Eligible studies must enrol '+value);
+  case 'Index test':return sentence('Eligible studies must evaluate '+value+' as the index test');
+  case 'Reference test':return sentence('The reference standard must be '+value);
+  case 'Evaluation':return sentence('Eligible studies must assess '+value);
   case 'Exposure':case 'Concept':case 'Phenomenon of Interest':case 'Condition':case 'Target condition':return sentence('Eligible studies must examine '+value);
   case 'Duration':case 'Follow-up':return sentence(dimension+' must be '+value);
   case 'Other':case 'Additional limit':return sentence('Eligibility requires '+value);
@@ -568,11 +604,14 @@ function description(rows,context={}){
   if(context.question_relation==='any_of')paragraphs.push('Studies may meet the requirements of any question.');
   return paragraphs.join(' ');
  }
+ const linked=context.linked_conditions||[];
+ const linkedFields=new Set(linked.flatMap(group=>group.fields.map(f=>JSON.stringify([f.dimension,f.text]))));
  const groups=new Map(),sourceRules=[];
  for(const row of rows){
   const dimension=row.dimension||row.label;
   const phrases=[];
   for(const rule of row.include||[]){
+   if(linkedFields.has(JSON.stringify([dimension,rule])))continue;
    const value=prosePhrase(rule);
    if(sourceSentence.test(value))sourceRules.push(sentence(value));
    else if(value)phrases.push(value);
@@ -601,6 +640,7 @@ function description(rows,context={}){
   sentences.push(sentence('We will '+aim+(focusPeople?' in '+focusPeople:'')));
  }else if(focusPeople)sentences.push(sentence('The review focuses on '+focusPeople));
  sentences.push(...sourceRules);
+ for(const group of linked)sentences.push(sentence('Eligible studies must meet the following condition: '+group.expression));
  for(const [dimension,items] of groups)for(const item of items)sentences.push(extraRule(dimension,item));
  const exclusions=context.exclusions||rows.flatMap(r=>r.exclude||[]);
  const excluded=[...new Set(exclusions.map(e=>lower(String(typeof e==='string'?e:e.rule||'').trim().replace(/^(?:exclude|excluding)\s+/i,'').replace(/[.。]+$/,''))).map(s=>s.replace(/^(?:Studies|Reports|Trials)\b/,w=>w.toLowerCase())).filter(Boolean))];
@@ -626,5 +666,5 @@ function description(rows,context={}){
  return [...new Set([...sentences,...(context.supplemental_sentences||[]),focus,methods].filter(Boolean))].join(' ');
 }
 
-return {ageClause,plan,classifyAnalysis,restoreAge,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,criterionPhrase,naturalExpression,splitDimensions,combinePopulationUnits,clause,topic,projectTopic,descriptionContext,description};
+return {ageClause,plan,classifyAnalysis,restoreAge,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,criterionPhrase,naturalExpression,splitDimensions,frameworkUnits,combinePopulationUnits,clause,topic,projectTopic,descriptionContext,description};
 });

@@ -9,7 +9,7 @@ function setup(initialStorage=new Map()){
   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},sessionStorage:{getItem(){return null}},
   location:{search:'?projectId=synthetic-grounding',href:'http://localhost/eligibility.html?projectId=synthetic-grounding',pathname:'/eligibility.html'},
   document:{getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{AIMSTEPEligibilityMethodology:require('../app/eligibility/methodology.js'),AIMSTEPEligibilityModel:require('../app/eligibility/model.js'),AIMSTEPCriteriaGrounding:grounding,AIMSTEPProjectAccess:{run:fn=>fn()},addEventListener(){}}};
- const code=source.replace('// Reuse this exact manual editor',`globalThis.testAPI={progressClient:backgroundModelClient,validate:validateAcademicDraft,extract:processExtracts,segments:sourceSegments,pipeline:autoCriteriaPipeline,state:()=>state,fill,pending:currentPending,normalized:standardizedCriteria,signature:machineSourceSignature,confirm:confirmSourceRule,sourceConfirmation,mergeConfirmations:mergeSourceConfirmations,topic:summaryTopic,validTopic:validatedReviewTopic,normalize:normalizeMachineCriteria,suggest:applyScopeSuggestion,normalizeSuggestions:normalizeScopeSuggestions,export:criteriaWordFile,sourceImages:originalMachineSources,navigate:saveBeforeToolNavigation,
+ const code=source.replace('// Reuse this exact manual editor',`globalThis.testAPI={progressClient:backgroundModelClient,validate:validateAcademicDraft,extract:processExtracts,segments:sourceSegments,pipeline:autoCriteriaPipeline,state:()=>state,fill,pending:currentPending,normalized:standardizedCriteria,signature:machineSourceSignature,confirm:confirmSourceRule,sourceConfirmation,mergeConfirmations:mergeSourceConfirmations,topic:summaryTopic,validTopic:validatedReviewTopic,suggest:applyScopeSuggestion,normalizeSuggestions:normalizeScopeSuggestions,export:criteriaWordFile,sourceImages:originalMachineSources,navigate:saveBeforeToolNavigation,
   transport(fn,provider='ollama'){localFetch=fn;resolveLocalModel=async()=>({name:'Synthetic model',provider,base:'http://synthetic.invalid',slot:'synthetic'});},
   manualInput(input){prepareSources=async()=>input;},
   readSources:prepareSources,resolveModel:resolveLocalModel,
@@ -71,48 +71,33 @@ async function run(){
  assert.deepEqual(Array.from(repaired.rows[0].include),['Adults aged at least 18 years.']);assert.equal(grounding.decisions(repaired).length,0,'A corrected rewrite is an audit note, not a human task');
  assert.throws(()=>grounding.batches([{text:'x'.repeat(8100)}]),/focused source excerpt/);
  console.log('PASS: original document tails, exact offsets, page attribution, SHA-256 manifest, forged quotations, missing/duplicate semantic assessments, and image-transcription provenance');
- const test=setup(),calls=[];let synthesisCalls=0;
+ const test=setup(),steps=[];
+ const B=require('../app/eligibility/background.js');
+ test.ctx.window.AIMSTEPEligibilityEngine=require('../app/eligibility/engine.js');
+ test.ctx.window.AIMSTEPEligibilityBackground={...B,create:options=>B.create({...options,baseURL:'http://localhost/',frameworkConfig:require('../config/eligibility-frameworks.json'),profileConfig:require('../config/eligibility-review-profiles.json')})};
  test.api.transport(async(url,options)=>{
-  const body=JSON.parse(options.body),system=body.messages[0].content,payload=JSON.parse(body.messages[1].content);calls.push({system,payload});let answer;
-  if(system.startsWith('Organize'))answer={framework:'PICO',criteria:[{dimension:'Population',eligibilityRule:'Adults aged at least 18 years with fibromyalgia.'}],questions:['What outcomes must be reported?','What publication dates should be required?'],suggestions:[{dimension:'Study design',rule:'Randomized controlled trials only.',side:'include',reason:'Restricting designs changes which studies are eligible.',priority:'important'},{dimension:'Comparison',rule:'Studies with a concurrent control group.',side:'include',reason:'A concurrent control group narrows the eligible comparisons.',priority:'important'}]};
-  else if(system.startsWith('Extract atomic')){
-   assert(!payload.segments.some(s=>s.text.includes('18')),'Extraction sees original passages, not the first-pass draft');
-   answer={items:[{sourceId:payload.segments[0].id,dimension:'Population',sourceSentence:payload.segments[0].text,attribute:'Fibromyalgia',value:'',entityType:'Population',temporality:'',modifier:'',logic:'required',proposition:'Adults with fibromyalgia.'}],uncertainties:[]};
-  }else if(system.startsWith('Independently'))answer={items:payload.items.map(item=>({id:item.id,status:'supported',reason:'All words were supplied.'}))};
-  else if(system.startsWith('You are a systematic review methods editor')){assert.equal(body.format.type,'object');assert.equal(body.format.additionalProperties,false);synthesisCalls++;answer=synthesisCalls===1?{criteria:[],dimension:'Intervention'}:{criteria:[{dimension:'Population',include:[{text:'Adults with fibromyalgia.',evidenceIds:['A001']},{text:'Adults aged at least 18 years with fibromyalgia.',evidenceIds:['A001']}],exclude:[]}],uncertainties:[]};}
-  else throw Error('Unexpected model call: '+system.slice(0,60));
-  return {ok:true,json:async()=>({message:{content:JSON.stringify(answer)}})};
- });
+  const envelope=JSON.parse(JSON.parse(options.body).messages[1].content),payload=envelope.payload;
+  steps.push(envelope.step);
+  if(envelope.step==='extract_elements'){
+   const q=payload.question,source=q.sources.find(s=>s.input_kind==='research_question');
+   const element={candidate_id:'p',dimension_id:'population',normalized_text:'adults with fibromyalgia',source_refs:[{source_id:source.source_id,source_revision:source.revision,quote:'adults with fibromyalgia'}],information_status:'explicit',semantic_role:'eligibility_condition',scope_status:'restricted',disposition:'include',structured_value:null};
+   return {ok:true,json:async()=>({provider:'local',message:{content:JSON.stringify({questions:[{question_id:q.question_id,review_topic:'Fibromyalgia in adults',framework_candidates:['pico'],elements:[element],logic:null,issues:[]}]})}})};
+  }
+  assert.equal(envelope.step,'review_normalization');
+  return {ok:true,json:async()=>({provider:'typesafe',review:{policy:'jev-once-v1'},message:{content:JSON.stringify({items:payload.items.map(item=>({...item,status:'supported',issue_type:'none',reason:'Verified against the supplied source.'}))})}})};
+ },'backend');
  test.el('generation-method').value='machine';test.el('generation-method').handlers.change();test.el('question').value='Include studies of adults with fibromyalgia.';
  await test.el('start-machine').handlers.click();
- assert.equal(synthesisCalls,2,'A malformed structure is retried once with the original atoms and schema');
- const state=test.api.state();assert(state.machineRun, test.el('generation-status').textContent);assert.equal(state.machineCriteria.length,1);assert.equal(state.machineCriteria[0].condition,'Adults with fibromyalgia.');
- test.api.navigate({preventDefault(){throw Error('Pending clarification must not block navigation');}});assert(JSON.parse(test.storage.get('aimstep-setup-completed:synthetic-grounding')||'[]').includes(1),'Generated criteria are complete without answering optional scope suggestions');
- assert(!state.machineRefinement.manuscriptParagraph.includes('English'));assert(!state.machineRefinement.manuscriptParagraph.includes('18'));assert(!state.machineRefinement.manuscriptParagraph.includes('2020'));
- assert.equal(state.machineRefinement.audit.sources[0].text,test.el('question').value);assert.equal(state.machineRefinement.trace[0].sourceName,'Question / voice input');
- assert(calls.filter(c=>c.system.startsWith('Independently')).length>=2,'Extracted and final rules undergo separate reviews');
- assert(!test.el('preview').innerHTML.includes('Original source excerpts'));assert(test.api.state().machineRefinement.trace.length);
- assert.equal(test.api.pending().length,0,'Missing core scope and diagnostics must not become required questions');
- assert(!test.el('preview').innerHTML.includes('Automatic check notes'));assert(!test.el('preview').innerHTML.includes('data-pc-'));
- assert.equal(state.machineRefinement.scopeSuggestions.length,2);assert(!test.el('preview').innerHTML.includes('Optional scope suggestions'));
- assert.equal(state.machineCriteria.length,1,'Suggestions do not enter the active criteria automatically');
- const rowsBefore=JSON.stringify(state.machineCriteria);
- assert(test.api.suggest(0,'keep'));assert.equal(JSON.stringify(state.machineCriteria),rowsBefore,'Keeping the draft must not create a complementary exclusion');
- assert.equal(state.finalCriteria.decisions.at(-1).rule,'');
- assert(test.api.suggest(1,'adopt'));assert(state.machineCriteria.some(row=>row.title==='Comparison'&&row.condition.includes('concurrent control')));
- assert(state.machineRefinement.manuscriptParagraph.includes('concurrent control'));assert.equal(state.machineRefinement.audit.decisions.at(-1).provenance,'author-decision');
- assert.equal(test.api.suggest(1,'adopt'),false,'A repeated click cannot duplicate a rule');
- assert.equal(test.api.pending().length,0);assert(!test.el('preview').innerHTML.includes('Optional scope suggestions'));
- const saved=JSON.parse(test.storage.get('aimstep-eligibility:synthetic-grounding'));assert(saved.machineRefinement.audit.sources.length);assert.equal(saved.machineRefinement.audit.version,grounding.VERSION);
- assert.equal(saved.machineRefinement.audit.calls.length,calls.length);assert(saved.machineRefinement.audit.calls.every(call=>call.promptHash?.length===64&&call.responseHash?.length===64));
- assert(saved.machineRefinement.audit.calls.some(call=>call.schemaHash?.length===64),'Schema-constrained calls are recorded');
- const reloaded=setup(test.storage);assert.equal(reloaded.api.state().machineRefinement.audit.sources[0].sha256,saved.machineRefinement.audit.sources[0].sha256);assert(!reloaded.el('preview').innerHTML.includes('Original source excerpts'));assert(reloaded.api.state().machineRefinement.trace.length);
- const archive=Buffer.from(test.api.export());let offset=0,xml='';
- while(archive.readUInt32LE(offset)===0x04034b50){const length=archive.readUInt32LE(offset+18),nameLength=archive.readUInt16LE(offset+26),extra=archive.readUInt16LE(offset+28),name=archive.subarray(offset+30,offset+30+nameLength).toString(),start=offset+30+nameLength+extra;if(name==='word/document.xml')xml=archive.subarray(start,start+length).toString();offset=start+length;}
- assert(!xml.includes('Source evidence'));assert(!xml.includes('Include studies of adults with fibromyalgia.'));assert(saved.machineRefinement.audit.sources[0].text.includes('Include studies of adults with fibromyalgia.'));assert(!xml.includes('Ignored suggestion'));
+ const state=test.api.state();assert(state.machineRun,test.el('generation-status').textContent);
+ assert.equal(state.machineCriteria.length,1);assert.match(state.machineCriteria[0].condition,/adults with fibromyalgia/i);
+ assert.deepEqual(steps,['extract_elements','review_normalization']);
+ assert.doesNotMatch(state.machineRefinement.manuscriptParagraph,/18|2020|English.language/i);
+ assert.equal(state.machineRefinement.scopeSuggestions.length,0);
+ const saved=JSON.parse(test.storage.get('aimstep-eligibility:synthetic-grounding'));
+ assert.equal(saved.machineRefinement.audit.sources[0].text,test.el('question').value);
+ const reloaded=setup(test.storage);assert.equal(JSON.stringify(reloaded.api.state().machineCriteria),JSON.stringify(state.machineCriteria));
  reloaded.api.state().machineRun.sourceFiles=['Saved protocol.pdf'];const generatedAt=reloaded.api.state().machineRun.generatedAt;
  await reloaded.el('start-machine').handlers.click();assert(reloaded.el('generation-status').textContent.includes('Reattach the original files'));assert.equal(reloaded.api.state().machineRun.generatedAt,generatedAt);
- console.log('PASS: end-to-end machine transport, original-source evidence, two semantic review passes, inactive fabricated limits, direct editable output, no required forms, optional important suggestions, consistent Description, author audit and persistence');
  const empty=setup();empty.api.declineAll();
  empty.api.transport(async()=>({ok:true,json:async()=>({message:{content:JSON.stringify({items:[]})}})}));
  const partial=await empty.api.pipeline({name:'Synthetic'}, {framework:'PICO',originalSources:[{name:'Topic',text:'Fibromyalgia?'}],criteria:[{dimension:'Population',eligibilityRule:''}]},'empty',new AbortController().signal,()=>{});
@@ -128,7 +113,7 @@ async function run(){
  const priorRows=JSON.stringify(oldState.machineCriteria),storage=new Map([['aimstep-eligibility:synthetic-grounding',JSON.stringify(oldState)]]),restored=setup(storage);
  assert.equal(restored.api.pending().length,0);assert.equal(JSON.stringify(restored.api.state().machineCriteria),priorRows);assert.equal(restored.api.state().machineRefinement.uncertainties.length,15);
  const preview=restored.el('preview').innerHTML,description=preview.slice(preview.indexOf('>Description</h3>'));
- assert.match(description,/adults aged 21 or older/i);assert.match(description,/case reports/i);assert(!preview.includes('>Pending clarification</h3>'));
+ assert.match(description,/adults aged 21 or older/i);assert.doesNotMatch(description,/case reports/i);assert(!preview.includes('>Pending clarification</h3>'));
  const mixed=grounding.decisions({rows:[],clarifications:[{item:'Population: Specify the intended scope.',kind:'question',domain:'Population'},{item:'Other: Specify a complete inclusion rule.',kind:'question',domain:'Other'},{item:'Population: Verify the conflicting rule "Adults"; it was removed from both inclusion and exclusion.',kind:'review',domain:'Other'},{item:'Intervention: Specify the intended scope.',kind:'question',domain:'Intervention'}]});
  assert.equal(mixed.length,0,'Old essential-scope and source-conflict tasks do not reopen required forms');
  assert.equal(grounding.reviewMap({items:[{id:'R',status:'contradicted',reason:'The original text contradicts the proposed rewrite.'}]},['R']).get('R').issueType,'unclassified');

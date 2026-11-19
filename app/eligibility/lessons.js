@@ -9,15 +9,15 @@ const version=1;
 // documented and may be counted, but do not consume extraction prompt space.
 const entries={
  excluded_intervention:{trigger:/\b(?:exclud(?:e|ed|ing)|exclusion)\b[^.!?。]{0,160}\b(?:studies|trials) (?:of|evaluating|testing) (?:[\w-]+\s+){0,5}(?:targeting|titration|dosing|treatments?|therap(?:y|ies)|regimens?|interventions?)\b|排除[^。！？]{0,80}(?:治疗策略|干预措施|滴定策略|氧饱和度目标)/i,
-  tip:'Classify an excluded study by what defines the exclusion. A treatment strategy belongs under Intervention. Reserve Study design for methods such as randomisation. Keep subgroup factors in the analysis plan.'},
+  tip:'Classify an excluded study by what defines the exclusion. A treatment strategy belongs under Intervention. Reserve Study design for methods such as randomisation. Apply this only when the treatment strategy determines eligibility.'},
  exclusion_list:{trigger:/\b(?:exclud(?:e|es|ed|ing)|exclusion|ineligible)\b|排除/i,
-  tip:'Carry the exclusion verb across every listed study restriction. Merge equivalent wording only when it refers to the same source item, subject and exceptions. Preserve analysis exclusions separately.'},
+  tip:'Carry the exclusion verb across each listed restriction within the chosen framework. Merge equivalent wording only when it refers to the same source item, subject and exceptions. Preserve analysis exclusions separately.'},
  comparison_arms:{trigger:/\b(?:compar(?:ed|ing) (?:with|to)|comparing\b|versus|vs\.?\s|placebo|control group|each other)\b|安慰剂|对照/i,
   tip:'Locate what each group receives. Record each named arm, including active alternatives and doses; cite the phrase that assigns it to that group.'},
  outcome_role:{trigger:/\b(?:outcomes? of interest|outcomes?|endpoints?|mortality|follow[- ]up)\b|结局/i,
-  tip:'Retain each stated endpoint, time point and definition. Assign a reporting requirement only when the source explicitly makes it a condition of inclusion.'},
+  tip:'Include an outcome only if the chosen framework contains that field and the source makes it an eligibility condition. Preserve its time point and definition.'},
  analysis_role:{trigger:/\b(?:subgroup|differ according to|effect modif|network meta[- ]analysis|NMA|individual participant data|IPD|rank the)\b|亚组|网状/i,
-  tip:'Record subgroup factors, synthesis methods and data plans separately from eligibility. Check whether the source actually requires a study or participant characteristic.'},
+  tip:'Check whether a study or participant characteristic determines eligibility. Omit objectives, subgroup analyses and synthesis plans from eligibility and its description.'},
  scope_status:{trigger:/\b(?:no restrictions?|unrestricted|any language|language|publication date|no age limit)\b|不限|语言/i,
   tip:'Assign unrestricted only to a stated waiver. An unmentioned limit is unspecified; no optional confirmation is needed.'},
  age_bound:{trigger:/[<>≤≥]|\b(?:older|elderly|aged|at least|younger than|older than|months? of age)\b|年龄|老年/i,
@@ -25,12 +25,12 @@ const entries={
  logical_scope:{trigger:/\b(?:either|both|unless|except|only if|provided that|one another)\b|\b(?:we included|eligible studies)\b[^.!?]{0,300}\bcomparing\b|除非|或者|例外/i,
   tip:'Keep each alternative or exception attached to its original condition. In an inclusion sentence, distinguish design alternatives from the shared population and the two comparison arms.'},
  source_coverage:{trigger:/\b(?:we included|eligible studies|inclusion criteria|population|participants)\b|纳入标准|研究对象/i,
-  tip:'Account for each explicit inclusion statement and labelled element. Attach the actual passage or leave the source gap visible.'},
+  tip:'Account for each explicit inclusion statement within the chosen framework. Attach the actual passage or leave the source gap visible.'},
  source_fidelity:{tip:'Rebuild the wording from the current cited passage. Preserve its subject, direction, qualifications and numerical values.'},
  repeated_passage:{tip:'Choose the occurrence whose heading, negation and surrounding clause support this candidate. Use its source revision and Unicode offsets.'},
  question_identity:{tip:'Return the exact supplied question ID for this part. Keep element references within the same question.'},
  topic_wording:{trigger:/\b(?:resuscitation|benefits and harms|to assess the effects)\b/i,
-  tip:'Use the named clinical subject, defining comparison and population for the title. Describe the purpose once and retain the enrolment details in their fields.'},
+  tip:'Name the clinical question and its defining comparison or population. Use direct clinical English and place each qualifier next to the term it modifies.'},
  residual_validation:{}, service_availability:{}, progress_display:{}, clear_project:{}, author_decision:{}, framework_display:{}
 };
 function errorLesson(error){
