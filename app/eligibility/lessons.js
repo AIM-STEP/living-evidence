@@ -13,7 +13,7 @@ const entries={
  exclusion_list:{trigger:/\b(?:exclud(?:e|es|ed|ing)|exclusion|ineligible)\b|排除/i,
   tip:'Carry the exclusion verb across each listed restriction within the chosen framework. Merge equivalent wording only when it refers to the same source item, subject and exceptions. Preserve analysis exclusions separately.'},
  comparison_arms:{trigger:/\b(?:compar(?:ed|ing) (?:with|to)|comparing\b|versus|vs\.?\s|placebo|control group|each other)\b|安慰剂|对照/i,
-  tip:'Locate what each group receives. Record each named arm, including active alternatives and doses; cite the phrase that assigns it to that group.'},
+  tip:'Cite what each group receives. Keep doses, active alternatives and parenthetical variants with their arm. End the comparator before a clause listing review outcomes.'},
  outcome_role:{trigger:/\b(?:outcomes? of interest|outcomes?|endpoints?|mortality|follow[- ]up)\b|结局/i,
   tip:'Include an outcome only if the chosen framework contains that field and the source makes it an eligibility condition. Preserve its time point and definition.'},
  analysis_role:{trigger:/\b(?:subgroup|differ according to|effect modif|network meta[- ]analysis|NMA|individual participant data|IPD|rank the)\b|亚组|网状/i,

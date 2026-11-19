@@ -1038,10 +1038,11 @@ async function extract_elements(state,env,adapter,options={},review=null){
    for(const e of answer.questions[0].elements){
     if(Methods.normalizeExcludedIntervention(e))options.onLesson?.('excluded_intervention');
    }
-   const armSources=ranges.map(r=>({source_id:r.id,source_revision:r.revision,start:r.start,quote:r.text}));
-   for(const {element} of Methods.normalizeComparisonArms(answer.questions[0].elements,armSources)){
+   const armSources=ranges.map(r=>({source_id:r.id,source_revision:r.revision,start:r.start,end:r.end,quote:r.text}));
+   for(const {element,literalDimension} of Methods.normalizeComparisonArms(answer.questions[0].elements,armSources)){
     delete element[reviewCitations];delete element[locatedContexts];
     checkExtractedSources(state,element,q.question_id,ranges);
+    if(literalDimension&&sources.every(source=>source.input_kind==='research_question'))markLiteralField(element,literalDimension,'include',element.normalized_text);
    }
    const result=answer.questions[0];
    const frameId=E.resolve_review_context(originals.get(q.question_id),result,env).framework_mapping.framework_id;
@@ -1281,10 +1282,18 @@ function sourceReview(state,adapter,options,env){
     // has already placed genuine source uncertainty under its native field.
     if(e.review_pending)continue;
     const ageAsWritten=sourceAgeGroup(e,q,sourceQuestion);
-    if(ageAsWritten)e.information_status='explicit';
     const proof=e[literalField];
     if(proof&&proof.dimension===e.dimension_id&&proof.side===e.disposition&&proof.wording===e.normalized_text&&
        !q.unresolved_fragment_logic&&(ageAsWritten||!q.issues.some(i=>i.element_candidate_ids?.includes(e.candidate_id))))literalCandidates.add(e);
+    // Send a complete, source-defined field to the existing independent check
+    // when extraction marked it uncertain without identifying an open decision.
+    // Qualitative age has its own check for a threshold requested elsewhere.
+    if(ageAsWritten||(e.information_status==='ambiguous'&&literalCandidates.has(e)&&
+       !qualitativeAgeGroup.test(e.normalized_text)&&!e.structured_value&&
+       !q.issues.some(i=>!i.element_candidate_ids?.length)&&
+       !/\b(?:to be (?:confirmed|clarified|specified|decided|determined|defined)|undecided|unclear|pending|possibly|tbd|tbc)\b|待定|可能|待确认|待明确|尚未确定/iu.test(original+' '+e.normalized_text))){
+     e.information_status='explicit';
+    }
     if(e.source_occurrence_alternatives?.length||e.information_status!=='explicit'||e.semantic_role==='undecided'){
      const issue=q.issues.find(issue=>issue.element_candidate_ids?.includes(e.candidate_id));
      const reason=issue?.question_text||'The source leaves the eligibility wording or its direction uncertain.';

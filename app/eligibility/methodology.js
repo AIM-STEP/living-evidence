@@ -40,7 +40,7 @@ function normalizeExcludedIntervention(e){
 // Only repair an arm when its own citation contains the misplaced comparison.
 // An explicit eligibility clause can supply a broader qualifier such as "any".
 const armContrast=/\s+(?:compared (?:with|to)|versus|vs\.?)\s+/i;
-const armKey=value=>norm(value).toLowerCase().trim().replace(/[.。]+$/,'').replace(/\s+/g,' ');
+const armKey=value=>norm(value).toLowerCase().trim().replace(/[.。]+$/,'').replace(/[‐‑]/gu,'-').replace(/[‘’]/gu,"'").replace(/[“”]/gu,'"').replace(/\s+/g,' ');
 function explicitComparisonPairs(ref){
  const pairs=[];
  for(const match of ref.quote.matchAll(/\bcomparing\s+([^;!?\n]{1,140}?)\s+(?:with|to)\s+([^;!?\n]{1,160}?)(?=\.(?:\s|$)|[;!?\n]|$)/gi)){
@@ -55,7 +55,7 @@ function explicitComparisonPairs(ref){
 }
 function objectiveArms(value){
  const wording=phrase(value).replace(/^studies comparing\s+/i,'comparing ');
- const objective=wording.match(/^(?:(?:to |we (?:aim(?:ed)? to )?)?(?:assess|evaluate|examine|determine) (?:the )?(?:benefits(?: and harms)?|harms|effects?|efficacy|effectiveness|safety) of )(.+)$/i);
+ const objective=wording.match(/^(?:to |we (?:aim(?:ed)? to )?)?(?:assess|evaluate|examine|determine) (?:the )?(?:(?:clinical|comparative|relative|cost|economic|benefits?|harms?|effects?|efficacy|effectiveness|safety|and)[ ‐‑–-]+)+of (.+)$/i);
  if(!objective){
   const pair=wording.match(/^(?:comparing|to compare) (.+?) (?:with|to) (.+)$/i);
   if(pair)return {intervention:pair[1],comparator:pair[2]};
@@ -65,17 +65,59 @@ function objectiveArms(value){
  const arms=objective[1].split(armContrast);
  if(arms.length!==2)return null;
  // Purpose and outcome clauses commonly follow an objective's comparator.
- const comparator=arms[1].split(/\s+(?:for (?:the )?(?:resuscitation|treatment|management|prevention|diagnosis) of|in (?:reducing|preventing|improving)|on (?:the )?(?:risk|rate|incidence|mortality|outcomes?))\b/i)[0];
- return {intervention:arms[0].replace(/,$/,''),comparator,sharedPurpose:comparator!==arms[1]&&/\sfor\b/i.test(arms[1].slice(comparator.length))};
+ const comparator=arms[1].split(/(?:,\s*|\s+)(?:for (?:the )?(?:resuscitation|treatment|management|prevention|diagnosis) of|in (?:reducing|preventing|improving)|on (?:the )?(?:risks?|rates?|incidence|mortality|morbidity|survival|quality of life|health[‐‑– -]related quality of life|outcomes?))\b/i)[0];
+ return {objective:true,intervention:arms[0].replace(/,$/,'').trim(),comparator:comparator.trim(),sharedPurpose:comparator!==arms[1]&&/^,?\s*for\b/i.test(arms[1].slice(comparator.length))};
+}
+// For a single source objective, the contrast assigns each intact noun phrase to
+// its group. Parenthetical descriptions may contain “with” or “or” within an arm.
+function standaloneObjectiveArms(ref){
+ if(!Number.isInteger(ref.start)||/[;!?\n]|\.(?=\s+[A-Z])|\b(?:unless|except|only if|provided that|depending on)\b/iu.test(ref.quote))return null;
+ const pair=objectiveArms(ref.quote);
+ if(!pair?.objective||pair.sharedPurpose||armKey(pair.intervention)===armKey(pair.comparator))return null;
+ for(const arm of [pair.intervention,pair.comparator]){
+  if(/\b(?:unless|except|when|whether|depending|each other|one another)\b/iu.test(arm))return null;
+  const head=arm.replace(/\([^()]+\)/gu,' ').trim();
+  if(!head||head.split(/\s+/u).length>16||/[(),;:.!?]|\b(?:among|in|for|on|where|studies|trials|compare[ds]?|versus|assess|outcomes?)\b/iu.test(head))return null;
+ }
+ const separator=armContrast.exec(ref.quote);
+ if(!separator)return null;
+ function citation(arm,from){
+  const index=ref.quote.indexOf(arm,from);
+  if(index<0)return null;
+  const start=ref.start+Array.from(ref.quote.slice(0,index)).length;
+  return {source_id:ref.source_id,source_revision:ref.source_revision,quote:arm,start,end:start+Array.from(arm).length};
+ }
+ const intervention=citation(pair.intervention,0),comparator=citation(pair.comparator,separator.index+separator[0].length);
+ if(!intervention||!comparator)return null;
+ return {intervention,comparator};
 }
 function normalizeComparisonArms(elements,sources=[]){
  const candidates=elements.filter(e=>['intervention','comparator','comparison','comparison_group','control_group','control'].includes(e.dimension_id)&&e.active!==false&&e.information_status==='explicit'&&!e.explicit_revision&&e.decision_status!=='confirmed_by_user'&&e.disposition!=='exclude'&&!e.exceptions?.length&&!e.scope_conditions?.length&&!e.structured_value&&!e.source_occurrence_pending&&!e.source_occurrence_alternatives?.length);
- const pairsBySource=new Map(),changed=[];
+ const pairsBySource=new Map(),objectiveBySource=new Map(),changed=[];
  for(const e of candidates){
+  const role=e.dimension_id==='intervention'?'intervention':'comparator',refs=e.source_refs||[],wording=armKey(e.normalized_text);
+  const ranges=sources.length?sources:refs;
+  let original=ranges.find(r=>refs.length&&refs.every(c=>c.source_id===r.source_id&&c.source_revision===r.source_revision&&Number.isInteger(c.start)&&c.start>=r.start&&c.end<=(r.end??r.start+Array.from(r.quote).length)));
+  // A separately quoted objective can also establish the arms when additional
+  // sentences discuss other topics without assigning competing treatments.
+  if(original&&refs.length===1&&refs[0].quote!==original.quote&&armContrast.test(refs[0].quote)){
+   const rest=original.quote.replace(refs[0].quote,'');
+   if(!armContrast.test(rest)&&!/\b(?:comparing|eligib\w*|includ\w*|exclud\w*|ineligible|unless|except)\b/iu.test(rest))original=refs[0];
+  }
+  if(original){
+   if(!objectiveBySource.has(original))objectiveBySource.set(original,standaloneObjectiveArms(original));
+   const citation=objectiveBySource.get(original)?.[role];
+   const copied=wording===armKey(original.quote);
+   if(citation&&(copied||wording===armKey(citation.quote))&&refs.every(r=>r.start<=citation.start&&r.end>=citation.end)){
+    if(e.normalized_text!==citation.quote)e.metadata_corrections=[...(e.metadata_corrections||[]),{field:'normalized_text',from:e.normalized_text,to:citation.quote,basis:'Separate the two arms of the explicit comparison in the original source.'}];
+    e.normalized_text=citation.quote;e.source_refs=[citation];
+    if(e.raw_text!==undefined)e.raw_text=citation.quote;
+    changed.push({element:e,citation,literalDimension:role});continue;
+   }
+  }
   const objective=objectiveArms(e.normalized_text);
   if(!objective)continue;
-  const wording=armKey(e.normalized_text),refs=e.source_refs||[];
-  const role=e.dimension_id==='intervention'?'intervention':'comparator',arm=armKey(objective[role]);
+  const arm=armKey(objective[role]);
   const cited=refs.filter(ref=>{
    const quote=armKey(ref.quote);
    if(quote.includes(wording))return true;
@@ -110,12 +152,14 @@ function normalizeComparisonArms(elements,sources=[]){
  }
  return changed;
 }
-function normalizeComparators(elements,sources=[]){normalizeComparisonArms(elements,sources);const target=interventionReference(elements);for(const e of elements.filter(e=>e.active!==false)){
+function normalizeComparators(elements,sources=[]){
+ const sourceInterventions=new Set(normalizeComparisonArms(elements,sources).filter(fix=>fix.literalDimension==='intervention').map(fix=>fix.element));
+ const target=interventionReference(elements);for(const e of elements.filter(e=>e.active!==false)){
  const clean=value=>norm(phrase(value)).trim().replace(/[.,;:]+$/,'').replace(/^(?:compared\s+(?:with|to)|versus|vs\.?)\s+(?:either\s+)?/i,''),raw=clean(e.raw_text),text=clean(e.normalized_text);
  const dimension=String(e.dimension_id).toLowerCase(),aliases=['comparison','comparisons','comparison_group','comparison.group','control','control_group','control.group','comparators'];
  const comparisonOnly=value=>/^(?:(?:(?:an?|the|either a) )?control (?:group|arm)\b[\s\S]*|(?:standard care|usual care|treatment as usual|placebo|sham|no treatment|wait[- ]?list)(?:\s*[,;]?\s+(?:and|or)\s+(?:(?:an?|another|other)\s+)?[\w\s()-]+)*|each other|one another)$/i.test(value);
  const sourceComparison=/\b(?:compar(?:ed|ing)\s+(?:with|to)|versus|vs\.?|control (?:group|arm)|placebo|each other|one another)\b/i.test(raw);
- const definedIntervention=dimension==='intervention'&&comparisonOnly(text)&&(e.source_refs||[]).some(ref=>{
+ const definedIntervention=sourceInterventions.has(e)||dimension==='intervention'&&comparisonOnly(text)&&(e.source_refs||[]).some(ref=>{
   const objective=objectiveArms(ref.quote);
   if(objective&&armKey(objective.intervention)===armKey(text))return true;
   return sources.some(source=>source.source_id===ref.source_id&&source.source_revision===ref.source_revision&&explicitComparisonPairs(source).some(pair=>armKey(pair.intervention)===armKey(text)));

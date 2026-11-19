@@ -23,6 +23,10 @@ test('a lower-confidence Jev agreement can be corroborated only by a complete so
  assert.equal(pass.e.semantic_review.status,'supported');
  assert.equal(pass.e.semantic_review.reviewer.verdict,'low_confidence');
  assert.equal(pass.e.semantic_review.reviewer.corroboration,'exact_source_field');
+ const lowExtraction=await generate('Population: adults with severe asthma.','adults with severe asthma','supported',true);
+ assert.equal(lowExtraction.checks,1);assert.equal(lowExtraction.e.semantic_review.status,'supported');
+ const undecided=await generate('Population: adults with severe asthma. The severity definition is to be decided.','adults with severe asthma','supported',true);
+ assert(undecided.e.review_pending);
  const disagrees=await generate('Population: adults with severe asthma.','adults with severe asthma','wrong_field');
  assert(disagrees.e.review_pending);
  const unscoped=await generate('The reported sample included adults with severe asthma.','adults with severe asthma');

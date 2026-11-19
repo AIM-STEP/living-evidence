@@ -82,6 +82,18 @@ mixed.issues.push(issue('Should a mixed-age sample qualify?',['age']));
 const retained=opened(E.ingest_candidates(explicit,{questions:[mixed]}).state);
 assert(retained.some(i=>i.trigger_rule_id==='source_or_relation'),'An alternative lost from the predicate still requires clarification.');
 assert(retained.some(i=>i.question_text==='Should a mixed-age sample qualify?'),'An explicit threshold cannot decide the scope for a mixed-age sample.');
+const arm='exercise‐based CR (exercise training alone or combined with psychosocial/educational interventions)';
+const objective="To assess the clinical and cost‐effectiveness of "+arm+" compared with 'no exercise' control, on mortality in people with CHD.";
+const rehab=E.save_input(E.create_project('rehabilitation'),{research_question:objective,question_framework:'PICO',output_language:'en'}).state;
+const rq=rehab.questions[0],rs=D.sourceAt(rehab,rq.source_refs[0]);
+const clinicalArm=(id,dimension,text)=>({...direct.elements[0],candidate_id:id,dimension_id:dimension,normalized_text:text,source_refs:[E.ref(rs,objective)]});
+const rehabQuestion={question_id:rq.question_id,framework_candidates:[],eligibility_policy:'framework-only-v1',elements:[
+ clinicalArm('exercise','intervention',arm.replace('exercise‐based','Exercise-based')),
+ clinicalArm('control','comparator',"'no exercise' control")
+],issues:[],logic:{op:'all_of',children:['exercise','control'].map(element_id=>({op:'predicate',element_id}))}};
+assert(!opened(E.ingest_candidates(rehab,{questions:[rehabQuestion]}).state).some(i=>i.trigger_rule_id==='source_or_relation'),'The variants within exercise-based CR are already preserved in the intervention.');
+rehabQuestion.elements[0].normalized_text='Exercise-based CR (exercise training alone)';
+assert(opened(E.ingest_candidates(rehab,{questions:[rehabQuestion]}).state).some(i=>i.trigger_rule_id==='source_or_relation'),'Losing the combined intervention still requires review.');
 const withNote=structuredClone(explicit);
 // Source conditions in additional notes must also protect a genuine language decision.
 const noteSource={...explicitSource,source_id:'language-note',source_type:'additional_requirement',original_text:'Languages of publication will depend on translation availability.'};

@@ -381,6 +381,20 @@ function sourceDefinesMinimumAge(group,known){
  });
  return defined&&bounds.size===1;
 }
+function alternativeSpan(quote,wording){
+ // These substitutions preserve original offsets. Match whitespace at its
+ // source width and keep the returned range in Unicode code points.
+ const surface=text=>text.replace(/[‐‑]/gu,'-').replace(/[‘’]/gu,"'").replace(/[“”]/gu,'"');
+ const expression=surface(wording.trim()).split(/\s+/u).map(word=>word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('\\s+');
+ if(!expression)return null;
+ const startBoundary=/^[A-Za-z0-9]/u.test(wording)?'(?<![A-Za-z0-9])':'';
+ const endBoundary=/[A-Za-z0-9]$/u.test(wording)?'(?![A-Za-z0-9])':'';
+ const matches=surface(quote).matchAll(new RegExp(startBoundary+expression+endBoundary,'giu'));
+ const first=matches.next().value;
+ if(!first||!matches.next().done)return null;
+ const start=Array.from(quote.slice(0,first.index)).length;
+ return {start,end:start+Array.from(first[0]).length};
+}
 function unrepresentedSourceOr(elements){
  const withAlternatives=elements.filter(e=>D.hasOr(e.normalized_text));
  return elements.some(e=>e.source_refs.some(ref=>{
@@ -396,10 +410,10 @@ function unrepresentedSourceOr(elements){
     if(!D.hasOr(sourceText))continue;
     let start=source.start,end=source.end;
     if(!wording.includes(sourceText)){
-     const offset=source.quote.indexOf(owner.normalized_text);
-     if(offset<0||source.quote.indexOf(owner.normalized_text,offset+1)>=0)continue;
-     start+=Array.from(source.quote.slice(0,offset)).length;
-     end=start+Array.from(owner.normalized_text).length;
+     const span=alternativeSpan(source.quote,owner.normalized_text);
+     if(!span)continue;
+     start=source.start+span.start;
+     end=source.start+span.end;
     }
     const left=Math.max(start,ref.start),right=Math.min(end,ref.end);
     if(left<right)chars.fill(' ',left-ref.start,right-ref.start);
