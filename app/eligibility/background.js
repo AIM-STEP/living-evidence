@@ -73,7 +73,7 @@ function projectToClassic(project,registry){
   bindings.set(q.question_id,domain);
   const pending=q.logic?.pending_inclusion_branches,linked=[];
   const awaiting=new Set(q.logic?.pending_logic_element_ids||[]);
-  for(const e of q.elements.filter(e=>awaiting.has(e.element_id)&&domain(e.dimension_id))){
+  for(const e of q.elements.filter(e=>awaiting.has(e.element_id)&&domain(e.dimension_id)&&e.disposition!=='exclude'&&!['review_focus','background_information'].includes(e.semantic_role))){
    pendingLogicRows.push({domain:domain(e.dimension_id),subject:e.normalized_text,questionNumber:multiple?q.display_number:null,side:'include'});
   }
   for(const side of ['include','exclude']){

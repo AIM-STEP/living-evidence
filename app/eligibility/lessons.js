@@ -9,13 +9,13 @@ const version=1;
 // documented and may be counted, but do not consume extraction prompt space.
 const entries={
  excluded_intervention:{trigger:/\b(?:exclud(?:e|ed|ing)|exclusion)\b[^.!?。]{0,160}\b(?:studies|trials) (?:of|evaluating|testing) (?:[\w-]+\s+){0,5}(?:targeting|titration|dosing|treatments?|therap(?:y|ies)|regimens?|interventions?)\b|排除[^。！？]{0,80}(?:治疗策略|干预措施|滴定策略|氧饱和度目标)/i,
-  tip:'Classify an excluded study by what defines the exclusion. A treatment strategy belongs under Intervention. Reserve Study design for methods such as randomisation. Apply this only when the treatment strategy determines eligibility.'},
+  tip:'Use what makes the study ineligible to choose the field. A restriction on the treatment strategy belongs under Intervention. Reserve Study design for methods such as randomisation.'},
  exclusion_list:{trigger:/\b(?:exclud(?:e|es|ed|ing)|exclusion|ineligible)\b|排除/i,
-  tip:'Carry the exclusion verb across each listed restriction within the chosen framework. Merge equivalent wording only when it refers to the same source item, subject and exceptions. Preserve analysis exclusions separately.'},
+  tip:'Carry the exclusion verb across the listed restrictions. Merge equivalent wording only for the same source, subject and exceptions. Keep exclusions from analyses separate from study eligibility.'},
  comparison_arms:{trigger:/\b(?:compar(?:ed|ing) (?:with|to)|comparing\b|versus|vs\.?\s|placebo|control group|each other)\b|安慰剂|对照/i,
-  tip:'Cite what each group receives. Keep doses, active alternatives and parenthetical variants with their arm. End the comparator before a clause listing review outcomes.'},
+  tip:'Read what participants took or received in each arm. Attach formulation and duration to treatment, and retain shared duration for both groups. The clinical objective supplies the topic and outcomes.'},
  outcome_role:{trigger:/\b(?:outcomes? of interest|outcomes?|endpoints?|mortality|follow[- ]up)\b|结局/i,
-  tip:'Include an outcome only if the chosen framework contains that field and the source makes it an eligibility condition. Preserve its time point and definition.'},
+  tip:'Retain objective endpoints as review interests. A review that omits symptom relief may still include trials reporting symptoms. Treat only an explicit study-level restriction as an eligibility decision.'},
  analysis_role:{trigger:/\b(?:subgroup|differ according to|effect modif|network meta[- ]analysis|NMA|individual participant data|IPD|rank the)\b|亚组|网状/i,
   tip:'Check whether a study or participant characteristic determines eligibility. Omit objectives, subgroup analyses and synthesis plans from eligibility and its description.'},
  scope_status:{trigger:/\b(?:no restrictions?|unrestricted|any language|language|publication date|no age limit)\b|不限|语言/i,
@@ -30,7 +30,7 @@ const entries={
  repeated_passage:{tip:'Choose the occurrence whose heading, negation and surrounding clause support this candidate. Use its source revision and Unicode offsets.'},
  question_identity:{tip:'Return the exact supplied question ID for this part. Keep element references within the same question.'},
  topic_wording:{trigger:/\b(?:resuscitation|benefits and harms|to assess the effects)\b/i,
-  tip:'Title an intervention review with the shortest specific name the source supports. Keep the named class if the review covers several treatments. Include the clinical purpose and population where useful. Omit the comparator.'},
+  tip:'Use the shortest specific intervention name supported by the source, or the named class for multiple treatments. Add the clinical purpose and population where useful. Omit the comparator.'},
  residual_validation:{}, service_availability:{}, progress_display:{}, clear_project:{}, author_decision:{}, framework_display:{}
 };
 function errorLesson(error){
