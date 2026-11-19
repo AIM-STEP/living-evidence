@@ -36,7 +36,15 @@ assert.equal(topic('pico',[item('intervention','saline'),item('comparator','gel'
 assert.equal(topic('pico',[item('intervention','saline'),item('comparator','gel'),item('population','adults')],'To compare saline with gel in adults. To compare saline with gel for symptom control in children.'),'Saline in adults');
 const longArms=Array.from({length:20},(_,i)=>item('intervention','intervention '+(i+1)));
 const bounded=topic('picos',[...longArms,item('comparator','medical therapy'),item('population','adults with asthma who were enrolled at specialised respiratory clinics in hospitals across five regions')]);
-assert.equal(bounded,'Interventions in adults with asthma');
+assert.match(bounded,/adults with asthma/i);
+assert.doesNotMatch(bounded,/\binterventions?\b|medical therapy/i);
+const cyclingPopulation=item('population','adults with asthma');
+const cyclingComparator=item('comparator','usual care');
+const cyclingQuestion={...question('picos','To assess the effects of supervised cycling compared with usual care in adults with asthma.'),review_topic:'Interventions in adults with asthma'};
+assert.equal(Methods.topic(cyclingQuestion,[cyclingPopulation,item('intervention','interventions'),cyclingComparator]),'Supervised cycling in adults with asthma');
+const detailedCycling='supervised cycling (sessions delivered on a stationary bicycle three times weekly over twelve weeks under the supervision of a physiotherapist)';
+const detailedQuestion={...cyclingQuestion,original_text:'To assess the effects of '+detailedCycling+' compared with usual care in adults with asthma.'};
+assert.equal(Methods.topic(detailedQuestion,[cyclingPopulation,item('intervention',detailedCycling),cyclingComparator]),'Supervised cycling in adults with asthma');
 assert(!/…|\b(?:and|or|with)$/i.test(topic('pico',[item('intervention','exercise and'),item('population','adults')])));
 const arms=[item('intervention','exercise',{element_id:'a'}),item('intervention','education',{element_id:'b'}),item('population','adults')];
 const alternatives={...question('pico'),logic:{op:'any_of',children:['a','b'].map(element_id=>({op:'predicate',element_id}))}};

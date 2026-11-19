@@ -30,7 +30,7 @@ const entries={
  repeated_passage:{tip:'Choose the occurrence whose heading, negation and surrounding clause support this candidate. Use its source revision and Unicode offsets.'},
  question_identity:{tip:'Return the exact supplied question ID for this part. Keep element references within the same question.'},
  topic_wording:{trigger:/\b(?:resuscitation|benefits and harms|to assess the effects)\b/i,
-  tip:'Name the clinical subject, its purpose and the population. Omit the comparison group from the title. Use direct clinical English and place each qualifier next to the term it modifies.'},
+  tip:'Title an intervention review with the shortest specific name the source supports. Keep the named class if the review covers several treatments. Include the clinical purpose and population where useful. Omit the comparator.'},
  residual_validation:{}, service_availability:{}, progress_display:{}, clear_project:{}, author_decision:{}, framework_display:{}
 };
 function errorLesson(error){
