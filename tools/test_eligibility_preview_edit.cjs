@@ -149,6 +149,37 @@ assert(html.indexOf('id="save-criteria"')<html.indexOf('id="download"'));assert(
 }
 console.log('PASS: editable criteria save/export/handoff/reload, framework-only rows, retained additional conditions, failed-save retry and source-index mapping');
 
+{
+ const project=setup('machine'),rules=[
+  'Studies of oxygen saturation targeting.',
+  'Studies not taking place in the delivery room.',
+  'Studies of infants with antenatally diagnosed congenital anomalies.'
+ ];
+ project.framework='PICOS';
+ project.machineCriteria=[{title:'Other',uncertain:rules[0]},{title:'Context',uncertain:rules[1]},
+  {title:'Population',condition:'Term or late preterm infants.',uncertain:rules[2]}];
+ api.set(project);
+ const exclusions=el('preview').innerHTML.split('>Exclusion</h3>')[1].split('</section>')[0];
+ const table=docXml().split('<w:tbl>')[1].split('</w:tbl>')[0];
+ for(const rule of rules){assert(exclusions.includes(rule),rule);assert(table.includes(rule),rule);}
+ assert(!exclusions.includes('>Context:</strong>')&&!exclusions.includes('>Other:</strong>'));
+ assert(!/>(Other|Context)</.test(table));
+ assert(!/No explicit exclusion|See Description/.test(exclusions));
+ const share=JSON.parse(storage.get('aimstep-eligibility-summary:synthetic-project'));
+ for(const rule of rules){
+  assert(share.exclusions.some(item=>item.text.includes(rule)));
+  assert(share.screeningCriteria.exclusions.some(item=>item.text.includes(rule)));
+ }
+ const edited='Studies conducted outside the delivery room.';
+ // The displayed Context exclusion follows Population and Other, while its
+ // underlying source row is between them.
+ edit([node(2,'exclude',0,edited)]);assert(api.savePreviewEdits());
+ assert.equal(api.get().machineCriteria[1].uncertain,edited);
+ assert.equal(api.get().machineCriteria[0].uncertain,rules[0]);
+ assert.equal(api.get().machineCriteria[2].uncertain,rules[2]);
+ assert(docXml().split('<w:tbl>')[1].split('</w:tbl>')[0].includes(edited));
+}
+
 // Search embeds the actual preview; raw input and polished display must not diverge.
 const previewContext={...ctx,location:{...ctx.location,search:'?projectId=synthetic-project&embedded=search-criteria-preview'},document:{...ctx.document,documentElement:{classList:{add(){}}}},window:{addEventListener(){},AimstepEligibilityLibrary:require('../app/eligibility-library.js'),AimstepEligibilityReset:require('../app/eligibility-reset.js'),AIMSTEPEligibilityMethodology:require('../app/eligibility/methodology.js')}};
 previewContext.window.AIMSTEPProjectAccess={run:fn=>fn()};

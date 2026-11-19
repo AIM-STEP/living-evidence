@@ -1,9 +1,9 @@
 /* Headless adapter: use the versioned eligibility engine behind the established UI. */
-(function(root,factory){const api=factory(root,typeof module==='object'&&module.exports?require('./domain.js'):root.AIMSTEPEligibilityDomain,typeof module==='object'&&module.exports?require('./engine.js'):root.AIMSTEPEligibilityEngine,typeof module==='object'&&module.exports?require('./model.js'):root.AIMSTEPEligibilityModel,typeof module==='object'&&module.exports?require('./methodology.js'):root.AIMSTEPEligibilityMethodology,typeof module==='object'&&module.exports?require('../eligibility-reset.js'):root.AimstepEligibilityReset);if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSTEPEligibilityBackground=api;})(typeof window==='object'?window:globalThis,function(root,D,E,M,Methods,Reset){
+(function(root,factory){const api=factory(root,typeof module==='object'&&module.exports?require('./domain.js'):root.AIMSTEPEligibilityDomain,typeof module==='object'&&module.exports?require('./engine.js'):root.AIMSTEPEligibilityEngine,typeof module==='object'&&module.exports?require('./model.js'):root.AIMSTEPEligibilityModel,typeof module==='object'&&module.exports?require('./methodology.js'):root.AIMSTEPEligibilityMethodology,typeof module==='object'&&module.exports?require('../eligibility-reset.js'):root.AimstepEligibilityReset,typeof module==='object'&&module.exports?require('./lessons.js'):root.AIMSTEPEligibilityLessons);if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSTEPEligibilityBackground=api;})(typeof window==='object'?window:globalThis,function(root,D,E,M,Methods,Reset,Lessons){
 'use strict';
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
-const presentationVersion='20261119-clinical-question-1';
+const presentationVersion='20261119-source-exclusions-1';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -240,7 +240,25 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    }
   }
   if(saved.classic_author_source_ref){const ref=saved.classic_author_source_ref;for(const q of project.questions.filter(q=>q.active!==false))if(!q.additional_source_refs.some(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision))q.additional_source_refs.push(clone(ref));}
-  const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});requireEpoch(storage,projectId,saved.criteria_epoch);onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);project.presentation_version=presentationVersion;const visible=projectView(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected,visible);
+  const observed=new Set(),lessonCounts=Lessons?.readCounts(storage,keys.lessons)||{};
+  try{
+   const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress,lessonCounts,onLesson:code=>observed.add(code)});
+   requireEpoch(storage,projectId,saved.criteria_epoch);
+   onProgress?.('Validating eligibility criteria…',{phase:'validate'});
+   project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;
+   for(const code of Lessons?.correctedLessons(project.elements)||[])observed.add(code);
+   project.model_calls.push(...result.model_calls);
+   project.presentation_version=presentationVersion;
+   const visible=projectView(project);
+   if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');
+   onProgress?.('Saving eligibility criteria…',{phase:'ready'});
+   return staged(project,revision,expected,visible);
+  }catch(error){
+   const code=Lessons?.errorLesson(error);if(code)observed.add(code);
+   throw error;
+  }finally{
+   if(!signal?.aborted&&observed.size&&currentEpoch(storage,projectId)===(saved.criteria_epoch??null))Lessons?.recordRun(storage,keys.lessons,observed);
+  }
  }
  async function decide({issue_id,option_id,answer_text,target_id,signal,criteriaEpoch}){
   requireEpoch(storage,projectId,criteriaEpoch);

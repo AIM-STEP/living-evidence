@@ -154,10 +154,12 @@ class ElementEncodingTest(unittest.TestCase):
                         'elements': {'items': self.elements_schema}}}}}}
         self.element = {'id': 'c1', 'dimension': 'population', 'text': 'Teachers', 'citations': [True], 'kind': 'include'}
 
-    def call(self, elements, opt_in=True):
+    def call(self, elements, opt_in=True, encoding='compact-elements-v1', groups=None):
         payload = {'question': {'question_id': self.question, 'sources': self.sources}}
         if opt_in:
-            payload['extraction_encoding'] = 'compact-elements-v1'
+            payload['extraction_encoding'] = encoding
+        if groups is not None:
+            payload['source_passages'] = groups
         messages = [{'role': 'system', 'content': 'Preserve all original scope and source evidence.'}, {'role': 'user',
                     'content': json.dumps({'project_id': 'test', 'payload': payload, 'step': 'extract_elements'})}]
         def model(wire, schema):
@@ -201,6 +203,37 @@ class ElementEncodingTest(unittest.TestCase):
         self.assertEqual(self.call([row], opt_in=False), [row])
         self.assertEqual(self.wire_fields, self.elements_schema)
         self.assertNotIn('compact element format', self.system)
+
+    def test_passages_are_resolved_before_normalization_from_only_current_unicode_excerpts(self):
+        self.sources = [dict(source_id=self.source, revision=3, start_codepoint=10, original_text='👶 Include '),
+                        dict(source_id=self.source, revision=3, start_codepoint=20, original_text='infants.')]
+        group = dict(source_id=self.source, source_revision=3, spans=[[1, 12, 28, 'include'], [2, 5, 19, 'include']])
+        row = dict(self.element, text='Eligible newborns', citations=[1])
+        result, = self.call([row], encoding='compact-elements-v2', groups=[group])
+        self.assertEqual(result['source_refs'], [dict(source_id=self.source, source_revision=3,
+                                                      quote='Include infants.', start=12, end=28)])
+        order = list(self.wire_fields['properties'])
+        self.assertLess(order.index('citations'), order.index('text'))
+        for citation in [True, 2, 3]:
+            with self.subTest(citation=citation), self.assertRaises(transport.OutputSyntaxError):
+                self.call([dict(row, citations=[citation])], encoding='compact-elements-v2', groups=[group])
+
+    def test_wrong_revision_duplicate_passage_and_unquoted_legacy_paraphrase(self):
+        with self.assertRaises(transport.OutputSyntaxError):
+            self.call([dict(self.element, text='Other participants')])
+        group = dict(source_id=self.source, source_revision=3, spans=[[1, 0, 8, 'population']])
+        for groups in [[dict(group, source_revision=1)], [group, group]]:
+            with self.subTest(groups=groups), self.assertRaises(transport.OutputSyntaxError):
+                self.call([dict(self.element, citations=[1])], encoding='compact-elements-v2', groups=groups)
+
+    def test_multi_source_passage_retains_source_identity_and_short_literal_citations(self):
+        other = 'source_' + 'b' * 32
+        self.sources.append(dict(source_id=other, revision=4, start_codepoint=0, original_text='Exclude infants.'))
+        group = dict(source_id=other, source_revision=4, spans=[[1, 0, 16, 'exclude']])
+        short = dict(source_id='S2', source_revision=4, quote='infants')
+        row, = self.call([dict(self.element, citations=[1, short])], encoding='compact-elements-v2', groups=[group])
+        self.assertEqual(row['source_refs'][0], dict(source_id=other, source_revision=4, start=0, end=16, quote='Exclude infants.'))
+        self.assertEqual(row['source_refs'][1], dict(short, source_id=other))
 
     def test_malformed_classification_or_citation_cannot_supply_a_different_source(self):
         for invalid in [dict(kind='pending'), dict(kind={'scope': 'restricted'}), dict(semantic_role='review_focus'),

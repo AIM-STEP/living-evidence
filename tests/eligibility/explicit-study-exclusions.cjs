@@ -4,9 +4,10 @@ const E=require('../../app/eligibility/engine');
 const M=require('../../app/eligibility/model');
 const B=require('../../app/eligibility/background');
 
-async function run(exclusionText,grouped=false){
+async function run(exclusionText,grouped=false,{language='en',extractOnly=false,translatedCandidate=null}={}){
  const question='👶 Eligible infants received respiratory support at birth. We examined whether oxygen was titrated to saturation targets. '+exclusionText;
- const state=E.save_input(E.create_project('neonatal-exclusions'),{research_question:question,question_framework:'PICOS',output_language:'en'}).state;
+ const state=E.save_input(E.create_project('neonatal-exclusions'),{research_question:question,question_framework:'PICOS',output_language:language}).state;
+ const lessons=[],options={onLesson:id=>lessons.push(id)};
  let requests=0;
  const adapter={request:async(step,s,payload)=>{
   if(step==='review_normalization'){
@@ -20,6 +21,7 @@ async function run(exclusionText,grouped=false){
   const el=(id,dimension,quote,side)=>({candidate_id:id,dimension_id:dimension,normalized_text:quote,structured_value:null,
    information_status:'explicit',semantic_role:side?'eligibility_condition':'review_focus',scope_status:side?'restricted':'unspecified',disposition:side,source_refs:[E.ref(source,quote)]});
   const elements=[el('p','population','infants received respiratory support at birth','include'),el('a','analysis_objective','whether oxygen was titrated to saturation targets',null)];
+  if(translatedCandidate)elements.push({...el('t','study_design',exclusionText,'exclude'),normalized_text:translatedCandidate});
   if(grouped)elements.push(el('all','other',exclusionText,'exclude'));
   else{
    if(question.includes('delivery room'))elements.push(el('room','population','delivery room','include'));
@@ -27,9 +29,10 @@ async function run(exclusionText,grouped=false){
   }
   return {questions:[{question_id:q.question_id,framework_candidates:['picos'],elements,issues:[],logic:null}]};
  }};
- const result=await M.analyze(state,E.environment(),adapter);
+ if(extractOnly)return M.extract_elements(state,E.environment(),adapter,options);
+ const result=await M.analyze(state,E.environment(),adapter,options);
  const project=E.ingest_candidates(state,result.candidates).state;
- return {view:B.projectToClassic(project),project,requests};
+ return {view:B.projectToClassic(project),project,requests,lessons};
 }
 
 test('mixed explicit exclusions retain their direction, independent domains, study subjects and exact offsets',async()=>{
@@ -67,4 +70,56 @@ test('a single verbatim exclusion list projects its independent conditions witho
  assert.equal(project.criteria.filter(c=>c.disposition==='exclude').length,2);
  assert.deepEqual(view.rows.find(row=>row.dimension==='Context').exclude,['studies outside the trial network']);
  assert(!view.manuscriptParagraph.includes('We exclude studies'));
+});
+
+test('recover a single explicit study exclusion that the extractor missed',async()=>{
+ for(const lead of ['We excluded','Exclude','Exclusion criteria:']){
+  const {project}=await run(lead+' studies conducted outside maternity hospitals.');
+  assert.deepEqual(project.criteria.filter(c=>c.disposition==='exclude').map(c=>c.text),['studies conducted outside maternity hospitals']);
+ }
+ const {view,lessons}=await run('We excluded case reports.');
+ assert.deepEqual(view.rows.find(r=>r.dimension==='Study design').exclude,['case reports']);
+ assert(lessons.includes('exclusion_list'));
+});
+
+test('a marked list retains its exclusion heading as evidence and stops at a change of section',async()=>{
+ const text='\nExclusion criteria:\n- studies outside clinics\n- Case reports\nInclusion criteria:\n- studies of twins.';
+ const {view,project}=await run(text);
+ const elements=project.elements.filter(e=>e.disposition==='exclude'&&e.active!==false);
+ assert.deepEqual(elements.map(e=>e.normalized_text),['studies outside clinics','Case reports']);
+ for(const e of elements)assert(e.source_refs.some(r=>r.quote==='Exclusion criteria:'));
+ assert(view.rows.find(row=>row.dimension==='Study design').exclude.includes('Case reports'));
+});
+
+test('wrapped exceptions and analytic exclusions are not turned into study-level exclusions',async()=>{
+ for(const text of [
+  'We excluded studies of twins\nfrom the sensitivity analysis.',
+  'We excluded studies of twins for the quantitative synthesis.',
+  '\nExclusion criteria:\n- studies of twins\n  only if both infants received ventilation.'
+ ]){
+  const {project}=await run(text);
+  assert.equal(project.criteria.filter(c=>c.disposition==='exclude').length,0);
+ }
+});
+
+test('Chinese directives and titled items recover missing exclusions with their original meaning',async()=>{
+ for(const [source,expected] of [
+  ['排除病例报告和动物研究。',['病例报告','动物研究']],
+  ['\n排除标准：\n- 病例报告\n- 动物研究\n纳入标准：\n- 随机试验',['病例报告','动物研究']],
+  ['排除病例报告，但有完整随访的病例报告除外。',[]],
+  ['仅在敏感性分析中排除病例报告。',[]],
+  ['排除了该患者存在并发症的可能性。',[]]
+ ]){
+  const {project}=await run(source,false,{language:'zh-CN'});
+  assert.deepEqual(project.criteria.filter(c=>c.disposition==='exclude').map(c=>c.text).sort(),expected.sort());
+ }
+});
+
+test('only a missing translation requires targeted normalization',async()=>{
+ const input='排除病例报告。';
+ const inspect=async translatedCandidate=>(await run(input,false,{extractOnly:true,translatedCandidate})).questions[0].elements.filter(e=>e.disposition==='exclude');
+ const missing=await inspect();
+ assert.equal(missing.length,1);assert.equal(missing[0].source_wording_needs_translation,true);
+ const translated=await inspect('Case reports');
+ assert.equal(translated.length,1);assert.equal(translated[0].normalized_text,'Case reports');assert(!translated[0].source_wording_needs_translation);
 });

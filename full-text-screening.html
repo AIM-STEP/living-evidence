@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261119-criteria-release-5"></script>
-<script src="app/secure-origin.js?v=20261119-criteria-release-5"></script>
+<script src="app/eligibility-release.js?v=20261119-criteria-release-6"></script>
+<script src="app/secure-origin.js?v=20261119-criteria-release-6"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -403,7 +403,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js?v=20261006-queue1"></script>
 <script src="app/fulltext-assistant.js?v=20261006-queue1"></script>
-<script src="app/eligibility-reset.js?v=20261119-independent-clear-1"></script><script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script><script src="app/search-criteria-editor.js?v=20261119-clear-criteria-1"></script><script src="app/screening-criteria-dialog.js?v=20261119-criteria-release-5"></script><script>
+<script src="app/eligibility-reset.js?v=20261119-criteria-release-6"></script><script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script><script src="app/search-criteria-editor.js?v=20261119-clear-criteria-1"></script><script src="app/screening-criteria-dialog.js?v=20261119-criteria-release-6"></script><script>
 window.AIMSTEPProjectAccess?.run(function(){
 
 'use strict';
@@ -591,7 +591,7 @@ function summaryHtml(m){
   const list=v=>Array.isArray(v)?v:[];
   const includes=list(m.includes).map(row=>`<div class="summary-inclusion"><span><strong>${esc(row.label)}:</strong> ${row.text?esc(row.text):'<span class="summary-muted" data-ui-localize>To be defined.</span>'}</span></div>`).join('');
   const limits=list(m.limits);
-  const exclusionHtml=list(m.exclusions).length?`<ol class="summary-list">${m.exclusions.map(g=>`<li><strong>${esc(g.domain)}:</strong> ${esc(g.text)}</li>`).join('')}</ol>`:'<p class="summary-muted" data-ui-localize>No explicit exclusion rules entered.</p>';
+  const exclusionHtml=list(m.exclusions).length?`<ol class="summary-list">${m.exclusions.map(g=>`<li>${g.domain?'<strong>'+esc(g.domain)+':</strong> ':''}${esc(g.text)}</li>`).join('')}</ol>`:'<p class="summary-muted" data-ui-localize>No explicit exclusion rules entered.</p>';
   const pending=list(m.pending);
   return `<div class="criteria-summary"><div class="summary-rule" aria-hidden="true"></div><div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> ${esc(m.topic||'To be defined')}</p><p><strong data-ui-localize>Framework:</strong> ${esc(m.framework||'Other')}</p></div><div class="summary-rule" aria-hidden="true"></div><section class="summary-block"><h3 data-ui-localize>Inclusion criteria</h3>${includes}${limits.length?`<div class="summary-inclusion"><span><strong data-ui-localize>Limits:</strong> ${esc(limits.join(' '))}</span></div>`:''}</section><section class="summary-block"><h3 data-ui-localize>Exclusion criteria</h3>${exclusionHtml}</section><section class="summary-block"><h3 data-ui-localize>Pending clarification</h3>${pending.length?`<ul class="summary-list summary-pending">${pending.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`:'<p class="summary-muted" data-ui-localize>None identified.</p>'}</section><section class="summary-block"><h3 data-ui-localize>Manuscript wording</h3>${m.paragraph?`<p class="summary-paragraph">${esc(m.paragraph)}</p>`:`<p class="summary-muted">${esc(m.paragraphNote||'No manuscript wording was generated for these criteria.')}</p>`}</section><div class="summary-rule" aria-hidden="true"></div></div>`;
 }

@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261119-criteria-release-5"></script>
-<script src="app/secure-origin.js?v=20261119-criteria-release-5"></script>
+<script src="app/eligibility-release.js?v=20261119-criteria-release-6"></script>
+<script src="app/secure-origin.js?v=20261119-criteria-release-6"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -103,13 +103,14 @@
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn small" id="update-criteria-version" type="button" hidden>Load updated Criteria</button><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div id="criteria-progress" class="criteria-progress" role="progressbar" aria-label="Criteria generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="criteria-progress-track"><div class="criteria-progress-fill"></div></div><span class="criteria-progress-percent">0%</span></div></div><p id="criteria-working" hidden><span data-ui-localize>Working</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
-<script src="app/eligibility/registries.js?v=20261119-criteria-release-5"></script>
-<script src="app/eligibility/domain.js?v=20261119-criteria-release-5"></script>
-<script src="app/eligibility/methodology.js?v=20261119-criteria-release-5"></script>
-<script src="app/eligibility/engine.js?v=20261119-criteria-release-5"></script>
-<script src="app/eligibility/model.js?v=20261119-criteria-release-5"></script>
-<script src="app/eligibility-reset.js?v=20261119-independent-clear-1"></script>
-<script src="app/eligibility/background.js?v=20261119-criteria-release-5"></script>
+<script src="app/eligibility/registries.js?v=20261119-criteria-release-6"></script>
+<script src="app/eligibility/domain.js?v=20261119-criteria-release-6"></script>
+<script src="app/eligibility/methodology.js?v=20261119-criteria-release-6"></script>
+<script src="app/eligibility/engine.js?v=20261119-criteria-release-6"></script>
+<script src="app/eligibility/lessons.js?v=20261119-criteria-release-6"></script>
+<script src="app/eligibility/model.js?v=20261119-criteria-release-6"></script>
+<script src="app/eligibility-reset.js?v=20261119-criteria-release-6"></script>
+<script src="app/eligibility/background.js?v=20261119-criteria-release-6"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -1077,6 +1078,9 @@ function criteriaForPage(data,refinement=currentRefinement()){
   }))):data.rows.map((row,sourceIndex)=>({...row,sourceIndex,slots}));
   const rows=allRows.filter(row=>withinFramework(row.label,row.slots));
   const extraRows=allRows.filter(row=>!withinFramework(row.label,row.slots));
+  // Exclusion is a decision across all domains. Keep its source row for
+  // editing without presenting that domain as a slot in the chosen framework.
+  for(const row of extraRows)if(row.exclude.length)rows.push({...row,include:[],unlabelledExclusion:true});
   const mixed=questions.some(q=>q.framework!==questions[0].framework);
   const framework=mixed?questions.map(q=>q.display_number+' · '+q.framework).join(' / '):questions[0]?.framework||data.framework;
   let paragraph=data.paragraph||'';
@@ -1085,7 +1089,7 @@ function criteriaForPage(data,refinement=currentRefinement()){
     const supplementRows=!refinement.frameworkSlots||refinement.descriptionEditedByAuthor?extraRows:[];
     if(supplementRows.length||data.limits.length||refinement.descriptionEditedByAuthor)paragraph=supplementDescription(paragraph,supplementRows,data.limits,refinement);
   }
-  return {...data,framework,rows,slots,questions,limits:[],paragraph,hasAdditionalExclusions:extraRows.some(row=>row.exclude.length)};
+  return {...data,framework,rows,slots,questions,limits:[],paragraph,hasExtraRows:extraRows.length>0};
 }
 function supplementDescription(paragraph,extraRows,limits,refinement){
   const meaning=text=>(String(text||'').normalize('NFKC').toLowerCase().match(/\d+(?:\.\d+)?|[\p{L}]+|[≤≥<>=%+-]/gu)||[]).join(' ');
@@ -1123,13 +1127,13 @@ function formatCriteriaRules(rules){
   return items.map((rule,index)=>(items.length>1?(index+1)+'.':'')+rule).join(' ');
 }
 function summarizedRules(rows){
-  const groups=new Map();for(const row of rows)for(const rule of row.exclude){const domain=[row.questionNumber,row.label].filter(Boolean).join(' · ');if(!groups.has(domain))groups.set(domain,[]);groups.get(domain).push(rule)}
+  const groups=new Map();for(const row of rows)for(const rule of row.exclude){const domain=[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · ');if(!groups.has(domain))groups.set(domain,[]);groups.get(domain).push(rule)}
   return {includes:rows.filter(row=>row.include.length).map(row=>({label:[row.questionNumber,row.label].filter(Boolean).join(' · '),text:formatCriteriaRules(row.include)})),exclusions:[...groups].map(([domain,rules])=>({domain,text:formatCriteriaRules(rules)}))};
 }
 function publishCriteriaSummary(data,complete){
   const {rows,framework,pending,limits,topic,paragraph}=data;
   shareSummary({rowsSig:summaryRowsSig(state.activeGenerator==='machine'?state.machineCriteria:state.criteria),topic:topic||summaryTopic(rows,framework),framework,
-    ...summarizedRules(rows),...(data.questions.length||rows.length!==complete.rows.length?{screeningCriteria:summarizedRules(complete.rows)}:{}),limits,pending,paragraph:paragraph||'',paragraphNote:'Click Generate to generate a publication-style paragraph with the local model.',
+    ...summarizedRules(rows),...(data.questions.length||data.hasExtraRows?{screeningCriteria:summarizedRules(complete.rows)}:{}),limits,pending,paragraph:paragraph||'',paragraphNote:'Click Generate to generate a publication-style paragraph with the local model.',
     authorChecks:(currentRefinement()?.sourceConfirmations||[]).filter(c=>c.status==='suggested').map(c=>({domain:c.domain,text:c.text,required:!c.reviewOnly})),methodVersion:state.machineRefinement?.audit?.version||state.manualRefinement?.audit?.version||null});
 }
 function renderCards(){const slots=frameworkFields(state.framework),extra=[];list.innerHTML=state.criteria.map((row,i)=>{const c=visibleCriterion(row);if(!c.condition&&!c.uncertain&&!c.definition&&['condition','uncertain','definition'].some(f=>splitVisibleRules(row,f).hidden))return '';const markup=`<article class="criterion" data-index="${i}"><div class="criterion-top"><span class="criterion-title">${escapeHtml(c.title||'Criterion')}</span><button class="remove" title="Remove criterion" aria-label="Remove ${escapeHtml(c.title)}" data-remove="${i}">×</button></div><div class="criterion-grid"><div class="criterion-eligibility"><label class="field-label">Eligibility rule</label><input class="text-input" data-field="condition" value="${escapeHtml(c.condition)}" placeholder="A clear, testable rule"></div><div><label class="field-label">Exclusion rule</label><input class="text-input" data-field="uncertain" value="${escapeHtml(c.uncertain)}" placeholder="Specify the exclusion rule"></div><div><label class="field-label">Conditions and exceptions</label><input class="text-input" data-field="definition" value="${escapeHtml(c.definition)}" placeholder="Thresholds, exceptions, mixed groups"></div></div></article>`;if(withinFramework(c.title,slots))return markup;extra.push(markup);return '';}).join('');
@@ -1366,11 +1370,11 @@ window.addEventListener('beforeunload',event=>{if(previewDirty){event.preventDef
 function criteriaDisplay(data,refinement){
  const {rows,slots,questions}=data;
  const entries=rows.map((row,index)=>({
-  label:row.label,index:row.readOnly?null:index,questionNumber:row.questionNumber,
+  label:row.label,index:row.readOnly?null:index,questionNumber:row.questionNumber,unlabelledExclusion:row.unlabelledExclusion,
   include:row.include.map((text,position)=>({text,position,checks:[]})),
   exclude:row.exclude.map((text,position)=>({text,position,checks:[]}))
  }));
- const display={rows:entries,topic:[],framework:[],focus:[],description:[],hasAdditionalExclusions:data.hasAdditionalExclusions};
+ const display={rows:entries,topic:[],framework:[],focus:[],description:[]};
  for(const [index,detail] of (refinement?.sourceConfirmations||[]).entries()){
   if(detail.status!=='suggested')continue;
   const locations=detail.locations?.length?detail.locations:[{domain:detail.domain,section:detail.focusOnly?'focus':detail.side||'include'}];
@@ -1378,15 +1382,17 @@ function criteriaDisplay(data,refinement){
    const check={detail,index,subject:location.subject||'',domain:location.domain,targetId:location.targetId};
    const question=questions.find(q=>q.display_number===detail.questionNumber),localSlots=question?frameworkFields(question.framework,question.frameworkSlots):slots;
    if(['topic','framework'].includes(location.section)){display[location.section].push(check);continue;}
-   if(location.section==='description'||!withinFramework(location.domain,localSlots)){
+   const outside=!withinFramework(location.domain,localSlots);
+   if(location.section==='description'||(outside&&location.section!=='exclude')){
      display.description.push({...check,subject:location.subject||location.rule||''});continue;
    }
    if(location.section==='focus'){display.focus.push(check);continue;}
    const side=location.section==='exclude'?'exclude':'include';
+   if(outside&&side==='exclude')check.context=location.domain;
    const sameDomain=row=>dimensionKey(row.label)===dimensionKey(location.domain)&&(!questions.length||row.questionNumber===detail.questionNumber);
    let row=entries.find(row=>sameDomain(row)&&location.rule&&row[side].some(line=>line.text===location.rule));
    if(!row)row=entries.find(sameDomain);
-   if(!row){row={label:location.domain,index:null,questionNumber:detail.questionNumber,include:[],exclude:[]};entries.push(row);}
+   if(!row){row={label:location.domain,index:null,questionNumber:detail.questionNumber,unlabelledExclusion:outside,include:[],exclude:[]};entries.push(row);}
    let line=location.rule&&row[side].find(line=>line.text===location.rule);
    if(!line){
     line=row[side].find(line=>line.position===null&&line.text===check.subject);
@@ -1427,7 +1433,8 @@ function renderCriteriaSide(display,side){
  const markup=display.rows.filter(row=>row[side].length).map(row=>{
   const count=row[side].filter(line=>line.position!==null).length;
   const lines=row[side].map((line,lineIndex)=>{
-   const title=lineIndex===0?'<strong>'+escapeHtml([row.questionNumber,row.label].filter(Boolean).join(' · '))+':</strong> ':'';
+   const heading=[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · ');
+   const title=lineIndex===0&&heading?'<strong>'+escapeHtml(heading)+':</strong> ':'';
    const number=line.position!==null&&count>1?(line.position+1)+'. ':'';
    const value=line.position===null?(line.text?'Pending · '+escapeHtml(line.text):''):row.index===null?escapeHtml(line.text):editableCriteriaText(line.text,
     `data-criteria-row="${row.index}" data-criteria-kind="${side}" data-criteria-rule="${line.position}"`,
@@ -1437,7 +1444,7 @@ function renderCriteriaSide(display,side){
   return lines.join('');
  }).join('');
  if(markup)return markup;
- const empty=side==='include'?'No explicit inclusion rules entered.':display.hasAdditionalExclusions?'See Description for the exclusion criteria.':'No explicit exclusion rules entered.';
+ const empty=side==='include'?'No explicit inclusion rules entered.':'No explicit exclusion rules entered.';
  return '<p class="summary-muted" data-ui-localize>'+empty+'</p>';
 }
 function renderPreview(){
@@ -1449,8 +1456,8 @@ function renderPreview(){
     const entries=all.filter(row=>withinFramework(row.title,slots));
     const extras=all.filter(row=>!withinFramework(row.title,slots)&&(row.include||row.exclude));
     const paragraph=extras.length?manuscriptDraft(extras.map(r=>({label:r.title,include:r.include.split('\n').filter(Boolean),exclude:r.exclude.split('\n').filter(Boolean)})),extras.filter(r=>r.exclude).map(r=>({rule:r.exclude,domains:[r.title]})),[]):'';
-    const emptyExclusion=extras.some(row=>row.exclude)?'See Description for the exclusion criteria.':'No explicit exclusion rules entered.';
-    const lines=field=>entries.filter(r=>r[field]).map(r=>`<div class="summary-inclusion"><span style="white-space:pre-wrap"><strong>${escapeHtml(r.title)}:</strong> ${escapeHtml(r[field])}</span></div>`).join('');
+    const emptyExclusion='No explicit exclusion rules entered.';
+    const lines=field=>entries.filter(r=>r[field]).map(r=>`<div class="summary-inclusion"><span style="white-space:pre-wrap"><strong>${escapeHtml(r.title)}:</strong> ${escapeHtml(r[field])}</span></div>`).join('')+(field==='exclude'?extras.filter(r=>r.exclude).map(r=>'<div class="summary-inclusion"><span style="white-space:pre-wrap">'+escapeHtml(r.exclude)+'</span></div>').join(''):'');
     area.innerHTML='<div class="criteria-summary"><section class="summary-block"><h3 data-ui-localize>Inclusion</h3>'+(lines('include')||'<p class="summary-muted" data-ui-localize>Enter eligibility rules above to generate criteria.</p>')+'</section><section class="summary-block"><h3 data-ui-localize>Exclusion</h3>'+(lines('exclude')||'<p class="summary-muted" data-ui-localize>'+emptyExclusion+'</p>')+'</section>'+(paragraph?'<section class="summary-block"><h3 data-ui-localize>Description</h3><p class="summary-paragraph">'+escapeHtml(paragraph)+'</p></section>':'')+'</div>';
     return;
   }
@@ -1486,12 +1493,12 @@ function makeStoredZip(files){const encoder=new TextEncoder(),localParts=[],cent
 function criteriaWordFile(){
  const refinement=currentRefinement(),normalized=criteriaForPage(standardizedCriteria(),refinement),display=criteriaDisplay(normalized,refinement);
  const widths=[3000,4200,2160],headers=['Domain','Include','Exclude'];
- const checkText=({detail})=>'Author check: '+(detail.questionNumber?detail.questionNumber+' · ':'')+detail.text;
+ const checkText=({detail,context})=>'Author check: '+[detail.questionNumber,context,detail.text].filter(Boolean).join(' · ');
  const sideText=lines=>{
   const numbered=lines.filter(line=>line.position!==null).length>1;
   return lines.flatMap(line=>[...(line.text?[(line.position===null?'Pending · ':numbered?(line.position+1)+'. ':'')+line.text]:[]),...line.checks.map(checkText)]);
  };
- const rows=[headers,...display.rows.map(row=>[[row.questionNumber,row.label].filter(Boolean).join(' · '),sideText(row.include),sideText(row.exclude)])];
+ const rows=[headers,...display.rows.map(row=>[[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · '),sideText(row.include),sideText(row.exclude)])];
  const topicChecks=display.topic.map(check=>wordParagraph(checkText(check),false)).join('');
  const frameworkChecks=display.framework.map(check=>wordParagraph(check.domain+' · '+checkText(check),false)).join('');
  const contextualCheck=check=>wordParagraph(checkText(check)+' ('+[check.domain,check.subject].filter(Boolean).join(' · ')+')',false);

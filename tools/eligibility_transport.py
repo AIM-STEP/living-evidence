@@ -10,7 +10,7 @@ import re
 import threading
 import eligibility_legacy_citations as legacy_citations
 
-VERSION = 'eligibility-transport-v5'
+VERSION = 'eligibility-transport-v6'
 _lock = threading.Lock()
 _entries = {}
 _fields = {'source_id': 'S', 'source_ids': 'S', 'question_id': 'Q', 'question_ids': 'Q', 'answer_question_id': 'Q', 'id': 'R'}
@@ -33,7 +33,47 @@ _kinds = {'include': ('eligibility_condition', 'explicit', 'restricted', 'includ
           'focus': ('review_focus', 'explicit', 'unspecified', None)}
 
 
-def _compact_elements(schema, sources):
+def _citation_index(sources, groups):
+    """Resolve batch-local passage numbers only inside the supplied revision and excerpts."""
+    ranges = {}
+    for source in sources:
+        text = source.get('original_text')
+        start = source.get('start_codepoint', 0)
+        if type(start) is not int or start < 0 or not isinstance(text, str):
+            continue
+        identity = (source['source_id'], source['revision'])
+        spans = ranges.setdefault(identity, [])
+        if spans and spans[-1][0] + len(spans[-1][1]) == start:
+            offset, previous = spans[-1]
+            spans[-1] = (offset, previous + text)
+        else:
+            spans.append((start, text))
+    passages, seen = {}, set()
+    for group in groups if isinstance(groups, list) else []:
+        if not isinstance(group, dict) or not isinstance(group.get('spans'), list):
+            continue
+        source_id, revision = group.get('source_id'), group.get('source_revision')
+        if not isinstance(source_id, str) or type(revision) is not int:
+            continue
+        for span in group['spans']:
+            if not isinstance(span, list) or len(span) != 4:
+                continue
+            number, start, end, _kind = span
+            if any(type(value) is not int for value in (number, start, end)) or number < 1 or end <= start:
+                continue
+            if number in seen:
+                passages.pop(number, None)
+                continue
+            seen.add(number)
+            for offset, text in ranges.get((source_id, revision), []):
+                if offset <= start < end <= offset + len(text):
+                    passages[number] = dict(source_id=source_id, source_revision=revision, start=start, end=end,
+                                            quote=text[start-offset:end-offset])
+                    break
+    return ranges, passages
+
+
+def _compact_elements(schema, sources, source_first=False, groups=None):
     """Only compact the known extraction schema, leaving other client contracts intact."""
     try:
         elements = schema['properties']['questions']['items']['properties']['elements']
@@ -48,7 +88,9 @@ def _compact_elements(schema, sources):
     except (KeyError, TypeError):
         return None
     single = next(iter(source_keys)) if len(source_keys) == 1 else None
-    fields = {short: properties[name] for name, short in _element_names.items() if name != 'structured_value'}
+    # Source citations precede the normalized wording in the generation schema.
+    order = ('candidate_id', 'source_refs', 'dimension_id', 'normalized_text')
+    fields = {_element_names[name]: properties[name] for name in order}
     fields['kind'] = {'anyOf': [{'type': 'string', 'enum': list(_kinds)},
                                 {'type': 'object', 'properties': {short: properties[name] for name, short in _kind_names.items()},
                                  'required': list(_kind_names.values()), 'additionalProperties': False}]}
@@ -66,16 +108,29 @@ def _compact_elements(schema, sources):
         ref = {'type': 'object', 'properties': {'quote': {'type': 'string'}, 'start': {'type': 'integer'},
                                                 'end': {'type': 'integer'}},
                'required': ['quote', 'start', 'end'], 'additionalProperties': False}
-        fields['citations'] = {'type': 'array', 'items': {'anyOf': [{'type': 'string'}, {'enum': [True]}, ref]}}
+        alternatives = [{'type': 'string'}, ref]
+        if not source_first:
+            alternatives.append({'enum': [True]})
+        fields['citations'] = {'type': 'array', 'items': {'anyOf': alternatives}}
         instruction += (' This part has one source and revision. Each citation is an exact quote string. '
-                        'The literal true copies text exactly as its source quote; use it only for verbatim text. '
                         'To supply exact Unicode offsets use {quote,start,end}.')
+    ranges, passages = _citation_index(sources, groups if source_first else [])
+    if source_first:
+        instruction += ' Select original citations first. Then write text as their standardized wording.'
+        if passages:
+            citations = fields['citations']
+            fields['citations'] = dict(citations, items={'anyOf': [
+                {'type': 'integer', 'enum': sorted(passages)}, citations.get('items', {'type': 'object'})]})
+            instruction += (' A citation may be an integer passage number from source_passages, identifying the '
+                            'entire original passage. Use an exact shorter quote for one arm, list item or qualifier.')
+    elif single:
+        instruction += ' The literal true copies text as a quote only for verbatim source wording.'
     elements['items'] = {'type': 'object', 'properties': fields,
-                         'required': ['id', 'dimension', 'text', 'citations', 'kind'], 'additionalProperties': False}
-    return instruction, single
+                         'required': ['id', 'citations', 'dimension', 'text', 'kind'], 'additionalProperties': False}
+    return instruction, single, ranges, passages, source_first
 
 
-def _restore_elements(result, single):
+def _restore_elements(result, single, ranges, passages, source_first):
     aliases = {short: original for original, short in _element_names.items()}
     for q in result['questions']:
         for e in q['elements']:
@@ -94,12 +149,23 @@ def _restore_elements(result, single):
                 e.update({name: kind[short] for name, short in _kind_names.items()})
             else:
                 raise OutputSyntaxError('The model omitted the eligibility classification.')
-            if single:
-                if not isinstance(e['source_refs'], list):
-                    raise OutputSyntaxError('Invalid single-source citations.')
-                for index, citation in enumerate(e['source_refs']):
-                    if citation is True or isinstance(citation, str):
-                        citation = {'quote': e['normalized_text'] if citation is True else citation}
+            if not isinstance(e['source_refs'], list):
+                raise OutputSyntaxError('Invalid citation list.')
+            for index, citation in enumerate(e['source_refs']):
+                if source_first and type(citation) is int:
+                    if citation not in passages:
+                        raise OutputSyntaxError('Unknown passage in this source batch.')
+                    e['source_refs'][index] = dict(passages[citation])
+                    continue
+                if citation is True:
+                    text = e['normalized_text']
+                    if source_first or not single or not isinstance(text, str) or not text or not any(
+                            text in original for _, original in ranges.get(single, [])):
+                        raise OutputSyntaxError('A citation must identify original source wording.')
+                    citation = text
+                if single:
+                    if isinstance(citation, str):
+                        citation = {'quote': citation}
                     elif not isinstance(citation, dict) or citation.keys() != {'quote', 'start', 'end'}:
                         raise OutputSyntaxError('Invalid single-source citation.')
                     e['source_refs'][index] = dict(citation, source_id=single[0], source_revision=single[1])
@@ -187,8 +253,11 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_w
             questions['minItems'] = questions['maxItems'] = 1
             questions['items']['properties']['question_id'] = {'type': 'string', 'enum': [expected]}
         if (criteria_workflow and invoke_with_schema and expected and any(m.get('role') == 'system' for m in messages) and
-                wire['payload'].get('extraction_encoding') == 'compact-elements-v1'):
-            element_format = _compact_elements(wire_schema, wire['payload']['question'].get('sources', []))
+                wire['payload'].get('extraction_encoding') in ('compact-elements-v1', 'compact-elements-v2')):
+            payload = wire['payload']
+            element_format = _compact_elements(wire_schema, payload['question'].get('sources', []),
+                                               payload['extraction_encoding'] == 'compact-elements-v2',
+                                               payload.get('source_passages'))
     wire_messages = [{**m, 'content': json.dumps(wire, ensure_ascii=False, separators=(',', ':'))}
                      if m.get('role') == 'user' else m for m in messages]
     if element_format:
@@ -232,7 +301,7 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_w
                 if element_format:
                     if not isinstance(questions[0].get('elements'), list):
                         raise OutputSyntaxError('The model omitted the element list.')
-                    _restore_elements(result, element_format[1])
+                    _restore_elements(result, *element_format[1:])
             entry['reply'], entry['result'] = reply, result
         except BaseException as error:
             entry['error'] = error
