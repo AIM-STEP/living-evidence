@@ -105,7 +105,7 @@
 <script src="app/eligibility/domain.js?v=20261118-criteria-review-3"></script>
 <script src="app/eligibility/methodology.js?v=20261118-criteria-review-3"></script>
 <script src="app/eligibility/engine.js?v=20261118-criteria-review-3"></script>
-<script src="app/eligibility/model.js?v=20261118-criteria-review-3"></script>
+<script src="app/eligibility/model.js?v=20261119-semantic-repair-1"></script>
 <script src="app/eligibility/background.js?v=20261118-criteria-review-3"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
@@ -169,8 +169,17 @@ function getEligibilityBackground(){
   return eligibilityBackgroundPromise;
 }
 function backgroundErrorMessage(error){
+  if(error.code==='SEMANTIC_REVIEW_FAILED'){
+    const dimension=String(error.details?.dimension_id||'').replace(/[._]+/g,' ').trim();
+    const wording=String(error.details?.wording||'').trim();
+    const reason=typeof error.details?.reason==='string'?error.details.reason.trim():'';
+    const previous=state.activeGenerator==='manual'?state.manualRefinement:state.machineRun||state.machineRefinement||state.machineCriteria?.length;
+    const explanation=reason&&!/^(?:none|n\/a|unknown)[.!]?$/i.test(reason)?reason.replace(/([^.!?。！？])$/u,'$1.'):'';
+    const candidate=wording?' “'+(wording.length>180?wording.slice(0,177)+'…':wording)+'”':'';
+    return ['The source check could not verify the proposed wording'+(dimension?' for '+dimension:'')+candidate+'.',explanation,previous?'Your previous draft is still available.':'No draft was saved for this run.'].filter(Boolean).join(' ');
+  }
   if(!/[\u3400-\u9fff]/u.test(error.message||''))return error.message;
-  const messages={SEMANTIC_REVIEW_FAILED:'A proposed criterion did not match the original input. Your previous version has been kept.',MODEL_SCHEMA_ERROR:'The model returned an invalid structure. Your previous version has been kept.',MODEL_TIMEOUT:'The model request timed out. Your previous version has been kept.'};
+  const messages={MODEL_SCHEMA_ERROR:'The model returned an invalid structure. Your previous version has been kept.',MODEL_TIMEOUT:'The model request timed out. Your previous version has been kept.'};
   return messages[error.code]||'The eligibility check could not be completed'+(error.code?' ('+error.code+')':'')+'. Your previous version has been kept.';
 }
 function backgroundModelClient(model){return {get exchanges(){return model.auditTrail||[];},async request(step,project,payload,schema,instruction,signal){

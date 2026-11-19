@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const html=fs.readFileSync('eligibility.html','utf8');
+const script=html.slice(html.indexOf('function backgroundErrorMessage('),html.indexOf('function backgroundModelClient('));
+const state={activeGenerator:'machine',machineCriteria:[],machineRun:null};
+const {format}=vm.runInNewContext(script+'\n;({format:backgroundErrorMessage})',{state});
+const error={code:'SEMANTIC_REVIEW_FAILED',message:'标准化尚未通过语义核对',details:{dimension_id:'population.age',reason:'The proposed threshold includes age 18, but the source specifies >18'}};
+assert.equal(format(error),'The source check could not verify the proposed wording for population age. The proposed threshold includes age 18, but the source specifies >18. No draft was saved for this run.');
+state.machineRun={generatedAt:'earlier'};
+assert(format({...error,details:{...error.details,wording:'at least 18 years'}}).includes('“at least 18 years”'));
+assert(format({...error,message:'Source verification failed.'}).endsWith('Your previous draft is still available.'));
+assert.equal(format({...error,details:{reason:'none'}}),'The source check could not verify the proposed wording. Your previous draft is still available.');
+assert.equal(format({code:'MODEL_HTTP_ERROR',message:'Connection failed.'}),'Connection failed.');
+console.log('PASS: semantic errors identify the element and cause for first and subsequent generations.');
