@@ -69,6 +69,8 @@ async function replay() {
   assert.match(field('Intervention'),/exercise training alone or combined with psychosocial\/educational interventions/i);
   assert.match(field('Study design'),/six months or longer/i);
   assert.equal(field('Outcomes'),undefined);
+  assert.deepEqual(view.rows.flatMap(row=>row.exclude),[]);
+  assert(!saved.criteria.some(criterion=>criterion.disposition==='exclude'));
   const [primary,secondary]=view.descriptionContext.outcome_groups;
   assert.equal(primary.label,'Primary');assert.equal(primary.items.length,4);
   assert.match(primary.items[2],/CABG.+PCI/);
@@ -91,7 +93,7 @@ async function replay() {
   const html=page.el('preview').innerHTML;
   assert.match(html,/Framework:<\/strong> PICOS<\/p>/);
   const sections=[...html.matchAll(/<h3[^>]*>([^<]+)<\/h3>/g)].map(m=>m[1]);
-  assert.deepEqual(sections,['Inclusion','Description']);
+  assert.deepEqual(sections,['Inclusion','Exclusion','Description']);
   function inOrder(text,labels){
     let last=-1;
     for(const label of labels){
@@ -102,12 +104,13 @@ async function replay() {
   }
   const outcomeList=[...primary.items,...secondary.items].map((item,index)=>(index+1)+'.'+item).join('；');
   inOrder(html,['Review topic:','Framework:','>Inclusion<','Population:','Intervention:','Comparison:','>no exercise<','Outcomes:',
-    outcomeList,'Study design:','>Description<']);
+    outcomeList,'Study design:','>Exclusion<','>Not reporting.<','>Description<']);
   assert.doesNotMatch(html.slice(html.indexOf('Outcomes:'),html.indexOf('Study design:')),/primary|secondary/i);
   assert.doesNotMatch(html,/<strong>(?:Context|Other):/i);
   const file=Buffer.from(page.api.export()).toString('utf8');
   const xml=file.slice(file.indexOf('<w:document'),file.indexOf('</w:document>'));
   assert.match(xml,/>Framework: PICOS<\/w:t>/);
+  inOrder(xml,['>Exclusion<','>Not reporting.<','>Description<']);
   const table=xml.slice(xml.indexOf('<w:tbl>'),xml.indexOf('</w:tbl>'));
   inOrder(table,['>Include<','>Population<','>Intervention<','>Comparison<','>no exercise<','>Outcomes<',outcomeList,'>Study design<']);
   assert.doesNotMatch(table.slice(table.indexOf('>Outcomes<'),table.indexOf('>Study design<')), /primary|secondary/i);
