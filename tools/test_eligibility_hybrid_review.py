@@ -44,11 +44,11 @@ class HybridReviewTest(unittest.TestCase):
                                  probabilities={v: float(v == selected) for v in question['criteria']})
         return dict(model='jev-test', answers=answers, usage=dict(input_tokens=1))
 
-    def run_review(self, response=None):
+    def run_review(self, response=None, partial_review=None):
         with patch.object(hybrid.ts, 'server_config', return_value=dict(model='jev-test')), \
              patch.object(hybrid.ts, 'resolve_key', return_value='synthetic-key'), \
              patch.object(hybrid.ts, 'request', side_effect=response or self.response):
-            result = hybrid.review(self.messages(), self.local, 'local-test')
+            result = hybrid.review(self.messages(), self.local, 'local-test', partial_review=partial_review)
         return json.loads(result['message']['content'])['items'], result['review']
 
     def test_confident_agreement_avoids_local_review_and_keeps_metadata(self):
@@ -96,6 +96,51 @@ class HybridReviewTest(unittest.TestCase):
                 _, audit = self.run_review(broken)
                 self.assertEqual(self.local_ids, [['c0', 'c1']])
                 self.assertEqual(audit['typesafe_accepted'], 0)
+
+    def test_missing_or_malformed_known_answers_only_require_their_own_fields(self):
+        for damage in ('missing', 'invalid_choice', 'invalid_probabilities'):
+            with self.subTest(damage=damage):
+                self.local_ids = []
+                def damaged(*args, **kwargs):
+                    result = self.response(*args, **kwargs)
+                    answers = result['answers']
+                    if damage == 'missing':
+                        del answers['c1_status']
+                    elif damage == 'invalid_choice':
+                        answers['c1_status']['choice'] = ['supported']
+                    else:
+                        answers['c1_status']['probabilities'] = {}
+                    return result
+
+                def partial(messages, schema):
+                    payload = json.loads(messages[-1]['content'])['payload']
+                    self.local_ids.append([item['id'] for item in payload['items']])
+                    self.assertEqual(payload['review_fields'], {'c1': ['status']})
+                    self.assertEqual(schema['properties']['items']['items']['required'], ['id', 'reason', 'status'])
+                    row = dict(id='c1', reason='Source checked locally.', status='supported')
+                    return dict(message=dict(content=json.dumps({'items': [row]})))
+
+                rows, audit = self.run_review(damaged, partial)
+                self.assertEqual(self.local_ids, [['c1']])
+                self.assertEqual([row['id'] for row in rows], ['c0', 'c1'])
+                self.assertEqual(audit['typesafe_accepted'], 1)
+                self.assertEqual(audit['typesafe_fields_used'], 11)
+                self.assertEqual(rows[1]['reviewer']['field_providers']['status'], 'local')
+
+    def test_all_answers_missing_for_one_item_or_foreign_id_in_response(self):
+        for foreign in (False, True):
+            with self.subTest(foreign=foreign):
+                self.local_ids = []
+                def damaged(*args, **kwargs):
+                    result = self.response(*args, **kwargs)
+                    result['answers'] = {k:v for k,v in result['answers'].items() if k.startswith('c0_')}
+                    if foreign:
+                        result['answers']['foreign_status'] = result['answers']['c0_status']
+                    return result
+
+                _, audit = self.run_review(damaged)
+                self.assertEqual(self.local_ids, [['c0', 'c1'] if foreign else ['c1']])
+                self.assertEqual(audit['typesafe_accepted'], 0 if foreign else 1)
 
     def test_ambiguous_sources_always_receive_local_review(self):
         for item in self.items:

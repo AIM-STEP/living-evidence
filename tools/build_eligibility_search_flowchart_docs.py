@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build static Eligibility/Search diagram readers from reviewed assets and manifests."""
+"""Build the Search strategy diagram reader from its reviewed assets and manifest."""
 import html
 import json
 from pathlib import Path
@@ -10,7 +10,6 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 CSS=re.search(r'<style>(.*?)</style>',(ROOT/'pilot-main-screening-flowcharts.html').read_text(),re.S).group(1)
-MODULES=('eligibility-criteria','search-strategy')
 
 def esc(value):return html.escape(str(value),quote=True)
 def png_size(path):
@@ -18,13 +17,12 @@ def png_size(path):
  if raw[:8]!=b'\x89PNG\r\n\x1a\n':raise ValueError('Not a PNG: '+str(path))
  return struct.unpack('>II',raw[16:24])
 
-def build(slug):
+def build():
+ slug='search-strategy'
  public=ROOT/'docs'/(slug+'-flowcharts');meta=json.loads((public/'manifest.json').read_text())
  title=meta['title'];page_name=slug+'-flowcharts.html';zip_name=slug+'-flowcharts.zip'
  source='https://github.com/AIM-STEP/living-evidence/blob/'+meta['sourceCommit']+'/'
- code='eligibility.html' if slug=='eligibility-criteria' else 'search-strategy.html'
- other='search-strategy' if slug=='eligibility-criteria' else 'eligibility-criteria'
- other_title='Search strategy' if slug=='eligibility-criteria' else 'Eligibility criteria'
+ code='search-strategy.html'
  sections=[];nav=[]
  for i,c in enumerate(meta['charts'],1):
   stem=c['stem'];base=ROOT/c['archive'];image=base/'figures'/(stem+'.png');mermaid=base/'sources'/(stem+'.mmd')
@@ -38,11 +36,11 @@ def build(slug):
 <a class="image-link" href="docs/{slug}-flowcharts/{stem}.png" target="_blank" rel="noopener" aria-label="打开{esc(title+'：'+c['title'])}完整原图"><img src="docs/{slug}-flowcharts/{stem}.png" width="{width}" height="{height}" alt="{esc(title+'：'+c['title']+'。'+c['description'])}" {'fetchpriority="high"' if i==1 else 'loading="lazy"'}></a>
 <details><summary>技术细节与代码依据（文字版）</summary><table><caption>{esc(c['title'])}技术细节</caption><tbody>{rows}</tbody></table><p class="code-ref">对应函数：<code>{esc(c['functions'])}</code>。<a href="{source+code}">查看该版本页面代码</a> · <a href="{source}app/eligibility-library.js">标准库代码</a> · <a href="{source}app/search-criteria-editor.js">跨工作区保存代码</a>。</p></details>
 </section>''')
- note=('机器路径的自动来源追溯核对中间规则，仍需人工对照原问题及附件。已确认澄清规则在前台隐藏重复展示后，完整摘要和导出仍保留。' if slug=='eligibility-criteria' else '只有 PubMed 与 Europe PMC 支持本页直接检索；其他数据库为策略草稿及外部执行。MeSH 词条成员身份、词条命中数和给定参考集覆盖均不等于独立检索性能证明。')
+ note='只有 PubMed 与 Europe PMC 支持本页直接检索；其他数据库为策略草稿及外部执行。MeSH 词条成员身份、词条命中数和给定参考集覆盖均不等于独立检索性能证明。'
  page=f'''<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>{esc(title)} 技术流程图 · AIM-STEP</title><style>{CSS}</style></head><body><main>
 <h1>{esc(title)} 技术流程图</h1><p class="intro">四张图按 1–4 阅读：{esc(meta['subtitle'])}。点击图片或“打开原图／放大”查看完整 PNG；手机可双指放大。每图下方可展开文字技术细节及代码依据，无需安装 Mermaid。</p>
-<p><a href="{other}-flowcharts.html">{esc(other_title)} 图册</a> · <a href="screening-source-flowcharts.html">Screening source 图册</a> · <a href="pilot-main-screening-flowcharts.html">Pilot 与 Main screening 图册</a> · <a href="https://github.com/AIM-STEP/living-evidence/tree/main/technical-roadmaps">GitHub 技术路线图档案</a></p>
+<p><a href="screening-source-flowcharts.html">Screening source 图册</a> · <a href="pilot-main-screening-flowcharts.html">Pilot 与 Main screening 图册</a> · <a href="https://github.com/AIM-STEP/living-evidence/tree/main/technical-roadmaps">GitHub 技术路线图档案</a></p>
 <a class="download" href="docs/{slug}-flowcharts/{zip_name}" download>下载本模块四张图片、文字细节与可编辑源码（ZIP）</a>
 <nav aria-label="流程图目录">{''.join(nav)}</nav>
 {''.join(sections)}
@@ -56,7 +54,7 @@ def build(slug):
  text+='\n'+note+'\n图像由本会话内置imagegen绘制；精确逻辑以配套文字与固定版本源码为准。\n'
  (public/'README.txt').write_text(text,encoding='utf-8')
  offline=page.replace('docs/'+slug+'-flowcharts/','')
- for p in [other+'-flowcharts.html','screening-source-flowcharts.html','pilot-main-screening-flowcharts.html']:
+ for p in ['screening-source-flowcharts.html','pilot-main-screening-flowcharts.html']:
   offline=offline.replace('href="'+p+'"','href="https://aimsetp.com/'+p+'"')
  offline=re.sub(r'<a class="download"[^>]*>.*?</a>','',offline)
  with zipfile.ZipFile(public/zip_name,'w',zipfile.ZIP_DEFLATED) as z:
@@ -76,4 +74,4 @@ def build(slug):
  print('Built',page_name,'and four-diagram offline ZIP.')
 
 if __name__=='__main__':
- for slug in MODULES:build(slug)
+ build()

@@ -403,22 +403,38 @@ function mergeFragmentLogic(merged,parts,q){
  }
  merged.unresolved_fragment_logic={branches:groups,alternatives:[...choices.values()]};
 }
-// Only independent batches overlap. Keep their inputs, review rules and merge order.
-async function mapModelBatches(items,options,work){
+// Extraction, semantic review and any repair share the same two request slots.
+async function runModelTasks(tasks,options){
  const controller=new AbortController(),abort=()=>controller.abort(options.signal?.reason);
  options.signal?.addEventListener('abort',abort,{once:true});if(options.signal?.aborted)abort();
- const results=new Array(items.length),limit=Math.max(1,Math.min(2,Math.floor(Number(options.concurrency)||2)));let next=0,failure;
+ const limit=Math.max(1,Math.min(2,Math.floor(Number(options.concurrency)||2)));
+ const ready=[],running=new Set();
+ let next=0,failure;
  try{
-  await Promise.all(Array.from({length:Math.min(limit,items.length)},async()=>{
-   while(next<items.length&&!controller.signal.aborted){const index=next++;try{results[index]=await work(items[index],index,controller.signal);}catch(error){if(!failure)failure=error;controller.abort(error);}}
-  }));
-  if(failure)throw failure;if(controller.signal.aborted)throw options.signal?.reason||Object.assign(new Error('Generation stopped.'),{name:'AbortError'});return results;
+  while((next<tasks.length||ready.length||running.size)&&!controller.signal.aborted){
+   while(running.size<limit&&(ready.length||next<tasks.length)){
+    // Start unscheduled extractions before using a free slot for an early review.
+    const task=next<tasks.length?tasks[next++]:ready.shift();
+    const request=Promise.resolve().then(()=>{
+     if(!controller.signal.aborted)return task(controller.signal,job=>ready.push(job));
+    }).catch(error=>{
+     if(!controller.signal.aborted){failure=error;controller.abort(error);}
+    }).finally(()=>running.delete(request));
+    running.add(request);
+   }
+   if(running.size)await Promise.race(running);
+  }
+  await Promise.all(running);
+  if(failure)throw failure;
+  if(controller.signal.aborted)throw options.signal?.reason||Object.assign(new Error('Generation stopped.'),{name:'AbortError'});
  }finally{options.signal?.removeEventListener('abort',abort);}
 }
-async function extract_elements(state,env,adapter,options={}){
+async function extract_elements(state,env,adapter,options={},review=null){
  const payload=E.extraction_payload(state,env),plans=payload.questions.map(sourceBatches),jobs=plans.flatMap((batches,qi)=>batches.map((sources,bi)=>({qi,bi,sources}))),total=jobs.length,frameworks=compactFrames(payload.frameworks);
- const profiles=payload.questions.map(q=>profileContext(env.profiles.resolve(q.context.review_methods)));let completed=0;
- const parts=await mapModelBatches(jobs,options,async({qi,bi,sources},index,signal)=>{
+ const profiles=payload.questions.map(q=>profileContext(env.profiles.resolve(q.context.review_methods)));
+ const parts=plans.map(batches=>new Array(batches.length)),remaining=plans.map(batches=>batches.length),questions=[];
+ let completed=0;
+ const tasks=jobs.map(({qi,bi,sources},index)=>async(signal,enqueue)=>{
   const q=payload.questions[qi],batches=plans[qi];
   const ranges=citedRanges(sources);
   options.onProgress?.('Extracting source conditions ('+(index+1)+'/'+total+')…',{phase:'extract',completed,total,waiting:true});
@@ -456,13 +472,25 @@ async function extract_elements(state,env,adapter,options={}){
   }catch(error){if(signal.aborted||(!retryableResponse(error)&&error.step!=='provenance')||attempt===(options.retries??1))throw error;request.validation_feedback={code:error.code,message:error.message};options.onProgress?.('Correcting the extraction against the original source…',{phase:'extract',completed,total,waiting:true});}
   completed++;
   options.onProgress?.('Source conditions extracted ('+completed+'/'+total+').',{phase:'extract',completed,total,waiting:completed<total});
-  return answer.questions[0];
+  parts[qi][bi]=answer.questions[0];
+  remaining[qi]--;
+  commitReady(enqueue);
  });
- // Reassemble in source order even when requests finish out of order.
- let offset=0;const questions=payload.questions.map((q,qi)=>{
+ commitReady(job=>tasks.push(job));
+ await runModelTasks(tasks,options);
+ return {questions};
+ // Commit whole questions in source order even if a later part finished first.
+ function commitReady(enqueue){
+  while(questions.length<plans.length&&remaining[questions.length]===0){
+   const n=questions.length,question=mergeQuestion(payload.questions[n],n);
+   questions.push(question);
+   review?.add(question,enqueue,questions.length===plans.length);
+  }
+ }
+ function mergeQuestion(q,qi){
   const merged={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null},trees=[];
   for(let bi=0;bi<plans[qi].length;bi++){
-   const item=parts[offset++],prefix='q'+qi+'b'+bi+'_';
+   const item=parts[qi][bi],prefix='q'+qi+'b'+bi+'_';
    for(const e of item.elements)merged.elements.push({...e,candidate_id:prefix+e.candidate_id});for(const issue of item.issues)merged.issues.push({...issue,element_candidate_ids:(issue.element_candidate_ids||[]).map(eid=>prefix+eid)});
    trees.push({tree:prefixLogic(item.logic,prefix),ids:item.elements.map(e=>prefix+e.candidate_id)});if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;
    for(const field of ['question_types','review_methods','evidence_units'])merged[field]=[...new Set([...(merged[field]||[]),...(item[field]||[])])];
@@ -477,8 +505,7 @@ async function extract_elements(state,env,adapter,options={}){
    options.fragmentPlans.push({merged,trees,q,participants:merged.elements.map(fragmentParticipant)});
   }
   return merged;
- });
- return {questions};
+ }
 }
 function indexReviewReplies(result,items,step='review_normalization'){
  const allowed=new Set(items.map(item=>item.id)),byId=new Map();
@@ -577,17 +604,48 @@ async function repairWording(state,adapter,questions,items,first,signal){
  }
  return {revised,reviewed};
 }
-async function review_elements(state,candidates,adapter,options={}){
- const candidatesById=new Map(),items=[];for(const q of candidates.questions)for(const e of q.elements){const unique=q.question_id+'/'+e.candidate_id;candidatesById.set(unique,e);items.push({id:unique,question_id:q.question_id,dimension_id:e.dimension_id,normalized_text:e.normalized_text,structured_value:e.structured_value,semantic_role:e.semantic_role,information_status:e.information_status,scope_status:e.scope_status,disposition:e.disposition,source_quotes:e[reviewCitations]||e.source_refs,...(e.source_occurrence_alternatives?.length?{source_occurrence_pending:true}:{}),scope_conditions:e.scope_conditions,exceptions:e.exceptions,...(e.outcome_use?{outcome_use:e.outcome_use}:{})});}
- const batches=G.batches(items,12500,7);let completed=0;
- await mapModelBatches(batches,options,async(batch,index,signal)=>{
-  options.onProgress?.('Checking criteria against the sources ('+(index+1)+'/'+batches.length+')…',{phase:'review',completed,total:batches.length,waiting:true});
-  const questionIds=new Set(batch.map(item=>item.question_id));
-  const questions=candidates.questions.filter(q=>questionIds.has(q.question_id)).map(q=>{
-   const original=state.questions.find(item=>item.question_id===q.question_id)?.original_text||'';
-   return {question_id:q.question_id,original_question:original.length<3500?original:null,logic:q.logic,
-    ...(q.unresolved_fragment_logic?{unresolved_fragment_logic:q.unresolved_fragment_logic}:{})};
+function sourceReview(state,adapter,options){
+ const candidatesById=new Map(),reviewQuestions=new Map();
+ const originals=new Map(state.questions.map(q=>[q.question_id,q.original_text]));
+ const maxItems=7;
+ let tail=[],total=0,completed=0,closed=false;
+ function add(q,enqueue,last){
+  const original=originals.get(q.question_id)||'';
+  reviewQuestions.set(q.question_id,{
+   question_id:q.question_id,original_question:original.length<3500?original:null,logic:q.logic,
+   ...(q.unresolved_fragment_logic?{unresolved_fragment_logic:q.unresolved_fragment_logic}:{})
   });
+  const items=tail;
+  for(const e of q.elements){
+   const id=q.question_id+'/'+e.candidate_id;
+   candidatesById.set(id,e);
+   items.push({
+    id,question_id:q.question_id,dimension_id:e.dimension_id,normalized_text:e.normalized_text,
+    structured_value:e.structured_value,semantic_role:e.semantic_role,information_status:e.information_status,
+    scope_status:e.scope_status,disposition:e.disposition,source_quotes:e[reviewCitations]||e.source_refs,
+    ...(e.source_occurrence_alternatives?.length?{source_occurrence_pending:true}:{}),
+    scope_conditions:e.scope_conditions,exceptions:e.exceptions,...(e.outcome_use?{outcome_use:e.outcome_use}:{})
+   });
+  }
+  // Keep the open tail for the next question so overlapping work never adds a request.
+  const batches=G.batches(items,12500,maxItems);
+  const partial=batches[batches.length-1];
+  tail=!last&&partial&&partial.length<maxItems?batches.pop():[];
+  for(const batch of batches){
+   const index=++total;
+   enqueue(signal=>check(batch,index,signal));
+  }
+  closed=last;
+  if(last&&completed)progress();
+ }
+ function progress(){
+  options.onProgress?.('Source checks complete ('+completed+'/'+total+').',{phase:'review',completed,total,waiting:completed<total});
+ }
+ async function check(batch,index,signal){
+  // Extraction reports progress until the final review batch count is known.
+  if(closed)options.onProgress?.('Checking criteria against the sources ('+index+'/'+total+')…',{phase:'review',completed,total,waiting:true});
+  const questionIds=new Set(batch.map(item=>item.question_id));
+  const questions=[...questionIds].map(id=>reviewQuestions.get(id));
   const assessments=await assessWording(state,adapter,questions,batch,signal);
   const failed=batch.filter(item=>!item.source_occurrence_pending&&needsWordingRepair(assessments.get(item.id)));
   if(failed.length){
@@ -618,14 +676,19 @@ async function review_elements(state,candidates,adapter,options={}){
    retainReviewedBounds(e);
   }
   completed++;
-  options.onProgress?.('Source checks complete ('+completed+'/'+batches.length+').',{phase:'review',completed,total:batches.length,waiting:completed<batches.length});
- });
+  if(closed)progress();
+ }
+ return {add};
+}
+async function review_elements(state,candidates,adapter,options={}){
+ const review=sourceReview(state,adapter,options),tasks=[];
+ candidates.questions.forEach((q,i)=>review.add(q,task=>tasks.push(task),i===candidates.questions.length-1));
+ await runModelTasks(tasks,options);
  return candidates;
 }
 async function analyze(state,env,adapter,options={}){
  const start=adapter.exchanges?.length||0,fragmentPlans=[];
- const candidates=await extract_elements(state,env,adapter,{...options,fragmentPlans});
- await review_elements(state,candidates,adapter,options);
+ const candidates=await extract_elements(state,env,adapter,{...options,fragmentPlans},sourceReview(state,adapter,options));
  for(const {merged,trees,q,participants} of fragmentPlans){
   // A review can correctly reclassify background information as an inclusion
   // condition (or vice versa). Only changed membership needs another merge.

@@ -3,7 +3,7 @@
 'use strict';
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
-const presentationVersion='20261119-source-decisions-1';
+const presentationVersion='20261119-author-decisions-2';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -14,6 +14,17 @@ function optionLabel(option){
  if(option.label&&!/[\u3400-\u9fff]/u.test(option.label))return option.label;
  const names={unrestricted:'No age restriction',defer:'Keep pending',ignore:'Keep the existing scope',keep:'Keep the previous decision',replace:'Use the revised decision',focus:'Review focus only',eligibility:'Eligibility requirement',any_of:'Any condition',all_of:'All conditions',systematic_review:'Systematic reviews',review:'Systematic reviews and other reviews',pico:'PICO',pico_qualitative:'PICo'};
  return names[option.option_id]||option.updates?.[0]?.normalized_text||option.option_id;
+}
+function authorChoices(issue){
+ return issue.options.flatMap(option=>{
+  const label=optionLabel(option);
+  if(option.source_occurrence_ref&&!E.passageWording(option.source_occurrence_ref).direction){
+   return [['include','Include'],['exclude','Exclude'],['focus','Review focus']].map(([role,name])=>({
+    option_id:option.option_id+'/'+role,stored_id:option.option_id,passage_role:role,label:name+' — '+label
+   }));
+  }
+  return [{option_id:option.option_id,stored_id:option.option_id,label}];
+ });
 }
 function issueText(issue,project,elements=issue.element_ids.map(id=>project.elements.find(e=>e.element_id===id)).filter(Boolean)){
  const names=elements.map(e=>e.normalized_text).filter(Boolean).join('; '),domain=label(elements[0]?.dimension_id);
@@ -77,7 +88,9 @@ function projectToClassic(project){
  const focusRows=[];for(const e of project.elements.filter(e=>e.active!==false&&e.information_status!=='missing'&&e.dimension_id!=='population.age'&&e.source_refs?.length&&!displayedByElement.has(e.element_id)&&['review_focus','undecided'].includes(e.semantic_role))){const analysis=e.decision_status==='confirmed_by_user'?null:Methods.classifyAnalysis(e,project.questions.find(q=>q.question_id===e.question_id)?.original_text||''),dimension=label(analysis?.dimension_id||e.dimension_id);let row=focusRows.find(row=>row.dimension===dimension);if(!row){row={dimension,values:[],role:e.semantic_role};focusRows.push(row);}if(e.normalized_text&&!row.values.includes(e.normalized_text))row.values.push(e.normalized_text);}
  for(const row of focusRows)if(row.dimension==='Analysis plan')row.values=row.values.filter(value=>!row.values.some(other=>other.length>value.length&&other.toLowerCase().includes(value.toLowerCase())));
  const confirmations=project.issues.filter(issue=>issue.status==='open'&&issue.blocking).map(issue=>{
-  const elements=(issue.linked_element_ids||issue.element_ids).map(id=>elementsById.get(id)).filter(Boolean);
+  const elements=(issue.linked_element_ids||issue.element_ids).filter(id=>!issue.answered_element_ids?.includes(id)).map(id=>elementsById.get(id)).filter(Boolean);
+  const pendingGroups=E.authorTargetGroups(project,issue).filter(group=>!group.every(id=>issue.answered_element_ids?.includes(id)));
+  const answerTargets=pendingGroups.length>1?pendingGroups.map(([id])=>({id,label:elementsById.get(id).normalized_text})):[];
   const locations=[];
   for(const element of elements){
    const location=displayedByElement.get(element.element_id)||{
@@ -85,15 +98,18 @@ function projectToClassic(project){
     section:element.source_occurrence_section||(['review_focus','undecided'].includes(element.semantic_role)?'focus':element.disposition==='exclude'?'exclude':'include'),
     subject:element.information_status==='missing'?'':element.normalized_text
    };
-   if(!locations.some(prior=>prior.domain===location.domain&&prior.section===location.section&&prior.rule===location.rule&&prior.subject===location.subject))locations.push(location);
+   const target=answerTargets.length?pendingGroups.find(group=>group.includes(element.element_id))?.[0]:null;
+   const prior=locations.find(prior=>prior.domain===location.domain&&prior.section===location.section&&prior.rule===location.rule&&prior.subject===location.subject);
+   if(!prior)locations.push({...location,...(target&&{targetId:target})});
+   else if(prior.targetId!==target)delete prior.targetId;
   }
   if(!locations.length)locations.push(issue.reason_code==='FRAMEWORK_AMBIGUITY'?{section:'framework',domain:'Framework'}:{section:'topic',domain:'Review topic'});
   const primary=locations[0],text=issueText(issue,project,elements);
   return {item:text,text,kind:'proposal',type:'source-ambiguity',domain:primary.domain,
    side:primary.section==='exclude'?'exclude':'include',status:'suggested',backgroundIssue:true,
-   reviewOnly:false,focusOnly:primary.section==='focus',locations,issue_id:issue.issue_id,
+   reviewOnly:false,focusOnly:primary.section==='focus',locations,issue_id:issue.issue_id,...(answerTargets.length&&{answerTargets}),
    questionNumber:output.questions.length>1?output.questions.find(q=>q.question_id===issue.question_id)?.display_number:null,
-   options:issue.options.map(option=>({label:optionLabel(option),option_id:option.option_id,...(option.requires_interpretation?{requires_interpretation:true}:{})})),
+   options:authorChoices(issue).map(({label,option_id})=>({label,option_id})),
    evidence:[...new Map(elements.flatMap(element=>issue.trigger_rule_id==='source_occurrence'?(element.source_occurrence_alternatives||[]).flatMap(a=>[a.heading,a].filter(Boolean)):element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
  });
  return {manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows,framework:output.questions.length===1?output.questions[0].framework_mapping?.display_name||'Other':'Other',rows,reviewTopic:output.questions.map(q=>q.objective).join(' '),topicStyle:'sentence-v3',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
@@ -197,25 +213,20 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   if(saved.classic_author_source_ref){const ref=saved.classic_author_source_ref;for(const q of project.questions.filter(q=>q.active!==false))if(!q.additional_source_refs.some(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision))q.additional_source_refs.push(clone(ref));}
   const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});requireEpoch(storage,projectId,saved.criteria_epoch);onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);project.presentation_version=presentationVersion;const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected,visible);
  }
- async function decide({issue_id,option_id,answer_text,modelClient,signal,criteriaEpoch}){
+ async function decide({issue_id,option_id,answer_text,target_id,signal,criteriaEpoch}){
   requireEpoch(storage,projectId,criteriaEpoch);
+  if(signal?.aborted)throw new DOMException('Confirmation stopped.','AbortError');
   const project=current(),issue=project.issues.find(issue=>issue.issue_id===issue_id&&issue.status==='open');if(!issue)D.fail('ISSUE_NOT_FOUND','background','This clarification has already changed. Reload the saved criteria.');
-  const expected=signature(read(keys.legacy));let request;
-  let option=option_id&&issue.options.find(item=>item.option_id===option_id);
-  if(option_id&&!option)D.fail('OPTION_NOT_FOUND','background','The selected answer is no longer available for this author check.');
-  if(!option&&typeof answer_text==='string'){
-   const wording=answer_text.trim().normalize('NFC');
-   const matches=issue.options.filter(item=>[item.label,optionLabel(item)].some(text=>typeof text==='string'&&text.trim().normalize('NFC')===wording));
-   if(matches.length===1&&M.executableOption(matches[0]))option=matches[0];
+  const expected=signature(read(keys.legacy)),choices=authorChoices(issue);
+  let choice=choices.find(item=>item.option_id===option_id);
+  if(option_id&&!choice)D.fail('OPTION_NOT_FOUND','background','The selected answer is no longer available for this author check.');
+  if(!choice&&typeof answer_text==='string'){
+   const matches=choices.filter(item=>[item.label,issue.options.find(o=>o.option_id===item.stored_id)?.label].some(label=>label?.trim().normalize('NFC')===answer_text.trim().normalize('NFC')));
+   if(matches.length===1)choice=matches[0];
   }
-  if(option?.requires_interpretation){
-   request=await M.parse_answers(project,option.label,[issue_id],modelClient,{signal,selected_option_id:option.option_id});
-   if(option.source_occurrence_ref)for(const answer of request.answers)answer.option_id=option.option_id;
-  }
-  else if(option)request={base_revision:project.revision,request_id:D.id('answer'),answers:[{issue_id,option_id:option.option_id,answer_text:answer_text||optionLabel(option)}]};
-  else request=await M.parse_answers(project,answer_text,[issue_id],modelClient,{signal});
-  if(request.answers.some(answer=>answer.from_model&&(answer.issue_ids.length!==1||answer.issue_ids[0]!==issue_id)))D.fail('ISSUE_TARGET_MISMATCH','background','The answer could not be matched to the selected author check.');
-  requireEpoch(storage,projectId,criteriaEpoch);
+  const answer={issue_id,author_confirmed:true,answer_text:answer_text??choice?.label,...(target_id&&{target_id})};
+  if(choice){answer.option_id=choice.stored_id;if(choice.passage_role)answer.passage_role=choice.passage_role;}
+  const request={base_revision:project.revision,request_id:D.id('answer'),answers:[answer]};
   return staged(E.apply_decisions(project,request,E.environment(...configs)).state,project.revision,expected);
  }
  function recordEdit(previous,next){

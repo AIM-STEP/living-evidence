@@ -219,19 +219,54 @@ function decisionWording(value){
 function issueTarget(e){
  return JSON.stringify([e.dimension_id,key(e.normalized_text),e.structured_value,e.disposition,e.scope_conditions||[],e.exceptions||[]]);
 }
-function modelIssueGroups(q,known){
+function authorTargetGroups(state,issue){
+ if(!issue.trigger_rule_id?.startsWith('model_issue:')||issue.element_ids.length<2)return [];
+ const groups=new Map();
+ for(const id of issue.element_ids){
+  const e=state.elements.find(item=>item.element_id===id&&active(item));
+  if(!e)continue;
+  const signature=e.source_decision_target?.key||issueTarget(e);
+  if(!groups.has(signature))groups.set(signature,[]);
+  groups.get(signature).push(id);
+ }
+ return [...groups.values()];
+}
+function confirmedNonScreeningFocus(e){
+ if(!accepted(e)||e.information_status!=='explicit'||e.role_issue||e.semantic_role!=='review_focus')return false;
+ return e.methodology_rule_id==='analysis_plan_is_not_eligibility'||(e.dimension_id.split('.')[0]==='outcome'&&e.outcome_use==='interest'&&!explicitOutcomeRequirement(e.source_refs));
+}
+const optionalLimitQuestions=[
+ {dimension:'language',subject:/\b(?:(?:publication|report|study) )?languages?\b|语种|(?:发表|出版)?语言/u,source:/\blanguages?\b|\b(?:translated?|translation|english|chinese|french|spanish|german|japanese)\b|\b(?:available|written|published|reported) in\b|语种|(?:英|中|法|德|日|韩|西班牙)文|语言/iu},
+ {dimension:'publication_date',subject:/\bpublication (?:dates?|years?)\b|(?:发表|出版)(?:时间|日期|年份)/u,source:/\b(?:publish\w*|publication|dates?)\b|\b(?:18|19|20)\d{2}\b|发表|出版|日期|年份/iu}
+];
+function asksForUnmentionedLimit(issue,q,known,state){
+ if(issue.reason_code!=='MISSING_REQUIRED_DECISION')return false;
+ const wording=key(issue.question_text),limit=optionalLimitQuestions.find(item=>item.subject.test(wording));
+ if(!limit||known.some(e=>e.dimension_id.split('.')[0]===limit.dimension))return false;
+ const request=wording.replace(limit.subject,'@');
+ if(!/^(?:(?:should (?:there be|we (?:apply|impose|add)) (?:any |a )?|are there (?:any )?|what |which )@ (?:limits?|restrictions?)(?: (?:apply|are needed|should apply))?|(?:是否|需要|要不要)(?:对|限定|限制)?@(?:作出|进行|有)?(?:限制|限定)?)$/u.test(request))return false;
+ const refs=[...(q.source_refs||[]),...(q.additional_source_refs||[]),...(q.imported_source_refs||[])];
+ return !refs.some(ref=>limit.source.test(ref.quote))&&!state.sources.some(s=>s.source_type==='authorized_rule'&&activeRuleSource(state,s)&&sourceApplies(s,q)&&limit.source.test(s.original_text));
+}
+function modelIssueGroups(q,known,state){
  const byId=new Map(known.map(e=>[e.element_id,e])),groups=new Map();
  for(const issue of q.model_issues||[]){
   if(!D.ENUMS.reason_code.includes(issue.reason_code))fail('INVALID_ENUM','clarification','Unknown issue reason.');
+  if(asksForUnmentionedLimit(issue,q,known,state))continue;
   const elements=array(issue.element_ids).map(id=>byId.get(id)).filter(Boolean);
-  if(issue.element_ids?.length&&!elements.length)continue;
+  if((issue.element_candidate_ids?.length||issue.element_ids?.length)&&!elements.length)continue;
+  if(elements.length&&elements.every(confirmedNonScreeningFocus)&&issue.reason_code!=='PROPOSED_RESTRICTION')continue;
   // Equivalent targets in separate source passages can have different element IDs.
   const scope=[...new Set(elements.map(e=>{
    if(e.source_decision_target?.dimension!==e.dimension_id)e.source_decision_target={dimension:e.dimension_id,key:issueTarget(e)};
    return e.source_decision_target.key;
   }))].sort();
-  const decision=[decisionWording(issue.question_text),decisionWording(issue.scope_impact),scope,issue.reason_code==='PROPOSED_RESTRICTION'];
-  const identity=JSON.stringify(decision),group=groups.get(identity)||{identity,issue,elements:new Map(),options:new Map(),aliases:[]};
+  const wording=decisionWording(issue.question_text),impact=decisionWording(issue.scope_impact),advice=issue.reason_code==='PROPOSED_RESTRICTION';
+  // A specific question already names its decision. For generic or unbound
+  // questions the impact may be the only detail identifying what is being decided.
+  const namesSubject=/\b(?:of|for|define|about) (?!(?:eligibility|inclusion|this|that|these|those)\b|the (?:following|study|review|scope|criteria)\b)\S+|(?:定义|界定|判断|诊断|评估).{2,}/u.test(wording);
+  const identity=JSON.stringify([wording,scope.length&&namesSubject?'':impact,scope,advice]);
+  const group=groups.get(identity)||{identity,issue,scope,wording,namesSubject,elements:new Map(),options:new Map(),aliases:[]};
   for(const e of elements)group.elements.set(e.element_id,e);
   for(const option of array(issue.options)){
    const value=typeof option==='string'?option:option?.label||option?.text;
@@ -245,11 +280,49 @@ function modelIssueGroups(q,known){
  }
  return [...groups.values()].map(group=>({...group,elements:[...group.elements.values()],options:[...group.options.values()]}));
 }
+function previousModelIssue(saved,group,data,advice){
+ if(saved.question_id!==data.question_id||!saved.element_ids.every(id=>data.element_ids.includes(id)))return false;
+ const prefix=advice?'model_advice:':'model_issue:';
+ if(!saved.trigger_rule_id?.startsWith(prefix))return false;
+ const wording=decisionWording(saved.question_text),impact=decisionWording(saved.scope_impact);
+ if(wording===group.wording&&(group.scope.length&&group.namesSubject||impact===decisionWording(group.issue.scope_impact))){
+  const previous=JSON.stringify([wording,impact,group.scope,advice]);
+  if(saved.trigger_rule_id===prefix+D.stableId('decision',previous))return true;
+ }
+ return group.aliases.some(alias=>saved.reason_code===alias.reason_code&&saved.trigger_rule_id===prefix+key(alias.question_text)&&saved.element_ids.length===alias.element_ids.length&&saved.element_ids.every(id=>alias.element_ids.includes(id)));
+}
 function isOlderAgeDecision(group){
  if(!group.elements.some(e=>e.dimension_id==='population.age'||e.age_boundary_element_id))return false;
  const text=key(group.issue.question_text);
  if(/\b(?:maximum|upper|mean|median|average|subgroup|analysis|follow.up|onset|diagnos\w*)\b|最高|最大|平均|中位|亚组|随访|诊断/u.test(text))return false;
  return /\b(?:age (?:threshold|boundary|cut[ -]?off|limit)|minimum age|how old|at what age)\b|\b(?:define|defined|definition of)\b.{0,24}\b(?:older (?:people|adults?|patients?)|elderly)\b|年龄(?:界限|阈值|下限)|多少岁/u.test(text);
+}
+function sourceDefinesMinimumAge(group,known){
+ if(!['AMBIGUOUS_BOUNDARY','AMBIGUOUS_MEANING','MISSING_REQUIRED_DECISION'].includes(group.issue.reason_code))return false;
+ const text=decisionWording(group.issue.question_text);
+ if(!/^(?:what (?:is )?(?:the )?(?:minimum age|age threshold)(?: (?:for (?:eligibility|inclusion)|defines? older (?:people|adults|patients)))?|最低(?:纳入)?年龄(?:是)?多少岁?)$/u.test(text))return false;
+ const bounds=new Set();
+ const defined=group.elements.every(e=>{
+  const age=e.age_boundary_element_id?known.find(item=>item.element_id===e.age_boundary_element_id):e;
+  if(age?.dimension_id!=='population.age'||!accepted(age)||age.information_status!=='explicit'||age.exceptions?.length||age.scope_conditions?.length)return false;
+  const lower=D.structuredConstraints(age.structured_value,age.dimension_id).filter(c=>['>','>='].includes(c.operator));
+  for(const c of lower)bounds.add(JSON.stringify(D.canonical(c)));
+  return lower.length===1;
+ });
+ return defined&&bounds.size===1;
+}
+function unrepresentedSourceOr(elements){
+ return elements.some(e=>{
+  const predicate=key(e.normalized_text);
+  return e.source_refs.some(ref=>{
+   const quote=key(ref.quote);
+   if(!D.hasOr(quote))return false;
+   // Alternatives retained inside one criterion cannot imply that all of
+   // the question's population, intervention and comparison are alternatives.
+   if(!predicate||!D.hasOr(predicate))return true;
+   return !predicate.includes(quote)&&D.hasOr(quote.replace(predicate,' '));
+  });
+ });
 }
 function matchingRuleIssue(state,q,group,desired){
  const ids=group.elements.map(e=>e.element_id),text=key(group.issue.question_text);
@@ -305,7 +378,7 @@ function detect_clarification_issues(state,env=environment()){
   for(const slot of frame?.slots||[])if(!slot.definition)createIssue(state,desired,issueData(q,'FRAMEWORK_AMBIGUITY',[],'custom_definition:'+slot.slot_id,'请定义自定义字段“'+(slot.display_label||slot.slot_id)+'”的含义。','决定该字段如何组织研究范围。',true,[]));
   const known=elements.filter(e=>e.information_status!=='missing');
   for(const dimension of [...(frame?.slots||[]).map(s=>s.slot_id),...OPTIONAL])if(!known.some(e=>e.dimension_id===dimension||e.dimension_id.startsWith(dimension+'.')))makeMissing(state,q,dimension,env);
-  const modelGroups=modelIssueGroups(q,known);
+  const modelGroups=modelIssueGroups(q,known,state);
   for(let e of known){
    if(e.source_occurrence_pending){createIssue(state,desired,sourceOccurrenceIssue(q,e));continue;}
    const hasAge=D.structuredConstraints(e.structured_value,e.dimension_id).some(c=>c.unit==='year'||c.unit==='岁')||/\d+\s*(?:岁|years?|year.old)/i.test(e.normalized_text);
@@ -325,7 +398,7 @@ function detect_clarification_issues(state,env=environment()){
    else if(e.role_issue||e.semantic_role==='undecided')createIssue(state,desired,issueData(q,'UNRESOLVED_ROLE',[e],'semantic_role','“'+e.normalized_text+'”是研究关注内容，还是纳入资格要求？','资格要求会排除不满足该条件的证据；关注内容用于提取或综合。',e.decision_status!=='proposed',[{option_id:'focus',label:'仅作为研究关注内容',updates:[{element_id:e.element_id,semantic_role:'review_focus'}]},{option_id:'eligibility',label:'作为纳入资格条件',updates:[{element_id:e.element_id,semantic_role:'eligibility_condition',disposition:'include'}]}]));
    else if(e.semantic_role==='eligibility_condition'&&(['ambiguous','conflicting'].includes(e.information_status)||e.decision_status==='pending')&&!modelGroups.some(group=>group.issue.reason_code===(e.information_status==='conflicting'?'CONFLICTING_REQUIREMENTS':'AMBIGUOUS_MEANING')&&group.elements.includes(e)))createIssue(state,desired,issueData(q,e.information_status==='conflicting'?'CONFLICTING_REQUIREMENTS':'AMBIGUOUS_MEANING',[e],'source_scope_ambiguity','请明确“'+e.normalized_text+'”应如何限定研究范围。','不同解释会改变可纳入的证据范围。',true,array(e.options)));
   }
-  for(const e of known.filter(e=>['population','intervention','comparator'].includes(e.dimension_id)&&e.semantic_role==='review_focus'))createIssue(state,desired,issueData(q,'UNRESOLVED_ROLE',[e],'source_scope_role','Confirm whether this source-defined population, intervention or comparison defines study eligibility or is only a review focus.','The element remains visible and is not silently discarded.',true,[{option_id:'focus',label:'Review focus only',keep_existing:true},{option_id:'eligibility',label:'Eligibility condition',updates:[{element_id:e.element_id,semantic_role:'eligibility_condition',scope_status:'restricted',disposition:'include'}]}]));
+  for(const e of known.filter(e=>['population','intervention','comparator'].includes(e.dimension_id)&&e.semantic_role==='review_focus'&&e.decision_status!=='confirmed_by_user'))createIssue(state,desired,issueData(q,'UNRESOLVED_ROLE',[e],'source_scope_role','Confirm whether this source-defined population, intervention or comparison defines study eligibility or is only a review focus.','The element remains visible and is not silently discarded.',true,[{option_id:'focus',label:'Review focus only',keep_existing:true},{option_id:'eligibility',label:'Eligibility condition',updates:[{element_id:e.element_id,semantic_role:'eligibility_condition',scope_status:'restricted',disposition:'include'}]}]));
   const configuredRules=[...profiles.flatMap(profile=>profile.required_decisions||[]),...(frame?.check_rules||[])];for(const rule of configuredRules){
    const when=rule.when||{};if(when.review_methods?.length&&!when.review_methods.some(value=>q.context.review_methods.includes(value))||when.question_types?.length&&!when.question_types.some(value=>q.context.question_types.includes(value))||when.present_dimensions?.some(dimension=>!known.some(e=>e.dimension_id===dimension))||when.absent_dimensions?.some(dimension=>known.some(e=>e.dimension_id===dimension)))continue;
    if(rule.kind==='advice')createIssue(state,desired,issueData(q,'PROPOSED_RESTRICTION',[],rule.rule_id,rule.description,rule.scope_impact||'可选方法学建议；尚未接受时不改变资格范围。',false,[]));
@@ -341,7 +414,6 @@ function detect_clarification_issues(state,env=environment()){
    createIssue(state,desired,issueData(q,'CONFLICTING_REQUIREMENTS',pair,'same_scope_conflict','这些条件在同一适用范围内相互冲突，应采用哪一项？','不能在最终标准中同时采用互相排斥的要求。',true,pair.map(e=>({option_id:e.element_id,label:e.normalized_text,keep_element_id:e.element_id,retire_element_ids:pair.filter(other=>other!==e).map(other=>other.element_id)}))));
   }
   if(q.logic)D.validate_expression(q.logic,new Set(known.map(e=>e.element_id)));
-  const refs=eligible.flatMap(e=>e.source_refs),raw=D.quoteText(refs);
   if(q.unresolved_fragment_logic){
    const elementIds=new Set(q.unresolved_fragment_logic.branches.flatMap(D.walkLeaves));
    const pending=q.unresolved_fragment_logic,branchKey=D.stableId('branches',JSON.stringify(pending));
@@ -349,7 +421,7 @@ function detect_clarification_issues(state,env=environment()){
    const prompt=alternatives?'How should these eligibility conditions be grouped?':'Should studies satisfy all of these groups of conditions or any one of them?';
    const choices=alternatives||[{option_id:'any_of',label:'Any one group',logic_op:'any_of'},{option_id:'all_of',label:'All groups',logic_op:'all_of'}];
    createIssue(state,desired,issueData(q,'UNCLEAR_LOGIC',known.filter(e=>elementIds.has(e.element_id)),'fragment_relation:'+branchKey,prompt,'This determines how the requirements from different source passages combine.',true,choices));
-  }else if(eligible.length>1&&(!q.fragment_logic_decision||JSON.stringify(q.logic)!==JSON.stringify(q.fragment_logic_decision.tree))&&D.hasOr(raw)&&!D.treeHas(q.logic,'any_of')&&!eligible.some(e=>e.exceptions?.length))createIssue(state,desired,issueData(q,'UNCLEAR_LOGIC',eligible,'source_or_relation','这些条件是任一满足还是共同满足？','任一满足与共同满足会产生不同资格范围。',true,[{option_id:'any_of',label:'任一满足',logic_op:'any_of'},{option_id:'all_of',label:'共同满足',logic_op:'all_of'}]));
+  }else if(eligible.length>1&&(!q.fragment_logic_decision||JSON.stringify(q.logic)!==JSON.stringify(q.fragment_logic_decision.tree))&&!D.treeHas(q.logic,'any_of')&&!eligible.some(e=>e.exceptions?.length)&&unrepresentedSourceOr(eligible))createIssue(state,desired,issueData(q,'UNCLEAR_LOGIC',eligible,'source_or_relation','这些条件是任一满足还是共同满足？','任一满足与共同满足会产生不同资格范围。',true,[{option_id:'any_of',label:'任一满足',logic_op:'any_of'},{option_id:'all_of',label:'共同满足',logic_op:'all_of'}]));
   for(const group of modelGroups){
    const {issue:modelIssue,elements:es}=group;
    if(modelIssue.reason_code==='MISSING_REQUIRED_DECISION'&&!es.length)continue;
@@ -357,6 +429,7 @@ function detect_clarification_issues(state,env=environment()){
     const ageIds=new Set(es.map(e=>e.age_boundary_element_id||e.element_id));
     const ageIssue=state.issues.find(issue=>issue.question_id===q.question_id&&issue.trigger_rule_id==='population_age_boundary'&&issue.element_ids.some(id=>ageIds.has(id))&&(desired.has(issue.issue_id)||issue.status==='resolved'));
     if(ageIssue){attachModelIssue(ageIssue,group);continue;}
+    if(sourceDefinesMinimumAge(group,known))continue;
    }
    const ruleIssue=matchingRuleIssue(state,q,group,desired);
    if(ruleIssue){attachModelIssue(ruleIssue,group);continue;}
@@ -365,7 +438,7 @@ function detect_clarification_issues(state,env=environment()){
    // Reuse saved author decisions and open IDs from before semantic grouping was introduced.
    const signature=[q.question_id,data.reason_code,data.trigger_rule_id,data.element_ids.slice().sort().join(',')].join('|');
    if(!state.issues.some(i=>i.signature===signature)){
-    const priorIssues=state.issues.filter(i=>i.question_id===q.question_id&&group.aliases.some(alias=>i.reason_code===alias.reason_code&&i.trigger_rule_id===(advice?'model_advice:':'model_issue:')+key(alias.question_text)&&i.element_ids.slice().sort().join(',')===alias.element_ids.slice().sort().join(',')));
+    const priorIssues=state.issues.filter(i=>previousModelIssue(i,group,data,advice));
     const prior=priorIssues.find(i=>i.status==='resolved')||priorIssues[0];
     if(prior)prior.signature=signature;
    }
@@ -426,23 +499,146 @@ function validate_criteria(state){
 }
 function rebuild(state,env=environment(),{recordTopicNormalization=false}={}){for(const q of state.questions.filter(active)){const elements=currentElements(state,q);Methods.normalizeComparators(elements.filter(e=>!e.source_occurrence_pending));const frame=env.frameworks.get(q.framework_mapping?.framework_id);for(const e of elements)e.framework_bindings=env.frameworks.map(e.dimension_id,frame);}detect_clarification_issues(state,env);for(const q of state.questions.filter(active)){const objective=Methods.topic(q,currentElements(state,q));if(objective){if(recordTopicNormalization)q.topic_normalization={previous:q.review_topic,basis:'Source-defined scope and analysis objectives',rule_id:'source_grounded_analysis_topic'};q.review_topic=objective;}}build_criteria(state);state.validation=validate_criteria(state);state.status=state.validation.errors.length?'validation_error':state.validation.blocking_issues.length?'needs_clarification':'final';const snapshot={snapshot_id:id('snapshot'),revision:state.revision,output_language:state.output_language,review_methods:clone(state.review_methods),created_at:now(),status:state.status,config_versions:clone(state.config_versions),question_relation:state.question_relation,questions:clone(state.questions.filter(active)),criteria:clone(state.criteria),elements:clone(state.elements.filter(active)),logic:clone(state.logic),issue_ids:state.issues.filter(i=>i.status==='open').map(i=>i.issue_id),issues:clone(state.issues),decision_ids:state.decisions.map(d=>d.decision_id),validation:clone(state.validation)};state.snapshots.push(snapshot);return state;}
 function valueText(value,language){if(!value)return '';const ops={gt:'>',gte:'≥',lt:'<',lte:'≤',eq:'='};if(value.operator==='between')return (value.lower_inclusive===false?'(':'[')+value.lower+', '+value.upper+(value.upper_inclusive===false?')':']')+' '+(value.unit||'');return (ops[value.operator]||value.operator||'')+String(value.value??'')+(language.startsWith('zh')&&['year','years'].includes(value.unit)?'岁':value.unit?' '+value.unit:'');}
-function checkSelectedPassage(passage,update){
- // Consider the passage the author actually selected. Two occurrences can be
- // in different clauses of the same sentence ("include X, but exclude X ...").
- const clause=D.occurrenceClause(passage),chars=Array.from(clause.quote);
- const before=chars.slice(0,passage.match_start-clause.start).join(''),after=chars.slice(passage.match_end-clause.start).join('');
- const text=clause.quote.trim();
- const directive=text.match(/^(?:we\s+)?(?:(?:will|must|should)\s+)?(do not include|do not exclude|exclude|include|inclusion criteria|exclusion criteria|纳入标准|排除标准|不纳入|排除|纳入)(?=\s|[:：]|[\u3400-\u9fff])/i);
- const heading=passage.heading?.quote.trim().replace(/^#+\s*|[:：]$/g,'').trim();
+function directedWording(wording,heading){
+ const text=wording.trim();
+ const directive=text.match(/^(?:we\s+)?(?:(?:will|must|should)\s+)?(do not include|exclude|include|inclusion criteria|exclusion criteria|纳入标准|排除标准|不纳入|排除|纳入)(?=\s|[:：]|[\u3400-\u9fff])/i);
  const governing=directive?.[1]||(/^(?:(?:inclusion|exclusion)(?: criteria)?|纳入(?:条件|标准)?|排除(?:条件|标准)?)$/i.test(heading)?heading:null);
  const direction=governing&&(/^(?:do not include|exclude|exclusion|不纳入|排除)/i.test(governing)?'exclude':'include');
- const content=directive?text.slice(directive[0].length).trim():text;
+ return {direction,content:directive?text.slice(directive[0].length).replace(/^\s*[:：]\s*/,'').trim():text};
+}
+function passageWording(passage){
+ return directedWording(D.occurrenceClause(passage).quote,passage.heading?.quote.trim().replace(/^#+\s*|[:：]$/g,'').trim());
+}
+function checkSelectedPassage(passage,update){
+ const clause=D.occurrenceClause(passage),chars=Array.from(clause.quote);
+ const before=chars.slice(0,passage.match_start-clause.start).join(''),after=chars.slice(passage.match_end-clause.start).join('');
+ const {direction,content}=passageWording(passage);
  const issues=D.sourceDifferences(update.normalized_text,[content],true);
  const qualifiers=/\b(?:with|without|who|whose|receiving|during|after|before|only|if|unless|except|among|aged|at risk)\b|仅|如果|除非|除外|伴有|合并|接受|期间|之后|之前/iu;
- const reducedToMatch=key(update.normalized_text)===key(passage.match_quote)&&qualifiers.test(before+' '+after+' '+(heading||''));
+ const reducedToMatch=key(update.normalized_text)===key(passage.match_quote)&&qualifiers.test(before+' '+after+' '+(passage.heading?.quote||''));
  if((direction&&(update.semantic_role!=='eligibility_condition'||update.disposition!==direction||update.scope_status!=='restricted'))||issues.length||reducedToMatch){
   fail('SOURCE_DECISION_INCOMPLETE','update','Please state the full intended rule, including its inclusion or exclusion direction and any limits or exceptions.');
  }
+}
+// A structured age bound may replace the display wording only when it describes
+// the entire answer. Keep conditions, mixed populations and exceptions verbatim.
+function authorAgeBound(wording){
+ const simple=/^(?:(?:define (?:older|elderly) (?:people|adults|patients|participants) as |(?:participants? |patients? |adults? )?(?:age[d]? )?)?(?:at least |at most |(?:no )?more than |(?:no )?less than |older than |younger than |under |over |up to |[<>]=?\s*|[≥≤]\s*)?\d+(?:\.\d+)?\s*(?:years?|months?)(?: (?:of age|old))?(?: or (?:older|younger|more|less|above|below))?|(?:年龄)?(?:至少|至多|不少于|不超过|大于|小于|超过|[≥≤])?\s*\d+(?:\.\d+)?\s*岁(?:及?以上|及?以下)?)$/iu;
+ if(!simple.test(wording.trim().replace(/[.。]+$/u,'').trim()))return null;
+ const [bound]=D.sourceConstraints(wording);
+ if(!bound?.unit)return null;
+ return {operator:({'>':'gt','>=':'gte','<':'lt','<=':'lte','=':'eq'})[bound.operator],value:Number(bound.value),unit:bound.unit};
+}
+// Unbound model questions may elicit a new rule. Only the author's wording, or
+// the direction of an explicit screening question, can establish its disposition.
+function unboundAuthorAnswer(state,issue,answer){
+ const text=answer.answer_text.trim(),question=issue.question_text||'',stated=directedWording(text);
+ const subject=question.split(/\b(?:should|must|will|can)\b/iu)[0]||question;
+ const dimensions=[
+  ['study_design',/\bstudy designs?\b|\bstudies by design\b|研究设计/iu],
+  ['population',/\b(?:populations?|participants?|patients?)\b|研究人群|研究对象/iu],
+  ['intervention',/\binterventions?\b|干预措施/iu],['comparator',/\b(?:comparators?|comparison groups?)\b|对照组/iu],
+  ['exposure',/\bexposures?\b|暴露因素/iu],['outcome',/\boutcomes?\b|结局指标/iu],
+  ['language',/\blanguages?\b|语种|语言/iu],['publication_date',/\bpublication (?:years?|dates?)\b|发表(?:年份|日期)/iu]
+ ].filter(([,pattern])=>pattern.test(subject));
+ const scope=/\b(?:eligib\w*|screening|as (?:an? )?(?:inclusion|exclusion) criteri\w*)\b|筛选|资格标准|纳排标准/iu;
+ const reporting=/\b(?:for|in|into|from) (?:the |our |a |an )?(?:(?:narrative|subgroup|sensitivity|primary|main|pooled) )?(?:analys(?:is|es)|synthesis|summary|discussion|appendix|tables?|figures?|data extraction)\b|(?:用于|写入|列入|在).{0,10}(?:分析|汇总|讨论|附录|图表)/iu;
+ const reportingQuestion=/\b(?:summari[sz]e[ds]?|presented|tabulated|extract(?:ed|ion) (?:fields?|forms?)|statistical methods?|analysis plan)\b|如何(?:汇总|呈现|分析|报告)/iu.test(question);
+ const directionInQuestion=question.match(/^\s*(?:which|what)\b[^?!.;]{1,90}?\s+(?:(?:should|must|can|will) be|are) (included|excluded)\b/iu)||
+  question.match(/^\s*(?:应当?|需要)?(纳入|排除)哪些|^\s*哪些[^？。；]{1,24}?(?:应当?|需要)(纳入|排除)/u);
+ const requested=directionInQuestion?.slice(1).find(Boolean);
+ const questionDirection=requested&&!/\b(?:not|except|unless|or)\b|不应|除外|或者/iu.test(question)?(/excluded|排除/iu.test(requested)?'exclude':'include'):null;
+ const note=/^(?:no|none|neither|nothing|yes|not applicable|no (?:additional |further )?(?:limits?|restrictions?|exclusions?|inclusions?)|无|没有|不适用)[.!。]?$/iu.test(text);
+ const direction=stated.direction||(!note&&questionDirection);
+ if(!direction||note||!scope.test(text)&&(reporting.test(text+' '+question)||reportingQuestion&&!scope.test(question))){
+  answer.issue_note=true;return;
+ }
+ if(!stated.content.trim()||/^(?:it|them|these|those|this|that|这些|上述)[.!。]?$/iu.test(stated.content)){
+  fail('SOURCE_DECISION_INCOMPLETE','update','Enter the full condition to include or exclude.');
+ }
+ const q=state.questions.find(item=>item.question_id===issue.question_id&&active(item));
+ if(!q)fail('QUESTION_NOT_FOUND','update','A new eligibility condition needs an active research question.');
+ const dimension=dimensions.length===1?dimensions[0][0]:'other',element_id=id('element');
+ // The regular answer update attaches the exact human source, validates its
+ // numeric semantics, records its decision and makes this predicate operative.
+ state.elements.push({element_id,question_id:q.question_id,dimension_id:dimension,raw_text:text,normalized_text:'',
+  structured_value:null,source_refs:[],scope_conditions:[],exceptions:[],framework_bindings:[],related_issue_ids:[],
+  source_decision_ids:[],source_rule_ids:[],semantic_role:'undecided',information_status:'missing',
+  scope_status:'unspecified',decision_status:'proposed',revision:0,active:true});
+ q.element_ids.push(element_id);
+ answer.updates=[{element_id,normalized_text:stated.content,semantic_role:'eligibility_condition',scope_status:'restricted',disposition:direction}];
+}
+function authorAnswer(state,issue,answer,option,env){
+ const text=answer.answer_text.trim(),word=key(text);
+ if(!option&&/^(?:defer|defer for now|keep pending|decide later|暂不决定|暂缓|稍后决定)$/.test(word)){answer.action='defer';return option;}
+ if(!option&&['source_scope_role','semantic_role'].includes(issue.trigger_rule_id)){
+  const id=/^(?:(?:make|use|treat) (?:this|it) (?:as )?(?:an? )?)?(?:eligibility (?:requirement|condition|criterion)|inclusion criterion|纳入条件|纳入标准)$/.test(word)?'eligibility':
+   /^(?:review focus(?: only)?|focus only|仅作为研究关注内容|仅作研究关注)$/.test(word)?'focus':null;
+  if(id)option=issue.options.find(choice=>choice.option_id===id);
+ }
+ if(option&&!option.requires_interpretation)return option;
+ if(!option&&(['source_or_relation','between_question_relation'].includes(issue.trigger_rule_id)||issue.trigger_rule_id.startsWith('fragment_relation:'))){
+  const op=/^(?:all|all groups|all conditions|all of them|together|and|全部|共同满足)$/.test(word)?'all_of':/^(?:any|any group|any condition|any one group|any of them|alternatives|or|任一|任一满足)$/.test(word)?'any_of':null;
+  const choice=issue.options.find(o=>op&&(o.logic_op===op||o.project_relation===op));
+  if(!choice)fail('UNRESOLVED_LOGIC','update','Choose the grouping that matches your decision.');
+  return choice;
+ }
+ if(issue.trigger_rule_id.startsWith('custom_definition:'))return option;
+ if(!option&&issue.trigger_rule_id==='case_sensitive_framework'){
+  const frame=env.frameworks.resolve(text).framework;
+  if(!frame)fail('FRAMEWORK_NOT_FOUND','update','Choose or enter the registered framework name, preserving its capitalisation.');
+  answer.context_updates={framework_id:frame.framework_id};return option;
+ }
+ if(!issue.element_ids.length&&issue.question_id&&/^model_(?:issue|advice):/.test(issue.trigger_rule_id)){
+  unboundAuthorAnswer(state,issue,answer);return option;
+ }
+ if(!issue.element_ids.length||issue.trigger_rule_id==='same_scope_conflict'||issue.trigger_rule_id.startsWith('ambiguous_answer_revision:')){
+  if(issue.options.length)fail('OPTION_REQUIRED','update','Select the option that matches your decision.');
+  // A project-level clarification has no eligibility predicate to rewrite.
+  answer.issue_note=true;return option;
+ }
+ const e=state.elements.find(item=>item.element_id===issue.element_ids[0]&&active(item));
+ if(!e)fail('ELEMENT_NOT_FOUND','update','This author check has changed.');
+ if(!option&&/^(?:unrestricted|no (?:age )?(?:limit|restriction)s?|any age|不限|不限制|不限年龄|年龄不限|无年龄限制|无限制|不设限制)$/.test(word)){
+  const stored=issue.options.find(o=>o.action==='unrestricted');
+  if(stored)return stored;
+  // A generic "unrestricted" applies to a dimension only when the check asks for its scope.
+  if(issue.reason_code==='MISSING_REQUIRED_DECISION'||issue.trigger_rule_id==='population_age_boundary'){
+   answer.action='unrestricted';return option;
+  }
+ }
+ const passage=option?.source_occurrence_ref;
+ const stated=passage?passageWording(passage):directedWording(text);
+ const focus=!passage&&text.match(/^(?:review focus(?: only)?|关注内容|研究关注)[:：]\s*(.+)$/isu);
+ const section=stated.direction||answer.passage_role||(focus?'focus':null);
+ const update={element_id:e.element_id};
+ // A direction answers a role or passage question. In an ordinary definition
+ // check, an instruction such as ‘Include people diagnosed by…’ adds detail
+ // to the existing rule and cannot silently replace its population or limits.
+ const setsRole=e.information_status==='missing'||issue.reason_code==='UNRESOLVED_ROLE'||
+  ['source_scope_role','semantic_role','population_age_boundary'].includes(issue.trigger_rule_id);
+ if(e.source_occurrence_pending||section&&setsRole){
+  if(!section)fail('SOURCE_DECISION_INCOMPLETE','update','Choose how to use this passage, or enter the full rule starting with Include or Exclude.');
+  if(section==='focus'){update.semantic_role='review_focus';update.scope_status='unspecified';}
+  else{update.semantic_role='eligibility_condition';update.scope_status='restricted';update.disposition=section;}
+  update.normalized_text=focus?focus[1]:stated.content;
+  update.structured_value=null;
+ }else if(issue.trigger_rule_id==='population_age_boundary'){
+  update.normalized_text=text;update.structured_value=authorAgeBound(text);
+ }else{
+  // A clarification of a definition supplements the original condition. Other
+  // restrictions and previous answers on the same element remain in the rule.
+  const previous=e.normalized_text?.trim();
+  const supplement=previous&&e.information_status!=='missing'&&(e.scope_status==='restricted'||e.semantic_role==='review_focus')&&
+   !word.includes(key(previous));
+  update.normalized_text=supplement?previous.replace(/[.。]+$/u,'')+(/[。！？，；\u3400-\u9fff]$/u.test(previous)?'。':'. ')+text:text;
+  if(e.structured_value&&D.sourceConstraints(text).length)update.structured_value=null;
+  if(e.semantic_role==='undecided'||e.role_issue||issue.trigger_rule_id==='source_scope_role'){
+   fail('OPTION_REQUIRED','update','Choose the role for this item, or enter an explicit inclusion or exclusion rule.');
+  }
+ }
+ answer.updates=[update];answer.explicit_revision=true;
+ return option;
 }
 function answerUpdate(state,q,e,update,answer,source,issue){
  const old=clone(e),value=update.structured_value===undefined?e.structured_value:clone(update.structured_value),newRef=ref(source),support=D.validate_provenance(state,answer.supporting_refs||[],q.question_id,{allowEmpty:true});
@@ -483,13 +679,35 @@ function apply_decisions(original,request,env=environment()){
   const qids=[...new Set([...issues.map(i=>i.question_id).filter(Boolean),...array(answer.question_ids)])],source=addSource(state,'human_answer',answer.answer_text,qids,null,{request_id:request.request_id,issue_ids:issueIds});
   const decision={decision_id:id('decision'),issue_ids:issueIds,source_ref:ref(source),answer_text:answer.answer_text,action:answer.action||'confirm',at:now(),revision:state.revision+1,changes:[],status:'applied'};
   const primary=issues[0];let option=null;if(answer.option_id){option=primary?.options?.find(o=>o.option_id===answer.option_id);if(!option)fail('OPTION_NOT_FOUND','update','The chosen answer option does not exist.');}
+  if(answer.author_confirmed&&!answer.from_model&&issues.length===1){
+   const groups=authorTargetGroups(state,primary);
+   if(groups.length>1&&(!option||option.requires_interpretation)){
+    const pending=groups.filter(group=>!group.every(id=>primary.answered_element_ids?.includes(id)));
+    const selected=answer.target_id==='*'?pending:answer.target_id?pending.filter(group=>group.includes(answer.target_id)):pending.length===1?pending:[];
+    if(!selected.length)fail('ANSWER_TARGET_REQUIRED','update','Choose which listed criteria this answer applies to.');
+    const updates=[];
+    for(const group of selected){
+     const part={...answer};
+     authorAnswer(state,{...primary,element_ids:group},part,option,env);
+     for(const update of part.updates||[])for(const id of group)updates.push({...update,element_id:id});
+     if(part.action)answer.action=part.action;
+     if(part.explicit_revision)answer.explicit_revision=true;
+    }
+    answer.updates=updates;
+    decision.target_element_ids=selected.flat();
+   }else option=authorAnswer(state,primary,answer,option,env);
+   decision.action=answer.action||option?.action||'confirm';
+   if(option)decision.selected_option_id=option.option_id;
+   if(answer.passage_role)decision.passage_role=answer.passage_role;
+   if(answer.issue_note)decision.changes.push({question_id:primary.question_id,clarification:answer.answer_text});
+  }
   if(primary?.trigger_rule_id?.startsWith('fragment_relation:')&&!option&&answer.action!=='defer'){
    const text=key(answer.answer_text);
    const op=['all','all groups','all conditions','all of them','together','全部','共同满足'].includes(text)?'all_of':['any','any group','any one group','any of them','alternatives','任一','任一满足'].includes(text)?'any_of':null;
    option=primary.options.find(item=>key(item.label)===text||op&&item.logic_op===op);
    if(!option)fail('UNRESOLVED_LOGIC','update','Select the grouping that should apply to these conditions.');
   }
-  if(option?.requires_interpretation&&!(option.source_occurrence_ref&&answer.from_model))fail('ANSWER_NEEDS_INTERPRETATION','update','Interpret this choice against its source before applying it.');
+  if(option?.requires_interpretation&&!(option.source_occurrence_ref&&answer.from_model)&&!(answer.author_confirmed&&!answer.from_model&&(answer.updates?.length||answer.issue_note)))fail('ANSWER_NEEDS_INTERPRETATION','update','Apply this choice to its source element before saving it.');
   if(answer.action==='defer'||option?.action==='defer'){decision.status='deferred';state.decisions.push(decision);changes.push(decision);continue;}
   if(option?.project_relation){state.question_relation=option.project_relation;state.question_relation_source=ref(source);}
   const targets=answer.updates||option?.updates||[];const rawContext=answer.context_updates||option?.context_updates,context=rawContext&&Object.keys(rawContext).length?rawContext:null;
@@ -513,7 +731,7 @@ function apply_decisions(original,request,env=environment()){
   const action=answer.action||option?.action;
   if(action==='retain_original'&&primary?.trigger_rule_id==='population_age_boundary')for(const eid of primary.element_ids){const age=state.elements.find(e=>e.element_id===eid&&active(e));const related=[age,...state.elements.filter(e=>active(e)&&e.age_boundary_element_id===eid)];for(const e of related){const old=clone(e);e.qualitative_definition_confirmed=true;e.decision_status='confirmed_by_user';e.source_refs.push(ref(source));e.source_decision_ids=[...(e.source_decision_ids||[]),decision.decision_id];e.revision++;if(e===age){e.semantic_role='background_information';e.boundary_resolution='original_wording_accepted';}decision.changes.push({element_id:e.element_id,old,new:clone(e),applied:true});}}
 
-  if(['unrestricted','not_applicable'].includes(action))for(const eid of primary?.element_ids||[])targets.push({element_id:eid,scope_status:action,normalized_text:answer.answer_text,structured_value:null});
+  if(['unrestricted','not_applicable'].includes(action))for(const eid of decision.target_element_ids||primary?.element_ids||[])targets.push({element_id:eid,scope_status:action,normalized_text:answer.answer_text,structured_value:null});
   if(!targets.length&&!option&&!context&&!decision.changes.length&&primary?.element_ids.length===1&&!answer.from_model)targets.push({element_id:primary.element_ids[0],normalized_text:answer.answer_text});
   if(!targets.length&&!option&&!context&&!decision.changes.length){
    state.issues.push({issue_id:id('issue'),signature:'unmatched|'+source.source_id,reason_code:'UNRESOLVED_ROLE',question_id:null,element_ids:[],question_text:'这条回答对应哪个问题或要素？',scope_impact:'先确认回答适用范围，再更新标准。',blocking:true,trigger_rule_id:'unmatched_human_answer',status:'open',persistent:true,created_at_revision:state.revision+1,source_refs:[ref(source)],options:state.questions.filter(active).map(q=>({option_id:q.question_id,label:q.display_number,context_updates:{answer_question_id:q.question_id}}))});decision.status='needs_mapping';
@@ -537,7 +755,13 @@ function apply_decisions(original,request,env=environment()){
    const adjusted={...answer,explicit_revision:answer.explicit_revision||option?.explicit_revision,selected_passage:passage,supporting_refs:passage?[passage.heading,D.occurrenceClause(passage)].filter(Boolean):option?.explicit_revision&&primary?.proposed_source_ref?[primary.proposed_source_ref]:answer.supporting_refs};
    const change=answerUpdate(state,q,e,update,adjusted,source,primary);allApplied=allApplied&&change.applied;decision.changes.push({element_id:e.element_id,old:change.old,new:change.new,applied:change.applied});if(change.applied){e.source_decision_ids=[...(e.source_decision_ids||[]),decision.decision_id];if(e.dimension_id==='population.age'&&e.scope_status==='unrestricted')for(const parent of state.elements.filter(p=>active(p)&&p.age_boundary_element_id===e.element_id)){const old=clone(parent);parent.normalized_text=parent.normalized_text.replace(/老年/g,'').replace(/\b(?:elderly|older)\s+(adults?|patients?|people)/gi,'$1');parent.source_refs.push(ref(source));parent.source_decision_ids=[...(parent.source_decision_ids||[]),decision.decision_id];parent.decision_status='confirmed_by_user';parent.explicit_revision=true;parent.revision++;decision.changes.push({element_id:parent.element_id,old,new:clone(parent),applied:true});}}
   }
-  if(allApplied&&decision.status==='applied')for(const issue of issues){issue.status='resolved';issue.resolved_by_decision_id=decision.decision_id;issue.resolved_at_revision=state.revision+1;}
+  if(allApplied&&decision.status==='applied')for(const issue of issues){
+   if(decision.target_element_ids){
+    issue.answered_element_ids=[...new Set([...(issue.answered_element_ids||[]),...decision.target_element_ids])];
+    if(issue.element_ids.some(id=>!issue.answered_element_ids.includes(id)))continue;
+   }
+   issue.status='resolved';issue.resolved_by_decision_id=decision.decision_id;issue.resolved_at_revision=state.revision+1;
+  }
   else if(!allApplied)decision.status='needs_confirmation';
   state.decisions.push(decision);changes.push(decision);
  }
@@ -555,5 +779,5 @@ function render_output(state,{snapshot_revision=null}={}){
  return {project_id:state.project_id,status:view.status,revision:view.revision,output_language:view.output_language||state.output_language,review_methods:view.review_methods||state.review_methods,question_relation:view.question_relation,questions:view.questions.filter(active).map(q=>({question_id:q.question_id,display_number:q.display_number,research_question:q.original_text,objective:q.review_topic||q.original_text,context:q.context,framework_mapping:q.framework_mapping,elements:es.filter(e=>e.question_id===q.question_id),include:view.criteria.filter(c=>c.question_ids.includes(q.question_id)&&c.disposition==='include'),exclude:view.criteria.filter(c=>c.question_ids.includes(q.question_id)&&c.disposition==='exclude'),logic:view.logic?.questions[q.question_id],logic_text:expression_text(view.logic?.questions[q.question_id]?.eligibility,view.criteria,view.output_language||state.output_language),focus:es.filter(e=>e.question_id===q.question_id&&e.semantic_role==='review_focus'),unrestricted:es.filter(e=>e.question_id===q.question_id&&e.scope_status==='unrestricted'),unspecified:es.filter(e=>e.question_id===q.question_id&&e.scope_status==='unspecified'),no_independent_exclusions:!view.criteria.some(c=>c.question_ids.includes(q.question_id)&&c.disposition==='exclude')})),issues:snap?(snap.issues||[]).filter(i=>i.status==='open'):state.issues.filter(i=>i.status==='open'),decisions:state.decisions.filter(d=>!snap||snap.decision_ids.includes(d.decision_id)),sources:state.sources,validation:view.validation,changes:state.changes.filter(c=>c.revision<=view.revision),config_versions:view.config_versions};
 }
 function render_text(state,options={}){const out=render_output(state,options),zh=out.output_language.startsWith('zh'),lines=[(zh?'纳入与排除标准':'Eligibility criteria')+' — v'+out.revision+' — '+out.status];for(const q of out.questions){lines.push('\n'+q.display_number+' '+q.objective,(zh?'框架：':'Framework: ')+(q.framework_mapping?.display_name||'待确定'),zh?'纳入标准':'Inclusion');q.include.forEach(c=>lines.push('- '+c.text));lines.push(zh?'排除标准':'Exclusion');q.exclude.forEach(c=>lines.push('- '+c.text));if(q.no_independent_exclusions)lines.push(zh?'无独立排除条款；资格范围由现有纳入条件确定。':'No independent exclusion clauses; eligibility is determined by the inclusion conditions.');if(q.logic_text)lines.push((zh?'逻辑关系：':'Logic: ')+q.logic_text);if(q.focus.length)lines.push((zh?'研究关注内容：':'Review focus: ')+q.focus.map(e=>e.normalized_text).join('；'));if(q.unrestricted.length)lines.push((zh?'明确不限：':'Explicitly unrestricted: ')+q.unrestricted.map(e=>e.dimension_id).join(', '));lines.push((zh?'未设定的非必要限制：':'Unspecified optional limits: ')+q.unspecified.filter(e=>OPTIONAL.includes(e.dimension_id)).map(e=>e.dimension_id).join(', '));}if(out.issues.some(i=>i.blocking))lines.push(zh?'此版本为草案，仍有必要事项待确认。':'Draft: required decisions remain unresolved.');return lines.join('\n');}
-return {VERSION:'eligibility-v3.2.0',environment,create_project,save_input,addSource,ref,extraction_payload,resolve_review_context,ingest_candidates,detect_clarification_issues,apply_decisions,edit_context,register_framework,build_criteria,validate_criteria,render_output,render_text,expression_text,rebuild,accepted,guard,SourceStore:{add:addSource,get:D.sourceAt,locate:D.locate},ProvenanceValidator:{validate:D.validate_provenance},ElementNormalizer:{validate:D.check_semantics},CriteriaBuilder:{build:build_criteria},CriteriaValidator:{validate:validate_criteria},DecisionApplier:{apply:apply_decisions}};
+return {VERSION:'eligibility-v3.2.0',environment,create_project,save_input,addSource,ref,extraction_payload,resolve_review_context,ingest_candidates,detect_clarification_issues,authorTargetGroups,passageWording,apply_decisions,edit_context,register_framework,build_criteria,validate_criteria,render_output,render_text,expression_text,rebuild,accepted,guard,SourceStore:{add:addSource,get:D.sourceAt,locate:D.locate},ProvenanceValidator:{validate:D.validate_provenance},ElementNormalizer:{validate:D.check_semantics},CriteriaBuilder:{build:build_criteria},CriteriaValidator:{validate:validate_criteria},DecisionApplier:{apply:apply_decisions}};
 });

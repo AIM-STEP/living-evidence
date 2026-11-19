@@ -29,7 +29,17 @@ const {setup}=require('../../tools/test_eligibility_grounding.cjs');
  assertApplied(await decide(exact,null),exact);
  assertApplied(await decide(option.label,null,option.option_id),option.label);
 
- // A normal, unstructured paraphrase of a supported stored option.
+ const unused={async request(){assert.fail('An author confirmation must not call a model.');}};
+ const written='Include supervised exercise for adults.';
+ const direct=(await decide(written,unused)).project;
+ const decision=direct.decisions.at(-1);
+ assert.deepEqual(decision.issue_ids,[issue.issue_id]);
+ assert.equal(decision.answer_text,written);
+ assert(direct.sources.some(s=>s.source_id===decision.source_ref.source_id&&s.source_type==='human_answer'&&s.original_text===written));
+ assert.equal(direct.issues.find(i=>i.issue_id===issue.issue_id).status,'resolved');
+ await assert.rejects(decide(written,unused,'unavailable'),{code:'OPTION_NOT_FOUND'});
+
+ // The separately callable interpretation API still validates stored-option replies.
  const input='Make this an eligibility requirement.';
  const choice={issue_ids:[issue.issue_id],option_id:option.option_id,answer_text:input};
  const metadata={provider:'typesafe',review:{version:'eligibility-answer-v1',route:'stored_option'}};
@@ -43,12 +53,13 @@ const {setup}=require('../../tools/test_eligibility_grounding.cjs');
  }
  const base='http://localhost/api/eligibility';
  const headless=M.client({base,fetch:respond});
- assertApplied(await decide(input,headless),input);
+ const interpret=async client=>({project:E.apply_decisions(project,await M.parse_answers(project,input,[issue.issue_id],client)).state});
+ assertApplied(await interpret(headless),input);
  assert.deepEqual(calls,[base+'/model']);
  assert.equal(headless.exchanges[0].hybrid_review.route,'stored_option');
  const page=setup();page.api.transport(respond);
  const browser=page.api.progressClient({provider:'backend',base,auditTrail:[]});
- assertApplied(await decide(input,browser),input);
+ assertApplied(await interpret(browser),input);
  assert.equal(browser.exchanges[0].hybridReview.route,'stored_option');
  assert.equal(calls.length,2);
 
@@ -62,13 +73,5 @@ const {setup}=require('../../tools/test_eligibility_grounding.cjs');
   [{...choice,updates:[]},metadata]
  ])await assert.rejects(attempt(answer,meta),e=>e.code==='MODEL_SCHEMA_ERROR');
 
- const modified=structuredClone(project);
- modified.issues.find(i=>i.issue_id===issue.issue_id).options.push({...option,option_id:'another',requires_interpretation:true});
- values.set(service.keys.project,JSON.stringify(modified));
- const sentinel=new Error('local interpretation required');
- const fallback={async request(){throw sentinel}};
- for(const input of [option.label,option.label.toLowerCase(),option.label+' except for adolescents']){
-  await assert.rejects(decide(input,fallback),e=>e===sentinel);
- }
- console.log('PASS: exact answers and clicks need zero calls, authenticated Jev choices use stored effects in both clients, and ambiguous or invalid options cannot bypass interpretation.');
+ console.log('PASS: direct author confirmations preserve their source, and the standalone interpretation API validates authenticated option choices in both clients.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

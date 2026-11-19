@@ -14,7 +14,7 @@ const options=['Use the assessment specified by each study','Use a validated scr
 const issue=(question_text,element_candidate_ids,options=[])=>({question_text,element_candidate_ids,options,scope_impact:'Defines the eligible population.',reason_code:'AMBIGUOUS_MEANING'});
 const response={questions:[{question_id:q.question_id,framework_candidates:[],elements:[element('first',source),element('second',note)],logic:{op:'any_of',children:[{op:'predicate',element_id:'first'},{op:'predicate',element_id:'second'}]},issues:[
  issue(risk,['first'],[options[0]]),
- issue('What assessment tool should be used to define nutritional risk?',['second'],[options[1]]),
+ {...issue('What assessment tool should be used to define nutritional risk?',['second'],[options[1]]),scope_impact:'Changes which patients can enter the review.'},
  issue(diagnosis,['first'])
 ]}]};
 const calls={},originals={};let generated;
@@ -47,6 +47,47 @@ old.signature=[q.question_id,old.reason_code,old.trigger_rule_id,old.element_ids
 E.rebuild(copy);
 assert.equal(opened(copy).length,1,'Existing author answers stay resolved when upgrading saved issue IDs.');
 assert.equal(copy.issues.find(i=>i.issue_id===old.issue_id).resolved_by_decision_id,after.decisions.at(-1).decision_id);
+const previous=structuredClone(after),answered=previous.issues.find(i=>i.issue_id===clarification.issue_id);
+const previousScope=[...new Set(answered.element_ids.map(id=>previous.elements.find(e=>e.element_id===id).source_decision_target.key))].sort();
+answered.scope_impact='Older description of how inclusion changes.';
+const oldIdentity=JSON.stringify(['what assessment define nutritional risk',D.key(answered.scope_impact),previousScope,false]);
+answered.trigger_rule_id='model_issue:'+D.stableId('decision',oldIdentity);
+answered.signature=[q.question_id,answered.reason_code,answered.trigger_rule_id,answered.element_ids.slice().sort().join(',')].join('|');
+E.rebuild(previous);
+assert.deepEqual(opened(previous).map(i=>i.question_text),[diagnosis],'A saved hashed ID stays resolved when a later extraction paraphrases its impact.');
+
+const explicitText='Adults with COPD or asthma aged at least 65 years receive exercise. Outcomes: pneumonia. We will use network meta-analysis.';
+const explicit=E.save_input(E.create_project('stated-criteria'),{research_question:explicitText,question_framework:'PICO',output_language:'en'}).state;
+const explicitQ=explicit.questions[0],explicitSource=D.sourceAt(explicit,explicitQ.source_refs[0]);
+const stated=(candidate_id,dimension_id,quote,extra={})=>({...response.questions[0].elements[0],candidate_id,dimension_id,normalized_text:quote,source_refs:[E.ref(explicitSource,quote)],...extra});
+const focus={semantic_role:'review_focus',scope_status:'unspecified',disposition:null};
+const noise=[
+ issue('What minimum age defines older adults?',['age']),
+ issue('What tool should measure pneumonia?',['outcome']),
+ issue('Which model should be used for network meta-analysis?',['plan']),
+ {...issue('Should there be a language restriction?',['population']),reason_code:'MISSING_REQUIRED_DECISION'},
+ {...issue('Are there any publication date restrictions?',['population']),reason_code:'MISSING_REQUIRED_DECISION'},
+];
+const direct={question_id:explicitQ.question_id,framework_candidates:[],elements:[
+ stated('population','population','Adults with COPD or asthma'),stated('age','population.age','aged at least 65 years',{structured_value:{operator:'gte',value:65,unit:'year'}}),
+ stated('intervention','intervention','exercise'),stated('outcome','outcome','pneumonia',focus),stated('plan','analysis_method','network meta-analysis',focus)
+],issues:noise,logic:{op:'all_of',children:['population','age','intervention'].map(element_id=>({op:'predicate',element_id}))}};
+const clearResult=E.ingest_candidates(explicit,{questions:[direct]}).state;
+assert.deepEqual(opened(clearResult).map(i=>i.question_text),[],'A stated minimum age, internal population alternatives and analysis details need no author decision.');
+assert(clearResult.criteria.some(c=>c.text==='Adults with COPD or asthma'));
+assert.equal(clearResult.elements.find(e=>e.dimension_id==='language').scope_status,'unspecified');
+const mixed=structuredClone(direct);
+mixed.elements[0].normalized_text='Adults with COPD';
+mixed.issues.push(issue('Should a mixed-age sample qualify?',['age']));
+const retained=opened(E.ingest_candidates(explicit,{questions:[mixed]}).state);
+assert(retained.some(i=>i.trigger_rule_id==='source_or_relation'),'An alternative lost from the predicate still requires clarification.');
+assert(retained.some(i=>i.question_text==='Should a mixed-age sample qualify?'),'An explicit threshold cannot decide the scope for a mixed-age sample.');
+const withNote=structuredClone(explicit);
+// Source conditions in additional notes must also protect a genuine language decision.
+const noteSource={...explicitSource,source_id:'language-note',source_type:'additional_requirement',original_text:'Languages of publication will depend on translation availability.'};
+withNote.sources.push(noteSource);
+withNote.questions[0].additional_source_refs.push(E.ref(noteSource));
+assert(opened(E.ingest_candidates(withNote,{questions:[direct]}).state).some(i=>i.question_text==='Should there be a language restriction?'));
 
 const ageText='Age at least 80 years. Age below 50 years.';
 const boundsState=E.save_input(E.create_project('alternative-bounds'),{research_question:ageText,question_framework:'PICO',output_language:'en'}).state;
@@ -88,15 +129,31 @@ assert(JSON.parse(t.storage.get(steps)).includes(1),'An optional suggestion does
  const service=await B.create({projectId:'confirmations',storage,baseURL:'http://localhost/',frameworkConfig:require('../../config/eligibility-frameworks.json'),profileConfig:require('../../config/eligibility-review-profiles.json')});
  values.set(service.keys.project,JSON.stringify(generated));
  const option=clarification.options[0];
- const adapter=issueId=>({async request(step,project,payload){
-  assert.equal(step,'interpret_human_answer');
-  assert.equal(payload.answer_text,option.label);
-  assert.equal(payload.selected_option_id,option.option_id);
-  return {answers:[{issue_ids:[issueId],action:'confirm',updates:[{element_id:clarification.element_ids[0],normalized_text:wording}]}]};
- }});
- const decide=modelClient=>service.decide({issue_id:clarification.issue_id,option_id:option.option_id,modelClient});
- const chosen=await decide(adapter(clarification.issue_id));
+ const modelClient={async request(){assert.fail('A suggested choice must save without a model call.');}};
+ const chosen=await service.decide({issue_id:clarification.issue_id,option_id:option.option_id,modelClient});
  assert.deepEqual(opened(chosen.project).map(issue=>issue.question_text),[diagnosis]);
- await assert.rejects(decide(adapter(opened(after)[0].issue_id)),error=>error.code==='ISSUE_TARGET_MISMATCH');
+ const decision=chosen.project.decisions.at(-1);
+ assert.deepEqual(decision.issue_ids,[clarification.issue_id]);
+ assert.equal(decision.answer_text,option.label);
+ assert.equal(D.sourceAt(chosen.project,decision.source_ref).original_text,option.label);
+ values.set(service.keys.project,JSON.stringify(chosen.project));
+ const diagnosisIssue=opened(chosen.project)[0];
+ const diagnosisAnswer='Include people diagnosed using the Global Leadership Initiative on Malnutrition criteria.';
+ const completed=(await service.decide({issue_id:diagnosisIssue.issue_id,answer_text:diagnosisAnswer,modelClient})).project;
+ assert.deepEqual(opened(completed),[]);
+ const population=completed.elements.find(e=>e.element_id===diagnosisIssue.element_ids[0]);
+ assert(population.normalized_text.includes(wording));
+ assert(population.normalized_text.includes(option.label),'The earlier risk definition survives the subsequent diagnosis answer.');
+ assert(population.normalized_text.includes(diagnosisAnswer));
+ const sources=population.source_refs.map(ref=>D.sourceAt(completed,ref)).filter(s=>s.source_type==='human_answer');
+ assert(sources.some(s=>s.original_text===option.label)&&sources.some(s=>s.original_text===diagnosisAnswer));
+ const regenerated=E.ingest_candidates(completed,response).state;
+ assert(!B.projectToClassic(regenerated).sourceConfirmations.some(c=>[risk,diagnosis].includes(c.text)));
+ assert(regenerated.elements.some(e=>e.active!==false&&e.normalized_text?.includes(option.label)&&e.normalized_text.includes(diagnosisAnswer)));
+ const exception='Exclude people without a confirmed clinical diagnosis.';
+ const excepted=(await service.decide({issue_id:diagnosisIssue.issue_id,answer_text:exception,modelClient})).project;
+ const retained=excepted.elements.find(e=>e.element_id===diagnosisIssue.element_ids[0]);
+ assert.equal(retained.disposition,'include','A narrower exception must not reverse the entire population rule.');
+ assert(retained.normalized_text.includes(wording)&&retained.normalized_text.includes(option.label)&&retained.normalized_text.includes(exception));
  console.log('PASS: distinct and merged human decisions, source bindings, selected answer application, pending navigation and cross-branch bounds.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

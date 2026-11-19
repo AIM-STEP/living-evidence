@@ -14,7 +14,6 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
     issues:[{reason_code:'AMBIGUOUS_MEANING',question_text:'Which assessment defines nutritional risk?',scope_impact:'Defines the intended population.',element_candidate_ids:['p']}],
     logic:{op:'all_of',children:[{op:'predicate',element_id:'p'},{op:'predicate',element_id:'i'},{op:'any_of',children:[{op:'predicate',element_id:'c1'},{op:'predicate',element_id:'c2'}]}]}}]};
   }else if(envelope.step==='review_normalization')result={items:payload.items.map(item=>({id:item.id,status:'supported',reason:'Simulated source review',issue_type:'none',information_status:item.information_status,semantic_role:item.semantic_role,scope_status:item.scope_status,disposition:item.disposition}))};
-  else if(envelope.step==='interpret_human_answer')result={answers:[{issue_ids:[payload.issues[0].issue_id],answer_text:payload.answer_text,action:'confirm',updates:[{element_id:payload.issues[0].element_ids[0],structured_value:{operator:'gte',value:65,unit:'year'}}]}]};
   else throw Error('Unexpected step');
   return {ok:true,json:async()=>({message:{content:JSON.stringify(result)},model:'Simulated'})};
  });
@@ -35,21 +34,66 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
  assert(xml.indexOf(risk)<xml.indexOf('>Intervention<'),'Word places the question inside the affected row');
  assert(xml.lastIndexOf('</w:p>')>xml.indexOf('>Description<'));assert.equal(xml.slice(xml.indexOf('>Description<')).match(/<w:p>/g).length,1,'Only the Description paragraph follows its heading');
  const savedChecks=state.machineRefinement.sourceConfirmations;
- const placed=structuredClone(savedChecks[0]);placed.text='Linked question';placed.locations=[
-  {domain:'Framework',section:'framework'},{domain:'Outcomes',section:'focus',subject:'outcome of interest'},
-  {domain:'Unused group',section:'exclude',subject:'Source eligibility wording'}];
+ const targets=[{id:'p',label:'Population & setting'},{id:'o',label:'Outcomes'}];
+ const placed=structuredClone(savedChecks[0]);placed.text='Linked question';placed.answerTargets=targets;placed.locations=[
+  {domain:'Framework',section:'framework'},{domain:'Outcomes',section:'focus',subject:'outcome of interest',targetId:'o'},
+  {domain:'Unused group',section:'exclude',subject:'Source eligibility wording',targetId:'p'}];
  const sameDomain=structuredClone(savedChecks[0]);sameDomain.text='Second rule question';
  populationRow.include.push('Second population rule.');
  sameDomain.locations=[{domain:'Population',section:'include',rule:'Second population rule.'}];
  state.machineRefinement.sourceConfirmations=[placed,sameDomain];
  t.api.fill();const routed=t.el('preview').innerHTML;
  assert.equal(routed.split('Linked question').length-1,3,'Cross-element checks must appear at each affected location');
+ const scopes=[...routed.matchAll(/Linked question<\/p>[\s\S]*?<select data-source-target="0">([^]*?)<\/select>/g)].map(match=>match[1]);
+ assert.equal(scopes.length,3);
+ assert(scopes.every(scope=>scope.includes('Population &amp; setting')&&scope.includes('<option value="*">All listed criteria</option>')));
+ assert.equal(scopes.filter(scope=>!scope.includes(' selected')).length,1,'A shared location must start with no target');
+ assert.equal(scopes.filter(scope=>scope.includes('value="p" selected')).length,1);
+ assert.equal(scopes.filter(scope=>scope.includes('value="o" selected')).length,1);
  assert(routed.indexOf('>Framework:</strong>')<routed.indexOf('Linked question',routed.indexOf('>Framework:</strong>'))&&routed.indexOf('Linked question',routed.indexOf('>Framework:</strong>'))<routed.indexOf('>Inclusion</h3>'));
  assert(routed.indexOf('Second population rule.')<routed.indexOf('Second rule question')&&routed.indexOf('Second rule question')<routed.indexOf('>Intervention:</strong>'));
  assert(routed.indexOf('>Exclusion</h3>')<routed.indexOf('Unused group'));assert(!routed.includes('Outcomes · Review focus'));assert(routed.includes('outcome of interest')&&routed.indexOf('outcome of interest')<routed.indexOf('>Framework:</strong>'));
  state.machineRefinement.sourceConfirmations=savedChecks;populationRow.include.pop();t.api.fill();
  assert(checks.some(c=>c.text.includes('age boundary')));assert(t.el('preview').innerHTML.includes('data-source-answer='),'Unresolved questions need a working answer field');
+ t.api.denyModelAccess();
  const ageIndex=checks.findIndex(c=>c.text.includes('age boundary'));t.ctx.document.querySelector=()=>({value:'65 years or older',focus(){}});
+ // Exercise the actual row's option and Apply handlers independently of the engine target validator.
+ for(const [choice,selection] of [[0,'p'],['answer','*']]){
+  const scoped=setup(new Map(t.storage)),requests=[];
+  scoped.ctx.window.AIMSTEPEligibilityEngine=E;
+  scoped.ctx.window.AIMSTEPEligibilityBackground={...B,create:async options=>{
+   const service=await t.ctx.window.AIMSTEPEligibilityBackground.create(options);
+   return {...service,decide({target_id,...request}){requests.push({target_id,...request});return service.decide(request);}};
+  }};
+  scoped.api.denyModelAccess();
+  const localIssue=scoped.api.state().machineRefinement.sourceConfirmations[ageIndex];
+  localIssue.answerTargets=targets;
+  const selector={value:'',focus(){this.focused=true;}},field={value:'65 years or older'};
+  const form={querySelector:key=>key==='[data-source-target]'?selector:field};
+  const button={dataset:{sourceConfirm:String(ageIndex),sourceOption:String(choice)},closest:()=>form};
+  const click=()=>scoped.el('preview').handlers.click({target:{closest:()=>button}});
+  assert.equal(await click(),false);assert(selector.focused);assert.equal(requests.length,0);
+  selector.value=selection;
+  const saved=click();
+  selector.value='o';field.value='changed after submission';
+  assert(await saved,scoped.el('generation-status').textContent);assert.equal(requests.length,1);
+  assert.equal(requests[0].target_id,selection);assert.equal(requests[0].issue_id,localIssue.issue_id);
+  assert.equal(requests[0].answer_text,choice==='answer'?'65 years or older':localIssue.options[0].label);
+ }
+ // Submit two independent checks before the local service finishes initialising.
+ const queued=setup(new Map(t.storage));
+ queued.ctx.window.AIMSTEPEligibilityEngine=E;
+ queued.ctx.window.AIMSTEPEligibilityBackground=t.ctx.window.AIMSTEPEligibilityBackground;
+ queued.api.denyModelAccess();
+ const riskIndex=checks.findIndex(c=>c.text.includes(risk));
+ const ageAnswer='65 years or older',riskAnswer='Use the Mini Nutritional Assessment.';
+ const ageField={value:ageAnswer},riskField={value:riskAnswer};
+ const both=[queued.api.confirm(ageIndex,'answer',ageField),queued.api.confirm(riskIndex,'answer',riskField)];
+ ageField.value=riskField.value='Changed after submission';
+ assert.deepEqual(await Promise.all(both),[true,true],queued.el('generation-status').textContent);
+ const projectAfterBoth=JSON.parse(queued.storage.get('aimstep-eligibility-v3:synthetic-grounding'));
+ assert.deepEqual(projectAfterBoth.decisions.slice(-2).map(d=>[d.issue_ids[0],d.answer_text]),[[checks[ageIndex].issue_id,ageAnswer],[checks[riskIndex].issue_id,riskAnswer]]);
+ assert(!queued.api.state().machineRefinement.sourceConfirmations.some(c=>[checks[riskIndex].issue_id,checks[ageIndex].issue_id].includes(c.issue_id)));
  assert(await t.api.confirm(ageIndex,'answer'),t.el('generation-status').textContent);state=t.api.state();
  assert(state.machineCriteria.some(r=>r.condition.includes('65')),'A real author answer must update the criteria');
  assert(state.machineRefinement.sourceConfirmations.some(c=>c.text.includes('Which assessment defines nutritional risk?')),'Unanswered questions must remain pending');

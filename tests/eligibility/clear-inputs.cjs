@@ -60,12 +60,27 @@ function page(storage){
   assert(reload.el('preview').innerHTML.toLowerCase().includes(row.condition),'Criteria remain visible on reload under their original source');
   assert(store.has('aimstep-eligibility-summary:'+project));
  }
- const t=page(new Map([[key,JSON.stringify(old)]])),state=t.api.state();
- state.machineRefinement={signature:t.api.signature(state.question,state.reviewType,0,state.machineCriteria),sourceConfirmations:[{backgroundIssue:true,issue_id:'issue',options:[{option_id:'keep',label:'Keep'}]}]};
- let started,finish;
- const reviewing=new Promise(resolve=>{started=resolve;});
- t.ctx.window.AIMSTEPEligibilityBackground={create:async()=>({decide(){started();return new Promise((_,reject)=>{finish=reject;});}})};
- const answer=t.api.confirm(0,0);await reviewing;t.el('clear-criteria').handlers.click();finish(Error('Stale review rejected'));assert.equal(await answer,false);assert.equal(t.api.state().question,old.question);assert(!JSON.stringify(t.api.state()).includes('previous patient group'));
+ for(const action of ['clear','generate']){
+  const t=page(new Map([[key,JSON.stringify(old)]])),state=t.api.state();
+  const checks=['first','second'].map(issue_id=>({backgroundIssue:true,issue_id,options:[{option_id:'keep',label:'Keep'}]}));
+  state.machineRefinement={signature:t.api.signature(state.question,state.reviewType,0,state.machineCriteria),rows:[],sourceConfirmations:checks};
+  const submitted=[];
+  let started,finish;
+  const reviewing=new Promise(resolve=>{started=resolve;});
+  t.ctx.window.AIMSTEPEligibilityBackground={create:async()=>({
+   decide(request){submitted.push(request.issue_id);started();return new Promise((_,reject)=>{finish=reject;});},
+   generate(){throw Error('End of simulated generation');}
+  })};
+  t.api.transport(()=>{throw Error('Unexpected model request');});
+  const first=t.api.confirm(0,0),second=t.api.confirm(1,0);
+  await reviewing;
+  if(action==='clear')t.el('clear-criteria').handlers.click();
+  else await t.el('start-machine').handlers.click();
+  finish(Error('Late decision rejected'));
+  assert.deepEqual(await Promise.all([first,second]),[false,false]);
+  assert.deepEqual(submitted,['first']);
+  if(action==='clear'){assert.equal(t.api.state().question,old.question);assert(!JSON.stringify(t.api.state()).includes('previous patient group'));}
+ }
  const independent={source:'upload',criteriaSnapshot:{rows:[row]},concepts:[{sourceRule:'independently uploaded'}]};assert.strictEqual(library.stripLinkedSearchCriteria(independent),independent);
  console.log('PASS: Criteria Clear retains only the current question, independent question Clear preserves drafts and attachments, and late work cannot restore cleared criteria');
 })().catch(error=>{console.error(error.stack);process.exitCode=1});

@@ -12,6 +12,8 @@ function setup(initialStorage=new Map()){
  const code=source.replace('// Reuse this exact manual editor',`globalThis.testAPI={progressClient:backgroundModelClient,validate:validateAcademicDraft,extract:processExtracts,segments:sourceSegments,pipeline:autoCriteriaPipeline,state:()=>state,fill,pending:currentPending,normalized:standardizedCriteria,signature:machineSourceSignature,confirm:confirmSourceRule,sourceConfirmation,mergeConfirmations:mergeSourceConfirmations,topic:summaryTopic,validTopic:validatedReviewTopic,normalize:normalizeMachineCriteria,suggest:applyScopeSuggestion,normalizeSuggestions:normalizeScopeSuggestions,export:criteriaWordFile,sourceImages:originalMachineSources,navigate:saveBeforeToolNavigation,
   transport(fn){localFetch=fn;resolveLocalModel=async()=>({name:'Synthetic model',provider:'ollama',base:'http://synthetic.invalid',slot:'synthetic'});},
   manualInput(input){prepareSources=async()=>input;},
+  readSources:prepareSources,resolveModel:resolveLocalModel,
+  denyModelAccess(){localFetch=resolveLocalModel=()=>{throw Error('Unexpected model access');};},
   declineAll(){reviewCriteriaRules=async(m,items)=>new Map(items.map(item=>[item.id,{status:'uncertain',reason:'Needs author clarification.'}]));}
  };\n// Reuse this exact manual editor`);
  vm.runInNewContext(code,ctx);return {api:ctx.testAPI,el,ctx,storage};

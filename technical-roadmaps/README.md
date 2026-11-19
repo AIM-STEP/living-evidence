@@ -6,7 +6,6 @@
 
 | 模块 | 日期 | 内容 | 在线查看 |
 |---|---|---|---|
-| [Eligibility criteria](eligibility-criteria/2026-11-16/README.md) | 2026-11-16 | 输入、原子规则与证据、人工澄清、标准库与下游交接；四张图 | [打开四张图](https://aimsetp.com/eligibility-criteria-flowcharts.html) |
 | [Search strategy](search-strategy/2026-11-16/README.md) | 2026-11-16 | 标准和种子、词汇扩展、Boolean编译、检索与保存；四张图 | [打开四张图](https://aimsetp.com/search-strategy-flowcharts.html) |
 | [Screening source](screening-source/2026-11-16/README.md) | 2026-11-16 | 完整数据流、报告级去重、同研究多报告关联、同步导出及 Pilot 交接 | [打开四张图](https://aimsetp.com/screening-source-flowcharts.html) |
 | [Pilot screening](pilot-screening/2026-11-16/README.md) | 2026-11-16 | 配置与 Prompt、抽样与执行、反馈学习与批准；三张详细图 | [打开图 1–3](https://aimsetp.com/pilot-main-screening-flowcharts.html#01-pilot-configuration) |

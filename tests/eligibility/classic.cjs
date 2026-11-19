@@ -10,10 +10,9 @@ assert(!html.includes('AIMSTEPEligibilityWorkspace.mount'));assert(!html.include
  const waitingLabel={textContent:''};t.el('criteria-progress').querySelector=()=>waitingLabel;
  const timers=new Map();let timerId=0;t.ctx.setTimeout=(fn,ms)=>{const id=++timerId;if(ms===1000)timers.set(id,fn);return id;};t.ctx.clearTimeout=id=>timers.delete(id);
  t.api.transport(async(url,options)=>{const body=JSON.parse(options.body),payload=JSON.parse(body.messages[1].content);steps.push(payload.step);let answer;
-  assert.equal(payload.output_language,'en');if(payload.step!=='interpret_human_answer'){assert(t.el('generation-status').hidden,'Source extraction detail stays in the background');assert.equal(t.el('criteria-progress').hidden,false);assert.match(waitingLabel.textContent,/^\d+%$/);assert.equal(t.el('criteria-working').hidden,false);assert.match(t.el('criteria-elapsed').textContent,/^\d+:\d{2}$/);}
+  assert.equal(payload.output_language,'en');assert(t.el('generation-status').hidden,'Source extraction detail stays in the background');assert.equal(t.el('criteria-progress').hidden,false);assert.match(waitingLabel.textContent,/^\d+%$/);assert.equal(t.el('criteria-working').hidden,false);assert.match(t.el('criteria-elapsed').textContent,/^\d+:\d{2}$/);
   if(payload.step==='extract_elements'){const q=payload.payload.question,source=q.sources.find(s=>s.input_kind==='research_question');answer={questions:[{question_id:q.question_id,review_topic:'This review examines exercise in older patients.',framework_candidates:[{framework_id:'pico',basis:'SIMULATED'}],elements:[['p','population','older patients'],['i','intervention','exercise'],['x','study_design','animal studies']].map(([id,dimension,quote])=>({candidate_id:id,dimension_id:dimension,normalized_text:quote,structured_value:null,source_refs:[{source_id:source.source_id,source_revision:source.revision,quote}],semantic_role:'eligibility_condition',information_status:'explicit',scope_status:'restricted',disposition:id==='x'?'exclude':'include'})),logic:{op:'all_of',children:[{op:'predicate',element_id:'p'},{op:'predicate',element_id:'i'}]},issues:[]}]};}
   else if(payload.step==='review_normalization')answer={items:payload.payload.items.map(item=>({id:item.id,status:'supported',reason:'SIMULATED',issue_type:'none',information_status:item.information_status,semantic_role:item.semantic_role,scope_status:item.scope_status,disposition:item.disposition}))};
-  else if(payload.step==='interpret_human_answer'){const issue=payload.payload.issues[0];answer={answers:[{issue_ids:[issue.issue_id],answer_text:payload.payload.answer_text,action:'confirm',updates:[{element_id:issue.element_ids[0],structured_value:{operator:'gte',value:65,unit:'year'}}]}]};}
   else throw Error('Unexpected call '+payload.step);
   return {ok:true,json:async()=>({message:{content:JSON.stringify(answer)},model:'SIMULATED'})};
  });
@@ -39,9 +38,23 @@ assert(!html.includes('AIMSTEPEligibilityWorkspace.mount'));assert(!html.include
   if(changeRule)assert.equal(refreshed,null,'Never restore a snapshot over revised eligibility criteria');
   else assert(refreshed.classic.sourceConfirmations.some(c=>c.issue_id===state.machineRefinement.sourceConfirmations[0].issue_id),'Restore the original pending issue after a prose-only edit');
  }
+ const choicePage=setup(new Map(t.storage));
+ choicePage.ctx.window.AIMSTEPEligibilityEngine=E;
+ choicePage.ctx.window.AIMSTEPEligibilityBackground=t.ctx.window.AIMSTEPEligibilityBackground;
+ choicePage.api.denyModelAccess();
+ const options=state.machineRefinement.sourceConfirmations[0].options;
+ const retain=options.findIndex(o=>o.option_id==='retain_original');assert(retain>=0);
+ const optionButton={dataset:{sourceConfirm:'0',sourceOption:String(retain)},closest:()=>null};
+ const choose=()=>choicePage.el('preview').handlers.click({target:{closest:()=>optionButton}});
+ assert.deepEqual(await Promise.all([choose(),choose()]),[true,false],'A repeated click saves the first decision once');
+ const chosen=JSON.parse(choicePage.storage.get('aimstep-eligibility-v3:synthetic-grounding'));
+ assert.equal(chosen.decisions.length,core.decisions.length+1);
+ assert.equal(chosen.decisions.at(-1).answer_text,options[retain].label);
+ assert(!choicePage.el('preview').innerHTML.includes('Author check:'));
+ t.api.denyModelAccess();
  const issue=state.machineRefinement.sourceConfirmations[0];assert.equal(issue.options.length,2);t.ctx.document.querySelector=()=>({value:'Define older participants as 65 years or older.'});assert(await t.api.confirm(0,'answer'));
  state=t.api.state();core=JSON.parse(t.storage.get('aimstep-eligibility-v3:synthetic-grounding'));assert.equal(core.status,'final');assert(state.machineCriteria.some(row=>row.condition.includes('65')));assert(t.el('preview').innerHTML.includes('65'));assert(!t.el('preview').innerHTML.includes('Author check:'));assert(core.decisions.some(d=>d.answer_text.includes('65')));assert(core.sources.some(s=>s.source_type==='human_answer'));
- assert.equal(timers.size,0,'Wait counters must stop after each response');assert(steps.includes('extract_elements'));assert(steps.includes('review_normalization'));assert(steps.includes('interpret_human_answer'));assert(!steps.includes(undefined));
+ assert.equal(timers.size,0,'Wait counters must stop after each response');assert(steps.includes('extract_elements'));assert(steps.includes('review_normalization'));assert(!steps.includes('interpret_human_answer'));assert(!steps.includes(undefined));
  const reloaded=setup(t.storage);assert(reloaded.el('preview').innerHTML.includes('65'));assert(!reloaded.el('preview').innerHTML.includes('v3-panel'));
  const service=await B.create({projectId:'synthetic-grounding',storage:t.ctx.localStorage,frameworkConfig:frameworks,profileConfig:profiles,baseURL:'http://localhost/'}),before=t.api.state(),edited=structuredClone(before);edited.machineCriteria[0].condition+=' Author revision.';
  const revision=service.recordEdit(before,edited);assert(revision);service.transaction(revision,()=>t.ctx.localStorage.setItem(service.keys.legacy,JSON.stringify(edited)));assert.equal(service.current().status,'input_saved');assert(service.current().decisions.at(-1).action==='classic_author_revision');

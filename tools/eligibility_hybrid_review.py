@@ -11,7 +11,7 @@ import time
 from eligibility_transport import OutputSyntaxError
 import typesafe_model as ts
 
-VERSION = 'eligibility-hybrid-v4'
+VERSION = 'eligibility-hybrid-v5'
 TASK = 'eligibility-review-v1'
 MIN_CONFIDENCE = .95
 TIMEOUT = 20
@@ -220,15 +220,22 @@ def review(messages, local_review, local_model, partial_review=None):
                 'questions': questions,
             }, timeout=TIMEOUT)
             answers = response.get('answers')
-            if not isinstance(answers, dict) or set(answers) != set(questions):
-                raise ValueError('Missing or unknown TypeSafe review answers.')
+            if not isinstance(answers, dict) or not answers or answers.keys() - questions.keys():
+                raise ValueError('Invalid response or unknown TypeSafe review answer IDs.')
             actual_model, usage = response.get('model') or model, response.get('usage')
             for index in routine:
                 item = items[index]
-                results = {field: ts.choice(answers['c%d_%s' % (index, field)], choices)
-                           for field, choices in CHOICES.items()}
-                checked += 1
-                selected = {field: answer['choice'] for field, answer in results.items()}
+                results = {}
+                for field, choices in CHOICES.items():
+                    question_id = 'c%d_%s' % (index, field)
+                    try:
+                        results[field] = ts.choice(answers.get(question_id), choices)
+                    except (ValueError, TypeError):
+                        # Known answer IDs are independent. An unusable field
+                        # stays unverified and is required of the local reviewer.
+                        continue
+                if results:
+                    checked += 1
                 verified = {field: (None if field == 'disposition' and a['choice'] == 'none' else a['choice'])
                             for field, a in results.items()
                             if min(a['confidence'], a['probabilities'][a['choice']]) >= MIN_CONFIDENCE}
@@ -244,6 +251,8 @@ def review(messages, local_review, local_model, partial_review=None):
                     'reason': 'TypeSafe/Jev classified the candidate wording and metadata as supported by the supplied original source context.',
                     'reviewer': {**audit, 'field_providers': {field: 'typesafe' for field in CHOICES}},
                 }
+            if not checked:
+                raise ValueError('No usable TypeSafe review answers.')
         except (ts.ConfigurationError, OSError, ValueError, KeyError, TypeError, AttributeError):
             # Authentication, quota, network and response errors never remove the
             # semantic review. The existing local reviewer receives all candidates.

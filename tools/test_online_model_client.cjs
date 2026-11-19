@@ -24,7 +24,9 @@ function setup({signed=true,host='aimsetp.com',network}={}){
  t=setup({network:(u,o)=>{if(o.method==='DELETE'){deleted=true;return new Response('{}');}controller.abort();return new Response(JSON.stringify({jobId:key}),{status:202});}});
  await assert.rejects(t.api.request(t.api.base+'/model',{signal:controller.signal}),e=>e.name==='AbortError');await new Promise(r=>setTimeout(r,10));assert(deleted);
  for(const page of ['eligibility','search-strategy','title-abstract-screening','full-text-screening']){
-  const html=fs.readFileSync(page+'.html','utf8');assert(html.includes('app/online-model.js?v=online-auth-v3'));assert(html.includes('window.AIMSTEPOnlineModel.base'));
+  const html=fs.readFileSync(page+'.html','utf8');assert(html.includes('app/online-model.js?v=online-auth-v3'));
+  if(page==='eligibility')assert.match(html,/const online=window\.AIMSTEPOnlineModel;[\s\S]{0,250}\bbase:online\.base/);
+  else assert(html.includes('window.AIMSTEPOnlineModel.base'));
  }
  console.log('PASS: authenticated fixed-origin requests, local-mode compatibility, unauthenticated/offline errors, asynchronous results and cancellation');
 })().catch(e=>{console.error(e);process.exitCode=1});

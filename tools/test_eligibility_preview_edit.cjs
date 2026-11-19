@@ -110,3 +110,13 @@ for(const mode of ['manual','machine']){
  assert.equal(JSON.stringify([...storage]),beforeStorage,'embedded edits must stay isolated until parent commits');
 }
 console.log('PASS: identical standalone/embedded previews in both modes, prepared summary, isolated editing');
+const isolated=embedded.read().workspace,storedBefore=JSON.stringify([...storage]);
+previewContext.window.AIMSTEPCriteriaRelease=require('../app/eligibility-release.js');
+isolated.machineRefinement.sourceConfirmations=[{backgroundIssue:true,issue_id:'older-snapshot',status:'suggested',domain:'Population',side:'include',text:'Which boundary applies?',options:[],evidence:[{quote:'Older participants'}]}];
+embedded.load(isolated);
+const markup=el('preview').innerHTML;
+assert(markup.includes('Which boundary applies?')&&markup.includes('Older participants'));
+assert.match(markup,/eligibility\.html\?projectId=synthetic-project&amp;appVersion=\d+-criteria-release-\d+" target="_blank"/);
+assert(!markup.includes('data-source-confirm=')&&!markup.includes('data-source-answer='));
+assert.equal(JSON.stringify([...storage]),storedBefore,'Previewing an independent draft must not change the current project');
+console.log('PASS embedded snapshots display source questions with a project-scoped link to the authoritative editor.');
