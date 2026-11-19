@@ -25,6 +25,7 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
  assert(!checks.some(c=>['Intervention','Comparison','Outcomes','Analysis plan','Data plan'].includes(c.domain)),'Broad, clearly stated scope is accepted directly');
  const preview=t.el('preview').innerHTML;assert(!preview.includes('Review focus and analysis plan'));assert(preview.includes('patient-relevant outcomes'));assert(preview.includes('individual participant data'));
  const exported=Buffer.from(t.api.export()).toString('utf8');assert(!exported.includes('Review focus and analysis plan'));assert(!exported.includes('Author checks pending'));assert(exported.includes('patient-relevant outcomes'));
+ assert(state.machineRefinement.focusRows.length);assert(!Object.hasOwn(t.api.normalized(),'focusRows'));
  const risk='Which assessment defines nutritional risk?';
  const populationRow=rows.find(r=>r.dimension==='Population');
  assert(checks.filter(c=>c.domain==='Population').every(c=>c.locations.some(l=>l.rule===populationRow.include[0])),'Both the age subelement and risk issue belong on the source population rule');
@@ -43,9 +44,9 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
  state.machineRefinement.sourceConfirmations=[placed,sameDomain];
  t.api.fill();const routed=t.el('preview').innerHTML;
  assert.equal(routed.split('Linked question').length-1,3,'Cross-element checks must appear at each affected location');
- assert(routed.indexOf('>Framework:</strong>')<routed.indexOf('Linked question')&&routed.indexOf('Linked question')<routed.indexOf('>Inclusion</h3>'));
+ assert(routed.indexOf('>Framework:</strong>')<routed.indexOf('Linked question',routed.indexOf('>Framework:</strong>'))&&routed.indexOf('Linked question',routed.indexOf('>Framework:</strong>'))<routed.indexOf('>Inclusion</h3>'));
  assert(routed.indexOf('Second population rule.')<routed.indexOf('Second rule question')&&routed.indexOf('Second rule question')<routed.indexOf('>Intervention:</strong>'));
- assert(routed.indexOf('>Exclusion</h3>')<routed.indexOf('Unused group'));assert(routed.indexOf('Outcomes · Review focus')<routed.indexOf('>Description</h3>'));
+ assert(routed.indexOf('>Exclusion</h3>')<routed.indexOf('Unused group'));assert(!routed.includes('Outcomes · Review focus'));assert(routed.includes('outcome of interest')&&routed.indexOf('outcome of interest')<routed.indexOf('>Framework:</strong>'));
  state.machineRefinement.sourceConfirmations=savedChecks;populationRow.include.pop();t.api.fill();
  assert(checks.some(c=>c.text.includes('age boundary')));assert(t.el('preview').innerHTML.includes('data-source-answer='),'Unresolved questions need a working answer field');
  const ageIndex=checks.findIndex(c=>c.text.includes('age boundary'));t.ctx.document.querySelector=()=>({value:'65 years or older',focus(){}});
