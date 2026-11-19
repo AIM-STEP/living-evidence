@@ -11,18 +11,99 @@ function plan(original){const text=norm(original),nma=original.match(/network\s+
 function classifyAnalysis(element,context){const text=norm(element.normalized_text),dimension=element.dimension_id||'',pureIPD=/^(?:studies (?:based on|using|with)\s+|based on\s+|using\s+)?(?:individual\s+(?:participant|patient)(?:[- ]level)?\s+data|IPD)(?:\s*\(IPD\))?\.?$/i.test(text),pureNMA=/^(?:using\s+)?(?:network\s+meta[- ]analysis|NMA)(?:\s*\(NMA\))?\.?$/i.test(text);if(dataGate(context)&&/IPD|individual\s+(?:participant|patient)\s+data/i.test(text))return null;if((pureIPD&&plan(context).ipd)||dimension==='analysis_data_unit')return {dimension_id:'analysis_data_unit',normalized_text:pureIPD?'individual participant data (IPD)':element.normalized_text};if(((pureNMA||/^network\s+meta[-– ]analysis[\s\S]*\bbased\s+on\b[\s\S]*(?:individual\s+(?:participant|patient)\s+data|IPD)/i.test(text))&&plan(context).nma)||dimension==='analysis_method')return {dimension_id:'analysis_method',normalized_text:pureNMA?'network meta-analysis (NMA)':element.normalized_text};if(dimension==='analysis_objective')return {dimension_id:dimension,normalized_text:element.normalized_text};return null;}
 function restoreAge(element){if(element.dimension_id.split('.')[0]!=='population'||element.dimension_id==='population.age'||!older.test(element.raw_text)||older.test(element.normalized_text)||element.explicit_revision)return;const word=/\belderly\b/i.test(element.raw_text)?'elderly':'older';if(/\b(?:people|patients|adults|participants)\b/i.test(element.normalized_text)){const previous=element.normalized_text;element.normalized_text=element.normalized_text.replace(/\b(people|patients|adults|participants)\b/i,word+' $1');element.metadata_corrections=[...(element.metadata_corrections||[]),{field:'normalized_text',from:previous,to:element.normalized_text,basis:'Restore the age qualification explicitly present in the source; no numeric threshold inferred.'}];}}
 function interventionReference(elements){const candidates=elements.filter(e=>e.active!==false&&e.dimension_id==='intervention'&&e.information_status!=='missing'&&e.normalized_text),i=candidates.find(e=>e.scope_status==='restricted')||candidates[0];if(!i)return null;const value=lower(phrase(i.normalized_text));return /interventions?$/i.test(value)?value.replace(/interventions$/i,'intervention'):'eligible intervention';}
-function normalizeComparators(elements){const target=interventionReference(elements);for(const e of elements.filter(e=>e.active!==false)){
+// Only repair an arm when its own citation contains the misplaced comparison.
+// An explicit eligibility clause can supply a broader qualifier such as "any".
+const armContrast=/\s+(?:compared (?:with|to)|versus|vs\.?)\s+/i;
+const armKey=value=>norm(value).toLowerCase().trim().replace(/[.。]+$/,'').replace(/\s+/g,' ');
+function explicitComparisonPairs(ref){
+ const pairs=[];
+ for(const match of ref.quote.matchAll(/\bcomparing\s+([^;!?\n]{1,140}?)\s+(?:with|to)\s+([^;!?\n]{1,160}?)(?=\.(?:\s|$)|[;!?\n]|$)/gi)){
+  const [quote,intervention,comparator]=match;
+  const prefix=ref.quote.slice(0,match.index).split(/(?:[.!?]\s+|[;\n])/).at(-1);
+  if(/\b(?:exclud(?:e|ed|ing)|ineligible|did not include|except|unless)\b/i.test(prefix))continue;
+  if(![intervention,comparator].every(arm=>!armContrast.test(arm)&&!/(?:\.\s|[,;]|\b(?:comparing|with|than|respectively|among|participants|studies|trials|except|unless|when|who)\b)/i.test(arm)))continue;
+  const start=ref.start+Array.from(ref.quote.slice(0,match.index)).length;
+  pairs.push({intervention:intervention.trim(),comparator:comparator.trim(),ref:{source_id:ref.source_id,source_revision:ref.source_revision,quote,start,end:start+Array.from(quote).length}});
+ }
+ return pairs;
+}
+function objectiveArms(value){
+ const wording=phrase(value).replace(/^studies comparing\s+/i,'comparing ');
+ const objective=wording.match(/^(?:(?:to |we (?:aim(?:ed)? to )?)?(?:assess|evaluate|examine|determine) (?:the )?(?:benefits(?: and harms)?|harms|effects?|efficacy|effectiveness|safety) of )(.+)$/i);
+ if(!objective){
+  const pair=wording.match(/^(?:comparing|to compare) (.+?) (?:with|to) (.+)$/i);
+  if(pair)return {intervention:pair[1],comparator:pair[2]};
+  const arms=wording.split(armContrast);
+  return arms.length===2?{intervention:arms[0],comparator:arms[1]}:null;
+ }
+ const arms=objective[1].split(armContrast);
+ if(arms.length!==2)return null;
+ // Purpose and outcome clauses commonly follow an objective's comparator.
+ const comparator=arms[1].split(/\s+(?:for (?:the )?(?:resuscitation|treatment|management|prevention|diagnosis) of|in (?:reducing|preventing|improving)|on (?:the )?(?:risk|rate|incidence|mortality|outcomes?))\b/i)[0];
+ return {intervention:arms[0].replace(/,$/,''),comparator,sharedPurpose:comparator!==arms[1]&&/\sfor\b/i.test(arms[1].slice(comparator.length))};
+}
+function normalizeComparisonArms(elements,sources=[]){
+ const candidates=elements.filter(e=>['intervention','comparator','comparison','comparison_group','control_group','control'].includes(e.dimension_id)&&e.active!==false&&e.information_status==='explicit'&&!e.explicit_revision&&e.decision_status!=='confirmed_by_user'&&e.disposition!=='exclude'&&!e.exceptions?.length&&!e.scope_conditions?.length&&!e.structured_value&&!e.source_occurrence_pending&&!e.source_occurrence_alternatives?.length);
+ const pairsBySource=new Map(),changed=[];
+ for(const e of candidates){
+  const objective=objectiveArms(e.normalized_text);
+  if(!objective)continue;
+  const wording=armKey(e.normalized_text),refs=e.source_refs||[];
+  const role=e.dimension_id==='intervention'?'intervention':'comparator',arm=armKey(objective[role]);
+  const cited=refs.filter(ref=>{
+   const quote=armKey(ref.quote);
+   if(quote.includes(wording))return true;
+   if(quote!==arm&&quote!=='any '+arm)return false;
+   return sources.some(source=>source.source_id===ref.source_id&&source.source_revision===ref.source_revision&&armKey(source.quote).includes(wording));
+  });
+  if(!cited.length)continue;
+  const pairs=[];
+  for(const ref of cited){
+   const ranges=sources.filter(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision);
+   for(const range of ranges.length?ranges:[ref]){
+    if(!Number.isInteger(range.start))continue;
+    if(!pairsBySource.has(range))pairsBySource.set(range,explicitComparisonPairs(range));
+    pairs.push(...pairsBySource.get(range));
+   }
+  }
+  const equivalent=(a,b)=>armKey(a)===armKey(b)||armKey(a)==='any '+armKey(b);
+  const matching=pairs.filter(p=>equivalent(p.intervention,objective.intervention)&&equivalent(p.comparator,objective.comparator));
+  if(!matching.length&&!pairs.length&&!objective.sharedPurpose){
+   // A standalone, unqualified binary contrast also identifies both arms.
+   const simple=arm=>arm.trim().split(/\s+/).length<=12&&!/[,;:.!?]|\b(?:with|compared|versus|vs|in|among|for|where|whether|when|unless|except|receiving|differ|reduce|reducing|includ(?:e|ed)|exclud(?:e|ed)|eligible|ineligible|studies|trials|assess|effects?|each other|one another)\b/i.test(arm);
+   if(simple(objective.intervention)&&simple(objective.comparator))matching.push({...objective,ref:cited[0]});
+  }
+  if(new Set(matching.map(p=>JSON.stringify([armKey(p.intervention),armKey(p.comparator)]))).size!==1)continue;
+  const pair=matching[0],text=pair[role];
+  if(armKey(pair.intervention)===armKey(pair.comparator))continue;
+  const supporting=refs.filter(r=>!cited.includes(r));
+  const nextRefs=[pair.ref,...supporting.filter(r=>r.source_id!==pair.ref.source_id||r.source_revision!==pair.ref.source_revision||r.start!==pair.ref.start||r.end!==pair.ref.end)];
+  e.metadata_corrections=[...(e.metadata_corrections||[]),{field:'normalized_text',from:e.normalized_text,to:text,basis:'Separate the two arms of the explicit comparison in the original source.'}];
+  e.normalized_text=text;e.source_refs=nextRefs;changed.push({element:e,citation:pair.ref});
+  if(e.raw_text!==undefined)e.raw_text=D.quoteText(nextRefs,'\n');
+ }
+ return changed;
+}
+function normalizeComparators(elements,sources=[]){normalizeComparisonArms(elements,sources);const target=interventionReference(elements);for(const e of elements.filter(e=>e.active!==false)){
  const clean=value=>norm(phrase(value)).trim().replace(/[.,;:]+$/,'').replace(/^(?:compared\s+(?:with|to)|versus|vs\.?)\s+(?:either\s+)?/i,''),raw=clean(e.raw_text),text=clean(e.normalized_text);
  const dimension=String(e.dimension_id).toLowerCase(),aliases=['comparison','comparisons','comparison_group','comparison.group','control','control_group','control.group','comparators'];
  const comparisonOnly=value=>/^(?:(?:(?:an?|the|either a) )?control (?:group|arm)\b[\s\S]*|(?:standard care|usual care|treatment as usual|placebo|sham|no treatment|wait[- ]?list)(?:\s*[,;]?\s+(?:and|or)\s+(?:(?:an?|another|other)\s+)?[\w\s()-]+)*|each other|one another)$/i.test(value);
  const sourceComparison=/\b(?:compar(?:ed|ing)\s+(?:with|to)|versus|vs\.?|control (?:group|arm)|placebo|each other|one another)\b/i.test(raw);
- if(!e.explicit_revision&&(aliases.includes(dimension)||(['other','intervention','comparator'].includes(dimension)&&(comparisonOnly(raw)||sourceComparison&&comparisonOnly(text))))){if(e.dimension_id!=='comparator')e.metadata_corrections=[...(e.metadata_corrections||[]),{field:'dimension_id',from:e.dimension_id,to:'comparator',basis:'Source-defined control/comparison alternative'}];e.dimension_id='comparator';}
- if(e.dimension_id==='comparator'&&target&&!e.explicit_revision){e.normalized_text=e.normalized_text.replace(/\b(?:a )?control group\s*\(([^()]*)\)/gi,'$1');if(/^(?:each other|one another)$/i.test(raw)||/^(?:each other|one another)$/i.test(text))e.normalized_text='another '+target;else e.normalized_text=e.normalized_text.replace(/\beach other\b|\bone another\b/gi,'another '+target);}
+ const definedIntervention=dimension==='intervention'&&comparisonOnly(text)&&(e.source_refs||[]).some(ref=>{
+  const objective=objectiveArms(ref.quote);
+  if(objective&&armKey(objective.intervention)===armKey(text))return true;
+  return sources.some(source=>source.source_id===ref.source_id&&source.source_revision===ref.source_revision&&explicitComparisonPairs(source).some(pair=>armKey(pair.intervention)===armKey(text)));
+ });
+ if(!e.explicit_revision&&e.decision_status!=='confirmed_by_user'&&!definedIntervention&&(aliases.includes(dimension)||(['other','intervention','comparator'].includes(dimension)&&(comparisonOnly(raw)||sourceComparison&&comparisonOnly(text))))){if(e.dimension_id!=='comparator')e.metadata_corrections=[...(e.metadata_corrections||[]),{field:'dimension_id',from:e.dimension_id,to:'comparator',basis:'Source-defined control/comparison alternative'}];e.dimension_id='comparator';}
+ if(e.dimension_id==='comparator'&&target&&!e.explicit_revision&&e.decision_status!=='confirmed_by_user'){e.normalized_text=e.normalized_text.replace(/\b(?:a )?control group\s*\(([^()]*)\)/gi,'$1');if(/^(?:each other|one another)$/i.test(raw)||/^(?:each other|one another)$/i.test(text))e.normalized_text='another '+target;else e.normalized_text=e.normalized_text.replace(/\beach other\b|\bone another\b/gi,'another '+target);}
 }}
 
 function join(items,op='any_of'){const list=items.filter(Boolean);if(list.length<2)return list[0]||'';const word=op==='any_of'?'or':'and';return list.length===2?list.join(' '+word+' '):list.slice(0,-1).join(', ')+', '+word+' '+list.at(-1);}
 function qualifierText(value){if(typeof value==='string')return value;for(const key of ['text','description','condition','quote'])if(typeof value?.[key]==='string')return value[key];D.fail('UNRENDERABLE_QUALIFIER','output','A scope qualifier needs readable source-preserving text before criteria can be displayed.');}
-function criterionPhrase(c){let value=lower(phrase(c.text));if(c.dimension_id==='comparator')value=value.replace(/^control\s+group\s*\(([^()]*)\)$/i,'$1');if(c.scope_conditions?.length&&!/\b(?:if|when|among|for)\b/i.test(value))value='For '+c.scope_conditions.map(x=>qualifierText(x)).join(' and ')+': '+value;if(c.exceptions?.length&&!/\bexcept\b|\bunless\b/i.test(value))value+=', except '+c.exceptions.map(x=>qualifierText(x)).join('; ');return value;}
+function criterionPhrase(c){
+ // Keep the subject of a study-level exclusion. Removing “studies of” can
+ // turn an excluded research objective into an excluded clinical procedure.
+ let value=lower(c.disposition==='exclude'?String(c.text||'').trim().replace(/[.。]+$/,''):phrase(c.text));if(c.dimension_id==='comparator')value=value.replace(/^control\s+group\s*\(([^()]*)\)$/i,'$1');if(c.scope_conditions?.length&&!/\b(?:if|when|among|for)\b/i.test(value))value='For '+c.scope_conditions.map(x=>qualifierText(x)).join(' and ')+': '+value;if(c.exceptions?.length&&!/\bexcept\b|\bunless\b/i.test(value))value+=', except '+c.exceptions.map(x=>qualifierText(x)).join('; ');return value;}
 function naturalExpression(node,criteria){
  if(!node)return '';
  if(node.op==='predicate'){
@@ -50,7 +131,7 @@ function factorSharedConditions(node){
 }
 function splitDimensions(node,criteria,domain){node=factorSharedConditions(node);if(!node)return [];if(node.op==='all_of')return node.children.flatMap(n=>splitDimensions(n,criteria,domain));const ids=[...new Set(leaves(node))],items=ids.map(id=>criteria.find(c=>c.criterion_id===id)).filter(Boolean),names=[...new Set(items.map(c=>domain(c.dimension_id)))];return [{dimension:names.length===1?names[0]:'Other',node,criteria:items,text:naturalExpression(node,criteria)}];}
 function ageClause(criteria){if(criteria.length!==1||criteria[0].dimension_id!=='population.age')return null;const value=criteria[0].structured_value;if(!value)return null;const unit=['year','years'].includes(value.unit)?'years':value.unit;if(value.operator==='between')return 'aged '+(value.lower_inclusive===false?'>':'≥')+value.lower+' and '+(value.upper_inclusive===false?'<':'≤')+value.upper+' '+unit;const symbols={gt:'>',gte:'≥',lt:'<',lte:'≤',eq:'='};return symbols[value.operator]?'aged '+symbols[value.operator]+value.value+' '+unit:null;}
-function clause(dimension,value,reference){return lower(phrase(value).replace(/^Studies comparing .*? with /i,''));}
+function clause(dimension,value,reference){return lower(phrase(value));}
 const titleDimensions={pico:'intervention',picos:'intervention',peco:'exposure',pecos:'exposure',peo:'exposure',
  pcc:'concept',pico_qualitative:'phenomenon_of_interest',spider:'phenomenon_of_interest',cocopop:'condition',pird:'index_test'};
 function titlePhrase(value){
@@ -67,9 +148,32 @@ function titlePhrase(value){
 function completePhrase(value){
  return value&&!/(?:…|\.{2,}|[,;:/-]|\b(?:and|or|with|without|versus|of|for|on|in|the|who|were))$/iu.test(value);
 }
-function compactTitle(value){
- return completePhrase(value)&&value.length<=105&&value.split(/\s+/u).length<=14&&
+function compactTitle(value,maxWords=14,maxLength=105){
+ return completePhrase(value)&&value.length<=maxLength&&value.split(/\s+/u).length<=maxWords&&
   (value.match(/[\u3400-\u9fff]/gu)||[]).length<=28;
+}
+function populationTitleHead(value){
+ return value.split(/[,;]\s+|\s+(?:who (?:were|are|have|had|received)|experiencing|recruited|enrolled|followed up|participating in)\s+/iu)[0];
+}
+function clinicalComparisonTitle(original,intervention,comparison,populations){
+ if(!original||!intervention||!comparison||!compactTitle(intervention)||!compactTitle(comparison))return '';
+ // Bind a clinical use to the actual named arms in the primary objective.
+ // A secondary subgroup question or a comparator-specific indication cannot supply it.
+ const primary=original.split(/[.!?](?=\s+[A-Z]|$)|[;\n]/u)[0];
+ const armPattern=value=>value.replace(/^(?:any|the)\s+/i,'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+ const pair=new RegExp('(?:^|\\s)('+armPattern(intervention)+')\\s*,?\\s*(compared (?:with|to)|versus|vs\\.?|with)\\s+(?:any |the )?('+armPattern(comparison)+')\\s+(for .+)$','i').exec(primary);
+ if(!pair||/^with$/i.test(pair[2])&&!/\bcompar(?:e|ing)\s*$/i.test(primary.slice(0,pair.index)))return '';
+ const use=titlePhrase(pair[4].split(/,?\s+(?:in (?:reducing|improving|increasing|decreasing)\b|(?:to|and to) (?:assess|evaluate|determine|reduce|improve)\b|using (?:a |an )?(?:network )?meta[- ]analysis\b)|[,;]\s*(?:including|with particular|according to)\b/i)[0]);
+ if(!/^for (?:the )?(?:[\w-]+ ){0,2}(?:[\w-]+(?:tion|sion|ment|ing)|diagnosis|repair|relief|control)\b/i.test(use))return '';
+ const contains=(whole,part)=>(' '+whole.toLowerCase()+' ').includes(' '+part.toLowerCase()+' ');
+ const groups=populations.map(e=>({value:lower(titlePhrase(e.normalized_text)),confirmed:e.explicit_revision||e.decision_status==='confirmed_by_user'}));
+ let candidate=intervention+' versus '+pair[3]+' '+use;
+ if(groups.length&&!groups.some(g=>g.value&&contains(use,populationTitleHead(g.value)))){
+  if(groups.length!==1||/\b(?:among|in|patients?|adults?|children|people|infants?|neonates?|participants?|women|men|adolescents?|newborns?)\b/i.test(use))return '';
+  candidate+=' in '+groups[0].value;
+ }
+ if(groups.some(g=>g.confirmed&&!contains(candidate,g.value)))return '';
+ return compactTitle(candidate,19,135)?candidate:'';
 }
 function topic(question,elements){
  const scope=elements.filter(e=>e.active!==false&&!e.source_occurrence_pending&&e.information_status!=='missing'&&
@@ -91,16 +195,28 @@ function topic(question,elements){
  }
  const population=wording('population')||wording('sample');
  // Keep an intact clinical group before ancillary recruitment or follow-up details.
- const populationHead=population.split(/[,;]\s+|\s+(?:who (?:were|are|have|had|received)|experiencing|recruited|enrolled|followed up|participating in)\s+/iu)[0];
+ const populationHead=populationTitleHead(population);
  const shortPopulation=compactTitle(populationHead)?populationHead:'';
  const ranked=[...new Set([titleDimensions[frame],'intervention','exposure','phenomenon_of_interest','concept','index_test','condition','target_condition','outcome','core_scope'].filter(Boolean))];
  const dimension=ranked.find(id=>scope.some(e=>e.dimension_id===id));
  let subject=dimension?wording(dimension):'';
  const original=norm(question.original_text||'');
- const comparison=wording('comparator');
+ let comparison=wording('comparator');
+ // Older saved summaries may contain the identical objective in both arm
+ // fields. Recover its named pair for the title only when it is source-verbatim.
+ if(dimension==='intervention'&&subject&&subject===comparison){
+  const arms=scope.filter(e=>['intervention','comparator'].includes(e.dimension_id));
+  const value=arms[0]?.normalized_text;
+  const pair=arms.every(e=>!e.explicit_revision&&e.decision_status!=='confirmed_by_user'&&armKey(e.normalized_text)===armKey(value))&&armKey(original).includes(armKey(value))&&objectiveArms(value);
+  if(pair&&compactTitle(pair.intervention)&&compactTitle(pair.comparator)&&armKey(pair.intervention)!==armKey(pair.comparator)){
+   subject=lower(titlePhrase(pair.intervention));
+   comparison=lower(titlePhrase(pair.comparator));
+  }
+ }
  const routine=/^(?:(?:a |the )?control(?: group| arm)?|usual care|standard care|placebo|sham|no (?:treatment|intervention)|wait[- ]?list|another .+ intervention|each other|one another)(?:(?:,? (?:or|and) |, )(?:usual care|standard care|placebo|another .+ intervention))*$/i;
+ const clinicalTitle=dimension==='intervention'&&clinicalComparisonTitle(original,subject,comparison,scope.filter(e=>e.dimension_id==='population'||e.dimension_id==='sample'));
  // Named active contrasts are part of the subject, even when the population is long.
- if(subject&&comparison&&['intervention','exposure'].includes(dimension)&&!routine.test(comparison)&&!subject.toLowerCase().includes(comparison.toLowerCase()))subject+=' versus '+comparison;
+ if(subject&&comparison&&['intervention','exposure'].includes(dimension)&&!routine.test(comparison)&&armKey(subject)!==armKey(comparison)&&!armKey(subject).endsWith(' versus '+armKey(comparison)))subject+=' versus '+comparison;
  if(dimension==='index_test'){
   if(/\bdiagnostic accuracy\b/i.test(original))subject='diagnostic accuracy of '+subject;
   const target=wording('target_condition');if(target)subject+=' for '+target;
@@ -129,14 +245,16 @@ function topic(question,elements){
   return focal.every(e=>{
    const value=titlePhrase(e.normalized_text).toLowerCase();
    if(/\b(?:no|not|without|versus)\b/.test(value)&&!suggested.toLowerCase().includes(value))return false;
+   if(subject.includes(' versus ')&&['intervention','exposure','comparator'].includes(e.dimension_id)&&compactTitle(value))return tokens(value).every(token=>terms.includes(token));
    return tokens(value).some(token=>terms.includes(token));
   })?suggested:'';
  }
- let result=[withFocus&&withFocus+people,subject&&subject+people].find(compactTitle);
+ let result=clinicalTitle||[withFocus&&withFocus+people,subject&&subject+people].find(value=>compactTitle(value));
  if(!result){
   const shortPeople=people&&shortPopulation&&population!==shortPopulation?' in '+shortPopulation:'';
-  const shorter=[withFocus&&shortPeople&&withFocus+shortPeople,subject&&shortPeople&&subject+shortPeople,withFocus,subject];
-  result=supportedTitle()||shorter.find(compactTitle);
+  const shorter=[withFocus&&shortPeople&&withFocus+shortPeople,subject&&shortPeople&&subject+shortPeople];
+  const namedContrast=subject.includes(' versus ')&&[subject+(shortPeople||people),subject].find(value=>compactTitle(value,19,135));
+  result=supportedTitle()||shorter.find(value=>compactTitle(value))||namedContrast||[withFocus,subject].find(value=>compactTitle(value));
  }
  if(!result){
   // A lengthy definition may have no accurate short alias. Use its source
@@ -146,7 +264,7 @@ function topic(question,elements){
   if(comparison&&name)name=!routine.test(comparison)&&compactTitle(comparison)?name+' compared with '+comparison:'Comparison of '+name.toLowerCase();
   const primary=titlePhrase((question.original_text||'').split(/[.!?;]\s+|,\s+and to\s+|\s+using (?:a |an )?(?:network )?meta.analysis/iu)[0]);
   const trials=[name&&shortPopulation&&name+' in '+shortPopulation,population,shortPopulation,primary,name];
-  result=trials.find(compactTitle)||'Review population and scope';
+  result=trials.find(value=>compactTitle(value))||'Review population and scope';
  }
  return result.replace(/^./u,c=>c.toUpperCase());
 }
@@ -158,6 +276,64 @@ function projectTopic(questions){
 }
 // Clear, direct, active prose; keep source qualifications and protocol tense.
 // Writing reference: https://www.bmj.com/about-bmj/resources-authors/house-style
+// Use an explicitly enumerated outcome list and a stated effect-modification
+// objective verbatim. Keep the positions in the question to distinguish these
+// declarations from separate requirements, added sources and author decisions.
+function declaredFocus(source){
+ const declarations=[];
+ let cursor=0,offset=0;
+ for(const boundary of source.matchAll(/[.!?](?=\s|$)|$/g)){
+  if(boundary[0]==='.'&&/\b(?:e\.g|i\.e|vs)\.$/i.test(source.slice(Math.max(0,boundary.index-5),boundary.index+1)))continue;
+  const end=boundary.index+boundary[0].length,raw=source.slice(cursor,end);
+  const text=raw.trim().replace(/[.!?]$/,'').trim();
+  const position=offset;offset+=Array.from(raw).length;cursor=end;
+  if(!text)continue;
+  const list=text.match(/^(?:our|the) outcomes of interest (?:were|are)\s+(.+)$/is);
+  const modifiers=text.match(/^(?:(?:to |we (?:aim(?:ed)? to )?)?(?:assess|determine|examine|investigate|evaluate) whether (?:the )?((?:benefits and harms|effects?)\b.+? (?:differ(?:ed)?|var(?:y|ied)) (?:according to|by) .+))$/is);
+  if(!modifiers&&(!list||/^(?:not|unknown|unclear|unavailable|unreported|described|reported|as follows\s*$)\b/i.test(list[1])))continue;
+  const start=position+Array.from(raw.slice(0,raw.indexOf(text))).length;
+  declarations.push({dimension:modifiers?'analysis_objective':'outcome',text,value:(modifiers?modifiers[1]:list[1]).trim(),start,end:start+Array.from(text).length});
+ }
+ return declarations;
+}
+// Split long enumerations at top-level noun phrases only. A continuation,
+// embedded "and", time range or qualification stays with its endpoint.
+function outcomeSentences(list,source){
+ let text=list;
+ const abbreviations=new Map();
+ for(const match of source.matchAll(/\s+\(([A-Z][A-Z0-9]{1,8})\)/g)){
+  const short=match[1];
+  const words=(source.slice(Math.max(0,match.index-120),match.index).match(/[\p{L}-]+(?:\s+[\p{L}-]+)*$/u)?.[0]||'').split(/[\s-]+/).filter(Boolean).slice(-6);
+  for(let i=0;i<words.length;i++){
+   const name=words.slice(i);
+   const initials=name.map(w=>w[0]).join('').toUpperCase();
+   // Compound words can contribute two letters to a supplied initialism.
+   const compound=name.length===2&&short.length===3&&name[0][0].toUpperCase()===short[0]&&
+    name[0].slice(1).toUpperCase().includes(short[1])&&name[1][0].toUpperCase()===short[2];
+   if(initials!==short&&!compound)continue;
+   const long=name.join(' '),prior=abbreviations.get(short);
+   abbreviations.set(short,prior===undefined||prior===long?long:'');
+   break;
+  }
+ }
+ for(const [short,long] of abbreviations){
+  if(!long||text.includes('('+short+')')||text.toLowerCase().includes(long.toLowerCase()))continue;
+  text=text.replace(new RegExp('\\b'+short+'\\b'),()=>long+' ('+short+')');
+ }
+ let depth=0,start=0;
+ const parts=[];
+ for(let i=0;i<text.length;i++){
+  if(text[i]==='(')depth++;
+  else if(text[i]===')')depth--;
+  else if(!depth&&text[i]===','&&text[i+1]===' '){
+   parts.push(text.slice(start,i));start=i+2;
+  }
+ }
+ parts.push(text.slice(start));
+ const endpoint=/^(?:(?:all[-‐‑–]cause|in[-‐‑–]hospital|post[-‐‑–]discharge|moderate|severe|number of|length of|duration of|incidence of|rates? of|risk of|time to|change in|days (?:on|of)|mortality|hospitali[sz]ation)\b)/i;
+ if(depth!==0||parts.length<5||!parts.every(p=>endpoint.test(p)))return sentence('We will assess '+text);
+ return sentence('We will assess '+join(parts.slice(0,3),'all_of'))+' '+sentence('Other outcomes of interest are '+parts.slice(3).join(', '));
+}
 function descriptionContext(question,project){
  const originalText=question.research_question||question.original_text||'';
  const p=plan(originalText);
@@ -168,8 +344,28 @@ function descriptionContext(question,project){
   const analysis=e.decision_status==='confirmed_by_user'?null:classifyAnalysis(e,originalText);
   return analysis?{...e,...analysis}:e;
  });
+ const primaryRef=ref=>original?.source_refs?.some(s=>s.source_id===ref.source_id&&s.source_revision===ref.source_revision&&s.quote===originalText);
+ const declarations=declaredFocus(originalText).filter(d=>!(question.elements||[]).some(e=>
+  e.active!==false&&e.dimension_id===d.dimension&&e.source_refs?.some(primaryRef)&&(e.explicit_revision||e.decision_status==='confirmed_by_user'||e.source_occurrence_pending||e.role_issue||
+   (d.dimension==='outcome'&&e.outcome_use&&e.outcome_use!=='interest'))));
+ const simplify=value=>norm(value).toLowerCase().replace(/[‐‑–]/g,'-').replace(/[.。]+$/,'').trim();
+ function represented(e,d){
+  if(!e.source_refs?.length||e.decision_status==='confirmed_by_user'||e.explicit_revision||e.scope_conditions?.length||e.exceptions?.length)return false;
+  if(!e.source_refs.every(primaryRef))return false;
+  if(e.source_refs.every(r=>r.start>=d.start&&r.end<=d.end+1))return true;
+  if(e.dimension_id!==d.dimension)return false;
+  const value=simplify(e.normalized_text);
+  if(simplify(d.value).includes(value))return true;
+  // An introduction may name an endpoint in full, with only the acronym used
+  // in the subsequent list of defined outcomes and time points.
+  const acronym=e.normalized_text.match(/\(([A-Z][A-Z0-9]{1,9})\)$/)?.[1];
+  return d.dimension==='outcome'&&!!acronym&&d.value.split(/[^A-Za-z0-9]+/).includes(acronym)&&
+   e.source_refs.every(r=>r.end<=d.start&&simplify(r.quote).includes(value)&&
+    /\b(?:assess|evaluate|determine|examine)\b/i.test(Array.from(originalText).slice(0,r.start).join('').split(/[.!?]/).at(-1)+' '+r.quote));
+ }
  function values(dimension){
-  const elements=focus.filter(e=>e.dimension_id===dimension);
+  const elements=focus.filter(e=>e.dimension_id===dimension&&!declarations.some(d=>
+   (d.dimension===dimension||d.dimension==='analysis_objective'&&['other','context','analysis_method'].includes(dimension))&&represented(e,d)));
   if(!elements.length)return [];
   const criteria=elements.map(e=>({...e,criterion_id:e.element_id,text:e.normalized_text}));
   const logic=original?.logic&&D.mapExpression(original.logic,new Map(elements.map(e=>[e.element_id,e.element_id])));
@@ -179,6 +375,7 @@ function descriptionContext(question,project){
  }
  const dimensions=[...new Set(focus.map(e=>e.dimension_id))];
  const aims=[],methods=[],outcomes=values('outcome');
+ for(const d of declarations.filter(d=>d.dimension==='outcome'))aims.push(outcomeSentences(d.value,originalText));
  if(outcomes.length)aims.push(sentence('We will assess '+join(outcomes,'all_of')));
  for(const dimension of dimensions){
   if(['population','intervention','comparator','outcome','analysis_method','analysis_data_unit','analysis_objective'].includes(dimension))continue;
@@ -188,6 +385,15 @@ function descriptionContext(question,project){
   aims.push(sentence((lead[dimension]||'The review will examine ')+(dimension==='exposure'?value.replace(/^exposure to\s+/i,''):value)));
  }
  const analysis='network meta-analysis'+(p.ipd?' of individual participant data':'');
+ for(const d of declarations.filter(d=>d.dimension==='analysis_objective')){
+  const arms=['intervention','comparator'].map(dim=>(question.include||[]).filter(c=>c.dimension_id===dim).map(c=>simplify(c.text).replace(/^any /,'')));
+  let value=d.value.replace(/ (?:differ|vary) (?:according to|by) (?:different )?/i,' vary by ');
+  if(arms.every(group=>group.length===1)){
+   const prefix=value.match(/^(benefits and harms|effects?) of (.+?) compared (?:with|to) (.+?) vary by /i);
+   if(prefix&&simplify(prefix[2])===arms[0][0]&&simplify(prefix[3]).replace(/^any /,'')===arms[1][0])value=prefix[1]+' vary by '+value.slice(prefix[0].length);
+  }
+  methods.push(sentence('We will examine whether '+value));
+ }
  const ranking=p.rank&&norm(p.rank).replace(/^rank (?:the )?effects of (?:these |the )?(?:different )?interventions$/i,'rank the interventions');
  if(p.nma)methods.push(sentence('We will '+(ranking?ranking+' using a '+analysis:'conduct a '+analysis)));
  else if(p.ipd)methods.push('We will analyse individual participant data.');
@@ -239,6 +445,24 @@ function populationProse(parts){
  const population=join(people,'all_of').replace(/\bat risk of or with established ([\w-]+)$/i,'with established $1 or at risk of developing it');
  const age=join(ages,'all_of').replace(/^aged ≥(\d+(?:\.\d+)?) years$/,'aged $1 years or older').replace(/^aged ≤(\d+(?:\.\d+)?) years$/,'aged $1 years or younger');
  return [population|| (age?'participants':''),age].filter(Boolean).join(' ');
+}
+// Rejoin a participant group with its own relative clauses only when the
+// eligibility expression requires all of them. Keep each underlying criterion.
+function combinePopulationUnits(units){
+ const population=units.filter(unit=>unit.criteria.length&&unit.criteria.every(c=>c.dimension_id==='population'));
+ if(population.length<2||population.some(unit=>unit.node.op!=='predicate'||unit.criteria.some(c=>c.exceptions?.length||c.scope_conditions?.length)))return units;
+ const relative=/^(?:who\s+|whose\s+|(?:received|required|underwent|were|had)\s+|(?:with|without)\s+)/i;
+ const heads=population.filter(unit=>!relative.test(unit.text));
+ const participant=/\b(?:infants|neonates|newborns|children|adolescents|adults|people|men|women|patients|participants)\b/i;
+ if(heads.length!==1||!participant.test(heads[0].text))return units;
+ // "term or late preterm infants" has a shared noun; "adults or infants"
+ // has two possible antecedents for a trailing relative clause.
+ if(heads[0].text.split(/\s+(?:or|and)\s+/i).slice(0,-1).some(part=>participant.test(part)))return units;
+ const qualifiers=population.filter(unit=>unit!==heads[0]);
+ if(qualifiers.some(unit=>/^(?:with|without)\b/i.test(unit.text)&&/\bor\b/i.test(unit.text)))return units;
+ const clauses=qualifiers.map(unit=>unit.text.replace(/^(?:Who|Whose|With|Without)\b/,word=>word.toLowerCase()).replace(/^(received|required|underwent|were|had)\b/i,(_,verb)=>'who '+verb.toLowerCase()));
+ const combined={...heads[0],text:heads[0].text+' '+join(clauses,'all_of'),criteria:population.flatMap(unit=>unit.criteria)};
+ return units.flatMap(unit=>unit===heads[0]?[combined]:population.includes(unit)?[]:[unit]);
 }
 function headToHeadControls(intervention,comparison){
  if(!/^(?:[\w-]+ ){0,5}interventions$/i.test(intervention))return null;
@@ -305,7 +529,7 @@ function description(rows,context={}){
  // Keep a comparator when the source supplies one without an accepted intervention.
  const comparison=intervention?join(take('Comparison'),'all_of'):'';
  const designs=groups.get('Study design')||[];
- const studies=designs.length===1&&/\b(?:studies|trials|reviews|reports)$/i.test(designs[0])?take('Study design')[0]:'studies';
+ const studies=designs.length===1&&/\b(?:studies|trials|reviews|reports|RCTs)(?:\s*\([^()]+\))?$/i.test(designs[0])?take('Study design')[0]:'studies';
  const people=population?' in '+population:'';
  if(intervention){
   const assessment=comparison?'comparing '+comparisonProse(intervention,comparison):'evaluating '+intervention;
@@ -341,11 +565,11 @@ function description(rows,context={}){
   return [...new Set(sentences)].join(' ');
  }
  let focus=context.focus_sentence||'',methods=context.methods_sentence||'';
- if(/^We will [^.!?]+\.$/.test(focus)&&/^We will [^.!?]+\.$/.test(methods)){
+ if((focus+' '+methods).split(/\s+/).length<=35&&/^We will [^.!?]+\.$/.test(focus)&&/^We will [^.!?]+\.$/.test(methods)){
   focus=focus.slice(0,-1)+' and '+methods.slice('We will '.length);methods='';
  }
  return [...new Set([...sentences,...(context.supplemental_sentences||[]),focus,methods].filter(Boolean))].join(' ');
 }
 
-return {ageClause,plan,classifyAnalysis,restoreAge,normalizeComparators,interventionReference,phrase,join,criterionPhrase,naturalExpression,splitDimensions,clause,topic,projectTopic,descriptionContext,description};
+return {ageClause,plan,classifyAnalysis,restoreAge,normalizeComparisonArms,normalizeComparators,interventionReference,phrase,join,criterionPhrase,naturalExpression,splitDimensions,combinePopulationUnits,clause,topic,projectTopic,descriptionContext,description};
 });

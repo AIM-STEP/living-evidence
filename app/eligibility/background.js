@@ -3,7 +3,7 @@
 'use strict';
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
-const presentationVersion='20261119-framework-description-1';
+const presentationVersion='20261119-clinical-question-1';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -72,9 +72,16 @@ function projectToClassic(project,registry){
    return slot?slotLabel(slot):label(dimension);
   };
   for(const side of ['include','exclude']){
-   const branches=side==='include'&&pending?pending:[q.logic?.[side]];
-   for(const branch of branches)for(const unit of Methods.splitDimensions(branch,q[side],dimensionLabel)){
-    add(target,unit.dimension,side,Methods.ageClause(unit.criteria)||Methods.clause(unit.dimension,unit.text,reference),unit.criteria);
+   const expression=q.logic?.[side];
+   // Each top-level exclusion independently disqualifies a study. Projecting
+   // their union as a single condition hides all domains in a mixed list.
+   const branches=side==='exclude'&&expression?.op==='any_of'?expression.children:side==='include'&&pending?pending:[expression];
+   for(const branch of branches){
+    const units=Methods.splitDimensions(branch,q[side],dimensionLabel);
+    for(const unit of side==='include'?Methods.combinePopulationUnits(units):units){
+     const wording=side==='exclude'?unit.text:Methods.clause(unit.dimension,unit.text,reference);
+     add(target,unit.dimension,side,Methods.ageClause(unit.criteria)||wording,unit.criteria);
+    }
    }
   }
   // A draft whose framework was inferred historically displayed the S extension
@@ -132,7 +139,7 @@ function projectToClassic(project,registry){
    options:authorChoices(issue).map(({label,option_id})=>({label,option_id})),
    evidence:[...new Map(elements.flatMap(element=>issue.trigger_rule_id==='source_occurrence'?(element.source_occurrence_alternatives||[]).flatMap(a=>[a.heading,a].filter(Boolean)):element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
  });
- return {manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows,framework,frameworkSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v1',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
+ return {manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows,framework,frameworkSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v2',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
 }
 async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
  if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');

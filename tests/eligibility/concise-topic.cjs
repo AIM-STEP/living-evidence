@@ -14,6 +14,18 @@ assert.equal(topic('pird',[item('index_test','lung ultrasound'),item('target_con
 assert.equal(topic('cocopop',[item('condition','asthma'),item('population','children')],'What is the prevalence of asthma in children?'),'Prevalence of asthma in children');
 assert.equal(topic('peco',[item('exposure','wood smoke'),item('outcome','asthma'),item('population','children')]),'Wood smoke and asthma in children');
 assert.equal(topic('pecos',[item('exposure','wood smoke'),item('outcome','asthma'),item('population','children')]),'Wood smoke and asthma in children');
+const neonatalAim='To assess the benefits and harms of air compared with supplemental oxygen for resuscitation of term or late preterm infants at birth in reducing rates of mortality and long‐term neurodevelopmental impairment (NDI)';
+const neonatalQuestion={...question('picos',neonatalAim+'. To assess whether the benefits and harms differ by gestational age. We included trials comparing air with any supplemental oxygen.'),review_topic:'Interventions in term or late preterm infants'};
+const neonatalGroup=[item('population','term or late preterm infants'),item('population','received respiratory support at birth'),item('population','delivery room')];
+const neonatalTitle='Air versus supplemental oxygen for resuscitation of term or late preterm infants at birth';
+assert.equal(Methods.topic(neonatalQuestion,[...neonatalGroup,item('intervention','air'),item('comparator','any supplemental oxygen')]),neonatalTitle);
+assert.equal(Methods.topic(neonatalQuestion,[...neonatalGroup,item('intervention',neonatalAim),item('comparator',neonatalAim)]),neonatalTitle);
+assert.equal(Methods.topic(neonatalQuestion,[item('population','term or late preterm infants who received respiratory support at birth'),item('intervention','air'),item('comparator','any supplemental oxygen')]),neonatalTitle);
+assert.equal(Methods.topic(neonatalQuestion,[item('population','adults',{decision_status:'confirmed_by_user'}),item('intervention','air'),item('comparator','supplemental oxygen')]),'Air versus supplemental oxygen in adults');
+assert.equal(Methods.topic(neonatalQuestion,[item('population','adults',{decision_status:'confirmed_by_user'}),item('intervention','air'),item('comparator','high-flow oxygen',{explicit_revision:true})]),'Air versus high-flow oxygen in adults');
+assert.equal(topic('pico',[item('intervention','high-dose aspirin'),item('comparator','aspirin'),item('population','adults')]),'High-dose aspirin versus aspirin in adults');
+assert.equal(topic('pico',[item('intervention','saline'),item('comparator','gel'),item('population','adults')],'To compare saline with gel for prevention of oral ulcers in adults. To compare the interventions for symptom control in children.'),'Saline versus gel for prevention of oral ulcers in adults');
+assert.equal(topic('pico',[item('intervention','saline'),item('comparator','gel'),item('population','adults')],'To compare saline with gel in adults. To compare saline with gel for symptom control in children.'),'Saline versus gel in adults');
 const longArms=Array.from({length:20},(_,i)=>item('intervention','intervention '+(i+1)));
 const bounded=topic('picos',[...longArms,item('comparator','medical therapy'),item('population','adults with asthma who were enrolled at specialised respiratory clinics in hospitals across five regions')]);
 assert.equal(bounded,'Interventions compared with medical therapy in adults with asthma');
