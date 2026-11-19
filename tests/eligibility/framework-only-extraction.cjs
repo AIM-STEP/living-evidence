@@ -14,6 +14,7 @@ test('check only determinate eligibility in the selected framework and preserve 
   if(step==='extract_elements')return {questions:[{question_id:state.questions[0].question_id,framework_candidates:['pico'],review_topic:'Exercise versus education',elements:items,issues:[],
    logic:{op:'any_of',children:['p','s'].map(element_id=>({op:'predicate',element_id}))}}]};
   assert.equal(step,'review_normalization');
+  assert.deepEqual(payload.questions[0].framework,{id:'pico',fields:['population','intervention','comparator','outcome']});
   reviewed.push(...payload.items.map(e=>e.dimension_id));
   return {items:payload.items.map(e=>({...e,status:'supported',issue_type:'none',reason:'Verified.'}))};
  }};

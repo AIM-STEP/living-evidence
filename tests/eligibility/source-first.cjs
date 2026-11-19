@@ -1,8 +1,8 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const E=require('../../app/eligibility/engine'),M=require('../../app/eligibility/model');
 
-function setup(text,extra=[],lang='en'){
- return E.save_input(E.create_project('source-first'),{research_question:text,additional_requirements:extra,question_framework:'PCC',output_language:lang}).state;
+function setup(text,extra=[],lang='en',framework='PCC'){
+ return E.save_input(E.create_project('source-first'),{research_question:text,additional_requirements:extra,question_framework:framework,output_language:lang}).state;
 }
 const support=items=>({items:items.map(({id,semantic_role,scope_status,disposition,information_status})=>({
  id,semantic_role,scope_status,disposition,information_status,status:'supported',issue_type:'none',reason:'Fixture independent review.'
@@ -14,20 +14,19 @@ function item(source,quote){
 
 test('explicit fields are located in the original before normalization and recovered on the same review',async()=>{
  const question='📋 Which participants are eligible?\nPopulation: adults.\nComparator: standard care.\nOutcomes: quality of life.';
- const state=setup(question),steps=[],lessons=[];
+ const state=setup(question,[],'en','PICO'),steps=[],lessons=[];
  const {candidates}=await M.analyze(state,E.environment(),{async request(step,state,payload){
   steps.push(step);
   if(step==='extract_elements'){
    const source=payload.question.sources.find(s=>s.input_kind==='research_question');
    const group=payload.source_passages.find(g=>g.source_id===source.source_id);
-   assert.equal(payload.extraction_encoding,'compact-elements-v2');
+   assert.equal(payload.extraction_encoding,'compact-elements-v3');
    assert.deepEqual(group.spans.map(([id,start,end,kind])=>[id,Array.from(question).slice(start,end).join(''),kind]),[
     [1,'Population: adults.','population'],[2,'Comparator: standard care.','comparator'],[3,'Outcomes: quality of life.','outcome']
    ]);
    return extraction(payload.question,[item(source,'adults')]);
   }
-  const q=payload.items.find(i=>i.dimension_id==='outcome');
-  assert.deepEqual([q.normalized_text,q.semantic_role,q.disposition],['quality of life','review_focus',null]);
+  assert(!payload.items.some(i=>i.dimension_id==='outcome'),'An outcome of interest is not a screening condition.');
   return support(payload.items);
  }},{onLesson:lesson=>lessons.push(lesson)});
  assert.deepEqual(steps,['extract_elements','review_normalization']);
@@ -86,7 +85,7 @@ test('reported study counts and Results headings never supply fallback inclusion
 
 test('recover a partially quoted named field without swallowing an adjacent field',async()=>{
  const text='Population: adults with a confirmed diagnosis; Comparator: usual care.';
- const state=setup(text);
+ const state=setup(text,[],'en','PICO');
  const result=await M.analyze(state,E.environment(),{async request(step,state,payload){
   if(step==='extract_elements'){
    const source=payload.question.sources.find(s=>s.input_kind==='research_question');

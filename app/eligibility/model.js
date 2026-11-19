@@ -186,30 +186,66 @@ function sourceOffset(span,index){
  }
  return span.start+(span.offsets?span.offsets[index]:index);
 }
-function citationHits(ref,ranges){
+// Match a small set of PDF typography variants while returning the original
+// characters. Numeric punctuation, signs, units, line breaks and case stay literal.
+const citationLigatures={'ﬀ':'ff','ﬁ':'fi','ﬂ':'fl','ﬃ':'ffi','ﬄ':'ffl','ﬆ':'st'};
+const citationTypography=/[ﬀﬁﬂﬃﬄﬆ]|(?<=\p{L})[‐‑](?=\p{L})|(?<!\p{Nd})[\u00a0\u2009\u202f]|[\u00a0\u2009\u202f](?!\p{Nd})/gu;
+function citationSpelling(text,mapToSource=false){
+ const folded=text.replace(citationTypography,ch=>citationLigatures[ch]||('‐‑'.includes(ch)?'-':' '));
+ let offsets=null;
+ if(mapToSource&&folded.length!==text.length){
+  offsets=[0];let sourceEnd=0;
+  for(const ch of text){
+   const width=(citationLigatures[ch]||ch).length;
+   for(let i=1;i<width;i++)offsets.push(-1);
+   offsets.push(sourceEnd+=ch.length);
+  }
+ }
+ return {text:folded,offsets};
+}
+function citationHits(ref,ranges,exactOnly=false){
  const hits=[],quote=D.text(ref.quote,'quote');
  if(!quote)D.fail('EMPTY_QUOTE','provenance','A source quotation cannot be empty.');
+ const needle=exactOnly||/[\r\n\u2028\u2029]/u.test(quote)?null:citationSpelling(quote).text;
  for(const span of ranges){
   if(span.id!==ref.source_id||span.revision!==ref.source_revision)continue;
-  for(let at=span.text.indexOf(quote);at>=0;at=span.text.indexOf(quote,at+1)){
-   hits.push({span,at,ref:{source_id:span.id,source_revision:span.revision,quote,start:sourceOffset(span,at),end:sourceOffset(span,at+quote.length)}});
+  const positions=new Map();
+  for(let at=span.text.indexOf(quote);at>=0;at=span.text.indexOf(quote,at+1))positions.set(at,at+quote.length);
+  if(needle!==null){
+   const index=span.citationSpelling??=citationSpelling(span.text,true);
+   if(needle!==quote||index.text!==span.text){
+    for(let i=index.text.indexOf(needle);i>=0;i=index.text.indexOf(needle,i+1)){
+     const at=index.offsets?index.offsets[i]:i,end=index.offsets?index.offsets[i+needle.length]:i+needle.length;
+     if(at<0||end<0||positions.has(at))continue;
+     // A match may not borrow a character outside the cited span to qualify
+     // a letter-internal hyphen or a digit separator.
+     if(citationSpelling(span.text.slice(at,end)).text===needle)positions.set(at,end);
+    }
+   }
+  }
+  for(const [at,end] of [...positions].sort((a,b)=>a[0]-b[0])){
+   hits.push({span,at,ref:{source_id:span.id,source_revision:span.revision,quote:span.text.slice(at,end),start:sourceOffset(span,at),end:sourceOffset(span,end)}});
   }
  }
  return hits;
 }
 function locatedHit(state,ref,hits){
- if(hits.length===1)return hits[0];
- if(ref.start==null&&ref.end==null)return null;
+ const supplied=ref.start!=null||ref.end!=null;
+ if(hits.length===1&&(!supplied||hits[0].ref.quote===ref.quote))return hits[0];
+ if(!supplied)return null;
  const matches=(start,end)=>(ref.start==null||ref.start===start)&&(ref.end==null||ref.end===end);
  const exact=hits.find(h=>matches(h.ref.start,h.ref.end));
  if(exact)return exact;
- // Some providers count UTF-16 code units. Accept only a verbatim hit in this batch.
+ // Some providers count UTF-16 code units. Use the exact length of each
+ // source occurrence, since a normalized citation can expand a ligature.
  const original=D.sourceAt(state,ref)?.original_text;
  if(!original)return null;
- const start=ref.start??ref.end-ref.quote.length,end=ref.end??start+ref.quote.length;
- if(!Number.isInteger(start)||start<0||!Number.isInteger(end)||original.slice(start,end)!==ref.quote)return null;
- const point=Array.from(original.slice(0,start)).length;
- return hits.find(h=>h.ref.start===point)||null;
+ for(const hit of hits){
+  const quote=hit.ref.quote,start=ref.start??ref.end-quote.length,end=ref.end??start+quote.length;
+  if(Number.isInteger(start)&&start>=0&&Number.isInteger(end)&&end<=original.length&&original.slice(start,end)===quote&&
+    Array.from(original.slice(0,start)).length===hit.ref.start)return hit;
+ }
+ return null;
 }
 function citationStatements(span){
  if(span.statements)return span.statements;
@@ -513,7 +549,10 @@ function checkExtractedSources(state,candidate,questionId,ranges){
  const entries=[...originals.values()].map(ref=>{
   const hits=citationHits(ref,ranges);
   if(!hits.length)D.fail('QUOTE_NOT_FOUND','provenance','Candidate '+candidate.candidate_id+' must quote the exact text from a source ID and revision supplied in this batch.');
-  return {ref,hits,located:locatedHit(state,ref,hits)};
+  const located=locatedHit(state,ref,hits);
+  if(!located&&(ref.start!=null||ref.end!=null)&&hits.some(h=>h.ref.quote!==ref.quote))
+   D.fail('QUOTE_OFFSET_MISMATCH','provenance','The supplied citation offsets do not identify its original wording.');
+  return {ref,hits,located};
  });
  const refs=[],review=[],alternatives=[],mentions=[];
  for(const [reference_index,entry] of entries.entries()){
@@ -525,7 +564,7 @@ function checkExtractedSources(state,candidate,questionId,ranges){
    const anchors=entries.map(e=>e.located).filter(Boolean);
    const wording=candidate.normalized_text;
    if(wording?.length>ref.quote.length&&wording.includes(ref.quote)){
-    const matches=citationHits({...ref,quote:wording},ranges);
+    const matches=citationHits({...ref,quote:wording},ranges,true);
     if(matches.length===1)anchors.push(matches[0]);
    }
    const enclosed=hits.filter(hit=>anchors.some(anchor=>anchor.span===hit.span&&anchor.ref.start<=hit.ref.start&&anchor.ref.end>=hit.ref.end));
@@ -537,14 +576,14 @@ function checkExtractedSources(state,candidate,questionId,ranges){
    const {context,group}=citationContext(hit);
    mentions.push({source_id:hit.ref.source_id,source_revision:hit.ref.source_revision,start:hit.ref.start,end:hit.ref.end,
     context_start:context.start,context_end:context.end,...(context.heading?{heading_start:context.heading.start,heading_end:context.heading.end}:{})});
-   if(!groups.has(group))groups.set(group,{...context,match_start:hit.ref.start,match_end:hit.ref.end,match_quote:ref.quote,reference_index});
+   if(!groups.has(group))groups.set(group,{...context,match_start:hit.ref.start,match_end:hit.ref.end,match_quote:hit.ref.quote,reference_index});
   }
   for(const passage of groups.values()){
    // Preserve all readings for clarification. Once a passage is identified,
    // an opposing clause in the same sentence cannot support its conditions.
    const context=groups.size===1?D.occurrenceClause(passage):passage;
-   const needsContext=context.quote!==ref.quote||passage.heading;
-   review.push({source_id:ref.source_id,source_revision:ref.source_revision,quote:ref.quote,start:passage.match_start,end:passage.match_end,
+   const needsContext=context.quote!==passage.match_quote||passage.heading;
+   review.push({source_id:ref.source_id,source_revision:ref.source_revision,quote:passage.match_quote,start:passage.match_start,end:passage.match_end,
     ...(needsContext?{context:context.quote,context_start:context.start}:{}),...(passage.heading?{heading:passage.heading}:{})});
    if(groups.size>1)alternatives.push(passage);
   }
@@ -561,7 +600,7 @@ function checkExtractedSources(state,candidate,questionId,ranges){
   if(large&&alternatives.length){
    const used=new Set(entries.flatMap(entry=>entry.hits.map(hit=>hit.span)));
    candidate[reviewCitations]=[...used].map(span=>({source_id:span.id,source_revision:span.revision,quote:span.text,start:span.start,end:span.end,
-    matched_quotes:[...new Set(entries.filter(entry=>entry.hits.some(hit=>hit.span===span)).map(entry=>entry.ref.quote))]}));
+    matched_quotes:[...new Set(entries.flatMap(entry=>entry.hits.filter(hit=>hit.span===span).map(hit=>hit.ref.quote)))]}));
   }else if(large){
    // Reuse only the located clauses. Quoting the entire batch here would
    // reintroduce other occurrences during normalization and wording repair.
@@ -938,7 +977,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
   const {document_input_only,original_text,...question}=q;
   const questionInBatch=sources.filter(s=>s.input_kind==='research_question').map(s=>s.original_text).join('')===original_text;
   const questionContext=batches.length>1&&!document_input_only&&!questionInBatch?original_text:undefined;
-  const request={question:{...question,sources,original_text:questionContext},frameworks,review_profiles:profiles[qi],source_passages:passageIndex(passages),part_index:bi,part_count:batches.length,extraction_encoding:'compact-elements-v2'};
+  const request={question:{...question,sources,original_text:questionContext},frameworks,review_profiles:profiles[qi],source_passages:passageIndex(passages),part_index:bi,part_count:batches.length,extraction_encoding:'compact-elements-v3'};
   const responseSchema=D.clone(extractionSchema);responseSchema.properties.questions.items.required.push('review_topic');responseSchema.properties.questions.minItems=1;responseSchema.properties.questions.maxItems=1;responseSchema.properties.questions.items.properties.question_id={type:'string',enum:[q.question_id]};
   let answer;for(let attempt=0;attempt<=(options.retries??1);attempt++)try{
    answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+(batches.length>1?' Extract only from sources in this part. If supplied, question.original_text is whole-question context, not another source for this part. Preserve the within-part logic of all eligibility conditions.':'')+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
@@ -1158,16 +1197,19 @@ function sourceReview(state,adapter,options,env){
  let tail=[],total=0,completed=0,closed=false;
  function add(q,enqueue,last){
   const original=originals.get(q.question_id)||'';
-  reviewQuestions.set(q.question_id,{
+  const reviewQuestion={
    question_id:q.question_id,original_question:original.length<3500?original:null,logic:q.logic,
    ...(q.unresolved_fragment_logic?{unresolved_fragment_logic:q.unresolved_fragment_logic}:{})
-  });
+  };
   if(env){
    const sourceQuestion=state.questions.find(source=>source.question_id===q.question_id);
    const mapping=E.resolve_review_context(sourceQuestion,q,env).framework_mapping;
-   const slots=env.frameworks.get(mapping.framework_id)?.slots||[];
-   allowed.set(q.question_id,slots.map(s=>s.slot_id));
+   const frame=env.frameworks.get(mapping.framework_id);
+   const fields=frame?.slots.map(s=>s.slot_id)||[];
+   if(frame)reviewQuestion.framework={id:frame.framework_id,fields};
+   allowed.set(q.question_id,fields);
   }
+  reviewQuestions.set(q.question_id,reviewQuestion);
   const items=tail;
   for(const e of q.elements){
    if(q.eligibility_policy==='framework-only-v1'){

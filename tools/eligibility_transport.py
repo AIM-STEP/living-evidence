@@ -10,7 +10,7 @@ import re
 import threading
 import eligibility_legacy_citations as legacy_citations
 
-VERSION = 'eligibility-transport-v6'
+VERSION = 'eligibility-transport-v7'
 _lock = threading.Lock()
 _entries = {}
 _fields = {'source_id': 'S', 'source_ids': 'S', 'question_id': 'Q', 'question_ids': 'Q', 'answer_question_id': 'Q', 'id': 'R'}
@@ -73,7 +73,7 @@ def _citation_index(sources, groups):
     return ranges, passages
 
 
-def _compact_elements(schema, sources, source_first=False, groups=None):
+def _compact_elements(schema, sources, source_first=False, groups=None, copy_language=None):
     """Only compact the known extraction schema, leaving other client contracts intact."""
     try:
         elements = schema['properties']['questions']['items']['properties']['elements']
@@ -125,12 +125,56 @@ def _compact_elements(schema, sources, source_first=False, groups=None):
                             'entire original passage. Use an exact shorter quote for one arm, list item or qualifier.')
     elif single:
         instruction += ' The literal true copies text as a quote only for verbatim source wording.'
+    if copy_language:
+        fields['text'] = {'anyOf': [fields['text'], {'type': 'boolean', 'enum': [True]}]}
+        instruction += (' For a single short exact field phrase already in the output language, use text:true '
+                        'to reuse the cited words. Write text explicitly for translations, changes, comparisons, '
+                        'full sentences, eligibility verbs, and/or lists, multiple citations, exceptions, and structured limits. '
+                        'Copy a named arm only, without a with/against clause. Keep the exact source typography.')
     elements['items'] = {'type': 'object', 'properties': fields,
                          'required': ['id', 'citations', 'dimension', 'text', 'kind'], 'additionalProperties': False}
-    return instruction, single, ranges, passages, source_first
+    return instruction, single, ranges, passages, source_first, copy_language
 
 
-def _restore_elements(result, single, ranges, passages, source_first):
+_wording_clause = re.compile(
+    r'[;:!?。！？；：\n]|\.(?:\s|$)|\b(?:compar(?:e[ds]?|ing)|versus|vs|assess|evaluate|determine|'
+    r'includ(?:e|ed)|exclud(?:e|ed)|whereas|unless|except|provided that|either|and|or)\b|'
+    r'纳入|排除|比较|评估|除非|或者', re.I)
+_arm_assignment = re.compile(r'\b(?:receiv(?:e|ed|ing)|assign(?:ed|ment)?|randomi[sz]ed|'
+                             r'administer(?:ed|ing)|eligible|participants?|studies|trials?|with|against)\b|给予|分配|研究对象', re.I)
+
+
+def _verbatim_wording(element, ranges, language):
+    refs = element['source_refs']
+    if len(refs) != 1 or not isinstance(refs[0], dict):
+        raise OutputSyntaxError('Verbatim wording requires a single original citation.')
+    ref = refs[0]
+    quote = ref.get('quote')
+    if (not isinstance(quote, str) or not quote.strip() or len(quote) > 160 or _wording_clause.search(quote)
+            or element['structured_value'] is not None or element.get('scope_conditions') or element.get('exceptions')
+            or element['information_status'] != 'explicit' or element['semantic_role'] != 'eligibility_condition'):
+        raise OutputSyntaxError('Write the standardized wording explicitly for this condition.')
+    if element['dimension_id'] in ('intervention', 'comparator') and _arm_assignment.search(quote):
+        raise OutputSyntaxError('Write only the name of the assigned arm.')
+    han = bool(re.search(r'[\u3400-\u9fff]', quote))
+    if (language == 'en' and han) or (language == 'zh' and not han and re.search(r'[a-z]{2,}', quote)):
+        raise OutputSyntaxError('Write the translated wording explicitly.')
+    if not isinstance(ref.get('source_id'), str) or type(ref.get('source_revision')) is not int:
+        raise OutputSyntaxError('Verbatim wording needs an identified source and revision.')
+    spans = ranges.get((ref['source_id'], ref['source_revision']), [])
+    start, end = ref.get('start'), ref.get('end')
+    if start is None and end is None:
+        # Keep existing provenance resolution for repetitions. No occurrence is chosen here.
+        if any(quote in text for _, text in spans):
+            return quote
+    elif type(start) is int and type(end) is int:
+        for offset, text in spans:
+            if offset <= start < end <= offset + len(text) and text[start-offset:end-offset] == quote:
+                return quote
+    raise OutputSyntaxError('Verbatim wording did not match the cited original excerpt.')
+
+
+def _restore_elements(result, single, ranges, passages, source_first, copy_language=None):
     aliases = {short: original for original, short in _element_names.items()}
     for q in result['questions']:
         for e in q['elements']:
@@ -169,6 +213,10 @@ def _restore_elements(result, single, ranges, passages, source_first):
                     elif not isinstance(citation, dict) or citation.keys() != {'quote', 'start', 'end'}:
                         raise OutputSyntaxError('Invalid single-source citation.')
                     e['source_refs'][index] = dict(citation, source_id=single[0], source_revision=single[1])
+            if e['normalized_text'] is True and copy_language:
+                e['normalized_text'] = _verbatim_wording(e, ranges, copy_language)
+            elif not isinstance(e['normalized_text'], str):
+                raise OutputSyntaxError('An extraction requires standardized wording.')
 
 
 def _group(key, value):
@@ -253,11 +301,13 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_w
             questions['minItems'] = questions['maxItems'] = 1
             questions['items']['properties']['question_id'] = {'type': 'string', 'enum': [expected]}
         if (criteria_workflow and invoke_with_schema and expected and any(m.get('role') == 'system' for m in messages) and
-                wire['payload'].get('extraction_encoding') in ('compact-elements-v1', 'compact-elements-v2')):
+                wire['payload'].get('extraction_encoding') in ('compact-elements-v1', 'compact-elements-v2', 'compact-elements-v3')):
             payload = wire['payload']
+            encoding = payload['extraction_encoding']
+            language = str(wire.get('output_language', '')).lower().split('-')[0]
+            copy_language = language if encoding == 'compact-elements-v3' and language in ('en', 'zh') else None
             element_format = _compact_elements(wire_schema, payload['question'].get('sources', []),
-                                               payload['extraction_encoding'] == 'compact-elements-v2',
-                                               payload.get('source_passages'))
+                                               encoding != 'compact-elements-v1', payload.get('source_passages'), copy_language)
     wire_messages = [{**m, 'content': json.dumps(wire, ensure_ascii=False, separators=(',', ':'))}
                      if m.get('role') == 'user' else m for m in messages]
     if element_format:

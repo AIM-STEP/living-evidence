@@ -6,7 +6,7 @@ import time
 from eligibility_transport import OutputSyntaxError
 import typesafe_model as ts
 
-VERSION = 'eligibility-hybrid-v7'
+VERSION = 'eligibility-hybrid-v8'
 TASK = 'eligibility-review-v1'
 MIN_CONFIDENCE = .95
 TIMEOUT = 20
@@ -204,11 +204,18 @@ def _review_once(envelope, messages):
         try:
             model = ts.server_config().get('model') or 'jev-latest'
             key = ts.resolve_key()
+            question_index = {q['question_id']: i for i, q in enumerate(payload['questions'])}
             questions = {name: {'type': 'choice', 'criteria': verdicts,
-                                'instructions': f'Check state.items[{i}] against its own cited source in context. '
-                                'Select the most specific applicable verdict.'} for name, i in entries.items()}
+                                'instructions': f'Check state.items[{i}] against its own citations. Use '
+                                f'state.questions[{question_index[items[i]["question_id"]]}] for context. '
+                                'Apply state.review_rules and select the most specific applicable verdict.'} for name, i in entries.items()}
+            rules = '\n'.join(m['content'] for m in messages if m.get('role') == 'system')
+            if any(q.get('framework') for q in payload['questions']):
+                rules += ('\nWhen a question supplies a framework, check the assigned dimension against its fields. '
+                          'A qualified dimension such as population.age belongs to its parent field. '
+                          'Use only the cited original evidence to determine whether a restriction applies.')
             response = ts.request('/systemone', key, {'model': model,
-                'state': {'review_rules': '\n'.join(m['content'] for m in messages if m.get('role') == 'system'),
+                'state': {'review_rules': rules,
                           'questions': payload['questions'], 'items': items},
                 'questions': questions}, timeout=TIMEOUT)
             answers = response.get('answers')
@@ -222,17 +229,18 @@ def _review_once(envelope, messages):
                     continue
                 checked += 1
                 choice = match['choice']
-                if choice == 'supported' and min(match['confidence'], match['probabilities'][choice]) < MIN_CONFIDENCE:
-                    choice = 'low_confidence'
-                decisions[i] = (choice, match['confidence'])
+                decisions[i] = (choice, match['confidence'], match['probabilities'][choice])
         except (ts.ConfigurationError, OSError, ValueError, KeyError, TypeError, AttributeError):
             fallback = 'typesafe_unavailable_or_invalid'
     reviewed = []
     for i, item in enumerate(items):
-        choice, confidence = decisions.get(i, ('unavailable' if i in entries.values() else 'ambiguous', None))
+        choice, confidence, probability = decisions.get(i, ('unavailable' if i in entries.values() else 'ambiguous', None, None))
         reviewer = {'provider': 'typesafe', 'version': VERSION, 'verdict': choice}
         if confidence is not None:
-            reviewer.update(model=actual_model, confidence=confidence)
+            reviewer.update(model=actual_model, confidence=confidence, choice_probability=probability)
+            if choice in ('supported', 'wrong_field') and min(confidence, probability) < MIN_CONFIDENCE:
+                reviewer['original_verdict'] = choice
+                choice = reviewer['verdict'] = 'low_confidence'
         reviewed.append({'id': item['id'], 'status': 'supported' if choice == 'supported' else 'uncertain',
                          'issue_type': 'none' if choice == 'supported' else 'unsupported_rewrite' if choice in
                          ('wording_or_scope', 'wrong_field') else 'ambiguous_source',

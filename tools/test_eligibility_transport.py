@@ -154,14 +154,14 @@ class ElementEncodingTest(unittest.TestCase):
                         'elements': {'items': self.elements_schema}}}}}}
         self.element = {'id': 'c1', 'dimension': 'population', 'text': 'Teachers', 'citations': [True], 'kind': 'include'}
 
-    def call(self, elements, opt_in=True, encoding='compact-elements-v1', groups=None):
+    def call(self, elements, opt_in=True, encoding='compact-elements-v1', groups=None, language='en'):
         payload = {'question': {'question_id': self.question, 'sources': self.sources}}
         if opt_in:
             payload['extraction_encoding'] = encoding
         if groups is not None:
             payload['source_passages'] = groups
         messages = [{'role': 'system', 'content': 'Preserve all original scope and source evidence.'}, {'role': 'user',
-                    'content': json.dumps({'project_id': 'test', 'payload': payload, 'step': 'extract_elements'})}]
+                    'content': json.dumps({'project_id': 'test', 'payload': payload, 'step': 'extract_elements', 'output_language': language})}]
         def model(wire, schema):
             self.wire_fields = schema['properties']['questions']['items']['properties']['elements']['items']
             self.system = wire[0]['content']
@@ -225,6 +225,29 @@ class ElementEncodingTest(unittest.TestCase):
         for groups in [[dict(group, source_revision=1)], [group, group]]:
             with self.subTest(groups=groups), self.assertRaises(transport.OutputSyntaxError):
                 self.call([dict(self.element, citations=[1])], encoding='compact-elements-v2', groups=groups)
+
+    def test_single_verbatim_field_reuses_original_words_only_in_v3(self):
+        self.sources[0]['original_text'] = '🔎 Teachers received supplemental oxygen. 对照组接受常规护理。'
+        record = dict(self.element, text=True, dimension='comparator', citations=['supplemental oxygen'])
+        copy, = self.call([record], encoding='compact-elements-v3')
+        self.assertEqual(copy['normalized_text'], 'supplemental oxygen')
+        self.assertEqual(copy['source_refs'][0]['quote'], copy['normalized_text'])
+        translated, = self.call([dict(record, citations=['常规护理'], text='usual care')], encoding='compact-elements-v3')
+        self.assertEqual(translated['normalized_text'], 'usual care')
+        for encoding, override in [
+            ('compact-elements-v2', {}),
+            ('compact-elements-v3', {'citations': ['常规护理']}),
+            ('compact-elements-v3', {'citations': ['Teachers received supplemental oxygen']}),
+            ('compact-elements-v3', {'citations': ['supplemental oxygen', 'Teachers']}),
+            ('compact-elements-v3', {'citations': ['inhaled oxygen']}),
+            ('compact-elements-v3', {'citations': [{'quote': 'Teachers', 'start': 1, 'end': 9}]}),
+            ('compact-elements-v3', {'exceptions': ['during transfer']})
+        ]:
+            with self.subTest(encoding=encoding, override=override), self.assertRaises(transport.OutputSyntaxError):
+                self.call([dict(record, **override)], encoding=encoding)
+        group = dict(source_id=self.source, source_revision=3, spans=[[3, 2, 10, 'population']])
+        located, = self.call([dict(record, dimension='population', citations=[3])], encoding='compact-elements-v3', groups=[group])
+        self.assertEqual((located['normalized_text'], located['source_refs'][0]['start']), ('Teachers', 2))
 
     def test_multi_source_passage_retains_source_identity_and_short_literal_citations(self):
         other = 'source_' + 'b' * 32

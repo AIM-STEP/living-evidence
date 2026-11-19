@@ -86,6 +86,10 @@ class HybridReviewTest(unittest.TestCase):
     def test_single_review_never_accepts_unchecked_or_low_confidence_items(self):
         rows, _ = self.single_review(dict(c0=('supported', .7), c1=(None, 0)))
         self.assertEqual([row['reviewer']['verdict'] for row in rows], ['low_confidence', 'unavailable'])
+        rows, _ = self.single_review(dict(c0=('wrong_field', .7), c1=('wrong_field', .99)))
+        self.assertEqual([row['reviewer']['verdict'] for row in rows], ['low_confidence', 'wrong_field'])
+        self.assertEqual(rows[0]['reviewer']['original_verdict'], 'wrong_field')
+        self.assertEqual(rows[0]['reviewer']['choice_probability'], 1)
         rows, _ = self.single_review(outage=True)
         self.assertTrue(all(row['status'] == 'uncertain' and row['reviewer']['verdict'] == 'unavailable' for row in rows))
         self.items[1]['source_occurrence_pending'] = True
