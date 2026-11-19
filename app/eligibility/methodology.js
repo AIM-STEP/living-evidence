@@ -159,6 +159,10 @@ function extraRule(dimension,value){
  }
 }
 function description(rows,context={}){
+ if(context.pending_inclusion_relation){
+  const settled=description(rows.map(row=>({...row,include:[]})),{...context,pending_inclusion_relation:false});
+  return [settled,'How the groups of inclusion conditions should be combined remains to be confirmed.'].filter(Boolean).join(' ');
+ }
  if(context.question_contexts?.length&&JSON.stringify(context.combined_rows)===JSON.stringify(rows)){
   const paragraphs=context.question_contexts.map((item,index)=>{
    const text=description(item.rows||[],item);

@@ -103,11 +103,11 @@
 <script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
 <script src="app/eligibility/registries.js?v=20261118-criteria-actions-1"></script>
 <script src="app/eligibility/domain.js?v=20261118-criteria-review-3"></script>
-<script src="app/eligibility/methodology.js?v=20261118-criteria-review-3"></script>
-<script src="app/eligibility/engine.js?v=20261118-criteria-review-3"></script>
-<script src="app/eligibility/model.js?v=20261119-clear-criteria-2"></script>
+<script src="app/eligibility/methodology.js?v=20261119-stage-one-1"></script>
+<script src="app/eligibility/engine.js?v=20261119-stage-one-1"></script>
+<script src="app/eligibility/model.js?v=20261119-stage-one-1"></script>
 <script src="app/eligibility-reset.js?v=20261119-clear-criteria-1"></script>
-<script src="app/eligibility/background.js?v=20261119-clear-criteria-1"></script>
+<script src="app/eligibility/background.js?v=20261119-stage-one-1"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -178,18 +178,19 @@ function getEligibilityBackground(){
   return eligibilityBackgroundPromise;
 }
 function backgroundErrorMessage(error){
+  const previous=state.activeGenerator==='manual'?state.manualRefinement:state.machineRun||state.machineRefinement||state.machineCriteria?.length;
+  const draftStatus=previous?'Your previous draft is still available.':'No draft was saved for this run.';
   if(error.code==='SEMANTIC_REVIEW_FAILED'){
     const dimension=String(error.details?.dimension_id||'').replace(/[._]+/g,' ').trim();
     const wording=String(error.details?.wording||'').trim();
     const reason=typeof error.details?.reason==='string'?error.details.reason.trim():'';
-    const previous=state.activeGenerator==='manual'?state.manualRefinement:state.machineRun||state.machineRefinement||state.machineCriteria?.length;
     const explanation=reason&&!/^(?:none|n\/a|unknown)[.!]?$/i.test(reason)?reason.replace(/([^.!?。！？])$/u,'$1.'):'';
     const candidate=wording?' “'+(wording.length>180?wording.slice(0,177)+'…':wording)+'”':'';
-    return ['The source check could not verify the proposed wording'+(dimension?' for '+dimension:'')+candidate+'.',explanation,previous?'Your previous draft is still available.':'No draft was saved for this run.'].filter(Boolean).join(' ');
+    return ['The source check could not verify the proposed wording'+(dimension?' for '+dimension:'')+candidate+'.',explanation,draftStatus].filter(Boolean).join(' ');
   }
   if(!/[\u3400-\u9fff]/u.test(error.message||''))return error.message;
-  const messages={MODEL_SCHEMA_ERROR:'The model returned an invalid structure. Your previous version has been kept.',MODEL_TIMEOUT:'The model request timed out. Your previous version has been kept.'};
-  return messages[error.code]||'The eligibility check could not be completed'+(error.code?' ('+error.code+')':'')+'. Your previous version has been kept.';
+  const messages={MODEL_SCHEMA_ERROR:'The model returned an invalid structure.',MODEL_TIMEOUT:'The model request timed out.'};
+  return (messages[error.code]||'The eligibility check could not be completed'+(error.code?' ('+error.code+')':'')+'.')+' '+draftStatus;
 }
 function backgroundModelClient(model){return {get exchanges(){return model.auditTrail||[];},async request(step,project,payload,schema,instruction,signal){
   let abort;const cancelled=new Promise((_,reject)=>{abort=()=>{const error=new Error('Generation stopped.');error.name='AbortError';reject(error);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true});});
@@ -535,9 +536,7 @@ async function requestMachineCriteria(model,input,reviewType,signal,transcribe=f
   if(token)headers.Authorization='Bearer '+token;
   const endpoint=model.base+(backend?'/model':ollama?'/api/chat':'/chat/completions');
   async function post(){
-    const response=await localFetch(endpoint,{method:'POST',headers,body:JSON.stringify(body),signal});
-    if(!response.ok){const raw=(await response.text()).slice(0,250);let message=raw;try{message=JSON.parse(raw).error||raw}catch(e){}const error=new Error('Model HTTP '+response.status+': '+message);error.status=response.status;throw error}
-    return response.json();
+    return criteriaModelResponse(endpoint,{method:'POST',headers,body:JSON.stringify(body),signal},transcribe?'transcription':'extract_elements',backend);
   }
   let data;try{data=await post()}catch(error){if(!ollama&&error.status===400&&/response.format|json.object|json mode/i.test(error.message)){delete body.response_format;data=await post()}else throw error}
   const content=ollama?data.message?.content:data.choices?.[0]?.message?.content;
@@ -560,9 +559,23 @@ async function callCriteriaJson(model,system,payload,signal,schema=null){
   const abort=()=>controller.abort(signal?.reason);
   signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
   const timer=setTimeout(()=>{expired=true;controller.abort()},600000);
-  let cancel;const cancelled=new Promise((_,reject)=>{cancel=()=>reject(Object.assign(new Error(expired?'This model step exceeded 10 minutes. Your previous criteria have been kept.':'Generation stopped.'),{name:expired?'Error':'AbortError',code:expired?'MODEL_TIMEOUT':'MODEL_CANCELLED'}));controller.signal.addEventListener('abort',cancel,{once:true});if(controller.signal.aborted)cancel();});
+  let cancel;const cancelled=new Promise((_,reject)=>{cancel=()=>reject(Object.assign(new Error(expired?'This model step timed out after 10 minutes.':'Generation stopped.'),{name:expired?'Error':'AbortError',code:expired?'MODEL_TIMEOUT':'MODEL_CANCELLED'}));controller.signal.addEventListener('abort',cancel,{once:true});if(controller.signal.aborted)cancel();});
   try{return await Promise.race([cancelled,Promise.resolve().then(()=>{if(controller.signal.aborted)return cancelled;return requestCriteriaJson(model,system,payload,controller.signal,schema)})]);}
   finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);controller.signal.removeEventListener('abort',cancel);}
+}
+async function criteriaModelResponse(url,options,step,backend){
+  let response;
+  try{response=await localFetch(url,options)}
+  catch(error){
+    if(backend&&error.onlineModel&&(error.status>=500||error.status===429))throw window.AIMSTEPEligibilityModel.httpError(error.status,null,step);
+    throw error;
+  }
+  if(response.ok)return response.json();
+  const raw=await response.text();
+  let detail;try{detail=JSON.parse(raw)}catch(_){}
+  if(backend)throw window.AIMSTEPEligibilityModel.httpError(response.status,detail,step);
+  const message=detail?.error?.message||detail?.error||raw;
+  throw Object.assign(new Error('Model HTTP '+response.status+': '+String(message).slice(0,500)),{status:response.status});
 }
 async function requestCriteriaJson(model,system,payload,signal,schema=null){
   const backend=model.provider==='backend',ollama=model.provider!=='compatible';
@@ -572,9 +585,7 @@ async function requestCriteriaJson(model,system,payload,signal,schema=null){
   const headers={'Content-Type':'application/json'},token=backend?'':sessionStorage.getItem(modelTokenKey(model.slot))||'';
   if(token)headers.Authorization='Bearer '+token;
   async function post(){
-    const response=await localFetch(model.base+(backend?'/model':ollama?'/api/chat':'/chat/completions'),{method:'POST',headers,body:JSON.stringify(body),signal});
-    if(!response.ok){const raw=(await response.text()).slice(0,500);let message=raw,code;try{const detail=JSON.parse(raw);message=detail.error||raw;code=detail.code}catch(e){}throw Object.assign(new Error('Model HTTP '+response.status+': '+message),code==='MODEL_SCHEMA_ERROR'?{code}:{})}
-    return response.json();
+    return criteriaModelResponse(model.base+(backend?'/model':ollama?'/api/chat':'/chat/completions'),{method:'POST',headers,body:JSON.stringify(body),signal},payload.step,backend);
   }
   let data;try{data=await post()}catch(error){if(!ollama&&/response.format|json.object|json.schema|json mode/i.test(error.message)){delete body.response_format;data=await post()}else throw error}
   const content=ollama?data.message?.content:data.choices?.[0]?.message?.content;
@@ -738,12 +749,21 @@ function sourceConfirmation(atom,review){
   let options=(review.alternatives||[]).filter(option=>['include','exclude'].includes(option.side)&&valid(option.text)).map(option=>({text:sentence(neutral(option.text)),side:option.side}));
   const text=sentence(neutral(atom.proposition||source));
   if(!options.length&&valid(text))options=[{text,side:'include'},{text,side:'exclude'}];
-  options=options.filter((option,index)=>options.findIndex(other=>other.side===option.side&&ruleKey(other.text)===ruleKey(option.text))===index).slice(0,2);
+  options=options.filter((option,index)=>options.findIndex(other=>other.side===option.side&&ruleKey(other.text)===ruleKey(option.text))===index);
   if(!options.length)return null;
   return {item:'Original rule: '+atom.dimension+': '+text,kind:'proposal',type:'source-ambiguity',domain:atom.dimension,text:options[0].text,side:options[0].side,options,status:'suggested',sourceIssue:review.issueType||'ambiguous_source',evidence:[{name:atom.sourceName||'Original input',page:atom.page||null,quote:source,verification:atom.verification||'original-text'}]};
 }
 function mergeSourceConfirmations(items){
-  const seen=new Set();return items.filter(Boolean).filter(detail=>{const key=detail.domain+'|'+detail.options.map(option=>ruleKey(option.text)).sort().join('|');if(seen.has(key))return false;seen.add(key);return true;});
+  const groups=new Map();
+  for(const detail of items.filter(Boolean)){
+    const options=detail.options||[],subject=detail.item||detail.text;
+    const id=JSON.stringify([detail.domain,detail.sourceIssue,ruleKey(subject||''),detail.scopeImpact||'']);
+    const merged=groups.get(id)||{...detail,options:[],evidence:[]};
+    for(const option of options)if(!merged.options.some(prior=>prior.side===option.side&&ruleKey(prior.text)===ruleKey(option.text)))merged.options.push(option);
+    for(const ref of detail.evidence||[])if(!merged.evidence.some(prior=>prior.name===ref.name&&prior.page===ref.page&&prior.quote===ref.quote&&prior.source_id===ref.source_id&&prior.source_revision===ref.source_revision&&prior.start===ref.start&&prior.end===ref.end))merged.evidence.push(ref);
+    groups.set(id,merged);
+  }
+  return [...groups.values()];
 }
 function restoreSourceConfirmations(refinement){
   if(Array.isArray(refinement.sourceConfirmations))return;
@@ -754,7 +774,13 @@ function restoreSourceConfirmations(refinement){
     const source=detail.evidence[0],text=detail.text||detail.item?.match(/(?:rule|requirement) "([^"]+)"/i)?.[1];
     if(text)details.push(sourceConfirmation({dimension:detail.domain,proposition:text,sourceSentence:source.quote,sourceName:source.name,page:source.page,verification:source.verification},{issueType:'source_conflict'}));
   }
-  refinement.sourceConfirmations=mergeSourceConfirmations(details).filter(detail=>!(state.finalCriteria?.decisions||[]).some(decision=>decision.domain===detail.domain&&decision.rule&&detail.options.some(option=>ruleKey(option.text)===ruleKey(decision.rule))));
+  const merged=mergeSourceConfirmations(details);
+  refinement.sourceConfirmations=merged.filter(detail=>!(state.finalCriteria?.decisions||[]).some(decision=>{
+    if(decision.domain!==detail.domain)return false;
+    if(decision.item)return ruleKey(decision.item)===ruleKey(detail.item);
+    const matches=merged.filter(check=>check.domain===decision.domain&&decision.rule&&check.options.some(option=>(!decision.side||option.side===decision.side)&&ruleKey(option.text)===ruleKey(decision.rule)));
+    return matches.length===1&&matches[0]===detail;
+  }));
 }
 function validateAcademicDraft(answer,input,signature,model,extracts){
   const sources=input.criteria,expected=sources.map(row=>row.dimension),atomLookup=new Map(extracts.atoms.map(atom=>[atom.id,atom]));
@@ -1223,13 +1249,17 @@ function criteriaDisplay(rows,refinement){
 }
 function sourceConfirmationHtml({detail,index,context=''}){
   const button=(choice,symbol,title)=>'<button class="btn small" type="button" data-source-confirm="'+index+'" data-source-option="'+choice+'" aria-label="'+escapeHtml(title)+'" title="'+escapeHtml(title)+'">'+symbol+'</button>';
-  const evidence=(detail.evidence||[]).slice(0,2).map(ref=>'<p class="summary-muted">Source: “'+escapeHtml(ref.quote||'')+'”</p>').join('');
+  const evidence=(detail.evidence||[]).map(ref=>'<p class="summary-muted">Source: “'+escapeHtml(ref.quote||'')+'”</p>').join('');
   if(detail.backgroundIssue){
    const answer='<div class="scope-actions"><input class="text-input" type="text" maxlength="2000" data-source-answer="'+index+'" aria-label="Your clarification" placeholder="Enter your clarification for this element"><button class="btn small" type="button" data-source-confirm="'+index+'" data-source-option="answer">Apply</button></div>';
    const options=detail.options.length===2?'<div class="scope-actions">'+button(0,'✓',detail.options[0].label)+button(1,'×',detail.options[1].label)+'</div><p class="summary-muted">✓ '+escapeHtml(detail.options[0].label)+' × '+escapeHtml(detail.options[1].label)+'</p>':detail.options.map((option,choice)=>'<div class="scope-actions"><span>'+escapeHtml(option.label)+'</span>'+button(choice,'✓','Use '+option.label)+button(-1,'×','Keep this issue pending')+'</div>').join('');
    return '<div class="scope-suggestion source-confirmations"><p><strong>Author check:</strong> '+(context?escapeHtml(context)+' — ':'')+escapeHtml((detail.questionNumber?detail.questionNumber+' · ':'')+detail.text)+'</p>'+evidence+options+answer+'</div>';
   }
-  return '<div class="scope-suggestion source-confirmations"><p>'+escapeHtml(detail.text||detail.options?.[0]?.text||'Confirm this condition')+'</p>'+evidence+'<div class="scope-actions">'+button(0,'✓','Use the first interpretation')+button(1,'×','Use the alternative interpretation')+'</div></div>';
+  const options=(detail.options||[]).map((option,choice)=>{
+   const label=(option.side==='exclude'?'Exclude':'Include')+' · '+option.text;
+   return '<div class="scope-actions">'+button(choice,'✓',label)+'<span>'+escapeHtml(label)+'</span></div>';
+  }).join('');
+  return '<div class="scope-suggestion source-confirmations"><p>'+escapeHtml(detail.text||detail.options?.[0]?.text||'Confirm this condition')+'</p>'+evidence+options+'</div>';
 }
 function renderCriteriaSide(display,side){
  const markup=display.rows.filter(row=>row[side].length).map(row=>{
@@ -1332,6 +1362,22 @@ $('download').addEventListener('click',()=>{if(!savePreviewEdits(false))return;c
 // navigation because they can also be uploaded there. The step is
 // still only marked complete, and the criteria only handed over, when there is
 // a current set with at least one eligibility rule and no unresolved new-method decisions.
+function hasRequiredAuthorChecks(){
+  const refinement=currentRefinement();
+  if(refinement?.sourceConfirmations?.some(item=>item.status==='suggested'&&!item.reviewOnly))return true;
+  if(state.activeGenerator!=='machine')return false;
+  const snapshot=state.eligibilityV3Snapshot;
+  return !!(snapshot?.issues?.some(issue=>issue.status==='open'&&issue.blocking)||snapshot?.status==='needs_clarification'&&snapshot.validation?.blocking_issues?.length);
+}
+function clearPendingCompletion(){
+  if(!completionKey||embeddedManual||embeddedPreview)return;
+  try{
+    const steps=JSON.parse(localStorage.getItem(completionKey)||'[]');
+    if(!Array.isArray(steps)||!steps.some(step=>Number(step)===1))return;
+    localStorage.setItem(completionKey,JSON.stringify(steps.filter(step=>Number(step)!==1)));
+    if(parent!==window&&parent.location.origin===location.origin)parent.AIMSTEP?.setSetupStepCompleted?.(1,false);
+  }catch(e){}
+}
 function saveBeforeToolNavigation(event){
   if(previewDirty&&!savePreviewEdits(false)){event.preventDefault();return;}
   if(generationController||manualRefinementController||voiceRecognition){stopMachineGeneration();stopManualRefinement();abortVoiceInput()}
@@ -1340,7 +1386,8 @@ function saveBeforeToolNavigation(event){
   const mode=$('generation-method').value;
   const machineCurrent=mode!=='machine'||(state.machineRun&&state.machineRun.question===$('question').value.trim()&&state.machineRun.reviewType===state.reviewType&&(state.machineRun.sourceRevision??0)===(Number(state.machineSourceRevision)||0));
   const rows=mode==='machine'?state.machineCriteria:state.criteria;
-  const unresolvedScope=currentPending().some(item=>['question','proposal','review'].includes(clarificationDetail(item)?.kind));
+  const unresolvedScope=hasRequiredAuthorChecks();
+  if(unresolvedScope)clearPendingCompletion();
   const ready=saved&&!!mode&&machineCurrent&&rows.length>0&&rows.some(row=>String(row.condition||'').trim())&&!unresolvedScope;
   if(!ready)return;
   if(completionKey){
@@ -1454,7 +1501,7 @@ async function confirmBackgroundIssue(detail,choice,answerField){
   const timer=setTimeout(()=>controller.abort(),600000);
   try{
     const service=await getEligibilityBackground();let model;
-    setMachineStatus('Applying your answer…');if(!option){model=await resolveLocalModel(false,controller.signal);model.auditTrail=[];}
+    setMachineStatus('Applying your answer…');if(!option||option.requires_interpretation){model=await resolveLocalModel(false,controller.signal);model.auditTrail=[];}
     const stage=await service.decide({criteriaEpoch:state.criteria_epoch??null,issue_id:detail.issue_id,option_id:option?.option_id,answer_text:answer||option?.label,modelClient:model?backgroundModelClient(model):null,signal:controller.signal});
     if(run!==generationNonce||controller.signal.aborted)return false;
     const decision=stage.project.decisions.at(-1),confirmed=stage.project.criteria.filter(c=>c.source_decision_ids.includes(decision.decision_id));
@@ -1468,7 +1515,7 @@ async function confirmBackgroundIssue(detail,choice,answerField){
 function confirmSourceRule(index,choice,answerField){
   const backgroundDetail=currentRefinement()?.sourceConfirmations?.[index];
   if(backgroundDetail?.backgroundIssue){if(previewDirty&&!savePreviewEdits(false))return false;return confirmBackgroundIssue(backgroundDetail,choice,answerField);}
-  if(!Number.isInteger(index)||index<0||!Number.isInteger(choice)||choice<0||choice>1)return false;
+  if(!Number.isInteger(index)||index<0||!Number.isInteger(choice)||choice<0)return false;
   if(previewDirty&&!savePreviewEdits(false))return false;
   const machine=state.activeGenerator==='machine',refinement=currentRefinement(),detail=refinement?.sourceConfirmations?.[index],option=detail?.options?.[choice];
   if(!option||detail.status!=='suggested')return false;
@@ -1529,6 +1576,7 @@ if(embeddedManual){
 }else{
  if(!embeddedPreview&&window.AimstepEligibilityLibrary){try{const saved=window.AimstepEligibilityLibrary.commit(localStorage,projectId,state);state.criteriaLibraryId=saved.criteriaLibraryId;}catch(error){toast('Could not save the criteria list on this device.');}}
  fill();
+ if(hasRequiredAuthorChecks())clearPendingCompletion();
 }
 })();
 

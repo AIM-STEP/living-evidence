@@ -3,7 +3,7 @@
 'use strict';
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
-const presentationVersion='20261118-criteria-review-3';
+const presentationVersion='20261119-source-decisions-1';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -19,6 +19,7 @@ function issueText(issue,project,elements=issue.element_ids.map(id=>project.elem
  if(issue.author_scope_review)return issue.question_text;
  if(issue.trigger_rule_id==='population_age_boundary')return 'The source specifies older people without a numeric age threshold. Define the age boundary below, or confirm whether to retain the original wording.';
  if(issue.trigger_rule_id?.startsWith('model_issue:')&&issue.question_text&&!/[\u3400-\u9fff]/u.test(issue.question_text))return issue.question_text;
+ if(issue.trigger_rule_id?.startsWith('fragment_relation:'))return issue.question_text;
  if(issue.trigger_rule_id==='between_question_relation')return 'Should studies satisfy any subquestion or all subquestions?';
  if(issue.reason_code==='CONFLICTING_REQUIREMENTS')return 'Which requirement should apply to '+domain.toLowerCase()+'?';
  if(issue.reason_code==='FRAMEWORK_AMBIGUITY')return issue.trigger_rule_id.startsWith('custom_definition:')?'What does this custom framework field mean?':'Which question framework should be used?';
@@ -47,25 +48,35 @@ function projectToClassic(project){
  const multiple=output.questions.length>1;
  const contexts=output.questions.map(q=>{
   const target=multiple?[]:rows,reference=Methods.interventionReference(q.elements);
-  for(const side of ['include','exclude'])for(const unit of Methods.splitDimensions(q.logic?.[side],q[side],label)){
-   add(target,unit.dimension,side,Methods.ageClause(unit.criteria)||Methods.clause(unit.dimension,unit.text,reference),unit.criteria);
+  const pending=q.logic?.pending_inclusion_branches;
+  for(const side of ['include','exclude']){
+   const branches=side==='include'&&pending?pending:[q.logic?.[side]];
+   for(const branch of branches)for(const unit of Methods.splitDimensions(branch,q[side],label)){
+    add(target,unit.dimension,side,Methods.ageClause(unit.criteria)||Methods.clause(unit.dimension,unit.text,reference),unit.criteria);
+   }
   }
   const context=Methods.descriptionContext(q,project);
-  return multiple?{...context,rows:target,display_number:q.display_number}:context;
+  return {...context,...(multiple?{rows:target,display_number:q.display_number}:{}),...(pending?{pending_inclusion_relation:true}:{})};
  });
  if(multiple){
-  const questions=output.questions.filter(q=>q.logic_text);
   const overview=q=>q.display_number+': '+q.logic_text;
-  if(project.question_relation){
-   add(rows,'Other','include',questions.map(overview).join(project.question_relation==='any_of'?' or ':' and '),project.criteria);
-  }else for(const q of questions)add(rows,'Other','include',overview(q),[...q.include,...q.exclude]);
+  if(output.questions.some(q=>q.logic?.pending_inclusion_branches)){
+   for(const q of output.questions){
+    if(q.logic_text)add(rows,'Other','include',overview(q),[...q.include,...q.exclude]);
+    else for(const side of ['include','exclude'])for(const criterion of q[side])add(rows,label(criterion.dimension_id),side,q.display_number+': '+criterion.text,[criterion]);
+   }
+  }else{
+   const questions=output.questions.filter(q=>q.logic_text);
+   if(project.question_relation)add(rows,'Other','include',questions.map(overview).join(project.question_relation==='any_of'?' or ':' and '),project.criteria);
+   else for(const q of questions)add(rows,'Other','include',overview(q),[...q.include,...q.exclude]);
+  }
  }
  const order=['Population','Sample','Intervention','Exposure','Concept','Phenomenon of Interest','Comparison','Outcomes','Context','Study design','Other'];rows.sort((a,b)=>(order.includes(a.dimension)?order.indexOf(a.dimension):99)-(order.includes(b.dimension)?order.indexOf(b.dimension):99));
  const descriptionContext={...(contexts.length===1?contexts[0]:{question_contexts:contexts,question_relation:project.question_relation,combined_rows:clone(rows)}),focus_sentence:contexts.map(c=>c.focus_sentence).filter(Boolean).join(' '),methods_sentence:contexts.map(c=>c.methods_sentence).filter(Boolean).join(' ')};
  const focusRows=[];for(const e of project.elements.filter(e=>e.active!==false&&e.information_status!=='missing'&&e.dimension_id!=='population.age'&&e.source_refs?.length&&!displayedByElement.has(e.element_id)&&['review_focus','undecided'].includes(e.semantic_role))){const analysis=e.decision_status==='confirmed_by_user'?null:Methods.classifyAnalysis(e,project.questions.find(q=>q.question_id===e.question_id)?.original_text||''),dimension=label(analysis?.dimension_id||e.dimension_id);let row=focusRows.find(row=>row.dimension===dimension);if(!row){row={dimension,values:[],role:e.semantic_role};focusRows.push(row);}if(e.normalized_text&&!row.values.includes(e.normalized_text))row.values.push(e.normalized_text);}
  for(const row of focusRows)if(row.dimension==='Analysis plan')row.values=row.values.filter(value=>!row.values.some(other=>other.length>value.length&&other.toLowerCase().includes(value.toLowerCase())));
  const confirmations=project.issues.filter(issue=>issue.status==='open'&&issue.blocking).map(issue=>{
-  const elements=issue.element_ids.map(id=>elementsById.get(id)).filter(Boolean);
+  const elements=(issue.linked_element_ids||issue.element_ids).map(id=>elementsById.get(id)).filter(Boolean);
   const locations=[];
   for(const element of elements){
    const location=displayedByElement.get(element.element_id)||{
@@ -81,8 +92,8 @@ function projectToClassic(project){
    side:primary.section==='exclude'?'exclude':'include',status:'suggested',backgroundIssue:true,
    reviewOnly:false,focusOnly:primary.section==='focus',locations,issue_id:issue.issue_id,
    questionNumber:output.questions.length>1?output.questions.find(q=>q.question_id===issue.question_id)?.display_number:null,
-   options:issue.options.map(option=>({label:optionLabel(option),option_id:option.option_id})),
-   evidence:elements.flatMap(element=>element.source_refs||[]).map(({quote,source_id,source_revision})=>({quote,source_id,source_revision}))};
+   options:issue.options.map(option=>({label:optionLabel(option),option_id:option.option_id,...(option.requires_interpretation?{requires_interpretation:true}:{})})),
+   evidence:[...new Map(elements.flatMap(element=>element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
  });
  return {manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows,framework:output.questions.length===1?output.questions[0].framework_mapping?.display_name||'Other':'Other',rows,reviewTopic:output.questions.map(q=>q.objective).join(' '),topicStyle:'sentence-v3',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
 }
@@ -150,10 +161,38 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  }
  async function generate({legacy,question,reviewType,sources=[],modelClient,signal,onProgress}){
   requireEpoch(storage,projectId,legacy?.criteria_epoch);
-  const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs),methods={'Systematic Review':'systematic_review','Scoping Review':'scoping_review','Umbrella Review':'umbrella_review'};
+  const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs);
+  const methods={'Systematic Review':'systematic_review','Scoping Review':'scoping_review','Rapid Review':'rapid_review',
+   'Umbrella Review':'umbrella_review','Narrative Literature Review':'narrative_literature_review',
+   'Integrative Review':'integrative_review','Other Review':'other_review'};
   const raw=question||sources.map(source=>source.text).join('\n\n');
-  let project=E.save_input(saved,{research_question:raw,review_method:methods[reviewType]||null,output_language:'en',legacy_archive:saved.criteria_epoch?null:legacy},{base_revision:revision},env).state;
-  for(const [index,source]of sources.entries()){if(source.name==='Question / voice input'&&source.text===question)continue;const questions=project.questions.filter(q=>q.active!==false),stored=E.addSource(project,'user_input',source.text,questions.map(q=>q.question_id),'classic_document:'+index,{input_kind:'original_document',name:source.name,page:source.page||null,verification:source.verification||'original-text'});for(const q of questions)q.imported_source_refs=[...(q.imported_source_refs||[]),E.ref(stored)];}
+  let project=E.save_input(saved,{research_question:raw,document_input_only:!question&&sources.length>0,review_method:methods[reviewType]||reviewType||null,output_language:'en',legacy_archive:saved.criteria_epoch?null:legacy},{base_revision:revision},env).state;
+  const activeQuestions=project.questions.filter(q=>q.active!==false);
+  let questionOffset=0,documentOffset=0;
+  const ranges=activeQuestions.map(q=>{
+   const start=question?0:raw.indexOf(q.original_text,questionOffset),end=start+q.original_text.length;
+   questionOffset=end;
+   return {q,start,end};
+  });
+  for(const [index,source]of sources.entries()){
+   if(source.name==='Question / voice input'&&source.text===question)continue;
+   const start=documentOffset,end=start+source.text.length;
+   documentOffset=end+2; // raw separates consecutive originals with two newlines.
+   const owners=question?ranges:ranges.filter(range=>range.start<end&&range.end>start);
+   if(!owners.length)continue;
+   const stored=E.addSource(project,'user_input',source.text,owners.map(({q})=>q.question_id),'classic_document:'+index,{input_kind:'original_document',name:source.name,page:source.page||null,verification:source.verification||'original-text'});
+   for(const range of owners){
+    const {q}=range;
+    q.imported_source_refs=q.imported_source_refs.filter(ref=>{
+     const previous=D.sourceAt(project,ref);
+     return !(previous?.input_kind==='legacy_original_document'&&previous.name===stored.name&&previous.page===stored.page&&previous.original_text===stored.original_text);
+    });
+    if(question||range.start<=start&&range.end>=end){q.imported_source_refs.push(E.ref(stored));continue;}
+    const from=Math.max(0,range.start-start),to=Math.min(source.text.length,range.end-start);
+    const quote=source.text.slice(from,to),offset=Array.from(source.text.slice(0,from)).length;
+    q.imported_source_refs.push({...E.ref(stored,quote),start:offset,end:offset+Array.from(quote).length});
+   }
+  }
   if(saved.classic_author_source_ref){const ref=saved.classic_author_source_ref;for(const q of project.questions.filter(q=>q.active!==false))if(!q.additional_source_refs.some(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision))q.additional_source_refs.push(clone(ref));}
   const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress});requireEpoch(storage,projectId,saved.criteria_epoch);onProgress?.('Validating eligibility criteria…',{phase:'validate'});project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;project.model_calls.push(...result.model_calls);project.presentation_version=presentationVersion;const visible=projectToClassic(project);if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');onProgress?.('Saving eligibility criteria…',{phase:'ready'});return staged(project,revision,expected,visible);
  }
@@ -161,7 +200,9 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   requireEpoch(storage,projectId,criteriaEpoch);
   const project=current(),issue=project.issues.find(issue=>issue.issue_id===issue_id&&issue.status==='open');if(!issue)D.fail('ISSUE_NOT_FOUND','background','This clarification has already changed. Reload the saved criteria.');
   const expected=signature(read(keys.legacy));let request;
-  if(option_id)request={base_revision:project.revision,request_id:D.id('answer'),answers:[{issue_id,option_id,answer_text:answer_text||optionLabel(issue.options.find(o=>o.option_id===option_id))}]};
+  const option=option_id&&issue.options.find(item=>item.option_id===option_id);
+  if(option?.requires_interpretation)request=await M.parse_answers(project,option.label,[issue_id],modelClient,{signal});
+  else if(option_id)request={base_revision:project.revision,request_id:D.id('answer'),answers:[{issue_id,option_id,answer_text:answer_text||optionLabel(issue.options.find(o=>o.option_id===option_id))}]};
   else request=await M.parse_answers(project,answer_text,[issue_id],modelClient,{signal});
   requireEpoch(storage,projectId,criteriaEpoch);
   return staged(E.apply_decisions(project,request,E.environment(...configs)).state,project.revision,expected);

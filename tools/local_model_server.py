@@ -49,6 +49,7 @@ import api_model
 import typesafe_model
 import eligibility_hybrid_review
 import eligibility_transport
+from model_service_errors import public_error
 import fulltext_sources
 import fulltext_assistant
 import json
@@ -393,6 +394,7 @@ class Handler(SimpleHTTPRequestHandler):
                 raise BadRequest("Unknown model provider")
         except (ValueError, BadRequest) as e:
             return self._send_json(400, {"error": str(e)})
+        criteria = payload.get('workflow') == 'eligibility-criteria' or payload.get('task') == eligibility_hybrid_review.TASK
         started = time.time()
         attempts = []
         local_chat = lambda subset, selected_format=fmt: eligibility_transport.chat(subset, self.model, selected_format,
@@ -405,11 +407,20 @@ class Handler(SimpleHTTPRequestHandler):
                     partial_review=lambda subset, schema: local_chat(subset, schema))
             else:
                 reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else local_chat(messages)
-        except eligibility_transport.IdentityError as e:
-            return self._send_json(422, {"error": str(e), "code": "MODEL_SCHEMA_ERROR"})
-        except (ValueError, KeyError, TypeError) as e:
+        except (eligibility_transport.IdentityError, eligibility_transport.OutputSyntaxError):
+            return self._model_error('MODEL_SCHEMA_ERROR')
+        except eligibility_hybrid_review.ReviewInputError:
+            return self._model_error('MODEL_REQUEST_INVALID')
+        except eligibility_hybrid_review.ReviewOutputError:
+            return self._model_error('MODEL_REVIEW_INCOMPLETE')
+        except (ValueError, KeyError, TypeError, AttributeError) as e:
+            if criteria:
+                return self._model_error('MODEL_UPSTREAM_ERROR')
             return self._send_json(502, {"error": str(e) if provider == "local" else "API request failed: " + str(e)})
         except urllib.error.HTTPError as e:
+            if criteria:
+                code = {408: 'MODEL_TIMEOUT', 429: 'MODEL_BUSY', 503: 'MODEL_UNAVAILABLE', 504: 'MODEL_TIMEOUT'}
+                return self._model_error(code.get(e.code, 'MODEL_UPSTREAM_ERROR'))
             if provider == "api":
                 return self._send_json(502, {"error": "API provider returned HTTP %d. Check server credentials, quota and model compatibility." % e.code})
             detail = e.read().decode("utf-8", "replace")[:300]
@@ -419,6 +430,10 @@ class Handler(SimpleHTTPRequestHandler):
                 pass
             return self._send_json(502, {"error": "Ollama HTTP %d: %s" % (e.code, detail)})
         except (urllib.error.URLError, OSError) as e:
+            if criteria:
+                if isinstance(getattr(e, 'reason', e), TimeoutError):
+                    return self._model_error('MODEL_TIMEOUT')
+                return self._model_error('MODEL_UNAVAILABLE')
             return self._send_json(502, {"error": "API provider is unreachable or timed out." if provider == "api" else "Ollama is not reachable: %s" % e})
         used_model = api_model.config()["model"] if provider == "api" else reply.get("model", self.model)
         used_provider = reply.get("provider", provider)
@@ -436,6 +451,10 @@ class Handler(SimpleHTTPRequestHandler):
                                      "model": used_model, "provider": used_provider,
                                      **({"review": reply["review"]} if "review" in reply else {}),
                                      **({"transport": reply["transport"]} if "transport" in reply else {})})
+
+    def _model_error(self, code):
+        self.log_message('model failure code=%s', code)
+        return self._send_json(*public_error(code))
 
     def _typesafe(self, payload):
         try:

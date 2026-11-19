@@ -5,8 +5,10 @@ Long model requests run as owner-scoped jobs so public proxy timeouts do not
 interrupt inference. Config belongs outside the site: private/online-model.json.
 """
 import argparse
+import errno
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from http.client import HTTPException
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -20,6 +22,7 @@ from urllib.parse import urlsplit
 
 from google.auth.transport.requests import Request
 from google.oauth2.id_token import verify_firebase_token
+from model_service_errors import ERRORS, public_error
 
 CONFIG = Path(__file__).resolve().parents[2] / 'private' / 'online-model.json'
 PREFIX = '/api/eligibility'
@@ -74,20 +77,47 @@ class Identity:
             raise AccessError(403, 'This account is not authorized to use online AI tools.')
         return claims['sub']
 
+def safe_http_error(error):
+    # Provider text can contain private inputs, keys or paths. Only reconstruct
+    # a locally known code when its HTTP status also matches the contract.
+    try:
+        with error:
+            raw = error.read(4097)
+        data = json.loads(raw) if len(raw) <= 4096 else None
+    except (OSError, ValueError, HTTPException):
+        data = None
+    code = data.get('code') if isinstance(data, dict) else None
+    if isinstance(code, str) and code in ERRORS and ERRORS[code][0] == error.code:
+        return public_error(code)
+    fallback = {400: 'MODEL_REQUEST_INVALID', 429: 'MODEL_BUSY', 502: 'MODEL_UPSTREAM_ERROR',
+                503: 'MODEL_UNAVAILABLE', 504: 'MODEL_TIMEOUT'}.get(error.code)
+    if fallback:
+        return public_error(fallback)
+    return error.code, {'error': 'The model service could not complete this request.'}
+
+
 def upstream(route, payload=None):
     request = urllib.request.Request(UPSTREAM + route,
         data=None if payload is None else json.dumps(payload).encode(),
         headers={'Content-Type': 'application/json', 'Origin': UPSTREAM})
-    try:
-        with OPENER.open(request, timeout=650 if payload is not None else 20) as r:
-            return r.status, json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        # Keep provider keys, paths and upstream response bodies out of public errors.
-        messages = {429: 'The model service is busy. Try again shortly.',
-                    503: 'The model service is not configured or is unavailable.'}
-        return e.code, {'error': messages.get(e.code, 'The model service could not complete this request.')}
-    except Exception:
-        return 502, {'error': 'The AIM-STEP model service is unavailable. Contact the administrator.'}
+    for attempt in range(2):
+        try:
+            with OPENER.open(request, timeout=650 if payload is not None else 20) as r:
+                return r.status, json.loads(r.read())
+        except urllib.error.HTTPError as error:
+            return safe_http_error(error)
+        except (urllib.error.URLError, OSError) as error:
+            cause = getattr(error, 'reason', error)
+            if isinstance(cause, TimeoutError):
+                return public_error('MODEL_TIMEOUT')
+            if attempt == 0 and (isinstance(cause, ConnectionRefusedError) or getattr(cause, 'errno', None) == errno.ECONNREFUSED):
+                # No connection was established, so the service never accepted
+                # this submission. Retrying a timeout or reset could duplicate work.
+                time.sleep(0.25)
+                continue
+            return public_error('MODEL_UNAVAILABLE')
+        except (ValueError, HTTPException):
+            return public_error('MODEL_UPSTREAM_ERROR')
 
 class Jobs:
     delivery_ttl = 1200

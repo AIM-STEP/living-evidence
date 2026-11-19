@@ -8,9 +8,10 @@ import copy
 import json
 import time
 
+from eligibility_transport import OutputSyntaxError
 import typesafe_model as ts
 
-VERSION = 'eligibility-hybrid-v3'
+VERSION = 'eligibility-hybrid-v4'
 TASK = 'eligibility-review-v1'
 MIN_CONFIDENCE = .95
 TIMEOUT = 20
@@ -86,8 +87,104 @@ def _envelope(messages):
     return envelope
 
 
+class ReviewOutputError(ValueError):
+    """The local reviewer returned incomplete structured assessments."""
+
+
+class ReviewInputError(ValueError):
+    """The supplied review request is structurally invalid."""
+
+
+def _assessment_schema(items, fields):
+    # Bind IDs to their own required fields. Candidates that need the same
+    # fields share a grammar branch; in all cases a local correction is allowed.
+    groups = {}
+    for item in items:
+        identity = item['id']
+        groups.setdefault(tuple(fields[identity]), []).append(identity)
+    base = {name: {'enum': [None if name == 'disposition' and value == 'none' else value for value in options]}
+            for name, options in CHOICES.items()}
+    variants = []
+    for required, identities in groups.items():
+        variants.append({'type': 'object', 'properties': {'id': {'type': 'string', 'enum': identities},
+                         'reason': {'type': 'string'}, **base}, 'required': ['id', 'reason', *required],
+                         'additionalProperties': False})
+    item_schema = variants[0] if len(variants) == 1 else {'anyOf': variants}
+    return {'type': 'object', 'required': ['items'], 'properties': {'items': {'type': 'array',
+            'minItems': len(items), 'maxItems': len(items), 'items': item_schema}}}
+
+
+def _local_batch(envelope, messages, pending, verified, local_review, partial_review, retry):
+    subset = copy.deepcopy(envelope)
+    subset['payload']['items'] = pending
+    fields = {item['id']: [field for field in CHOICES if field not in verified.get(item['id'], {})]
+              for item in pending}
+    instructions = ''
+    if partial_review and any(len(required) < len(CHOICES) for required in fields.values()):
+        subset['payload']['review_fields'] = fields
+        instructions = (' For each ID return a source-based reason and every field listed in payload.review_fields. '
+                        'Other fields already have a high-confidence assessment. Include corrections if the source '
+                        'contradicts them. Apply all original review rules.')
+    if retry:
+        instructions += ' The preceding response missed or misidentified these assessments. Return each supplied ID exactly once with all its required fields.'
+    outgoing = copy.deepcopy(messages)
+    for message in outgoing:
+        if message.get('role') == 'user':
+            message['content'] = json.dumps(subset, ensure_ascii=False, separators=(',', ':'))
+        elif message.get('role') == 'system':
+            message['content'] += instructions
+    return partial_review(outgoing, _assessment_schema(pending, fields)) if partial_review else local_review(outgoing)
+
+
+def _complete_assessments(reply, pending, verified):
+    message = reply.get('message') if isinstance(reply, dict) else None
+    raw = message.get('content') if isinstance(message, dict) else None
+    if not isinstance(raw, str):
+        return {}
+    raw = raw.strip()
+    if raw.startswith('```'):
+        raw = raw.strip('`').strip().removeprefix('json').strip()
+    try:
+        result = json.loads(raw)
+    except ValueError:
+        return {}
+    if not isinstance(result, dict) or not isinstance(result.get('items'), list):
+        return {}
+    expected = {item['id'] for item in pending}
+    valid, seen = {}, set()
+    foreign = False
+    for row in result['items']:
+        identity = row.get('id') if isinstance(row, dict) else None
+        if not isinstance(identity, str) or identity not in expected:
+            foreign = True
+            continue
+        if identity in seen:
+            valid.pop(identity, None)
+            continue
+        seen.add(identity)
+        combined = {**verified.get(identity, {}), **row}
+        if not isinstance(combined.get('reason'), str) or not combined['reason'].strip():
+            continue
+        if any(name not in combined or not _valid_field(name, combined[name]) for name in CHOICES):
+            continue
+        valid[identity] = row
+    if foreign and set(valid) == expected:
+        # An unexpected extra assessment with no missing ID has no safe target.
+        raise ReviewOutputError('Unexpected extra assessment in the model response.')
+    return valid
+
+
+def _valid_field(name, value):
+    if name == 'disposition':
+        return value in ('include', 'exclude', None)
+    return isinstance(value, str) and value in CHOICES[name]
+
+
 def review(messages, local_review, local_model, partial_review=None):
-    envelope = _envelope(messages)
+    try:
+        envelope = _envelope(messages)
+    except (ValueError, TypeError, KeyError) as error:
+        raise ReviewInputError('Invalid eligibility review request.') from error
     payload, accepted, decisions, verified_fields = envelope['payload'], {}, {}, {}
     items = payload['items']
     rules = '\n'.join(m['content'] for m in messages if m.get('role') == 'system')
@@ -159,52 +256,23 @@ def review(messages, local_review, local_model, partial_review=None):
 
     pending = [item for item in items if item['id'] not in accepted]
     local_transport = None
-    if pending:
-        local_envelope = copy.deepcopy(envelope)
-        local_envelope['payload']['items'] = pending
-        partial = partial_review is not None and any(verified_fields.get(i['id']) for i in pending)
-        if partial:
-            local_envelope['payload']['review_fields'] = {
-                item['id']: [field for field in CHOICES if field not in verified_fields.get(item['id'], {})]
-                for item in pending}
-        local_messages = [{**m, 'content': json.dumps(local_envelope, ensure_ascii=False, separators=(',', ':'))}
-                          if m.get('role') == 'user' else m for m in messages]
-        if partial:
-            local_messages = copy.deepcopy(local_messages)
-            system = next(m for m in local_messages if m.get('role') == 'system')
-            system['content'] += (' Other review fields have already received a separate high-confidence assessment. '
-                                  'For each candidate return id, a short source-based reason, and every field listed '
-                                  'in payload.review_fields for that ID. Omit other fields to avoid duplicate work. '
-                                  'If the source contradicts another field, include that correction as well. '
-                                  'All original semantic review rules still apply. Return compact JSON.')
-            properties = {field: {'enum': [None if field == 'disposition' and value == 'none' else value for value in options]}
-                          for field, options in CHOICES.items()}
-            properties.update({'id': {'type': 'string'}, 'reason': {'type': 'string'}})
-            schema = {'type': 'object', 'required': ['items'], 'properties': {'items': {
-                'type': 'array', 'items': {'type': 'object', 'properties': properties,
-                                          'required': ['id', 'reason'], 'additionalProperties': False}}}}
-            reply = partial_review(local_messages, schema)
-        else:
-            reply = local_review(local_messages)
-        local_transport = reply.get('transport')
-        raw = reply.get('message', {}).get('content', '').strip()
-        if raw.startswith('```'):
-            raw = raw.strip('`').strip()
-            if raw.startswith('json'):
-                raw = raw[4:].strip()
-        result = json.loads(raw)
-        assessments = result.get('items')
-        wanted, seen = {item['id'] for item in pending}, set()
-        if not isinstance(assessments, list):
-            raise ValueError('The local eligibility reviewer omitted assessments.')
-        for assessment in assessments:
-            if not isinstance(assessment, dict) or assessment.get('id') not in wanted or assessment['id'] in seen:
-                raise ValueError('Invalid or duplicate local eligibility assessment.')
-            identity = assessment['id']
-            seen.add(identity)
+    unresolved = pending
+    retried = 0
+    for attempt in range(2):
+        if not unresolved:
+            break
+        if attempt:
+            retried = len(unresolved)
+        try:
+            reply = _local_batch(envelope, messages, unresolved, verified_fields, local_review, partial_review, attempt)
+            local_transport = reply.get('transport') if isinstance(reply, dict) else None
+            complete = _complete_assessments(reply, unresolved, verified_fields)
+        except OutputSyntaxError as error:
+            # The transport already attempted its syntax repair. Avoid replaying
+            # the batch for a syntax or malformed upstream-envelope failure.
+            raise ReviewOutputError('The reviewer did not return readable assessments.') from error
+        for identity, assessment in complete.items():
             combined = {**verified_fields.get(identity, {}), **assessment}
-            if any(field not in combined for field in CHOICES) or not isinstance(combined.get('reason'), str):
-                raise ValueError('The local eligibility reviewer omitted an unresolved field.')
             providers = {field: 'local' if field in assessment else 'typesafe' for field in CHOICES}
             combined['reviewer'] = {
                 'provider': 'hybrid' if 'typesafe' in providers.values() else 'local',
@@ -213,11 +281,12 @@ def review(messages, local_review, local_model, partial_review=None):
                 'routing': decisions.get(identity, {'route': 'local', 'reason': fallback_reason or 'source_requires_clarification'}),
             }
             accepted[identity] = combined
-        if seen != wanted:
-            raise ValueError('The local eligibility reviewer omitted a candidate.')
+        unresolved = [item for item in unresolved if item['id'] not in complete]
+    if unresolved:
+        raise ReviewOutputError('The local reviewer did not complete all required assessments.')
 
     metadata = {'version': VERSION, 'typesafe_model': actual_model or model,
-                'local_model': local_model, 'typesafe_checked': checked,
+                'local_model': local_model, 'typesafe_checked': checked, 'local_retried_items': retried,
                 'typesafe_accepted': len(items) - len(pending), 'local_reviewed': len(pending),
                 'typesafe_fields_used': sum(sum(p == 'typesafe' for p in a.get('reviewer', {}).get('field_providers', {}).values()) for a in accepted.values()),
                 'typesafe_ms': elapsed, 'typesafe_cache': 'disabled',

@@ -20,6 +20,10 @@ class IdentityError(ValueError):
     """An invalid routing identifier must never be accepted or reused."""
 
 
+class OutputSyntaxError(ValueError):
+    """An upstream chat reply contained unreadable model output."""
+
+
 def _group(key, value):
     group = _fields.get(key)
     if not isinstance(value, str) or not group:
@@ -126,7 +130,10 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None):
                 raw = raw.strip('`').strip()
                 if raw.startswith('json'):
                     raw = raw[4:].strip()
-            result = json.loads(raw)
+            try:
+                result = json.loads(raw)
+            except json.JSONDecodeError as error:
+                raise OutputSyntaxError('The model output could not be read.') from error
             if envelope['step'] == 'extract_elements':
                 expected = wire.get('payload', {}).get('question', {}).get('question_id')
                 questions = result.get('questions') if isinstance(result, dict) else None

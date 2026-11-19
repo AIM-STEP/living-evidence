@@ -104,6 +104,22 @@ class ServerTest(unittest.TestCase):
 
     MSG = {"messages": [{"role": "system", "content": "s"}, {"role": "user", "content": "u"}]}
 
+    def test_criteria_reports_fixed_error_types_without_leaking_content(self):
+        payload = {**self.MSG, 'task': srv.eligibility_hybrid_review.TASK}
+        cases = [
+            (srv.eligibility_hybrid_review.ReviewInputError, 'MODEL_REQUEST_INVALID'),
+            (srv.eligibility_hybrid_review.ReviewOutputError, 'MODEL_REVIEW_INCOMPLETE'),
+            (srv.eligibility_transport.IdentityError, 'MODEL_SCHEMA_ERROR'),
+            (srv.eligibility_transport.OutputSyntaxError, 'MODEL_SCHEMA_ERROR'),
+            (TimeoutError, 'MODEL_TIMEOUT'), (ConnectionRefusedError, 'MODEL_UNAVAILABLE'),
+            (ValueError, 'MODEL_UPSTREAM_ERROR'),
+        ]
+        for error, code in cases:
+            with self.subTest(code=code), patch.object(srv.eligibility_hybrid_review, 'review',
+                                                       side_effect=error('sensitive-test-message')) as review:
+                self.assertEqual(self.req('POST', srv.MODEL, payload), srv.public_error(code))
+                review.assert_called_once()
+
     # ------------------------------------------------------------- health
 
     def test_download_health_independent_of_models(self):

@@ -6,6 +6,7 @@ import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+import urllib.error
 
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -43,6 +44,32 @@ class Tests(unittest.TestCase):
         head,data=bytes(connection.output).split(b'\r\n\r\n',1)
         return int(head.split()[1]),head.decode(),json.loads(data)
     def test_valid_signed_identity(self): self.assertEqual(self.identity('Bearer '+self.token()),'synthetic-owner')
+    def test_model_error_codes_are_allowlisted_and_raw_error_bodies_stay_private(self):
+        for status, supplied, expected in [(422, 'MODEL_REVIEW_INCOMPLETE', 'MODEL_REVIEW_INCOMPLETE'),
+                                           (422, 'MODEL_SCHEMA_ERROR', 'MODEL_SCHEMA_ERROR'),
+                                           (502, 'MODEL_SCHEMA_ERROR', 'MODEL_UPSTREAM_ERROR'),
+                                           (422, 'unknown', None), (503, None, 'MODEL_UNAVAILABLE')]:
+            body = json.dumps({'code': supplied, 'error': 'private-provider-text'}).encode()
+            error = urllib.error.HTTPError(g.UPSTREAM, status, '', {}, io.BytesIO(body))
+            with self.subTest(status=status, code=supplied), patch.object(g.OPENER, 'open', side_effect=error) as opener:
+                observed, result = g.upstream(g.PREFIX + '/model', {'messages': []})
+                self.assertEqual(observed, status)
+                self.assertEqual(result.get('code'), expected)
+                self.assertNotIn('private-provider-text', json.dumps(result))
+                opener.assert_called_once()
+
+    def test_retry_only_when_connection_was_never_established(self):
+        response = io.BytesIO(b'{"ok":true}')
+        response.status = 200
+        refused = urllib.error.URLError(ConnectionRefusedError())
+        with patch.object(g.OPENER, 'open', side_effect=[refused, response]) as opener, patch.object(g.time, 'sleep'):
+            self.assertEqual(g.upstream(g.PREFIX + '/model', {}), (200, {'ok': True}))
+            self.assertEqual(opener.call_count, 2)
+        for cause, expected in [(TimeoutError(), 'MODEL_TIMEOUT'), (ConnectionResetError(), 'MODEL_UNAVAILABLE')]:
+            with self.subTest(cause=cause), patch.object(g.OPENER, 'open', side_effect=urllib.error.URLError(cause)) as opener:
+                self.assertEqual(g.upstream(g.PREFIX + '/model', {}), g.public_error(expected))
+                opener.assert_called_once()
+
     def test_identity_rejections(self):
         for change in [{'aud':'other'},{'iss':'wrong'},{'exp':1},{'email_verified':False},{'email':'other@example.test'},{'sub':''}]:
             with self.subTest(change=change),self.assertRaises(g.AccessError): self.identity('Bearer '+self.token(**change))

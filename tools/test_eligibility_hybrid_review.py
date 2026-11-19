@@ -122,7 +122,10 @@ class HybridReviewTest(unittest.TestCase):
         def partial(messages, schema):
             payload = json.loads(messages[-1]['content'])['payload']
             requested.append(payload['review_fields'])
-            self.assertEqual(schema['properties']['items']['items']['required'], ['id', 'reason'])
+            array = schema['properties']['items']
+            self.assertEqual(array['items']['required'], ['id', 'reason', 'information_status'])
+            self.assertEqual(array['items']['properties']['id']['enum'], ['c1'])
+            self.assertEqual((array['minItems'], array['maxItems']), (1, 1))
             return dict(model='local-test', message=dict(content=json.dumps(dict(items=[
                 dict(id='c1', information_status='explicit', reason='Original wording explicitly states the condition.')]))))
 
@@ -137,6 +140,65 @@ class HybridReviewTest(unittest.TestCase):
         self.assertEqual(items[1]['reviewer']['field_providers']['status'], 'typesafe')
         self.assertEqual(result['review']['typesafe_fields_used'], 11)
         self.assertEqual(self.local_ids, [])
+
+    def test_incomplete_row_retries_only_its_id_and_keeps_other_local_and_jev_assessments(self):
+        self.items.append({**self.items[1], 'id': 'c2'})
+        self.items[1]['information_status'] = self.items[2]['information_status'] = 'ambiguous'
+        attempts = []
+
+        def partial(messages, schema):
+            response = self.local(messages)
+            rows = json.loads(response['message']['content'])['items']
+            attempts.append(schema['properties']['items']['items']['properties']['id']['enum'])
+            if len(attempts) == 1:
+                del rows[1]['scope_status']
+            response['message']['content'] = json.dumps({'items': rows})
+            return response
+
+        with patch.object(hybrid.ts, 'server_config', return_value={'model': 'jev-test'}), \
+             patch.object(hybrid.ts, 'resolve_key', return_value='synthetic-key'), \
+             patch.object(hybrid.ts, 'request', side_effect=self.response) as jev:
+            result = hybrid.review(self.messages(), self.local, 'local-test', partial_review=partial)
+        jev.assert_called_once()
+        self.assertEqual(self.local_ids, [['c1', 'c2'], ['c2']])
+        self.assertEqual(attempts, self.local_ids)
+        self.assertEqual(result['review']['local_retried_items'], 1)
+        rows = json.loads(result['message']['content'])['items']
+        self.assertEqual([row['id'] for row in rows], ['c0', 'c1', 'c2'])
+        self.assertEqual([row['reviewer']['provider'] for row in rows], ['typesafe', 'local', 'local'])
+
+    def test_duplicate_wrong_id_or_invalid_fields_fail_after_one_targeted_retry(self):
+        for item in self.items:
+            item['information_status'] = 'ambiguous'
+        for invalid in ['duplicate', 'other_id', 'invalid_value', 'invalid_null']:
+            with self.subTest(invalid=invalid):
+                self.local_ids = []
+
+                def broken(messages):
+                    response = self.local(messages)
+                    rows = json.loads(response['message']['content'])['items']
+                    if invalid == 'duplicate':
+                        rows.append(rows[-1])
+                    elif invalid == 'other_id':
+                        rows[-1]['id'] = 'unknown'
+                    elif invalid == 'invalid_value':
+                        rows[-1]['status'] = []
+                    else:
+                        rows[-1]['disposition'] = 'none'
+                    response['message']['content'] = json.dumps({'items': rows})
+                    return response
+
+                with self.assertRaises(hybrid.ReviewOutputError):
+                    hybrid.review(self.messages(), broken, 'local-test')
+                self.assertEqual(self.local_ids, [['c0', 'c1'], ['c1']])
+
+    def test_local_transport_failure_does_not_replay_generation(self):
+        for item in self.items:
+            item['information_status'] = 'ambiguous'
+        with patch.object(self, 'local', side_effect=TimeoutError) as local:
+            with self.assertRaises(TimeoutError):
+                hybrid.review(self.messages(), local, 'local-test')
+            local.assert_called_once()
 
     def test_unchanged_input_starts_fresh_after_a_completed_review(self):
         import eligibility_transport as transport

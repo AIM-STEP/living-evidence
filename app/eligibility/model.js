@@ -11,7 +11,7 @@ const elementSchema={type:'object',required:['candidate_id','dimension_id','norm
 const str={type:'string'}, list=items=>({type:'array',items}), obj=(properties,required=Object.keys(properties))=>({type:'object',required,properties});
 const issueSchema=obj({reason_code:{enum:D.ENUMS.reason_code},question_text:str,scope_impact:str,element_candidate_ids:list(str),options:{type:'array'}},['reason_code','question_text','scope_impact','element_candidate_ids']);
 function logicSchema(depth=3){const leaf=obj({op:{enum:['predicate']},element_id:str});return depth?{anyOf:[leaf,obj({op:{enum:['all_of','any_of']},children:{type:'array',minItems:1,maxItems:24,items:logicSchema(depth-1)}}),obj({op:{enum:['not']},children:{type:'array',minItems:1,maxItems:1,items:logicSchema(depth-1)}})]}:leaf;}
-const questionSchema=obj({question_id:str,review_topic:str,review_methods:list(str),question_types:list(str),evidence_units:list(str),framework_candidates:list(obj({framework_id:str,basis:str})),elements:list(elementSchema),logic:{anyOf:[{type:'null'},logicSchema()]},issues:list(issueSchema)},['question_id','review_topic','framework_candidates','elements','issues','logic']);
+const questionSchema=obj({question_id:str,review_topic:str,review_methods:list(str),question_types:list(str),evidence_units:list(str),framework_candidates:list(obj({framework_id:str,basis:str})),elements:list(elementSchema),logic:{anyOf:[{type:'null'},logicSchema()]},issues:list(issueSchema)},['question_id','framework_candidates','elements','issues','logic']);
 const extractionSchema=obj({questions:list(questionSchema)});
 const reviewSchema=obj({items:list(obj({id:str,status:{enum:['supported','uncertain','contradicted']},reason:str,issue_type:{enum:['none','ambiguous_source','unsupported_rewrite']},information_status:{enum:D.ENUMS.information_status},semantic_role:{enum:D.ENUMS.semantic_role},scope_status:{enum:D.ENUMS.scope_status},disposition:{enum:['include','exclude',null]}}))});
 const updateSchema=obj({element_id:str,normalized_text:str,structured_value:valueSchema,scope_status:{enum:D.ENUMS.scope_status},semantic_role:{enum:D.ENUMS.semantic_role},disposition:{enum:['include','exclude']}},['element_id']);
@@ -26,6 +26,21 @@ function requestEnvelope(step,state,payload,schema){
  return {step,project_id:modelProjectId(state),
   base_revision:state.revision,config_versions:state.config_versions,output_language:state.output_language,payload,schema};
 }
+function httpError(status,detail,step){
+ const stages={extract_elements:'Source extraction',review_normalization:'Independent source review',
+  repair_candidate_wording:'Candidate wording correction',interpret_human_answer:'Interpretation of the author’s answer',
+  transcription:'Attachment transcription'};
+ const descriptions={MODEL_SCHEMA_ERROR:'The model returned an invalid response structure.',
+  MODEL_REVIEW_INCOMPLETE:'The reviewer could not return all required decisions for the affected items.',
+  MODEL_UPSTREAM_ERROR:'The inference service could not return a usable response.',
+  MODEL_UNAVAILABLE:'The inference service is unavailable.',MODEL_BUSY:'The inference service is busy.',
+  MODEL_TIMEOUT:'The inference service timed out.',MODEL_REQUEST_INVALID:'The model service rejected the request.'};
+ const defaults={429:'MODEL_BUSY',502:'MODEL_UPSTREAM_ERROR',503:'MODEL_UNAVAILABLE',504:'MODEL_TIMEOUT'};
+ const code=Object.hasOwn(descriptions,detail?.code)?detail.code:(defaults[status]||'MODEL_HTTP_ERROR');
+ const message=descriptions[code]||(typeof detail?.error==='string'?detail.error:'The model request failed.');
+ const error=new D.EligibilityError(code,step,(stages[step]||'Criteria generation')+' (HTTP '+status+'). '+message);
+ error.status=status;return error;
+}
 function client(options={}){
  let base=options.base||null,model=options.model||null;const exchanges=[];
  const fetcher=options.fetch||((url,init)=>{if(typeof window==='object'&&window.AIMSTEPOnlineModel?.online)return window.AIMSTEPOnlineModel.request(url,init);return fetch(url,/^http:\/\/(?:127\.0\.0\.1|localhost)/.test(url)?{...init,targetAddressSpace:'loopback'}:init);});
@@ -39,7 +54,7 @@ function client(options={}){
   const endpoint=await discover(signal),controller=new AbortController(),abort=()=>controller.abort(signal?.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(()=>controller.abort(),options.timeout_ms||600000);
   const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',workflow:'eligibility-criteria',messages,format:schema,...(step==='review_normalization'?{task:'eligibility-review-v1'}:{})};
   try{
-   const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let error;try{error=await r.json();}catch(_){error={error:'HTTP '+r.status};}D.fail(error.code==='MODEL_SCHEMA_ERROR'?'MODEL_SCHEMA_ERROR':'MODEL_HTTP_ERROR',step,error.error||'Model request failed.');}
+   const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let detail;try{detail=await r.json();}catch(_){}throw httpError(r.status,detail,step);}
    const data=await r.json(),raw=data.message?.content||data.choices?.[0]?.message?.content;if(typeof raw!=='string')D.fail('MODEL_EMPTY_RESPONSE',step,'模型返回空内容。');
    const log={request_id:D.id('model'),step,base_revision:state.revision,at:D.now(),model:data.model||model||'configured',provider:data.provider||'configured backend',prompt_sha256:await G.hashText(JSON.stringify(messages)),response_sha256:await G.hashText(raw),actual_sampling:'not_reported',...(data.review?{hybrid_review:data.review}:{}),...(data.transport?{transport:data.transport}:{})};exchanges.push(log);options.onExchange?.({...log,input:envelope,raw_output:raw});
    try{return JSON.parse(raw.replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,''));}catch(_){D.fail('MODEL_INVALID_JSON',step,'模型返回非法JSON；已有状态未更改。');}
@@ -69,7 +84,7 @@ function sourceBatches(q){
   // details. Revision, author decisions, rules and source associations remain.
   if(source.identity==='question:'+q.question_id)delete source.identity;
   const segments=G.segments([{id:source.source_id,name:source.source_type,text:source.original_text}]);
-  let previousStart=0,codePoints=0;
+  let previousStart=0,codePoints=source.start_codepoint||0;
   for(const segment of segments){
    codePoints+=Array.from(source.original_text.slice(previousStart,segment.start)).length;
    previousStart=segment.start;
@@ -79,6 +94,170 @@ function sourceBatches(q){
  const groups=[];let part=[],size=0;for(const source of fragments){if(part.length&&size+source.original_text.length>5500){groups.push(part);part=[];size=0;}part.push(source);size+=source.original_text.length;}if(part.length)groups.push(part);return groups;
 }
 function prefixLogic(node,prefix){return node?.op==='predicate'?{...node,element_id:prefix+node.element_id}:node?{...node,children:(node.children||[]).map(n=>prefixLogic(n,prefix))}:null;}
+function missingComparatorAlternatives(original,comparators){
+ // Only flag a demonstrable omission. Richer descriptions and paraphrases
+ // outside this small vocabulary remain with the independent semantic review.
+ const namedControls=/\b(?:standard care|usual care|routine care|treatment as usual|placebo)\b/gi;
+ const controlKind=value=>value.toLowerCase()==='placebo'?'placebo':'usual care';
+ if(!comparators.length)return [];
+ const retained=new Set();let separateHeadToHead=false;
+ for(const entry of comparators){
+  if(entry.source_refs.some(ref=>/^(?:each other|one another)$/i.test(ref.quote.trim()))&&/^another\b/i.test(entry.normalized_text)){
+   separateHeadToHead=true;continue;
+  }
+  const text=entry.normalized_text;
+  for(const term of text.match(namedControls)||[])retained.add(controlKind(term));
+  const other=text.replace(namedControls,'').replace(/\b(?:a|an|the|either|and|or|with|group|arm|control|comparison|comparator)\b/gi,'').replace(/[\s(),.\/-]/g,'');
+  if(other)return [];
+ }
+ const missing=[];
+ const list=original.match(/\bcontrol (?:group|arm)\s*\(([^()]{1,120})\)/i)?.[1];
+ if(list){
+  const options=list.split(/\s+or\s+/i).map(text=>text.trim());
+  if(options.length>1&&options.every(term=>/^(?:standard care|usual care|routine care|treatment as usual|placebo)$/i.test(term)))
+   missing.push(...options.filter(term=>!retained.has(controlKind(term))));
+ }
+ if(!separateHeadToHead&&/\b(?:compared (?:with|to)|versus)\b[^.;?!]{0,240}\bor\s+(?:with\s+)?(?:each other|one another)\b/i.test(original))missing.push('head-to-head comparison');
+ return missing;
+}
+// The prompt can contain several consecutive excerpts of one document. Keep the
+// exact range presented to this extraction job, including its Unicode offsets.
+function citedRanges(sources){
+ const ranges=[];
+ for(const source of sources){
+  const previous=ranges.at(-1),start=source.start_codepoint,end=start+Array.from(source.original_text).length;
+  if(previous&&previous.id===source.source_id&&previous.revision===source.revision&&previous.end===start){
+   previous.text+=source.original_text;previous.end=end;
+  }else ranges.push({id:source.source_id,revision:source.revision,text:source.original_text,start,end});
+ }
+ return ranges;
+}
+function checkExtractedSources(state,candidate,questionId,ranges){
+ const refs=candidate.source_refs.map(ref=>{
+  D.object(ref,'provenance');
+  const quote=D.text(ref.quote,'quote');
+  if(!quote)D.fail('EMPTY_QUOTE','provenance','A source quotation cannot be empty.');
+  const matches=ranges.filter(span=>span.id===ref.source_id&&span.revision===ref.source_revision&&span.text.includes(quote));
+  if(!matches.length)D.fail('QUOTE_NOT_FOUND','provenance','Candidate '+candidate.candidate_id+' must quote the exact text from a source ID and revision supplied in this batch.');
+  const length=Array.from(quote).length;
+  // If supplied, offsets must locate this occurrence in a range actually shown.
+  if(ref.start!=null||ref.end!=null){
+   const start=ref.start??ref.end-length,end=ref.end??start+length;
+   if(matches.some(span=>start>=span.start&&end<=span.end&&Array.from(span.text).slice(start-span.start,end-span.start).join('')===quote))return {...ref,start,end};
+  }
+  const span=matches[0],offset=span.text.indexOf(quote);
+  if(matches.length>1||span.text.indexOf(quote,offset+1)>=0){
+   D.fail('QUOTE_OFFSET_MISMATCH','provenance','Candidate '+candidate.candidate_id+' has multiple matching passages. Supply the correct original offsets or quote enough surrounding text to identify the intended occurrence.');
+  }
+  const start=span.start+Array.from(span.text.slice(0,offset)).length;
+  return {...ref,start,end:start+length};
+ });
+ candidate.source_refs=D.validate_provenance(state,refs,questionId,{
+  allowEmpty:candidate.information_status==='missing'||candidate.scope_status==='not_applicable'&&!!candidate.applicability_basis
+ });
+}
+// Locate the cited leaves on the original source, not in generated wording.
+function branchRange(tree,elements,sourceIndex){
+ const spans=[];
+ for(const id of D.walkLeaves(tree)){
+  for(const ref of elements.get(id).source_refs){
+   const source=sourceIndex.get(ref.source_id);
+   if(!source||ref.source_revision!==source.revision)return null;
+   spans.push({source,start:ref.start,end:ref.end,quote:ref.quote});
+  }
+ }
+ spans.sort((a,b)=>a.source.index-b.source.index||a.start-b.start||a.end-b.end);
+ return spans.length?{first:spans[0],last:spans.reduce((last,span)=>span.source.index>last.source.index||(span.source===last.source&&span.end>last.end)?span:last)}:null;
+}
+function fragmentConnector(left,right){
+ if(!left||!right)return null;
+ const a=left.last,b=right.first;
+ let gap;
+ if(a.source===b.source&&a.end<=b.start)gap=a.source.characters.slice(a.end-a.source.base,b.start-b.source.base).join('');
+ else{
+  // Separate uploaded documents have no implicit page-to-page reading order.
+  const documentName=s=>s.name?.replace(/\s*·\s*page\s+\d+$/i,'');
+  if(!a.source.page||b.source.page!==a.source.page+1||!documentName(a.source)||documentName(a.source)!==documentName(b.source)||b.source.index!==a.source.index+1)return null;
+  gap=a.source.characters.slice(a.end-a.source.base).join('')+' '+b.source.characters.slice(0,b.start-b.source.base).join('');
+ }
+ // A connector must directly link the two cited conditions. An "or" elsewhere
+ // in either passage may describe a different condition altogether.
+ const separators=/^[\s,.;:，。；：、–—-]+|[\s,.;:，。；：、–—-]+$/gu;
+ let connector=gap.replace(separators,'');
+ if(!connector){
+  const opening=b.quote.match(/^(or\b|alternatively\b|and\b|in addition\b|except(?: for)?\b|unless\b|或者|或是|并且|且|除外)/i);
+  const closing=a.quote.match(/\b(or|and|except(?: for)?|unless)\s*$/i);
+  connector=opening?.[1]||closing?.[1]||'';
+ }
+ if(/^(?:or|alternatively|或者|或是|或)$/i.test(connector))return 'any_of';
+ if(/^(?:and|and also|in addition|并且|且|同时)$/i.test(connector))return 'all_of';
+ if(/^(?:except(?: for)?|unless|but not|但不包括|除外)$/i.test(connector))return 'except';
+ return null;
+}
+function fragmentParticipant(e){
+ return e.disposition==='include'&&e.semantic_role==='eligibility_condition'&&e.information_status!=='missing'&&e.scope_status!=='unrestricted';
+}
+function combineFragmentTrees(left,right,relation){
+ return relation==='except'?{op:'all_of',children:[left,{op:'not',children:[right]}]}:{op:relation,children:[left,right]};
+}
+function fragmentTreeLabel(node,elements){
+ if(node.op==='predicate')return elements.get(node.element_id).normalized_text;
+ if(node.op==='not')return 'NOT '+fragmentTreeLabel(node.children[0],elements);
+ return '('+node.children.map(n=>fragmentTreeLabel(n,elements)).join(node.op==='any_of'?' OR ':' AND ')+')';
+}
+function mergeFragmentLogic(merged,parts,q){
+ if(parts.length===1){merged.logic=parts[0].tree;return;}
+ const sourceIndex=new Map(q.sources.map((s,index)=>[s.source_id,{...s,index,characters:Array.from(s.original_text),base:s.start_codepoint||0}]));
+ const elements=new Map(merged.elements.map(e=>[e.candidate_id,e])),branches=[];
+ for(const {tree,ids} of parts){
+  const rules=ids.filter(id=>fragmentParticipant(elements.get(id)));
+  const mapped=tree?D.mapExpression(tree,new Map(rules.map(id=>[id,id])),'element_id'):null,covered=new Set(D.walkLeaves(mapped));
+  const nodes=[...(mapped?[mapped]:[]),...rules.filter(id=>!covered.has(id)).map(element_id=>({op:'predicate',element_id}))];
+  const entries=nodes.map(node=>({node,range:branchRange(node,elements,sourceIndex)}));
+  entries.sort((a,b)=>a.range&&b.range?a.range.first.source.index-b.range.first.source.index||a.range.first.start-b.range.first.start:0);
+  branches.push(...entries);
+ }
+ if(!branches.length)return;
+ const relations=branches.slice(1).map((branch,i)=>fragmentConnector(branches[i].range,branch.range));
+ // Missing connectors separate independent blocks. A mixed sequence with no
+ // grouping has several possible readings; keep every stated connective.
+ const runs=[{nodes:[branches[0].node],ops:[]}];
+ for(let j=0;j<relations.length;j++){
+  if(!relations[j])runs.push({nodes:[branches[j+1].node],ops:[]});
+  else{runs.at(-1).ops.push(relations[j]);runs.at(-1).nodes.push(branches[j+1].node);}
+ }
+ const ambiguous=run=>new Set(run.ops).size>1||run.ops.filter(op=>op==='except').length>1;
+ function grouped(run,order){
+  const {nodes,ops}=run;
+  if(order==='right')return nodes.reduceRight((right,left,i)=>combineFragmentTrees(left,right,ops[i]));
+  if(order==='all_of'||order==='any_of'){
+   // Join tighter operators first without disturbing the order of the leaves.
+   const loose=[];let group=nodes[0];
+   for(let i=0;i<ops.length;i++){
+    if(ops[i]===order)group=combineFragmentTrees(group,nodes[i+1],ops[i]);
+    else{loose.push({node:group,op:ops[i]});group=nodes[i+1];}
+   }
+   return loose.reduceRight((right,prior)=>combineFragmentTrees(prior.node,right,prior.op),group);
+  }
+  return nodes.reduce((left,right,i)=>combineFragmentTrees(left,right,ops[i-1]));
+ }
+ const groups=runs.flatMap(run=>ambiguous(run)?run.nodes:[grouped(run,'left')]);
+ if(!runs.some(ambiguous)){
+  if(groups.length===1)merged.logic=groups[0];
+  else merged.unresolved_fragment_logic={branches:groups};
+  return;
+ }
+ const choices=new Map();
+ for(const order of ['left','right','all_of','any_of']){
+  const blocks=runs.map(run=>grouped(run,ambiguous(run)?order:'left'));
+  const readings=blocks.length===1?[blocks[0]]:['all_of','any_of'].map(op=>({op,children:blocks}));
+  for(const tree of readings){
+   const label=fragmentTreeLabel(tree,elements),key=JSON.stringify(tree);
+   if(!choices.has(key))choices.set(key,{option_id:'grouping_'+(choices.size+1),label,tree});
+  }
+ }
+ merged.unresolved_fragment_logic={branches:groups,alternatives:[...choices.values()]};
+}
 // Only independent batches overlap. Keep their inputs, review rules and merge order.
 async function mapModelBatches(items,options,work){
  const controller=new AbortController(),abort=()=>controller.abort(options.signal?.reason);
@@ -96,15 +275,23 @@ async function extract_elements(state,env,adapter,options={}){
  const profiles=payload.questions.map(q=>profileContext(env.profiles.resolve(q.context.review_methods)));let completed=0;
  const parts=await mapModelBatches(jobs,options,async({qi,bi,sources},index,signal)=>{
   const q=payload.questions[qi],batches=plans[qi];
+  const ranges=citedRanges(sources);
   options.onProgress?.('Extracting source conditions ('+(index+1)+'/'+total+')…',{phase:'extract',completed,total,waiting:true});
-  const request={question:{...q,sources,original_text:undefined},frameworks,review_profiles:profiles[qi],part_index:bi,part_count:batches.length};
+  const {document_input_only,original_text,...question}=q;
+  const questionInBatch=sources.filter(s=>s.input_kind==='research_question').map(s=>s.original_text).join('')===original_text;
+  const questionContext=batches.length>1&&!document_input_only&&!questionInBatch?original_text:undefined;
+  const request={question:{...question,sources,original_text:questionContext},frameworks,review_profiles:profiles[qi],part_index:bi,part_count:batches.length};
   const responseSchema=D.clone(extractionSchema);responseSchema.properties.questions.minItems=1;responseSchema.properties.questions.maxItems=1;responseSchema.properties.questions.items.properties.question_id={type:'string',enum:[q.question_id]};
   let answer;for(let attempt=0;attempt<=(options.retries??1);attempt++)try{
-   answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
+   answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+(batches.length>1?' Extract only from sources in this part. If supplied, question.original_text is whole-question context, not another source for this part. Preserve the within-part logic of all eligibility conditions.':'')+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
    if(!Array.isArray(answer?.questions)||answer.questions.length!==1||answer.questions[0]?.question_id!==q.question_id)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The model omitted or changed the question ID.');
-   D.text(answer.questions[0].review_topic,'review_topic',1000);if(!answer.questions[0].review_topic.trim())D.fail('MODEL_SCHEMA_ERROR','extract_elements','A concise research objective is required.');
+   const topic=answer.questions[0].review_topic;answer.questions[0].review_topic=typeof topic==='string'?topic.trim().slice(0,1000):'';
    if(!Array.isArray(answer.questions[0].elements)||!Array.isArray(answer.questions[0].issues)||!Array.isArray(answer.questions[0].framework_candidates))D.fail('MODEL_SCHEMA_ERROR','extract_elements','Required extraction arrays are missing.');
-   for(const e of answer.questions[0].elements)D.validate_candidate_element(e);if(answer.questions[0].logic)D.validate_expression(answer.questions[0].logic,new Set(answer.questions[0].elements.map(e=>e.candidate_id)));
+   for(const e of answer.questions[0].elements){
+    D.validate_candidate_element(e);
+    checkExtractedSources(state,e,q.question_id,ranges);
+   }
+   if(answer.questions[0].logic)D.validate_expression(answer.questions[0].logic,new Set(answer.questions[0].elements.map(e=>e.candidate_id)));
    const result=answer.questions[0],pico=result.framework_candidates.some(f=>['pico','PICO'].includes(typeof f==='string'?f:f.framework_id))||q.context.framework_requested==='PICO';
    if(pico&&batches.length===1){
     const original=String(q.original_text||'').normalize('NFKC');
@@ -115,10 +302,13 @@ async function extract_elements(state,env,adapter,options={}){
     Methods.normalizeComparators(mapped);
     const present=dimensions=>mapped.some(e=>dimensions.includes(e.dimension_id.split('.')[0]));
     const coverage=[[/\b(?:interventions?|therapies|treatments?)\b/i,['intervention'],'intervention'],[/\b(?:compared (?:with|to)|control group|placebo|each other)\b/i,['comparator','comparison','comparison_group','control'],'comparison'],[/\boutcomes?\b/i,['outcome'],'outcomes']];
-    const missing=coverage.filter(([pattern,dimensions])=>pattern.test(original)&&!present(dimensions)).map(([, ,name])=>name);if(missing.length)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The original question explicitly names '+missing.join(', ')+' information, but no source-linked element preserves it. Include every omitted element; keep review-focus information separate from eligibility restrictions.');
+    const missing=coverage.filter(([pattern,dimensions])=>pattern.test(original)&&!present(dimensions)).map(([, ,name])=>name);
+    const comparisons=mapped.filter(e=>coverage[1][1].includes(e.dimension_id.split('.')[0]));
+    missing.push(...missingComparatorAlternatives(original,comparisons));
+    if(missing.length)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The original question explicitly names '+missing.join(', ')+' information, but no source-linked element preserves it. Include every omitted element; keep review-focus information separate from eligibility restrictions.');
    }
    break;
-  }catch(error){if(signal.aborted||!retryableResponse(error)||attempt===(options.retries??1))throw error;request.validation_feedback={code:error.code,message:error.message};options.onProgress?.('Correcting the model response structure…',{phase:'extract',completed,total,waiting:true});}
+  }catch(error){if(signal.aborted||(!retryableResponse(error)&&error.step!=='provenance')||attempt===(options.retries??1))throw error;request.validation_feedback={code:error.code,message:error.message};options.onProgress?.('Correcting the extraction against the original source…',{phase:'extract',completed,total,waiting:true});}
   completed++;
   options.onProgress?.('Source conditions extracted ('+completed+'/'+total+').',{phase:'extract',completed,total,waiting:completed<total});
   return answer.questions[0];
@@ -129,10 +319,19 @@ async function extract_elements(state,env,adapter,options={}){
   for(let bi=0;bi<plans[qi].length;bi++){
    const item=parts[offset++],prefix='q'+qi+'b'+bi+'_';
    for(const e of item.elements)merged.elements.push({...e,candidate_id:prefix+e.candidate_id});for(const issue of item.issues)merged.issues.push({...issue,element_candidate_ids:(issue.element_candidate_ids||[]).map(eid=>prefix+eid)});
-   if(item.logic)trees.push(prefixLogic(item.logic,prefix));if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;
+   trees.push({tree:prefixLogic(item.logic,prefix),ids:item.elements.map(e=>prefix+e.candidate_id)});if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;
    for(const field of ['question_types','review_methods','evidence_units'])merged[field]=[...new Set([...(merged[field]||[]),...(item[field]||[])])];
   }
-  merged.logic=trees.length===1?trees[0]:trees.length?{op:'all_of',children:trees}:null;return merged;
+  if(!merged.review_topic){
+   const titleElement=merged.elements.find(e=>e.normalized_text&&e.information_status!=='missing'&&e.semantic_role!=='background_information');
+   const shortOriginal=!q.document_input_only&&q.original_text.length<=240&&!(state.output_language.startsWith('en')&&/[\u3400-\u9fff]/u.test(q.original_text));
+   merged.review_topic=shortOriginal?q.original_text:titleElement?.normalized_text||(state.output_language.startsWith('zh')?'纳排标准':'Eligibility criteria');
+  }
+  mergeFragmentLogic(merged,trees,q);
+  if(trees.length>1&&options.fragmentPlans){
+   options.fragmentPlans.push({merged,trees,q,participants:merged.elements.map(fragmentParticipant)});
+  }
+  return merged;
  });
  return {questions};
 }
@@ -216,7 +415,12 @@ async function review_elements(state,candidates,adapter,options={}){
  const batches=G.batches(items,12500,7);let completed=0;
  await mapModelBatches(batches,options,async(batch,index,signal)=>{
   options.onProgress?.('Checking criteria against the sources ('+(index+1)+'/'+batches.length+')…',{phase:'review',completed,total:batches.length,waiting:true});
-  const questionIds=new Set(batch.map(item=>item.question_id)),questions=candidates.questions.filter(q=>questionIds.has(q.question_id)).map(q=>{const original=state.questions.find(item=>item.question_id===q.question_id)?.original_text||'';return {question_id:q.question_id,original_question:original.length<3500?original:null,logic:q.logic};});
+  const questionIds=new Set(batch.map(item=>item.question_id));
+  const questions=candidates.questions.filter(q=>questionIds.has(q.question_id)).map(q=>{
+   const original=state.questions.find(item=>item.question_id===q.question_id)?.original_text||'';
+   return {question_id:q.question_id,original_question:original.length<3500?original:null,logic:q.logic,
+    ...(q.unresolved_fragment_logic?{unresolved_fragment_logic:q.unresolved_fragment_logic}:{})};
+  });
   const assessments=await assessWording(state,adapter,questions,batch,signal);
   const failed=batch.filter(item=>needsWordingRepair(assessments.get(item.id)));
   if(failed.length){
@@ -245,7 +449,20 @@ async function review_elements(state,candidates,adapter,options={}){
  });
  return candidates;
 }
-async function analyze(state,env,adapter,options={}){const start=adapter.exchanges?.length||0;const candidates=await extract_elements(state,env,adapter,options);await review_elements(state,candidates,adapter,options);return {candidates,base_revision:state.revision,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};}
+async function analyze(state,env,adapter,options={}){
+ const start=adapter.exchanges?.length||0,fragmentPlans=[];
+ const candidates=await extract_elements(state,env,adapter,{...options,fragmentPlans});
+ await review_elements(state,candidates,adapter,options);
+ for(const {merged,trees,q,participants} of fragmentPlans){
+  // A review can correctly reclassify background information as an inclusion
+  // condition (or vice versa). Only changed membership needs another merge.
+  if(merged.elements.some((e,i)=>fragmentParticipant(e)!==participants[i])){
+   merged.logic=null;delete merged.unresolved_fragment_logic;
+   mergeFragmentLogic(merged,trees,q);
+  }
+ }
+ return {candidates,base_revision:state.revision,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
+}
 async function parse_answers(state,answerText,issueIds,adapter,options={}){
  const start=adapter.exchanges?.length||0;const issues=state.issues.filter(i=>i.status==='open'&&(!issueIds?.length||issueIds.includes(i.issue_id))),payload={answer_text:answerText,issues,elements:state.elements.filter(e=>e.active!==false),prior_decisions:state.decisions,questions:state.questions.map(q=>({question_id:q.question_id,context:q.context,framework_mapping:q.framework_mapping}))};
  let result;
@@ -271,5 +488,5 @@ async function parse_answers(state,answerText,issueIds,adapter,options={}){
  }
  return {base_revision:state.revision,request_id:options.request_id||D.id('answer_request'),answers:result.answers,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
 }
-return {client,analyze,extract_elements,review_elements,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,serializationInstruction};
+return {client,analyze,extract_elements,review_elements,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,httpError,serializationInstruction};
 });
