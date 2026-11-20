@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const engine = require('../../app/eligibility/engine.js');
 const model = require('../../app/eligibility/model.js');
 const domain = require('../../app/eligibility/domain.js');
+const background = require('../../app/eligibility/background.js');
 
 const rejection = 'The wording reverses the supervision requirement.';
 
@@ -94,6 +95,9 @@ async function check(mode){
   assert.equal(project.criteria.length,2);
   const issue=checks.find(i=>project.elements.some(e=>i.element_ids.includes(e.element_id)&&e.dimension_id==='intervention'&&e.normalized_text.includes('exercise')));
   assert(issue?.blocking);
+  const prompt=background.projectToClassic(project).sourceConfirmations.find(detail=>detail.issue_id===issue.issue_id);
+  assert(prompt.text.includes('Intervention')&&prompt.text.includes('exercise')&&prompt.text.includes('inclusion criterion'));
+  assert(prompt.evidence.some(ref=>ref.quote.includes('exercise')));
   const proposal=project.elements.find(e=>issue.element_ids.includes(e.element_id));
   assert.equal(proposal.decision_status,'pending');
   assert.equal(proposal.review_pending.routed_by,mode==='field'?'local':undefined);

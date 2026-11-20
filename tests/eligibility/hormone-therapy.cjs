@@ -14,7 +14,7 @@ const population='perimenopausal and postmenopausal women';
 const outcomes=['mortality','cardiovascular outcomes','cancer','gallbladder disease','fractures','cognition'];
 const text=[aim,trial,formulations,focus,boundary].join(' ');
 
-async function generate(question,additional=[]){
+async function generate(question,additional=[],compound=false){
  const input=E.save_input(E.create_project('hormone-therapy'),{research_question:question,question_type:'intervention_effect',output_language:'en'}).state;
  const source=input.sources.find(s=>s.input_kind==='research_question');
  const records=[
@@ -26,6 +26,12 @@ async function generate(question,additional=[]){
   candidate_id:'c'+i,dimension_id,normalized_text,disposition,source_refs:[E.ref(source,quote)],
   information_status:'explicit',semantic_role:'eligibility_condition',scope_status:'restricted',structured_value:null
  }));
+ if(compound){
+  const bound={operator:'gte',value:1,unit:'year',anchor:'treatment duration'};
+  Object.assign(elements[1],{normalized_text:'hormone therapy (oestrogen formulations, with or without progestogens) for at least one year',
+   source_refs:[E.ref(source,trial),E.ref(source,formulations)],structured_value:bound});
+  Object.assign(elements[4],{normalized_text:'placebo for at least one year',source_refs:[E.ref(source,trial)],structured_value:bound});
+ }
  const adapter={async request(step,project,payload){
   if(step==='extract_elements')return {questions:[{question_id:input.questions[0].question_id,review_topic:aim,framework_candidates:['picos'],
    elements,issues:[],logic:{op:'all_of',children:elements.filter(e=>e.disposition==='include').map(e=>({op:'predicate',element_id:e.candidate_id}))}}]};
@@ -40,19 +46,18 @@ async function generate(question,additional=[]){
 test('separate the treatment, its qualifiers, clinical outcomes and review scope',async()=>{
  const {project,view}=await generate(text);
  if(process.argv.includes('--show'))console.log(view.reviewTopic+'\n'+JSON.stringify(view.rows)+'\n'+JSON.stringify(view.descriptionContext.outcome_groups)+'\n'+view.manuscriptParagraph);
- assert.match(view.reviewTopic,/hormone therapy/i);
- assert.match(view.reviewTopic,/menopausal women/i);
- assert(view.reviewTopic.split(/\s+/u).length<=15,view.reviewTopic);
- assert.doesNotMatch(view.reviewTopic,/assess|mortality|placebo|formulations|\//i);
+ assert.equal(view.reviewTopic,'Long-term effects of hormone therapy in perimenopausal and postmenopausal women');
  const include=dimension=>view.rows.find(row=>row.dimension===dimension)?.include.join(' ')||'';
  const intervention=include('Intervention');
  assert.match(intervention,/hormone therapy/i);
  assert.match(intervention,/oestrogen formulations/i);
  assert.match(intervention,/with or without progestogens/i);
  assert.doesNotMatch(intervention,/to assess|mortality|cognition|menopausal women/i);
- assert.match(include('Population'),/menopausal women/i);
- assert.match(include('Comparison'),/^placebo(?: for at least (?:one|1) year)?$/i);
- assert.match(include('Study design'),/randomised,? double[‐‑– -]blind trials/i);
+ assert.equal(include('Population'),'perimenopausal or postmenopausal women');
+ assert.equal(include('Comparison'),'placebo');
+ assert.equal(include('Study design'),'double-blind randomised trials');
+ assert.equal(project.criteria.filter(c=>['intervention','comparator'].includes(c.dimension_id)&&c.text.includes('for at least one year')).length,2);
+ assert.equal(view.manuscriptParagraph.match(/for at least one year/gi)?.length,1);
  assert.deepEqual(view.rows.flatMap(row=>row.exclude),[]);
  assert(!project.criteria.some(c=>c.disposition==='exclude'||c.dimension_id==='outcome'));
  assert.deepEqual(view.sourceConfirmations,[]);
@@ -77,6 +82,16 @@ test('separate the treatment, its qualifiers, clinical outcomes and review scope
  assert.doesNotMatch(html,/Pending relationship/);
  const outcomeSection=html.slice(html.indexOf('Outcomes:'),html.indexOf('Study design:'));
  outcomes.forEach(outcome=>assert(outcomeSection.toLowerCase().includes(outcome),outcome));
+});
+
+test('merge a formulation repeated beside a complete arm without duplicating the shared treatment duration',async()=>{
+ const {view}=await generate(text,[],true);
+ assert.equal(view.reviewTopic,'Long-term effects of hormone therapy in perimenopausal and postmenopausal women');
+ assert.deepEqual(view.rows.find(row=>row.dimension==='Intervention').include,[
+  'hormone therapy (oestrogen formulations with or without progestogens)'
+ ]);
+ assert.equal(view.manuscriptParagraph.match(/for at least one year/gi)?.length,1);
+ assert.deepEqual(view.sourceConfirmations,[]);
 });
 
 test('retain an explicit study exclusion in a question with an outcome scope boundary',async()=>{
@@ -111,7 +126,8 @@ test('opening a saved v7 machine draft repairs its original citations without ge
  const stage=service.refreshPresentation(legacy);
  assert.equal(stage.classic.reviewTopic,'Long-term effects of hormone therapy in perimenopausal and postmenopausal women');
  const arm=stage.classic.rows.find(row=>row.dimension==='Intervention').include;
- assert.equal(arm.length,1);assert.match(arm[0],/^hormone therapy.*oestrogen formulations.*at least one year/i);
+ assert.deepEqual(arm,['hormone therapy (oestrogen formulations with or without progestogens)']);
+ assert.match(stage.classic.manuscriptParagraph,/for at least one year/i);
  assert.deepEqual(stage.classic.rows.flatMap(row=>row.exclude),[]);
  assert.deepEqual(stage.classic.pendingLogicRows,[]);
  assert.deepEqual(stage.classic.sourceConfirmations,[]);

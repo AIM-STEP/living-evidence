@@ -424,11 +424,21 @@ function unrepresentedSourceOr(elements){
   // already preserved by a predicate only at its own attested source location.
   const chars=Array.from(ref.quote);
   for(const owner of withAlternatives){
-   const wording=key(owner.normalized_text);
+   const punctuation=text=>key(text).replace(/, (?=with or without\b)/gu,' ');
+   const wording=punctuation(owner.normalized_text);
    for(const source of owner.source_refs){
     if(source.source_id!==ref.source_id||source.source_revision!==ref.source_revision||source.end<=ref.start||source.start>=ref.end)continue;
-    const sourceText=key(source.quote);
+    let sourceText=punctuation(source.quote);
     if(!D.hasOr(sourceText))continue;
+    // The trial sentence can use a shared suffix that its objective spells out.
+    if(owner.dimension_id==='population'&&owner.title_population){
+     const shortened=/^([a-z]+)[-‐‑–] or ([a-z]+) (.+)$/u.exec(sourceText);
+     const expanded=/^([a-z]+) (?:or|and) ([a-z]+) (.+)$/u.exec(key(owner.title_population));
+     if(shortened&&expanded&&expanded[1].startsWith(shortened[1])&&expanded[2]===shortened[2]&&expanded[3]===shortened[3]&&
+      expanded[1].length>shortened[1].length&&expanded[2].endsWith(expanded[1].slice(shortened[1].length))){
+      sourceText=[expanded[1],'or',shortened[2],shortened[3]].join(' ');
+     }
+    }
     let start=source.start,end=source.end;
     if(!wording.includes(sourceText)){
      const span=alternativeSpan(source.quote,owner.normalized_text);

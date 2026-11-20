@@ -4,7 +4,7 @@
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
-const presentationVersion='framework-display-v8';
+const presentationVersion='framework-display-v9';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -29,8 +29,22 @@ function authorChoices(issue){
   return [{option_id:option.option_id,stored_id:option.option_id,label}];
  });
 }
-function issueText(issue,project,elements=issue.element_ids.map(id=>project.elements.find(e=>e.element_id===id)).filter(Boolean)){
+function issueText(issue,project,elements=issue.element_ids.map(id=>project.elements.find(e=>e.element_id===id)).filter(Boolean),field){
  const names=elements.map(e=>e.normalized_text).filter(Boolean).join('; '),domain=label(elements[0]?.dimension_id);
+ if(issue.trigger_rule_id==='source_occurrence'&&names)return 'The phrase “'+names+'” occurs in more than one passage. Which passage should define the rule for '+(field||domain)+'?';
+ if(issue.trigger_rule_id==='independent_source_check'&&elements.length===1){
+  const [element]=elements,review=element.semantic_review;
+  const wording='“'+element.normalized_text+'”';
+  const fieldName=field||domain;
+  const role=element.disposition==='exclude'?'an exclusion criterion':'an inclusion criterion';
+  if(review?.validation_code)return 'Should '+wording+' be used as '+role+'? '+issue.question_text;
+  if(review?.reviewer?.verdict==='wrong_field'||element.review_pending?.routed_by)
+   return 'Does '+wording+' belong under '+fieldName+' as '+role+'? Use the cited passage to check the field and the direction of the rule.';
+  if(!element.disposition)return 'Does the cited passage make '+wording+' an eligibility criterion? Choose Include or Exclude if it does.';
+  const reason=issue.question_text;
+  const specific=reason&&!/^(?:The proposed wording or scope does not match|The cited passage leaves|The source check could not|Confirm how this criterion)/u.test(reason);
+  return 'Should '+wording+' be used as '+role+' for '+fieldName+'? '+(specific?reason:'Check that the cited passage supports the proposed rule, including any limits or exceptions.');
+ }
  if(issue.author_scope_review||elements.some(e=>e.review_pending))return issue.question_text;
  if(issue.trigger_rule_id==='population_age_boundary')return 'The source specifies older people without a numeric age threshold. Define the age boundary below, or confirm whether to retain the original wording.';
  if(issue.trigger_rule_id?.startsWith('model_issue:')&&issue.question_text&&!/[\u3400-\u9fff]/u.test(issue.question_text))return issue.question_text;
@@ -38,7 +52,7 @@ function issueText(issue,project,elements=issue.element_ids.map(id=>project.elem
  if(issue.trigger_rule_id==='between_question_relation')return 'Should studies satisfy any subquestion or all subquestions?';
  if(issue.reason_code==='CONFLICTING_REQUIREMENTS')return 'Which requirement should apply to '+domain.toLowerCase()+'?';
  if(issue.reason_code==='FRAMEWORK_AMBIGUITY')return issue.trigger_rule_id.startsWith('custom_definition:')?'What does this custom framework field mean?':'Which question framework should be used?';
- if(issue.reason_code==='UNCLEAR_LOGIC')return 'Should these conditions be satisfied together or as alternatives?';
+ if(issue.reason_code==='UNCLEAR_LOGIC')return 'Must a study meet all the listed conditions to be eligible, or is any one sufficient?';
  if(issue.reason_code==='MISSING_REQUIRED_DECISION')return elements.length?'What '+domain.toLowerCase()+' scope should apply to this review?':'What population or core concept should this review cover?';
  if(issue.reason_code==='UNRESOLVED_ROLE')return 'Should this information define eligibility or only the review focus?';
  return 'How should this requirement define eligibility'+(names?': '+names:'')+'?';
@@ -72,6 +86,8 @@ function projectToClassic(project,registry){
   const domain=id=>fields.get(id)||fields.get(id.split('.')[0]);
   bindings.set(q.question_id,domain);
   const pending=q.logic?.pending_inclusion_branches,linked=[];
+  const duration=fields.has('intervention')&&fields.has('comparator')?
+   Methods.sharedTreatmentDuration(q.include,q.logic?.include,elementsById):null;
   const awaiting=new Set(q.logic?.pending_logic_element_ids||[]);
   for(const e of q.elements.filter(e=>awaiting.has(e.element_id)&&domain(e.dimension_id)&&e.disposition!=='exclude'&&!['review_focus','background_information'].includes(e.semantic_role))){
    pendingLogicRows.push({domain:domain(e.dimension_id),subject:e.normalized_text,questionNumber:multiple?q.display_number:null,side:'include'});
@@ -83,7 +99,11 @@ function projectToClassic(project,registry){
    for(const branch of branches){
     const units=Methods.frameworkUnits(branch,criteria,domain,linked);
     for(const unit of side==='include'?Methods.combinePopulationUnits(units):units){
-     const wording=unit.linked?unit.text:Methods.ageClause(unit.criteria)||unit.text;
+     let wording=unit.linked?unit.text:Methods.ageClause(unit.criteria)||unit.text;
+     if(duration&&side==='include'&&unit.node.op==='predicate'&&duration.ids.has(unit.node.criterion_id)&&wording.endsWith(duration.suffix))
+      wording=wording.slice(0,-duration.suffix.length);
+     if(unit.criteria.every(c=>['study_design','design'].includes(c.dimension_id)&&c.source_element_ids.every(id=>elementsById.get(id)?.decision_status==='accepted_from_input')))
+      wording=Methods.studyDesignWording(wording);
      add(target,unit.dimension,side,wording,unit.criteria);
     }
    }
@@ -95,7 +115,7 @@ function projectToClassic(project,registry){
    add(rows,row.dimension,side,q.display_number+' · '+rule,[],false);
   }
   const outcomes=fields.has('outcome')?Methods.outcomeGroups(q.research_question):[];
-  return {display_number:q.display_number,manuscript:Methods.manuscriptContext(q.research_question||''),...(outcomes.length?{outcome_groups:outcomes}:{}),...(multiple?{rows:target}:{}),...(pending&&!awaiting.size?{pending_inclusion_relation:true}:{}),...(linked.length?{linked_conditions:linked}:{})};
+  return {display_number:q.display_number,manuscript:Methods.manuscriptContext(q.research_question||''),...(outcomes.length?{outcome_groups:outcomes}:{}),...(multiple?{rows:target}:{}),...(pending&&!awaiting.size?{pending_inclusion_relation:true}:{}),...(linked.length?{linked_conditions:linked}:{}),...(duration&&{shared_treatment_duration:{suffix:duration.suffix,intervention:duration.intervention,comparison:duration.comparison}})};
  });
  const frameNames=[...new Set(frameworkQuestions.map(q=>q.framework))],framework=frameNames.length===1?frameNames[0]:'Other';
  const frameworkSlots=frameNames.length===1?frameworkQuestions[0].frameworkSlots:[];
@@ -127,7 +147,7 @@ function projectToClassic(project,registry){
    else if(prior.targetId!==target)delete prior.targetId;
   }
   if(!locations.length)locations.push(issue.reason_code==='FRAMEWORK_AMBIGUITY'?{section:'framework',domain:'Framework'}:{section:'topic',domain:'Review topic'});
-  const primary=locations[0],text=issueText(issue,project,elements);
+  const primary=locations[0],text=issueText(issue,project,elements,primary.domain);
   return {item:text,text,kind:'proposal',type:'source-ambiguity',domain:primary.domain,
    side:primary.section==='exclude'?'exclude':'include',status:'suggested',backgroundIssue:true,
    reviewOnly:false,focusOnly:primary.section==='focus',locations,issue_id:issue.issue_id,...(answerTargets.length&&{answerTargets}),
@@ -241,7 +261,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
     if(M.repairSavedExtraction(project,question))corrected=true;
    }
   }
-  if(!corrected&&/^framework-display-v[2-7]$/.test(saved.presentation_version)&&saved.elements.some(e=>e.active!==false)){
+  if(!corrected&&/^framework-display-v[2-8]$/.test(saved.presentation_version)&&saved.elements.some(e=>e.active!==false)){
    const visible=E.render_output(project).questions;
    for(const question of project.questions.filter(q=>q.active!==false)){
     const elements=visible.find(q=>q.question_id===question.question_id).elements;

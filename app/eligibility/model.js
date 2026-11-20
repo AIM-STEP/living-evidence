@@ -460,11 +460,12 @@ function assignedTrialFields(passage,passages,source){
  const primary={...sourceRef,quote:aim.primary};
  // Expand coordinated shorthand only when the complete terms and shared suffix
  // are explicitly named in this same objective (e.g. peri- or postmenopausal).
- const shared=/^([\p{L}]+)[‐‑–-] (?:or|and) ([\p{L}]+) (.+)$/iu.exec(group);
+ const shared=/^([\p{L}]+)[‐‑–-] (or|and) ([\p{L}]+) (.+)$/iu.exec(group);
  const fullGroup=shared&&aim.outcomeClause.match(/\b(?:in|among) ([\p{L}]+) (?:and|or) ([\p{L}]+) (.+)$/iu);
- if(fullGroup&&fullGroup[1].toLowerCase().startsWith(shared[1].toLowerCase())&&key(fullGroup[2])===key(shared[2])&&
-    key(fullGroup[3])===key(shared[3])&&fullGroup[1].length>shared[1].length&&shared[2].toLowerCase().endsWith(fullGroup[1].slice(shared[1].length).toLowerCase())){
+ if(fullGroup&&fullGroup[1].toLowerCase().startsWith(shared[1].toLowerCase())&&key(fullGroup[2])===key(shared[3])&&
+    key(fullGroup[3])===key(shared[4])&&fullGroup[1].length>shared[1].length&&shared[3].toLowerCase().endsWith(fullGroup[1].slice(shared[1].length).toLowerCase())){
   population.titlePopulation=fullGroup[0].replace(/^(?:in|among) /iu,'');
+  population.quote=[fullGroup[1],shared[2],shared[3],shared[4]].join(' ');
   population.refs.push(quotedField(primary,population.titlePopulation));population.forms.push(population.titlePopulation);
  }
  const next=passages[passages.indexOf(passage)+1];
@@ -474,7 +475,8 @@ function assignedTrialFields(passage,passages,source){
     (/^(?:(?:a|an|matching) )?placebo$/iu.test(control)||key(next.value).includes(key(active)))){
   const formulation=next.value.replace(/^(?:various|different) /iu,'');
   arm.refs.push(quotedField(next.ref,formulation));arm.forms.push(formulation,next.value);
-  arm.quote+=' ('+formulation+')';arm.ancillaryPassage=next;
+  arm.formulation=arm.refs.at(-1);
+  arm.quote+=' ('+formulation.replace(/, (with or without\b)/iu,' $1')+')';arm.ancillaryPassage=next;
  }
  arm.treatmentName=active;
  arm.fullObjective=aim.primary;
@@ -484,9 +486,10 @@ function assignedTrialFields(passage,passages,source){
   if(q){arm.matchRefs=[q];arm.forms.push(aim.qualification);}
  }
  arm.quote+=' '+duration;
- comparison.quote+=' '+duration;comparison.refs.push(time);
+ comparison.quote+=' '+duration;comparison.refs.push(time);comparison.forms.push(duration);
+ arm.duration=comparison.duration=time;
  const designRef=quotedField(ref,design);
- return [{dimension:'study_design',quote:design.replace(/[‐‑]/gu,'-'),ref:designRef,refs:[designRef],forms:[design]},population,arm,comparison];
+ return [{dimension:'study_design',quote:Methods.studyDesignWording(design),ref:designRef,refs:[designRef],forms:[design]},population,arm,comparison];
 }
 function comparisonEligibilityFields(passage,passages,source){
  if(passage.kind!=='include'||!passage.value)return null;
@@ -519,6 +522,21 @@ function comparisonEligibilityFields(passage,passages,source){
 }
 // Only the deterministic source readers can attest the full wording, field and side.
 const literalField=Symbol('field established by the original eligibility clause');
+const durationNumbers=['one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
+function equivalentTreatmentDuration(value,field){
+ if(!field.duration||!value)return false;
+ const [bound,...others]=D.structuredConstraints(value,field.dimension);
+ if(!bound||others.length)return false;
+ const digits=field.duration.quote.replace(/\b[a-z]+(?= (?:days?|weeks?|months?|years?)\b)/iu,word=>{
+  const index=durationNumbers.indexOf(word.toLowerCase());
+  return index===-1?word:String(index+1);
+ });
+ const equivalent=digits.replace(/^for (\d+(?:\.\d+)? \w+) or (longer|shorter)$/iu,
+  (_,amount,direction)=>(direction.toLowerCase()==='longer'?'at least ':'at most ')+amount);
+ const [stated]=D.sourceConstraints(equivalent);
+ const anchor=D.canonical(bound).anchor;
+ return !!stated&&['','treatment','treatment duration'].includes(anchor)&&D.sameConstraint({...bound,anchor:''},stated);
+}
 function literalWording(text){
  return text.trim().normalize('NFC').replace(/[‐‑]/gu,'-').replace(/[‘’]/gu,"'").replace(/[“”]/gu,'"')
   .replace(/\s+/gu,' ').replace(/[.。]$/u,'')
@@ -678,28 +696,31 @@ function reconcileEligibilityFields(state,result,q,ranges,passages,onLesson,fram
   const fullAim=arm&&/^(?:to (?:assess|compare|evaluate|determine)|we (?:aim|assess|compare))/i.test(primary)&&
     value===key(primary)&&(objectiveTreatment||fields.filter(f=>['intervention','comparator'].includes(f.dimension)).every(f=>contains(key(primary),key(f.quote).replace(/^any /,''))))&&
     e.source_refs.every(r=>sameClause(r)||contains(key(primary),key(r.quote))||contains(key(r.quote),key(primary)));
-  const field=fields.find(f=>{
-   const domain=e.dimension_id==='design'?'study_design':e.dimension_id==='comparison'?'comparator':e.dimension_id;
+  const domain=e.dimension_id==='design'?'study_design':['comparison','control_group'].includes(e.dimension_id)?'comparator':e.dimension_id;
+  const matchField=f=>{
    const spans=[...(f.refs||[f.ref]),...(f.matchRefs||[])];
    const citedInside=e.source_refs.every(r=>spans.some(span=>r.start>=span.start&&r.end<=span.end));
    if(domain!==f.dimension&&domain!=='other'&&!citedInside)return false;
    if(fullAim)return objectiveTreatment?f===objectiveTreatment:domain===f.dimension;
    if(citedInside)return true;
-   const forms=(f.forms||[f.quote]).map(groupKey);
-   const broad=e.source_refs.every(r=>sameClause(r)||contains(key(primary),key(r.quote))||contains(key(r.quote),key(primary))||contains(key(r.quote),key(p.value)));
+   const forms=[f.quote,...(f.forms||[])].map(groupKey);
+   const broad=e.source_refs.every(r=>sameClause(r)||f.ancillaryPassage&&r.start>=f.ancillaryPassage.ref.start&&r.end<=f.ancillaryPassage.ref.end||
+    contains(key(primary),key(r.quote))||contains(key(r.quote),key(primary))||contains(key(r.quote),key(p.value)));
    if(!broad)return false;
    if(arm&&domain===f.dimension&&sameArmWithExpandedAcronym(f.quote,e.normalized_text))return true;
    const fragments=groupKey(e.normalized_text).split(/ \| /);
    return forms.some(form=>contains(form,groupKey(e.normalized_text)))||
     (f.dimension==='population'&&fragments.length>1&&fragments.every(part=>forms.some(form=>contains(form,part))));
-  });
+  };
+  const field=(fullAim&&objectiveTreatment)||fields.find(f=>f.dimension===domain&&matchField(f))||fields.find(matchField);
   if(!field)continue;
   // Other author/source qualifications on a candidate must survive even if
   // they resemble one of these slots.
-  const explicitTiming=field.forms?.length>1&&(field.dimension==='study_design'||field.treatmentName)&&[...field.refs.slice(1),...(field.matchRefs||[])].some(time=>
+  const explicitTiming=field.forms?.length>1&&field.dimension==='study_design'&&field.refs.slice(1).some(time=>
    e.source_refs.every(r=>r.start>=time.start&&r.end<=time.end));
-  if(blocked(e)||e.structured_value&&!explicitTiming||!['explicit','ambiguous'].includes(e.information_status))return;
-  if(e.information_status==='ambiguous'&&!fullAim&&!(field.forms||[field.quote]).some(form=>key(form)===value))return;
+  const sameDuration=equivalentTreatmentDuration(e.structured_value,field);
+  if(blocked(e)||e.structured_value&&!explicitTiming&&!sameDuration||!['explicit','ambiguous'].includes(e.information_status))return;
+  if(e.information_status==='ambiguous'&&!fullAim&&![field.quote,...(field.forms||[])].some(form=>groupKey(form)===groupKey(e.normalized_text)))return;
   if(e.source_occurrence_alternatives?.some(alt=>/\b(?:exclude|excluded|excluding|ineligible|unless|except)\b/i.test(alt.quote+' '+(alt.heading?.quote||''))))return;
   fieldById.set(e.candidate_id,field);candidatesByField.get(field).push(e);
  }
@@ -750,8 +771,11 @@ function repairSavedExtraction(state,q){
  const copied=aim&&active.some(e=>e.dimension_id==='intervention'&&e.disposition==='include'&&literalWording(e.normalized_text)===literalWording(aim.primary));
  const boundary=active.some(e=>e.dimension_id==='outcome'&&(e.disposition==='exclude'||e.review_pending))&&
   Methods.declaredFocus(q.original_text).some(d=>d.dimension==='review_boundary');
- if(!copied&&!boundary)return false;
+ if(!aim&&!boundary)return false;
  const ranges=citedRanges([{...original,start_codepoint:original.start_codepoint||0}]),ids=new Map(active.map(e=>[e.element_id,e.element_id]));
+ const passages=aim?readSourcePassages(state,ranges):[];
+ const assigned=aim&&passages.some(p=>p.kind==='include'&&p.value&&assignedTrialFields(p,passages,ranges[0]));
+ if(!copied&&!boundary&&!assigned)return false;
  const result={elements:active.map(e=>({...D.clone(e),candidate_id:e.element_id})),issues:(q.model_issues||[]).map(i=>({...D.clone(i),element_candidate_ids:i.element_ids||[]})),
   logic:q.logic&&D.mapExpression(q.logic,ids,'element_id')};
  // The stored citations must belong to this particular version of the question.
@@ -759,7 +783,7 @@ function repairSavedExtraction(state,q){
  if(result.elements.some(e=>e.source_refs.some(ref=>ref.source_id!==original.source_id||ref.source_revision!==original.revision||
   !Number.isInteger(ref.start)||characters.slice(ref.start,ref.end).join('')!==ref.quote)))return false;
  classifyDeclaredOutcomes(result,ranges);
- if(copied)reconcileEligibilityFields(state,result,q,ranges,readSourcePassages(state,ranges),null,q.framework_mapping?.framework_id);
+ if(copied||assigned)reconcileEligibilityFields(state,result,q,ranges,passages,null,q.framework_mapping?.framework_id);
  const changedRole=new Set(result.elements.filter(e=>e.disposition===null&&['background_information','review_focus'].includes(e.semantic_role)&&
   active.some(old=>old.element_id===e.candidate_id&&(old.disposition!=null||old.semantic_role!==e.semantic_role))).map(e=>e.candidate_id));
  const replacements=new Map(result.elements.filter(e=>!changedRole.has(e.candidate_id)).map(e=>[e.candidate_id,e]));
@@ -1374,6 +1398,12 @@ async function extract_elements(state,env,adapter,options={},review=null){
    classifyFollowUpGroups(result.elements);
    const frameId=E.resolve_review_context(originals.get(q.question_id),result,env).framework_mapping.framework_id;
    if(batches.length===1)reconcileEligibilityFields(state,result,q,ranges,passages,options.onLesson,frameId);
+   for(const e of result.elements){
+    if(!['study_design','design'].includes(e.dimension_id)||e.explicit_revision||e.decision_status==='confirmed_by_user')continue;
+    const wording=Methods.studyDesignWording(e.normalized_text);
+    if(wording===e.normalized_text||!e.source_refs.some(ref=>literalWording(Methods.studyDesignWording(ref.quote))===literalWording(wording)))continue;
+    e.normalized_text=wording;
+   }
    // A review objective can name its treatment without spelling out a binary
    // comparison. Bind a copied objective to the actual governed noun phrase.
    // Leave the original scope, eligibility direction and treatment duration intact.

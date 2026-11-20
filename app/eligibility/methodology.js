@@ -3,6 +3,27 @@
 'use strict';
 const norm=x=>String(x||'').normalize('NFKC');
 const older=/\b(?:older (?:people|patients|adults|participants)|elderly)\b|老年/i;
+// A shared treatment duration belongs in the eligibility description once.
+const treatmentDuration=/\s+(for (?:at least |at most |more than |less than |up to )?(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|twelve) (?:days?|weeks?|months?|years?)(?: or (?:longer|shorter))?)$/iu;
+function studyDesignWording(text){
+ return text.replace(/^randomi[sz]ed[,]?\s+double[-‐‑– ]blind(?:ed)? (controlled )?(trials?)\b/iu,(_,controlled,trials)=>
+  'double-blind randomised '+(controlled?'controlled ':'')+trials.toLowerCase());
+}
+function sharedTreatmentDuration(criteria,expression,elementById){
+ const arms=['intervention','comparator'].map(dimension=>criteria.filter(c=>c.dimension_id===dimension));
+ if(!arms.every(group=>group.length===1))return null;
+ const pair=arms.flat();
+ const contains=(node,id)=>node?.op==='predicate'?node.criterion_id===id:node?.op==='all_of'&&node.children.some(child=>contains(child,id));
+ if(pair.some(c=>!contains(expression,c.criterion_id)||c.scope_conditions.length||c.exceptions.length||c.source_element_ids.length!==1))return null;
+ const suffix=pair[0].text.match(treatmentDuration)?.[0];
+ if(!suffix||!pair[1].text.endsWith(suffix))return null;
+ const sources=pair.map(c=>elementById.get(c.source_element_ids[0]));
+ if(sources.some(e=>!e||e.decision_status!=='accepted_from_input'||e.explicit_revision))return null;
+ const samePassage=sources[0].source_refs.some(ref=>ref.quote.trim()===suffix.trim()&&sources[1].source_refs.some(
+  other=>ref.source_id===other.source_id&&ref.source_revision===other.source_revision&&ref.start===other.start&&ref.end===other.end));
+ return samePassage?{suffix,ids:new Set(pair.map(c=>c.criterion_id)),
+  intervention:pair[0].text.slice(0,-suffix.length),comparison:pair[1].text.slice(0,-suffix.length)}:null;
+}
 function phrase(text){return String(text||'').trim().replace(/[.。]+$/,'').replace(/^(?:include\s+)?studies\s+(?:involving|evaluating|of|in)\s+/i,'').replace(/^various\s+/i,'');}
 function lower(text){return String(text||'').replace(/^(?:Hospitali[sz]ed|Older|Adults?|Patients?|People|Exercise|Nutritional|Standard|Placebo|Another|Various)\b/,s=>s.toLowerCase());}
 function dataGate(text){const t=norm(text),data='(?:IPD|individual\\s+(?:participant|patient)\\s+data(?:\\s*\\(IPD\\))?)';return new RegExp('(?:only\\s+(?:include\\s+)?(?:studies|trials|reports)|include\\s+only\\s+(?:studies|trials|reports)|eligibility\\s+(?:requires|depends))[\\s\\S]{0,100}(?:with|providing|for which|available|availability|access)[\\s\\S]{0,80}'+data,'i').test(t)||new RegExp('(?:only\\s+include\\s+(?:studies|trials|reports)|studies\\s+must|trials\\s+must)[\\s\\S]{0,100}'+data+'[\\s\\S]{0,40}(?:available|provided|obtained)','i').test(t)||new RegExp(data+'\\s+(?:must\\s+be\\s+available|availability\\s+is\\s+required)','i').test(t)||new RegExp('exclude\\s+(?:studies|trials)\\s+without\\s+'+data,'i').test(t);}
@@ -72,12 +93,13 @@ function objectiveArms(value){
 // duration in the X phrase qualifies treatment and is never a second arm.
 function treatmentObjective(original){
  const primary=String(original||'').trim().split(/[.!?](?=\s|$)|[;\n]/u)[0];
- const aim=/^(?:to |we (?:aim(?:ed)? to )?)?(?:assess|evaluate|examine|investigate|determine)\s+(?:the )?((?:(?:long|short|medium)[-‐‑– ]term )?(?:effects?|impacts?|benefits?(?: and harms?)?|efficacy|effectiveness|safety)) of (.+?) on (.+)$/iu.exec(primary);
+ const aim=/^(?:to |we (?:aim(?:ed)? to )?)?(?:assess|evaluate|examine|investigate|determine)\s+(?:the )?((?:(?:long|short|medium)[-‐‑– ]term )?(?:effects?|impacts?|benefits?(?: and harms?)?|efficacy|effectiveness|safety)) of ((?:[^()]|\([^()]*\))+?) on (.+)$/iu.exec(primary);
  if(!aim||armContrast.test(aim[2])||/\b(?:compared|comparing|whether|except|unless|depending)\b/iu.test(aim[2]))return null;
  const use=/^(?:(?:prolonged|extended|long[-‐‑– ]term|short[-‐‑– ]term|continuous) )?(?:use|administration|application)\s*(?:\(([^()]+)\)\s*)?of (.+)$/iu.exec(aim[2]);
  const name=(use?use[2]:aim[2]).trim();
  if(!compactTitle(name)||genericArmTitle(name)||/[;!?]/u.test(name)||/\b(?:to assess|studies|trials)\b/iu.test(name))return null;
- return {primary,name,arm:aim[2],goal:aim[1].replace(/[‐‑–]/gu,'-'),qualification:use?aim[2].slice(0,aim[2].lastIndexOf(' of ')).trim():'',outcomeClause:aim[3]};
+ const population=/\b(?:in|among) ((?:(?!\b(?:in|among)\b)[^,;])+?\b(?:adults?|participants?|patients?|infants?|children|people|men|women)(?: (?:with|without|aged|at risk of) [^,;]+)?)$/iu.exec(aim[3])?.[1];
+ return {primary,name,arm:aim[2],goal:aim[1].replace(/[‐‑–]/gu,'-'),qualification:use?aim[2].slice(0,aim[2].lastIndexOf(' of ')).trim():'',outcomeClause:aim[3],population};
 }
 // For a single source objective, the contrast assigns each intact noun phrase to
 // its group. Parenthetical descriptions may contain “with” or “or” within an arm.
@@ -400,7 +422,10 @@ function topic(question,elements){
  }
  const original=norm(question.original_text||'');
  const compareReview=titleDimensions[frame]==='intervention';
- const populationValue=wording('population')||wording('sample');
+ const revisedPopulation=elements.some(e=>e.active!==false&&['population','sample'].includes(e.dimension_id.split('.')[0])&&
+  (e.explicit_revision||e.decision_status==='confirmed_by_user'));
+ const effectAim=compareReview?treatmentObjective(original):null;
+ const populationValue=(!revisedPopulation&&effectAim?.population)||wording('population')||wording('sample');
  const population=compareReview?comparisonTitleTerms(populationValue,original):populationValue;
  // Keep an intact clinical group before ancillary recruitment or follow-up details.
  const populationHead=populationTitleHead(population);
@@ -409,16 +434,12 @@ function topic(question,elements){
  const interventionRecords=elements.filter(e=>e.active!==false&&e.dimension_id==='intervention'&&e.disposition!=='exclude');
  const authorIntervention=interventionRecords.some(e=>e.explicit_revision||e.decision_status==='confirmed_by_user');
  const sourceName=compareReview&&!authorIntervention?focalIntervention(original):'';
- const effectAim=compareReview&&!authorIntervention?treatmentObjective(original):null;
  const dimension=ranked.find(id=>scope.some(e=>e.dimension_id===id)||id==='intervention'&&sourceName);
  let subject=dimension?wording(dimension):'';
  if(dimension==='intervention'&&sourceName){
   const namedClass=/\b(?:interventions|therapies|treatments|strategies|programmes|programs)\b$/iu.test(sourceName);
   const singleName=interventionRecords.length===1&&armKey(subject).startsWith(armKey(sourceName)+' ');
-  // Only fold formulation or duration records into the title's treatment
-  // when the source reader has established their role in this same regimen.
-  const qualified=effectAim&&interventionRecords.length&&interventionRecords.every(e=>e.treatment_name&&armKey(e.treatment_name)===armKey(sourceName));
-  if(qualified||!subject||!compactTitle(subject)&&(namedClass||singleName))subject=sourceName;
+  if(effectAim||!subject||!compactTitle(subject)&&(namedClass||singleName))subject=sourceName;
  }
  let comparison=wording('comparator');
  // Either arm can independently contain the copied primary objective. Recover
@@ -489,7 +510,10 @@ function topic(question,elements){
  if(!result){
   const shortPeople=people&&shortPopulation&&population!==shortPopulation?' in '+shortPopulation:'';
   const shorter=[withFocus&&shortPeople&&withFocus+shortPeople,subject&&shortPeople&&subject+shortPeople];
-  result=supportedTitle()||shorter.find(value=>compactTitle(value))||[withFocus,subject].find(value=>compactTitle(value));
+  const supported=supportedTitle();
+  const namesPopulation=shortPopulation&&armKey(supported).includes(armKey(shortPopulation));
+  result=shorter.find(value=>compactTitle(value))||(people&&compactTitle(subject+people,19,135)?subject+people:'')||
+   (namesPopulation?supported:'')||(people?shortPopulation:'')||supported||[withFocus,subject].find(value=>compactTitle(value));
  }
  if(!result){
   const names={exposure:'Exposures',phenomenon_of_interest:'Experiences',concept:'Review concept',index_test:'Diagnostic testing',condition:'Clinical condition',target_condition:'Clinical condition',outcome:'Outcomes',core_scope:'Review scope'};
@@ -912,6 +936,8 @@ function description(rows,context={}){
  const studies=designs.length===1&&/\b(?:studies|trials|reviews|reports|RCTs)(?:\s*\([^()]+\))?$/i.test(designs[0])?take('Study design')[0]:'studies';
  const people=population?' in '+population:'';
  const aim=manuscript?.aim;
+ const recorded=context.shared_treatment_duration;
+ let sharedDuration=recorded&&armKey(intervention)===armKey(recorded.intervention)&&armKey(comparison)===armKey(recorded.comparison)?recorded.suffix:'';
  if(aim&&armKey(intervention)===armKey(aim.intervention)&&armKey(comparatorDisplayText(comparison))===armKey(comparatorDisplayText(aim.comparison))&&designs.length===1){
   sentences.push(sentence((completed?'We assessed the ':'We will assess the ')+aim.goal+' of '+aim.name+' compared with '+aim.control+people));
   groups.delete('Study design');
@@ -919,7 +945,7 @@ function description(rows,context={}){
   sentences.push(sentence(include+design));
   if(aim.variants)sentences.push(sentence((completed?'The intervention comprised ':'The intervention comprises ')+aim.variants.replace(/ alone or combined with /iu,' alone or in combination with ')));
  }else if(intervention){
-  const duration=intervention.match(/\s+(for (?:at least |at most |more than |less than |up to )?(?:\d+(?:\.\d+)?|one|two|three|six|twelve) (?:days?|weeks?|months?|years?))$/iu)?.[0];
+  const duration=intervention.match(treatmentDuration)?.[0];
   const shared=duration&&comparison.toLowerCase().endsWith(duration.toLowerCase())?duration:'';
   const assessment=comparison?'comparing '+comparisonProse(shared?intervention.slice(0,-shared.length):intervention,shared?comparison.slice(0,-shared.length):comparison):'evaluating '+intervention;
   const controls=headToHeadControls(intervention,comparison);
@@ -927,8 +953,9 @@ function description(rows,context={}){
    sentences.push(sentence(include+studies+' of '+intervention+people));
    sentences.push(sentence((completed?'Eligible studies compared ':'Eligible studies will compare ')+'the interventions with '+controls+', or with one another'));
   }else sentences.push(sentence(include+studies+' '+assessment+people));
-  if(shared)sentences.push(sentence((completed?'Both groups received':'Both groups will receive')+' their assigned treatment'+shared));
+  sharedDuration=shared||sharedDuration;
  }else if(population||studies!=='studies')sentences.push(sentence(include+studies+(population?' of '+population:'')));
+ if(sharedDuration)sentences.push(sentence((completed?'Participants received':'Participants must receive')+' their assigned treatment '+sharedDuration.trim()));
  const focusPeople=populationProse(context.source_population||[]),focusIntervention=join(context.source_interventions||[],'all_of'),focusComparison=join(context.source_comparisons||[],'all_of');
  if(focusIntervention||focusComparison){
   const subject=focusIntervention||intervention,control=focusComparison||comparison;
@@ -990,5 +1017,5 @@ function description(rows,context={}){
  return result;
 }
 
-return {ageClause,plan,classifyAnalysis,restoreAge,treatmentObjective,standaloneObjectiveArms,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,comparatorDisplayText,criterionPhrase,naturalExpression,splitDimensions,frameworkUnits,combinePopulationUnits,clause,topic,projectTopic,declaredFocus,outcomeGroups,abbreviationDefinitions,abbreviationFormatter,descriptionContext,manuscriptContext,description};
+return {ageClause,plan,classifyAnalysis,restoreAge,treatmentObjective,studyDesignWording,sharedTreatmentDuration,standaloneObjectiveArms,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,comparatorDisplayText,criterionPhrase,naturalExpression,splitDimensions,frameworkUnits,combinePopulationUnits,clause,topic,projectTopic,declaredFocus,outcomeGroups,abbreviationDefinitions,abbreviationFormatter,descriptionContext,manuscriptContext,description};
 });
