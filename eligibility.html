@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261120-criteria-release-32"></script>
-<script src="app/secure-origin.js?v=20261120-criteria-release-32"></script>
+<script src="app/eligibility-release.js?v=20261120-criteria-release-33"></script>
+<script src="app/secure-origin.js?v=20261120-criteria-release-33"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -74,7 +74,7 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261120-criteria-release-32"></script>
+<script src="app/criteria-grounding.js?v=20261120-criteria-release-33"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
 <script defer src="app/tool-i18n-catalog.js?v=20261118-criteria-actions-1"></script>
@@ -97,14 +97,15 @@
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div></div><p id="criteria-timing" hidden><span id="criteria-working-label" data-ui-localize>Working</span><span id="criteria-finished-label" data-ui-localize hidden>Elapsed time</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed generation time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
-<script src="app/eligibility/registries.js?v=20261120-criteria-release-32"></script>
-<script src="app/eligibility/domain.js?v=20261120-criteria-release-32"></script>
-<script src="app/eligibility/methodology.js?v=20261120-criteria-release-32"></script>
-<script src="app/eligibility/engine.js?v=20261120-criteria-release-32"></script>
-<script src="app/eligibility/lessons.js?v=20261120-criteria-release-32"></script>
-<script src="app/eligibility/model.js?v=20261120-criteria-release-32"></script>
-<script src="app/eligibility-reset.js?v=20261120-criteria-release-32"></script>
-<script src="app/eligibility/background.js?v=20261120-criteria-release-32"></script>
+<script src="app/eligibility/registries.js?v=20261120-criteria-release-33"></script>
+<script src="app/eligibility/domain.js?v=20261120-criteria-release-33"></script>
+<script src="app/eligibility/methodology.js?v=20261120-criteria-release-33"></script>
+<script src="app/eligibility/sparse-input.js?v=20261120-criteria-release-33"></script>
+<script src="app/eligibility/engine.js?v=20261120-criteria-release-33"></script>
+<script src="app/eligibility/lessons.js?v=20261120-criteria-release-33"></script>
+<script src="app/eligibility/model.js?v=20261120-criteria-release-33"></script>
+<script src="app/eligibility-reset.js?v=20261120-criteria-release-33"></script>
+<script src="app/eligibility/background.js?v=20261120-criteria-release-33"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -1005,8 +1006,9 @@ async function generateMachineCriteria(){
     const [service,fileDigests]=await Promise.all([generationService(),savedFiles?state.machineRun.fileDigests:attachmentDigests(files,controller.signal)]);
     if(run!==generationNonce||controller.signal.aborted)return;
     const record=registeredProject(),questionType=record?.question_type||record?.question;
+    const registration=record?{title:record.name||'',project_type:record.project_type||record.type||'',question_type:questionType||'',area:record.area_of_research||''}:null;
     const modelConfig=localModelConfig(),modelSettings=[LOCAL_SERVER,modelConfig.provider,modelConfig.base,modelConfig.name||'',modelConfig.slot||''];
-    const inputs={question,reviewType,questionType,modelSettings};
+    const inputs={question,reviewType,questionType,registration,modelSettings};
     function showPublished(stage){
       if(state.machineRun.sourceRevision!==sourceRevision){
         state.machineRun.sourceRevision=sourceRevision;
@@ -1412,7 +1414,7 @@ function criteriaDisplay(data,refinement,tableOrder=false){
   reviewTopic:data.topic||summaryTopic(rows,data.framework)
  };
  for(const [index,detail] of (refinement?.sourceConfirmations||[]).entries()){
-  if(detail.status!=='suggested')continue;
+  if(detail.status!=='suggested'||tableOrder&&detail.methodAdvice)continue;
   const locations=detail.locations?.length?detail.locations:[{domain:detail.domain,section:detail.focusOnly?'focus':detail.side||'include'}];
   for(const location of locations){
    const check={detail,index,subject:location.subject||'',domain:location.domain,targetId:location.targetId};
@@ -1517,7 +1519,9 @@ function sourceConfirmationHtml({detail,index,context='',targetId}){
   const button=(choice,symbol,title)=>'<button class="btn small" type="button" data-source-confirm="'+index+'" data-source-option="'+choice+'" aria-label="'+escapeHtml(title)+'" title="'+escapeHtml(title)+'">'+symbol+'</button>';
   const evidence=(detail.evidence||[]).map(ref=>'<p class="summary-muted">Source: “'+escapeHtml(ref.quote||'')+'”</p>').join('');
   if(detail.backgroundIssue){
-   const question='<p><strong>Author check:</strong> '+(context?escapeHtml(context)+' — ':'')+escapeHtml((detail.questionNumber?detail.questionNumber+' · ':'')+detail.text)+'</p>'+evidence;
+   const advice=detail.methodAdvice;
+   const rationale=advice?'<p class="summary-muted">'+escapeHtml(advice.rationale)+' '+advice.references.map(ref=>'<a href="'+escapeHtml(ref.url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(ref.label)+'</a>').join(' · ')+'</p>':'';
+   const question='<p><strong>'+(advice?'Suggested criterion':'Author check:')+'</strong> '+(context?escapeHtml(context)+' — ':'')+escapeHtml((detail.questionNumber?detail.questionNumber+' · ':'')+detail.text)+'</p>'+evidence+rationale;
    if(embeddedPreview||embeddedManual){
      const editor=pageLink('eligibility.html'),target=window.AIMSTEPCriteriaRelease?.editorURL(editor,params.get('appVersion')).href||editor;
      const link='<a class="btn small" href="'+escapeHtml(target)+'" target="_blank" rel="noopener">Review in Eligibility criteria</a>';
@@ -1533,7 +1537,7 @@ function sourceConfirmationHtml({detail,index,context='',targetId}){
    if(omit>=0){
      const actions=detail.options.map((option,i)=>button(i,i===omit?'×':'✓',option.label));
      options='<div class="scope-actions">'+detail.options.map((option,i)=>
-       actions[i]+'<span>'+escapeHtml(detail.options.length===2?(i===omit?'Omit':'Accept'):option.label)+'</span>').join('')+'</div>';
+       actions[i]+'<span>'+escapeHtml(!advice&&detail.options.length===2?(i===omit?'Omit':'Accept'):option.label)+'</span>').join('')+'</div>';
    }else{
      options=detail.options.map((option,i)=>'<div class="scope-actions">'+button(i,'✓',option.label)+'<span>'+escapeHtml(option.label)+'</span></div>').join('');
    }
@@ -1863,7 +1867,7 @@ async function confirmBackgroundIssue(detail,choice,answerField,targetField){
       if(!active())return false;
       const decision=stage.project.decisions.at(-1),confirmed=stage.project.criteria.filter(c=>c.source_decision_ids.includes(decision.decision_id));
       useBackgroundCriteria(stage,state.machineRun,false);
-      state.finalCriteria={at:new Date().toISOString(),count:(state.finalCriteria?.count||0)+1,decisions:[...(state.finalCriteria?.decisions||[]),...confirmed.map(c=>({item:detail.text,domain:stage.classic.rows.find(row=>row[c.disposition].includes(c.text))?.dimension||detail.domain,rule:c.text,decision:c.disposition==='include'?'meets':'fails',side:c.disposition,kind:'proposal',at:new Date().toISOString(),provenance:'author-decision',decision_id:decision.decision_id}))]};
+      if(!detail.methodAdvice||confirmed.length)state.finalCriteria={at:new Date().toISOString(),count:(state.finalCriteria?.count||0)+1,decisions:[...(state.finalCriteria?.decisions||[]),...confirmed.map(c=>({item:detail.text,domain:stage.classic.rows.find(row=>row[c.disposition].includes(c.text))?.dimension||detail.domain,rule:c.text,decision:c.disposition==='include'?'meets':'fails',side:c.disposition,kind:'proposal',at:new Date().toISOString(),provenance:'author-decision',decision_id:decision.decision_id}))]};
       if(!save({updateEntry:true}))throw Error('Could not save this decision. Your previous criteria have been kept.');
       toast('Criteria saved.');return true;
     }catch(error){

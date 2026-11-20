@@ -1,5 +1,5 @@
 /* Eligibility v3: immutable transactions, independently configured frameworks/profiles and two-stage state. */
-(function(root,factory){const api=factory(typeof module==='object'&&module.exports?require('./domain.js'):root.AIMSTEPEligibilityDomain,typeof module==='object'&&module.exports?require('./registries.js'):root.AIMSTEPEligibilityRegistries,typeof module==='object'&&module.exports?require('./methodology.js'):root.AIMSTEPEligibilityMethodology);if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSTEPEligibilityEngine=api;})(typeof window==='object'?window:globalThis,function(D,R,Methods){
+(function(root,factory){const api=factory(typeof module==='object'&&module.exports?require('./domain.js'):root.AIMSTEPEligibilityDomain,typeof module==='object'&&module.exports?require('./registries.js'):root.AIMSTEPEligibilityRegistries,typeof module==='object'&&module.exports?require('./methodology.js'):root.AIMSTEPEligibilityMethodology,typeof module==='object'&&module.exports?require('./sparse-input.js'):root.AIMSTEPEligibilitySparseInput);if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSTEPEligibilityEngine=api;})(typeof window==='object'?window:globalThis,function(D,R,Methods,Sparse){
 'use strict';
 const {clone,array,fail,id,now,key}=D;
 const active=e=>e.active!==false;
@@ -42,6 +42,7 @@ function save_input(original,input,options={},env=environment()){
   const source=addSource(state,'user_input',raw,[q.question_id],'question:'+q.question_id,{input_kind:'research_question',...(manifest?{derived_from:[ref(manifest,raw)]}:{})});
   if(prior&&prior.revision!==source.revision)for(const e of state.elements.filter(e=>e.question_id===q.question_id&&e.decision_status!=='confirmed_by_user'))e.active=false;
   const previousEvidenceUnits=JSON.stringify(q.context.evidence_units||[]);q.original_text=raw;q.source_refs=[ref(source)];q.context={...q.context,review_methods:array(entry.review_method||input.review_method||state.review_methods),review_method_inherited:!entry.review_method,question_types:array(entry.question_type||input.question_type),evidence_units:array(entry.evidence_unit||input.evidence_unit),framework_requested:entry.question_framework??input.question_framework??null};
+  if(input.registration)q.context.registration=clone(input.registration);else delete q.context.registration;
   if(previousEvidenceUnits!==JSON.stringify(q.context.evidence_units)){for(const element of state.elements.filter(e=>e.question_id===q.question_id&&e.context_managed))element.active=false;delete q.evidence_unit_source_ref;delete q.evidence_unit_decision_id;}
   const explicitContext=Object.fromEntries(['review_methods','question_types','evidence_units','framework_requested'].map(field=>[field,clone(q.context[field])]));const contextSource=addSource(state,'user_input',JSON.stringify(explicitContext),[q.question_id],'context:'+q.question_id,{input_kind:'explicit_context_fields'});q.context_source_ref=ref(contextSource);
   const extra=[...(Array.isArray(input.questions)?array(input.additional_requirements):[]),...array(entry.additional_requirements)];q.document_input_only=!!input.document_input_only;q.additional_source_refs=[];q.imported_source_refs=[];for(const [n,value]of extra.entries()){const s=addSource(state,'user_input',typeof value==='string'?value:value.text,[q.question_id],'additional:'+q.question_id+':'+n,{input_kind:'additional_requirement'});q.additional_source_refs.push(ref(s));}
@@ -96,6 +97,7 @@ function extraction_payload(state,env=environment()){
 function resolve_review_context(q,candidate,env){
  const context=clone(q.context),types=array(candidate.question_types||context.question_types);if(!context.question_types.length)context.question_types=types;
  if(!context.review_methods.length)context.review_method_candidates=array(candidate.review_methods);if(!context.evidence_units.length)context.evidence_unit_candidates=array(candidate.evidence_units);
+ const sparse_input=frameworkOnly(candidate)&&Sparse.isSparse(q,candidate.elements||[]);
  let resolved=env.frameworks.resolve(context.framework_requested,{question_types:context.question_types,dimensions:(candidate.elements||[]).map(e=>e.dimension_id.split('.')[0])});
  if(!context.framework_requested){
   const dimensions=new Set((candidate.elements||[]).filter(e=>e.information_status!=='missing'&&e.source_refs?.length&&e.disposition!=='exclude').map(e=>e.dimension_id.split('.')[0]));
@@ -104,7 +106,8 @@ function resolve_review_context(q,candidate,env){
    const frame=env.frameworks.resolve(id,{question_types:context.question_types,dimensions:[...dimensions]}).framework||env.frameworks.get(id);
    return frame?[frame]:[];
   });
-  let framework=options[0],basis='model_mapping_suggestion';
+  const registered=sparse_input&&env.frameworks.get(Sparse.registeredFramework(q));
+  let framework=registered||options[0],basis=registered?'registered_scope_for_sparse_input':'model_mapping_suggestion';
   if(!framework){
    // Match a missing model recommendation to the distinguishing fields in the
    // source. Common fields such as Population alone cannot identify a framework.
@@ -120,9 +123,9 @@ function resolve_review_context(q,candidate,env){
    basis=framework?'source_dimensions':'framework_unresolved';
   }
   if(['pico','peco'].includes(framework?.framework_id)&&dimensions.has('study_design'))framework=env.frameworks.get(framework.framework_id+'s')||framework;
-  resolved={framework,candidates:options.length?options:env.frameworks.list(),basis,explicit:false};
+  resolved={framework,candidates:registered?[registered]:options.length?options:env.frameworks.list(),basis,explicit:false};
  }
- return {context,framework_mapping:{framework_id:resolved.framework?.framework_id||null,display_name:resolved.framework?.display_name||null,version:resolved.framework?.version||null,candidates:resolved.candidates.map(f=>({framework_id:f.framework_id,display_name:f.display_name})),basis:resolved.basis,explicit:resolved.explicit,provisional:!resolved.explicit,source_refs:resolved.explicit&&q.context_source_ref?[clone(q.context_source_ref)]:clone(q.source_refs)}};
+ return {context,sparse_input,framework_mapping:{framework_id:resolved.framework?.framework_id||null,display_name:resolved.framework?.display_name||null,version:resolved.framework?.version||null,candidates:resolved.candidates.map(f=>({framework_id:f.framework_id,display_name:f.display_name})),basis:resolved.basis,explicit:resolved.explicit,provisional:!resolved.explicit,source_refs:resolved.basis==='registered_scope_for_sparse_input'?[]:resolved.explicit&&q.context_source_ref?[clone(q.context_source_ref)]:clone(q.source_refs)}};
 }
 function explicitOutcomeRequirement(refs){
  const reporting=/\b(?:measur(?:e[ds]?|ing|ement)|report(?:ed|s|ing)?|provid(?:e[ds]?|ing)|assess(?:ed|es|ing)?)\b/i;
@@ -240,7 +243,7 @@ function ingest_candidates(original,response,options={},env=environment()){
   const q=state.questions.find(q=>q.question_id===candidate.question_id&&active(q));if(!q||seen.has(q.question_id))fail('INVALID_QUESTION_REFERENCE','extraction','A question is missing, duplicated or outside this project.');seen.add(q.question_id);
   if(!Array.isArray(candidate.elements)||!candidate.framework_candidates)fail('INVALID_STRUCTURE','extraction','Each question needs elements and framework_candidates.');
   if(frameworkOnly(candidate))q.eligibility_policy=candidate.eligibility_policy;
-  const resolved=resolve_review_context(q,candidate,env);q.context=resolved.context;q.framework_mapping=resolved.framework_mapping;q.review_topic=normalizeTopic(candidate.review_topic,q.original_text,state.output_language);
+  const resolved=resolve_review_context(q,candidate,env);q.context=resolved.context;q.framework_mapping=resolved.framework_mapping;q.sparse_input=resolved.sparse_input;q.review_topic=normalizeTopic(candidate.review_topic,q.original_text,state.output_language);
   const map=new Map();for(const c of candidate.elements){if(map.has(c.candidate_id))fail('DUPLICATE_ELEMENT_ID','extraction','Candidate IDs must be unique within a question.');const e=elementFromCandidate(state,q,c,env);map.set(c.candidate_id,e.element_id);const old=state.elements.findIndex(x=>x.element_id===e.element_id);if(old<0)state.elements.push(e);else state.elements[old]=e;}
   const incomingIds=new Set(map.values());
   for(const e of currentElements(state,q))if(e.decision_status!=='confirmed_by_user'&&!incomingIds.has(e.element_id))e.active=false;
@@ -525,6 +528,12 @@ function detect_clarification_issues(state,env=environment()){
   }
   if(!q.framework_mapping?.framework_id)createIssue(state,desired,issueData(q,'FRAMEWORK_AMBIGUITY',[],'case_sensitive_framework','请确认此问题使用的框架及字段含义。','影响问题字段的含义和必要决定。',true,(q.framework_mapping?.candidates||[]).map(f=>({option_id:f.framework_id,label:f.display_name,context_updates:{framework_id:f.framework_id}}))));
   const known=elements.filter(e=>e.information_status!=='missing'&&withinEligibilityFramework(q,e));
+  if(strict)for(const advice of Sparse.suggestions(q,frame,known)){
+   const options=advice.criterion?[{option_id:'adopt',label:advice.criterion}]:[];
+   options.push({option_id:'omit',label:'Skip suggestion'});
+   const trigger='sparse_scope:'+frame.framework_id+':'+advice.dimension+':'+q.source_refs[0].source_revision;
+   createIssue(state,desired,{...issueData(q,'PROPOSED_RESTRICTION',[],trigger,advice.prompt,advice.rationale,false,options),method_advice:{dimension:advice.dimension,references:advice.references}});
+  }
   for(const slot of frame?.slots||[])if(!slot.definition&&(!strict||known.some(e=>e.framework_bindings.some(b=>b.slot_id===slot.slot_id))))createIssue(state,desired,issueData(q,'FRAMEWORK_AMBIGUITY',[],'custom_definition:'+slot.slot_id,'请定义自定义字段“'+(slot.display_label||slot.slot_id)+'”的含义。','决定该字段如何组织研究范围。',true,[]));
   if(!strict)for(const dimension of [...(frame?.slots||[]).map(s=>s.slot_id),...OPTIONAL])if(!known.some(e=>e.dimension_id===dimension||e.dimension_id.startsWith(dimension+'.')))makeMissing(state,q,dimension,env);
   const modelGroups=strict?[]:modelIssueGroups(q,known.filter(e=>!e.review_pending),state);
@@ -774,6 +783,15 @@ function authorAgeBound(wording){
 }
 // Unbound model questions may elicit a new rule. Only the author's wording, or
 // the direction of an explicit screening question, can establish its disposition.
+function addAuthorCriterion(state,q,answer,dimension,content,direction){
+ const element_id=id('element');
+ state.elements.push({element_id,question_id:q.question_id,dimension_id:dimension,raw_text:answer.answer_text.trim(),normalized_text:'',
+  structured_value:null,source_refs:[],scope_conditions:[],exceptions:[],framework_bindings:[],related_issue_ids:[],
+  source_decision_ids:[],source_rule_ids:[],semantic_role:'undecided',information_status:'missing',
+  scope_status:'unspecified',decision_status:'proposed',revision:0,active:true});
+ q.element_ids.push(element_id);
+ answer.updates=[{element_id,normalized_text:content,semantic_role:'eligibility_condition',scope_status:'restricted',disposition:direction}];
+}
 function unboundAuthorAnswer(state,issue,answer){
  const text=answer.answer_text.trim(),question=issue.question_text||'',stated=directedWording(text);
  const subject=question.split(/\b(?:should|must|will|can)\b/iu)[0]||question;
@@ -801,19 +819,20 @@ function unboundAuthorAnswer(state,issue,answer){
  }
  const q=state.questions.find(item=>item.question_id===issue.question_id&&active(item));
  if(!q)fail('QUESTION_NOT_FOUND','update','A new eligibility condition needs an active research question.');
- const dimension=dimensions.length===1?dimensions[0][0]:'other',element_id=id('element');
- // The regular answer update attaches the exact human source, validates its
- // numeric semantics, records its decision and makes this predicate operative.
- state.elements.push({element_id,question_id:q.question_id,dimension_id:dimension,raw_text:text,normalized_text:'',
-  structured_value:null,source_refs:[],scope_conditions:[],exceptions:[],framework_bindings:[],related_issue_ids:[],
-  source_decision_ids:[],source_rule_ids:[],semantic_role:'undecided',information_status:'missing',
-  scope_status:'unspecified',decision_status:'proposed',revision:0,active:true});
- q.element_ids.push(element_id);
- answer.updates=[{element_id,normalized_text:stated.content,semantic_role:'eligibility_condition',scope_status:'restricted',disposition:direction}];
+ addAuthorCriterion(state,q,answer,dimensions.length===1?dimensions[0][0]:'other',stated.content,direction);
 }
 function authorAnswer(state,issue,answer,option,env){
  const text=answer.answer_text.trim(),word=key(text);
  if(!option&&/^(?:defer|defer for now|keep pending|decide later|暂不决定|暂缓|稍后决定)$/.test(word)){answer.action='defer';return option;}
+ if(issue.method_advice){
+  if(option?.option_id==='omit'){answer.action='dismiss_suggestion';return option;}
+  const q=state.questions.find(item=>item.question_id===issue.question_id&&active(item)),dimension=issue.method_advice.dimension;
+  if(!q||!env.frameworks.map(dimension,env.frameworks.get(q.framework_mapping?.framework_id)).length)fail('OBSOLETE_ISSUE','update','This suggestion no longer belongs to the selected framework.');
+  const {direction,content}=directedWording(option?.label||text);
+  if(!content)fail('SOURCE_DECISION_INCOMPLETE','update','Enter the full condition to include or exclude.');
+  addAuthorCriterion(state,q,answer,dimension,content,direction||'include');
+  return option;
+ }
  if(!option&&['source_scope_role','semantic_role'].includes(issue.trigger_rule_id)){
   const id=/^(?:(?:make|use|treat) (?:this|it) (?:as )?(?:an? )?)?(?:eligibility (?:requirement|condition|criterion)|inclusion criterion|纳入条件|纳入标准)$/.test(word)?'eligibility':
    /^(?:review focus(?: only)?|focus only|仅作为研究关注内容|仅作研究关注)$/.test(word)?'focus':null;
@@ -941,6 +960,7 @@ function apply_decisions(original,request,env=environment()){
   const answer=clone(incoming);D.text(answer.answer_text,'answer_text');if(!answer.answer_text.trim())fail('EMPTY_ANSWER','update','Save the actual answer text.');
   const issueIds=array(answer.issue_ids||answer.issue_id),issues=issueIds.map(iid=>state.issues.find(i=>i.issue_id===iid));if(issues.some(i=>!i))fail('ISSUE_NOT_FOUND','update','An answer references an unknown issue.');
   if(issues.some(i=>i.status==='obsolete'))fail('OBSOLETE_ISSUE','update','The issue is no longer applicable.');
+  if(issues.some(i=>i.method_advice)&&(issues.length!==1||!answer.author_confirmed||answer.from_model))fail('OPTION_REQUIRED','update','Apply each suggested criterion through an explicit author decision.');
   const qids=[...new Set([...issues.map(i=>i.question_id).filter(Boolean),...array(answer.question_ids)])],source=addSource(state,'human_answer',answer.answer_text,qids,null,{request_id:request.request_id,issue_ids:issueIds});
   const decision={decision_id:id('decision'),issue_ids:issueIds,source_ref:ref(source),answer_text:answer.answer_text,action:answer.action||'confirm',at:now(),revision:state.revision+1,changes:[],status:'applied'};
   const primary=issues[0];let option=null;if(answer.option_id){option=primary?.options?.find(o=>o.option_id===answer.option_id);if(!option)fail('OPTION_NOT_FOUND','update','The chosen answer option does not exist.');}

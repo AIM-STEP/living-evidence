@@ -6,7 +6,7 @@ const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
 const presentationVersion='framework-display-v12';
 // Bump when eligibility semantics change. Presentation updates can use the saved evidence.
-const generationVersion='20261120-criteria-release-30';
+const generationVersion='20261120-criteria-release-33';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -121,8 +121,16 @@ function projectToClassic(project,registry){
  const frameNames=[...new Set(frameworkQuestions.map(q=>q.framework))],framework=frameNames.length===1?frameNames[0]:'Other';
  const frameworkSlots=frameNames.length===1?frameworkQuestions[0].frameworkSlots:[];
  const descriptionContext=contexts.length===1?contexts[0]:{question_contexts:contexts,question_relation:project.question_relation,combined_rows:clone(rows)};
- const confirmations=project.issues.filter(issue=>issue.status==='open'&&issue.blocking).flatMap(issue=>{
+ const confirmations=project.issues.filter(issue=>issue.status==='open'&&(issue.blocking||issue.method_advice)).flatMap(issue=>{
   const field=bindings.get(issue.question_id);
+  if(issue.method_advice){
+   const domain=field?.(issue.method_advice.dimension);
+   if(!domain)return [];
+   return {item:issue.question_text,text:issue.question_text,kind:'proposal',domain,side:'include',status:'suggested',backgroundIssue:true,
+    locations:[{section:'include',domain}],issue_id:issue.issue_id,methodAdvice:{rationale:issue.scope_impact,references:issue.method_advice.references},
+    questionNumber:multiple?output.questions.find(q=>q.question_id===issue.question_id)?.display_number:null,
+    options:authorChoices(issue).map(({label,option_id})=>({label,option_id}))};
+  }
   const linkedIds=issue.linked_element_ids||issue.element_ids;
   const elements=linkedIds.filter(id=>!issue.answered_element_ids?.includes(id)).map(id=>elementsById.get(id)).filter(e=>
    e&&field?.(e.dimension_id)&&e.information_status!=='missing'&&e.source_refs?.length&&
@@ -176,8 +184,8 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   return project;
  }
  function staged(project,expectedRevision,expectedSignature,classic=projectView(project)){return {project,expectedRevision,expectedSignature,classic};}
- function inputKey({question,reviewType,questionType,modelSettings},material){
-  return D.stableId('input',JSON.stringify([generationVersion,configKey,question||'',reviewType||'',questionType||'',modelSettings||null,material]));
+ function inputKey({question,reviewType,questionType,registration,modelSettings},material){
+  return D.stableId('input',JSON.stringify([generationVersion,configKey,question||'',reviewType||'',questionType||'',registration||null,modelSettings||null,material]));
  }
  function sourceKey(input,sources){
   const passages=sources.filter(s=>s.name!=='Question / voice input'||s.text!==input.question)
@@ -272,11 +280,11 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_criteria_presentation',at:project.updated_at,changes:[]});
   return staged(project,saved.revision,signature(read(keys.legacy)));
  }
- async function generate({legacy,question,reviewType,questionType,sources=[],fileDigests,modelSettings,modelClient,signal,onProgress}){
+ async function generate({legacy,question,reviewType,questionType,registration,sources=[],fileDigests,modelSettings,modelClient,signal,onProgress}){
   requireEpoch(storage,projectId,legacy?.criteria_epoch);
   requireCurrentView(legacy);
   const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs);
-  const input={legacy,question,reviewType,questionType,modelSettings},key=sourceKey(input,sources);
+  const input={legacy,question,reviewType,questionType,registration,modelSettings},key=sourceKey(input,sources);
   if((!Array.isArray(fileDigests)||saved.generation_files_key===inputKey(input,fileDigests))&&matchesPublished(input,saved,key,'generation_source_key')){
    return publishedStage(saved,legacy);
   }
@@ -284,8 +292,9 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    'Umbrella Review':'umbrella_review','Narrative Literature Review':'narrative_literature_review',
    'Integrative Review':'integrative_review','Other Review':'other_review'};
   const raw=question||sources.map(source=>source.text).join('\n\n');
-  const questionTypes={effectiveness:'intervention_effect',etiology:'exposure_outcome',qualitative:'experience',diagnosis:'diagnostic_accuracy'};
-  let project=E.save_input(saved,{research_question:raw,document_input_only:!question&&sources.length>0,review_method:methods[reviewType]||reviewType||null,question_type:questionTypes[questionType]||questionType||null,output_language:'en',legacy_archive:saved.criteria_epoch?null:legacy},{base_revision:revision},env).state;
+  const questionTypes={effectiveness:'intervention_effect',prevention:'intervention_effect',etiology:'exposure_outcome',qualitative:'experience',diagnosis:'diagnostic_accuracy'};
+  const registeredScope=registration?{...registration,question_type:registration.question_type||questionType||''}:null;
+  let project=E.save_input(saved,{research_question:raw,document_input_only:!question&&sources.length>0,review_method:methods[reviewType]||reviewType||null,question_type:questionTypes[questionType]||questionType||null,registration:registeredScope,output_language:'en',legacy_archive:saved.criteria_epoch?null:legacy},{base_revision:revision},env).state;
   const activeQuestions=project.questions.filter(q=>q.active!==false);
   let questionOffset=0,documentOffset=0;
   const ranges=activeQuestions.map(q=>{
@@ -347,7 +356,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    const matches=choices.filter(item=>[item.label,issue.options.find(o=>o.option_id===item.stored_id)?.label].some(label=>label?.trim().normalize('NFC')===answer_text.trim().normalize('NFC')));
    if(matches.length===1)choice=matches[0];
   }
-  const answer={issue_id,author_confirmed:true,answer_text:answer_text??choice?.label,...(target_id&&{target_id})};
+  const answer={issue_id,author_confirmed:true,answer_text:choice&&issue.method_advice?choice.label:answer_text??choice?.label,...(target_id&&{target_id})};
   if(choice){answer.option_id=choice.stored_id;if(choice.passage_role)answer.passage_role=choice.passage_role;}
   const request={base_revision:project.revision,request_id:D.id('answer'),answers:[answer]};
   return staged(E.apply_decisions(project,request,E.environment(...configs)).state,project.revision,expected);

@@ -1360,9 +1360,9 @@ function alignVerbatimValue(e){
 // Keep source-only alternatives from becoming standalone rules when their
 // neighbouring predicate falls outside the selected framework.
 function restrictToFramework(question,original,savedQuestion,env,trees){
+ question.eligibility_policy='framework-only-v1';
  const mapping=E.resolve_review_context(savedQuestion,question,env).framework_mapping;
  const frame=env.frameworks.get(mapping.framework_id);
- question.eligibility_policy='framework-only-v1';
  if(frame&&!original.context.framework_requested)question.framework_candidates=[
   {framework_id:frame.framework_id,basis:mapping.basis}
  ];
@@ -1456,10 +1456,13 @@ async function extract_elements(state,env,adapter,options={},review=null){
   const {document_input_only,original_text,...question}=q;
   const questionInBatch=sources.filter(s=>s.input_kind==='research_question').map(s=>s.original_text).join('')===original_text;
   const questionContext=batches.length>1&&!document_input_only&&!questionInBatch?original_text:undefined;
-  const request={question:{...question,sources,original_text:questionContext},frameworks,review_profiles:profiles[qi],source_passages:passageIndex(passages),part_index:bi,part_count:batches.length,extraction_encoding:'compact-elements-v3'};
+  const {registration,...sourceContext}=question.context;
+  const briefRegistration=original_text.length<=180&&batches.length===1&&sources.length===1&&questionInBatch?registration:null;
+  const request={question:{...question,context:{...sourceContext,...(briefRegistration&&{registration:briefRegistration})},sources,original_text:questionContext},frameworks,review_profiles:profiles[qi],source_passages:passageIndex(passages),part_index:bi,part_count:batches.length,extraction_encoding:'compact-elements-v3'};
+  const briefInstruction=briefRegistration?' If the question consists of a population or clinical group, extract that group with exact source evidence even when it is a sentence fragment. Use registration only to interpret the scope and framework. Extract no criteria from the registered title.':'';
   const responseSchema=D.clone(extractionSchema);responseSchema.properties.questions.items.required.push('review_topic');responseSchema.properties.questions.minItems=1;responseSchema.properties.questions.maxItems=1;responseSchema.properties.questions.items.properties.question_id={type:'string',enum:[q.question_id]};
   let answer;for(let attempt=0;attempt<=(options.retries??1);attempt++)try{
-   answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+(batches.length>1?' Extract only from sources in this part. If supplied, question.original_text is whole-question context, not another source for this part. Preserve the within-part logic of all eligibility conditions.':'')+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
+   answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+briefInstruction+(batches.length>1?' Extract only from sources in this part. If supplied, question.original_text is whole-question context, not another source for this part. Preserve the within-part logic of all eligibility conditions.':'')+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
    if(!Array.isArray(answer?.questions)||answer.questions.length!==1||answer.questions[0]?.question_id!==q.question_id)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The model omitted or changed the question ID.');
    const topic=answer.questions[0].review_topic;answer.questions[0].review_topic=typeof topic==='string'?topic.trim().slice(0,1000):'';
    if(!Array.isArray(answer.questions[0].elements)||!Array.isArray(answer.questions[0].issues)||!Array.isArray(answer.questions[0].framework_candidates))D.fail('MODEL_SCHEMA_ERROR','extract_elements','Required extraction arrays are missing.');
