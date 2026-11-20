@@ -142,6 +142,8 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  const base=baseURL||new URL('.',root.location.href).href,version='20261119-framework-description-1';
  const configs=await Promise.all([frameworkConfig||root.fetch(new URL('config/eligibility-frameworks.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load framework definitions.');return r.json();}),profileConfig||root.fetch(new URL('config/eligibility-review-profiles.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load review profiles.');return r.json();})]);
  const registry=E.environment(...configs).frameworks;
+ const release=root.AIMSTEPCriteriaRelease?.current||(typeof require==='function'?require('../eligibility-release.json').version:presentationVersion);
+ const configKey=D.stableId('config',JSON.stringify(configs));
  const projectView=project=>projectToClassic(project,registry);
  const keys=projectKeys(projectId);
  const read=key=>JSON.parse(storage.getItem(key)||'null');
@@ -154,6 +156,41 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   return project;
  }
  function staged(project,expectedRevision,expectedSignature,classic=projectView(project)){return {project,expectedRevision,expectedSignature,classic};}
+ function inputKey({question,reviewType,questionType,modelSettings},material){
+  return D.stableId('input',JSON.stringify([release,configKey,question||'',reviewType||'',questionType||'',modelSettings||null,material]));
+ }
+ function sourceKey(input,sources){
+  const passages=sources.filter(s=>s.name!=='Question / voice input'||s.text!==input.question)
+   .map(s=>[s.name,s.page??null,s.text,s.verification||'original-text']);
+  return inputKey(input,passages);
+ }
+ function requireCurrentView(legacy){
+  const stored=read(keys.legacy);
+  if(stored?.eligibility_v3_revision!=null&&legacy?.eligibility_v3_revision!==stored.eligibility_v3_revision)
+   D.fail('VERSION_CONFLICT','background','The criteria changed in another session. Reload the current criteria before generating.');
+ }
+ function matchesPublished(input,project,key,field){
+  if(!key||project[field]!==key)return false;
+  const legacy=input.legacy,stored=read(keys.legacy),expected=signature(stored);
+  if(!stored||project.last_published_legacy_signature!==expected||signature(legacy)!==expected)return false;
+  if(legacy.activeGenerator!=='machine'||!legacy.machineRefinement||legacy.eligibility_v3_revision!==project.revision)return false;
+  if(['final','needs_clarification'].includes(project.status))return project.validation?.errors?.length===0;
+  const edit=project.decisions.at(-1)?.changes?.[0];
+  return project.status==='input_saved'&&project.decisions.at(-1)?.action==='classic_author_revision'&&
+   edit?.old?.question===edit?.new?.question&&JSON.stringify(edit?.old?.rows)!==JSON.stringify(edit?.new?.rows);
+ }
+ // Only the currently published result is eligible. Clear removes both keys with the project.
+ function publishedGeneration(input,fileDigests){
+  requireEpoch(storage,projectId,input.legacy?.criteria_epoch);
+  requireCurrentView(input.legacy);
+  if(!Array.isArray(fileDigests))return null;
+  const saved=current();
+  return matchesPublished(input,saved,inputKey(input,fileDigests),'generation_files_key')?
+   publishedStage(saved,input.legacy):null;
+ }
+ function publishedStage(saved,legacy){
+  return {...staged(saved,saved.revision,signature(legacy),{...legacy.machineRefinement,snapshot:legacy.eligibilityV3Snapshot}),reused:true};
+ }
  function validate(stage){requireEpoch(storage,projectId,stage.project.criteria_epoch);const saved=read(keys.project);if((saved?.revision??0)!==stage.expectedRevision||signature(read(keys.legacy))!==stage.expectedSignature)D.fail('VERSION_CONFLICT','background','The criteria changed while this request was running. Your newer edits have been kept.');}
  function transaction(stage,writeLegacy){
   validate(stage);
@@ -215,9 +252,14 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_criteria_presentation',at:project.updated_at,changes:[]});
   return staged(project,saved.revision,signature(read(keys.legacy)));
  }
- async function generate({legacy,question,reviewType,questionType,sources=[],modelClient,signal,onProgress}){
+ async function generate({legacy,question,reviewType,questionType,sources=[],fileDigests,modelSettings,modelClient,signal,onProgress}){
   requireEpoch(storage,projectId,legacy?.criteria_epoch);
+  requireCurrentView(legacy);
   const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs);
+  const input={legacy,question,reviewType,questionType,modelSettings},key=sourceKey(input,sources);
+  if((!Array.isArray(fileDigests)||saved.generation_files_key===inputKey(input,fileDigests))&&matchesPublished(input,saved,key,'generation_source_key')){
+   return publishedStage(saved,legacy);
+  }
   const methods={'Systematic Review':'systematic_review','Scoping Review':'scoping_review','Rapid Review':'rapid_review',
    'Umbrella Review':'umbrella_review','Narrative Literature Review':'narrative_literature_review',
    'Integrative Review':'integrative_review','Other Review':'other_review'};
@@ -262,6 +304,9 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    project.presentation_version=presentationVersion;
    const visible=projectView(project);
    if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');
+   const verified=['final','needs_clarification'].includes(project.status)&&project.validation?.errors?.length===0;
+   project.generation_source_key=verified?key:null;
+   project.generation_files_key=verified&&Array.isArray(fileDigests)?inputKey(input,fileDigests):null;
    onProgress?.('Saving eligibility criteria…',{phase:'ready'});
    return staged(project,revision,expected,visible);
   }catch(error){
@@ -314,7 +359,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   project.criteria=[];project.logic={questions:{},relation:project.question_relation};project.issues=[];project.elements.forEach(e=>e.active=false);next.eligibility_v3_revision=project.revision;next.eligibilityV3Snapshot={...next.eligibilityV3Snapshot,status:'input_saved',revision:project.revision,validation:clone(project.validation)};
   return {project,expectedRevision:saved.revision,expectedSignature:signature(previous)};
  }
- return {generate,decide,validate,transaction,recordEdit,refreshPresentation,current,projectToClassic:projectView,keys};
+ return {generate,publishedGeneration,decide,validate,transaction,recordEdit,refreshPresentation,current,projectToClassic:projectView,keys};
 }
 return {create,resetProject,currentEpoch,projectToClassic,signature,issueText,optionLabel,progressPercent,renderDescription:Methods.description};
 });

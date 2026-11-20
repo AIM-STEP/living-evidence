@@ -121,10 +121,9 @@ function profileContext(profiles){
 function sourceBatches(q){
  const fragments=[];
  for(const stored of q.sources){
-  const {created_at,...source}=stored;
-  // Document creation time and the internal question lookup key are storage
-  // details. Revision, author decisions, rules and source associations remain.
-  if(source.identity==='question:'+q.question_id)delete source.identity;
+  // Creation time and database lookup keys (including generated IDs in
+  // attachment/additional-source identities) are not extraction evidence.
+  const {created_at,identity,...source}=stored;
   const segments=G.segments([{id:source.source_id,name:source.source_type,text:source.original_text}]);
   let previousStart=0,codePoints=source.start_codepoint||0;
   for(const segment of segments){
@@ -136,6 +135,36 @@ function sourceBatches(q){
  const groups=[];let part=[],size=0;for(const source of fragments){if(part.length&&size+source.original_text.length>5500){groups.push(part);part=[];size=0;}part.push(source);size+=source.original_text.length;}if(part.length)groups.push(part);return groups;
 }
 function prefixLogic(node,prefix){return node?.op==='predicate'?{...node,element_id:prefix+node.element_id}:node?{...node,children:(node.children||[]).map(n=>prefixLogic(n,prefix))}:null;}
+function orderExtractedElements(item,sourceOrder){
+ if(item.elements.length<2)return;
+ const compare=(a,b)=>a.source-b.source||a.start-b.start||a.end-b.end;
+ const positions=new Map();
+ for(const e of item.elements){
+  let first;
+  for(const ref of e.source_refs){
+   const source=sourceOrder.get(ref.source_id);
+   if(source==null||!Number.isInteger(ref.start)||!Number.isInteger(ref.end))continue;
+   const span={source,start:ref.start,end:ref.end};
+   if(!first||compare(span,first)<0)first=span;
+  }
+  if(first)positions.set(e.candidate_id,first);
+ }
+ // Unanchored entries keep their positions. Reorder explicit siblings only
+ // within a single framework slot and side of a Boolean expression.
+ const compareIds=(a,b)=>compare(positions.get(a.candidate_id),positions.get(b.candidate_id));
+ const anchored=item.elements.filter(e=>positions.has(e.candidate_id)).sort(compareIds);
+ let index=0;
+ item.elements=item.elements.map(e=>positions.has(e.candidate_id)?anchored[index++]:e);
+ const byId=new Map(anchored.map(e=>[e.candidate_id,e]));
+ function orderSiblings(node){
+  if(!node?.children)return;
+  const elements=node.children.map(child=>child.op==='predicate'&&byId.get(child.element_id));
+  if(['any_of','all_of'].includes(node.op)&&elements.length>1&&elements.every(e=>e&&e.dimension_id===elements[0].dimension_id&&e.disposition===elements[0].disposition)){
+   node.children.sort((a,b)=>compare(positions.get(a.element_id),positions.get(b.element_id)));
+  }else node.children.forEach(orderSiblings);
+ }
+ orderSiblings(item.logic);
+}
 function missingComparatorAlternatives(original,comparators){
  // Only flag a demonstrable omission. Richer descriptions and paraphrases
  // outside this small vocabulary remain with the independent semantic review.
@@ -1405,8 +1434,10 @@ async function extract_elements(state,env,adapter,options={},review=null){
  }
  function mergeQuestion(q,qi){
   const merged={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null},trees=[];
+  const sourceOrder=new Map(q.sources.map((source,index)=>[source.source_id,index]));
   for(let bi=0;bi<plans[qi].length;bi++){
    const item=parts[qi][bi],prefix='q'+qi+'b'+bi+'_';
+   if(!state.decisions.length)orderExtractedElements(item,sourceOrder);
    for(const e of item.elements)merged.elements.push({...e,candidate_id:prefix+e.candidate_id});for(const issue of item.issues)merged.issues.push({...issue,element_candidate_ids:(issue.element_candidate_ids||[]).map(eid=>prefix+eid)});
    trees.push({tree:prefixLogic(item.logic,prefix),ids:item.elements.map(e=>prefix+e.candidate_id)});if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;
    for(const field of ['question_types','review_methods','evidence_units'])merged[field]=[...new Set([...(merged[field]||[]),...(item[field]||[])])];
@@ -1715,7 +1746,9 @@ function sourceReview(state,adapter,options,env){
  return {add};
 }
 async function review_elements(state,candidates,adapter,options={}){
- const review=sourceReview(state,adapter,options),tasks=[];
+ const env=options.env||(typeof require==='function'?E.environment():null);
+ if(env)for(const definition of state.custom_frameworks||[])env.frameworks.register(definition);
+ const review=sourceReview(state,adapter,options,env),tasks=[];
  candidates.questions.forEach((q,i)=>review.add(q,task=>tasks.push(task),i===candidates.questions.length-1));
  await runModelTasks(tasks,options);
  return candidates;

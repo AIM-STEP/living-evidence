@@ -83,6 +83,33 @@ class HybridReviewTest(unittest.TestCase):
         self.assertEqual([row['status'] for row in rows], ['supported', 'uncertain'])
         self.assertEqual(rows[1]['reviewer']['verdict'], 'wrong_field')
 
+    def test_fresh_runs_send_identical_jev_context_and_return_current_ids(self):
+        requests = []
+        for suffix in ('first', 'second'):
+            qid, source, candidate = ('question_' + suffix, 'source_' + suffix, 'candidate_' + suffix)
+            identity = qid + '/' + candidate
+            item = dict(self.items[0], id=identity, question_id=qid, source_quotes=[{
+                'source_id': source, 'source_revision': 3, 'start': 12, 'end': 18, 'quote': 'Adults',
+                'heading': {'source_id': source, 'quote': 'Eligibility'}}])
+            question = dict(question_id=qid, original_question='Eligibility: Adults',
+                            logic={'op': 'predicate', 'element_id': candidate})
+            messages = self.messages()
+            messages[-1]['content'] = json.dumps(dict(step='review_normalization', payload=dict(
+                questions=[question], items=[item], review_policy='jev-once-v1')))
+            with patch.object(hybrid.ts, 'server_config', return_value={'model': 'test'}), \
+                 patch.object(hybrid.ts, 'resolve_key', return_value='test'), \
+                 patch.object(hybrid.ts, 'request', return_value={'answers': {}}) as remote:
+                reply = hybrid.review(messages, self.local, 'local-test')
+            requests.append(remote.call_args.args[2])
+            self.assertEqual(json.loads(reply['message']['content'])['items'][0]['id'], identity)
+        self.assertEqual(requests[0], requests[1])
+        state = requests[0]['state']
+        question, item = state['questions'][0], state['items'][0]
+        self.assertEqual(item['id'], question['question_id'] + '/' + question['logic']['element_id'])
+        quote = item['source_quotes'][0]
+        self.assertEqual(quote, {'source_id': 'S1', 'source_revision': 3, 'start': 12, 'end': 18,
+                                 'quote': 'Adults', 'heading': {'source_id': 'S1', 'quote': 'Eligibility'}})
+
     def test_single_review_never_accepts_unchecked_or_low_confidence_items(self):
         rows, _ = self.single_review(dict(c0=('supported', .7), c1=(None, 0)))
         self.assertEqual([row['reviewer']['verdict'] for row in rows], ['low_confidence', 'unavailable'])

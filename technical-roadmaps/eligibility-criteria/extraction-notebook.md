@@ -26,6 +26,7 @@
 | 记录代码 | 现象与处理 | 复现检查 |
 | --- | --- | --- |
 | `framework_display` | 框架外信息落入 Context 或 Other 显示行，或在隐藏这些行时从预览、导出消失。标准与 Description 只展示所选框架内、有原文依据的纳排条件。PICOS 下单独的场所限制不归入人群或干预。框架本身含 Context 且原文明示地点条件时，才呈现场所。 | [框架投影](../../tests/eligibility/framework-projection.cjs) |
+| 重复生成 | 研究问题和附件均未改变时，重新推理曾产生不同的标题、条目或待确认项。同一项目再次 Generate 时核对输入并保留当前结果和作者决定。Clear 后从当前原文重新推理。模型使用固定采样种子，推理输入只保留与研究有关的信息。 | [重复生成与作者决定](../../tests/eligibility/repeat-generation.cjs) · [模型请求](../../tools/test_eligibility_transport.py) |
 | `clear_project` | 旧草稿或来源污染新任务。清除项目标准、旧记录和反馈，保留有独立清除键的研究问题，拒绝清除前发出的旧请求回写。 | [Clear 与并发保护](../../tests/eligibility/clear-project.cjs) |
 | `author_decision` | 确认项离开对应要素，作者明确回答后仍要等待再次推理。把确认定位到规则，并直接应用作者决定。 | [作者决定路由](../../tests/eligibility/author-answer-routing.cjs) · [确认目标](../../tests/eligibility/author-targets.cjs) |
 | `progress_display` | 工作期间进度停在 0% 或 15%，用户无法判断是否仍在运行。显示阶段进度、等待状态及实际完成的批次。 | [进度反馈](../../tests/eligibility/wait-progress.cjs) |

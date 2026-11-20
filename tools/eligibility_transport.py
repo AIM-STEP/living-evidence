@@ -10,7 +10,7 @@ import re
 import threading
 import eligibility_legacy_citations as legacy_citations
 
-VERSION = 'eligibility-transport-v7'
+VERSION = 'eligibility-transport-v8'
 _lock = threading.Lock()
 _entries = {}
 _fields = {'source_id': 'S', 'source_ids': 'S', 'question_id': 'Q', 'question_ids': 'Q', 'answer_question_id': 'Q', 'id': 'R'}
@@ -225,7 +225,8 @@ def _group(key, value):
         return None
     if group == 'R':
         return group if value.startswith('question_') and '/' in value else None
-    return group if re.match(r'^(?:source|question)_[A-Za-z0-9_-]{20,}$', value) else None
+    prefix = 'source_' if group == 'S' else 'question_'
+    return group if value.startswith(prefix) and re.fullmatch(r'[A-Za-z0-9_-]+', value[len(prefix):]) else None
 
 
 def _walk(value, transform, key=None):
@@ -237,6 +238,41 @@ def _walk(value, transform, key=None):
     return transform(key, value)
 
 
+def review_context(questions, items):
+    """Give Jev stable IDs for this batch, including links to logic and nested evidence."""
+    question_ids = {q['question_id']: f'Q{i}' for i, q in enumerate(questions, 1)}
+    source_ids = {}
+    elements = {qid: {} for qid in question_ids}
+
+    def alias(table, identity, prefix):
+        return table.setdefault(identity, f'{prefix}{len(table) + 1}')
+
+    def record(row):
+        qid = row['question_id']
+
+        def field(key, value):
+            if isinstance(value, str):
+                if key == 'question_id':
+                    return question_ids.get(value, value)
+                if key == 'source_id':
+                    return alias(source_ids, value, 'S')
+                if key == 'element_id':
+                    return alias(elements[qid], value, 'E')
+            return value
+
+        return _walk(row, field)
+
+    wire_questions = [record(q) for q in questions]
+    wire_items = []
+    for item in items:
+        qid = item['question_id']
+        candidate = item['id'].removeprefix(qid + '/')
+        wire_item = record(item)
+        wire_item['id'] = question_ids[qid] + '/' + alias(elements[qid], candidate, 'E')
+        wire_items.append(wire_item)
+    return {'questions': wire_questions, 'items': wire_items}
+
+
 def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_workflow=False):
     users = [m for m in messages if m.get('role') == 'user']
     if len(users) != 1 or any(m.get('images') for m in messages):
@@ -245,7 +281,9 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_w
         envelope = json.loads(users[0]['content'])
     except (TypeError, ValueError):
         return invoke(messages)
-    if not isinstance(envelope, dict) or envelope.get('step') not in {'extract_elements', 'review_normalization', 'interpret_human_answer'}:
+    if not isinstance(envelope, dict) or envelope.get('step') not in {
+            'extract_elements', 'review_normalization', 'interpret_human_answer',
+            'repair_candidate_wording', 'route_author_checks'}:
         return invoke(messages)
     legacy_checker = criteria_workflow and legacy_citations.applies(messages, schema, envelope)
 
@@ -274,6 +312,10 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_w
         return tables[group][value]
 
     wire = _walk(envelope, compact)
+    # Project, Clear epoch and write revision route the request outside inference.
+    # Source revisions, question context and confirmed decisions remain in the prompt.
+    wire.pop('project_id', None)
+    wire.pop('base_revision', None)
     wire_schema = copy.deepcopy(schema)
 
     def compact_schema(node):
@@ -313,13 +355,7 @@ def chat(messages, model, schema, invoke, invoke_with_schema=None, *, criteria_w
     if element_format:
         wire_messages = [dict(m, content=m['content'] + element_format[0]) if m.get('role') == 'system' else m
                          for m in wire_messages]
-    # Revision is an optimistic-write guard, not a change to the model's task.
-    # Source revisions, confirmed decisions and every payload field stay in key.
-    cache_envelope = copy.deepcopy(wire)
-    cache_envelope['base_revision'] = 0
-    cache_messages = [{**m, 'content': json.dumps(cache_envelope, ensure_ascii=False, separators=(',', ':'))}
-                      if m.get('role') == 'user' else m for m in wire_messages]
-    key = hashlib.sha256(json.dumps([VERSION, envelope.get('project_id'), model, wire_schema, cache_messages],
+    key = hashlib.sha256(json.dumps([VERSION, envelope.get('project_id'), model, wire_schema, wire_messages],
                                    ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     with _lock:
         entry = _entries.get(key)

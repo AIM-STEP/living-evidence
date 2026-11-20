@@ -71,16 +71,26 @@ function extraction_payload(state,env=environment()){
   // For attachment-only input, the combined question is an index. Cite each
   // original page once, restricted to the applicable numbered subquestion.
   const refs=[...(q.document_input_only?[]:q.source_refs),...q.additional_source_refs,...(q.imported_source_refs||[])];
-  const sources=state.sources.flatMap(s=>{
-   if(!sourceApplies(s,q))return [];
-   const ref=refs.find(r=>r.source_id===s.source_id&&r.source_revision===s.revision);
-   if(!ref)return s.source_type==='authorized_rule'&&activeRuleSource(state,s)?[s]:[];
-   if(q.document_input_only&&s.input_kind==='original_document'&&ref.quote!==s.original_text){
-    return [{...s,original_text:ref.quote,start_codepoint:ref.start}];
+  // Keep the primary question, supplementary text and attachments in input
+  // order even when an edit created a newer source revision later in storage.
+  const ordered=new Map();
+  for(const ref of refs){
+   const source=D.sourceAt(state,ref);
+   if(source&&sourceApplies(source,q)&&!ordered.has(source))ordered.set(source,ref);
+  }
+  for(const rule of state.authorized_rules){
+   const source=state.sources.findLast(s=>s.source_type==='authorized_rule'&&s.rule_id===rule.rule_id&&s.rule_version===rule.version);
+   if(source&&activeRuleSource(state,source)&&sourceApplies(source,q)&&!ordered.has(source))ordered.set(source,null);
+  }
+  const sources=Array.from(ordered,([s,ref])=>{
+   if(q.document_input_only&&s.input_kind==='original_document'&&ref&&ref.quote!==s.original_text){
+    return {...s,original_text:ref.quote,start_codepoint:ref.start};
    }
-   return [s];
+   return s;
   });
-  return {question_id:q.question_id,original_text:q.original_text,document_input_only:!!q.document_input_only,context:q.context,sources,confirmed_elements:state.elements.filter(e=>e.question_id===q.question_id&&e.decision_status==='confirmed_by_user'&&active(e))};
+  // Prior model suggestions are output, not new evidence for the next run.
+  const {review_method_candidates,evidence_unit_candidates,...context}=q.context;
+  return {question_id:q.question_id,original_text:q.original_text,document_input_only:!!q.document_input_only,context,sources,confirmed_elements:state.elements.filter(e=>e.question_id===q.question_id&&e.decision_status==='confirmed_by_user'&&active(e))};
  }),question_relation:state.question_relation};
 }
 function resolve_review_context(q,candidate,env){

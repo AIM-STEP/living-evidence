@@ -44,6 +44,44 @@ function model(before = async () => {}) {
 
 const reviews = adapter => adapter.calls.filter(c => c.step === 'review_normalization').map(c => c.payload);
 
+test('fresh extraction uses the current input order and omits previous model guesses and storage keys', async () => {
+  const input = { research_question: 'Earlier population.', additional_requirements: ['Extra source.'], question_framework: 'PICO', output_language: 'en' };
+  const initial = E.save_input(E.create_project('stable-source-order'), input).state;
+  initial.questions[0].context.review_method_candidates = ['systematic_review'];
+  initial.questions[0].context.evidence_unit_candidates = ['study'];
+  const state = E.save_input(initial, { ...input, research_question: 'Current population.' }).state;
+  const adapter = model();
+  await M.extract_elements(state, env, adapter);
+  const question = adapter.calls[0].payload.question;
+  assert.deepEqual(question.sources.map(s => s.original_text), ['Current population.', 'Extra source.']);
+  assert(question.sources.every(s => !Object.hasOwn(s, 'created_at') && !Object.hasOwn(s, 'identity')));
+  assert(!Object.hasOwn(question.context, 'review_method_candidates'));
+  assert(!Object.hasOwn(question.context, 'evidence_unit_candidates'));
+  assert.equal(question.context.framework_requested, 'PICO');
+  assert.deepEqual(state.questions[0].context.evidence_unit_candidates, ['study']);
+});
+
+test('permuted model records and equivalent same-slot predicates use source order for review and display', async () => {
+  const state = fixture([3]), adapter = model();
+  const original = adapter.request.bind(adapter);
+  adapter.request = async (...args) => {
+    const answer = await original(...args);
+    if(args[0] === 'extract_elements'){
+      const q = answer.questions[0];
+      q.elements.reverse();
+      q.logic = { op: 'any_of', children: q.elements.map(e => ({ op: 'predicate', element_id: e.candidate_id })) };
+    }
+    return answer;
+  };
+  const result = await M.analyze(state, env, adapter);
+  const question = result.candidates.questions[0];
+  const expected = ['group A alpha', 'group A bravo', 'group A charlie'];
+  assert.deepEqual(question.elements.map(e => e.normalized_text), expected);
+  assert.deepEqual(reviews(adapter)[0].items.map(e => e.normalized_text), expected);
+  assert.equal(question.logic.op, 'any_of');
+  assert.deepEqual(question.logic.children.map(n => n.element_id), question.elements.map(e => e.candidate_id));
+});
+
 test('a sealed batch overlaps the last extraction with unchanged requests, results and monotonic progress', async () => {
   const state = fixture([7, 2]), progress = [];
   let release;

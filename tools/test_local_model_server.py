@@ -255,6 +255,12 @@ class ServerTest(unittest.TestCase):
         self.assertGreater(FakeOllama.seen[2]["options"]["temperature"], 0)
         self.assertEqual(FakeOllama.seen[2]["messages"], self.MSG["messages"])
 
+    def test_criteria_uses_fixed_seed_for_generation_repair_and_retry(self):
+        FakeOllama.replies = ['{"broken', 'invalid', '{"ok":1}']
+        status, _ = self.req("POST", "/api/eligibility/model", dict(self.MSG, workflow="eligibility-criteria"))
+        self.assertEqual(status, 200)
+        self.assertEqual([body["options"]["seed"] for body in FakeOllama.seen], [42, 42, 42])
+
     def test_an_empty_reply_skips_repair(self):
         FakeOllama.replies = ["", '{"ok": 1}']
         status, body = self.req("POST", "/api/eligibility/model", self.MSG)

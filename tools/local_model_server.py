@@ -129,7 +129,10 @@ def clean_format(payload):
     return "json"
 
 
-def ollama_body(model, messages, temperature=0, fmt="json"):
+def ollama_body(model, messages, temperature=0, fmt="json", seed=None):
+    options = {"temperature": temperature, "num_ctx": NUM_CTX, "num_predict": NUM_PREDICT}
+    if seed is not None:
+        options["seed"] = seed
     return {
         "model": model,
         "messages": messages,
@@ -137,7 +140,7 @@ def ollama_body(model, messages, temperature=0, fmt="json"):
         "think": False,
         "keep_alive": "30m",
         "format": fmt,
-        "options": {"temperature": temperature, "num_ctx": NUM_CTX, "num_predict": NUM_PREDICT},
+        "options": options,
     }
 
 
@@ -185,7 +188,7 @@ def _content(reply):
     return ((reply or {}).get("message") or {}).get("content", "")
 
 
-def chat(ollama, model, messages, post=post_json, attempts=None, fmt="json"):
+def chat(ollama, model, messages, post=post_json, attempts=None, fmt="json", seed=None):
     """Return a reply whose content is a JSON object, trying in order:
 
       1. the reply as generated;
@@ -198,7 +201,7 @@ def chat(ollama, model, messages, post=post_json, attempts=None, fmt="json"):
     `attempts`, if given, is filled with what happened, for the log.
     """
     log = attempts if attempts is not None else []
-    reply = post(ollama + "/api/chat", ollama_body(model, messages, fmt=fmt))
+    reply = post(ollama + "/api/chat", ollama_body(model, messages, fmt=fmt, seed=seed))
     content = _content(reply)
     if is_json_object(content):
         log.append("ok")
@@ -206,14 +209,14 @@ def chat(ollama, model, messages, post=post_json, attempts=None, fmt="json"):
     log.append("invalid")
     if content.strip():
         repaired = post(ollama + "/api/chat", ollama_body(model, [
-            {"role": "system", "content": REPAIR_PROMPT}, {"role": "user", "content": content}]))
+            {"role": "system", "content": REPAIR_PROMPT}, {"role": "user", "content": content}], seed=seed))
         if is_json_object(_content(repaired)):
             log.append("model-repair")
             return repaired
         log.append("model-repair-failed")
     # Temperature 0 repeats a degenerate path exactly; a little noise leaves it.
     log.append("regenerate")
-    return post(ollama + "/api/chat", ollama_body(model, messages, temperature=0.3, fmt=fmt))
+    return post(ollama + "/api/chat", ollama_body(model, messages, temperature=0.3, fmt=fmt, seed=seed))
 
 
 def clean_embed(payload):
@@ -400,9 +403,10 @@ class Handler(SimpleHTTPRequestHandler):
         criteria = payload.get('workflow') == 'eligibility-criteria' or payload.get('task') in (eligibility_hybrid_review.TASK, eligibility_hybrid_answer.TASK)
         started = time.time()
         attempts = []
+        seed = 42 if criteria else None
         local_chat = lambda subset, selected_format=fmt: eligibility_transport.chat(subset, self.model, selected_format,
-            lambda wire: chat(self.ollama, self.model, wire, attempts=attempts, fmt=selected_format),
-            invoke_with_schema=lambda wire, wire_format: chat(self.ollama, self.model, wire, attempts=attempts, fmt=wire_format),
+            lambda wire: chat(self.ollama, self.model, wire, attempts=attempts, fmt=selected_format, seed=seed),
+            invoke_with_schema=lambda wire, wire_format: chat(self.ollama, self.model, wire, attempts=attempts, fmt=wire_format, seed=seed),
             criteria_workflow=payload.get('workflow') == 'eligibility-criteria')
         try:
             if provider == "local" and payload.get("task") == eligibility_hybrid_review.TASK:

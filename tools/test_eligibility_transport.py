@@ -42,13 +42,15 @@ class TransportTest(unittest.TestCase):
         self.assertEqual(question['logic']['element_id'], 'S1')
 
     def test_identical_project_work_does_not_retain_completed_replies(self):
-        transport.chat(self.messages(), 'same-model', {}, self.invoke)
+        first = transport.chat(self.messages(), 'same-model', {}, self.invoke)
         result = transport.chat(self.messages('b', 9), 'same-model', {}, self.invoke)
+        self.assertEqual(first['transport']['wire_prompt_sha256'], result['transport']['wire_prompt_sha256'])
         self.assertEqual(self.calls, 2)
         self.assertFalse(transport._entries)
         self.assertEqual(result['transport']['cache'], 'miss')
         self.assertEqual(json.loads(result['message']['content'])['questions'][0]['question_id'], 'question_' + 'b' * 32)
-        transport.chat(self.messages('b', 9, 'Children'), 'same-model', {}, self.invoke)
+        changed = transport.chat(self.messages('b', 9, 'Children'), 'same-model', {}, self.invoke)
+        self.assertNotEqual(first['transport']['wire_prompt_sha256'], changed['transport']['wire_prompt_sha256'])
         self.assertEqual(self.calls, 3, 'Changed sources must trigger fresh inference')
 
     def test_overlapping_identical_requests_share_inference(self):
@@ -85,7 +87,8 @@ class TransportTest(unittest.TestCase):
                 self.assertEqual(fresh['transport']['cache'], 'miss')
             finally:
                 release_old.set()
-            prior.result(1)
+            original = prior.result(1)
+            self.assertEqual(original['transport']['wire_prompt_sha256'], fresh['transport']['wire_prompt_sha256'])
         self.assertEqual(self.calls, 2)
         self.assertFalse(transport._entries)
 
