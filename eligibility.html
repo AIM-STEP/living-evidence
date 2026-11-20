@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261120-criteria-release-35"></script>
-<script src="app/secure-origin.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility-release.js?v=20261120-criteria-release-36"></script>
+<script src="app/secure-origin.js?v=20261120-criteria-release-36"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -28,7 +28,7 @@
 .btn:not(.primary):not(.btn-primary):not(.btn-link):not(.activated):not([aria-pressed="true"]):hover:not(:disabled),.vote:not(.selected):hover:not(:disabled),.round:not(.current):not(.done):hover:not(:disabled),.collapse-toggle:hover:not(:disabled){border-color:#cdced4;background:#f2f3f5;color:var(--plum)}
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
-.criteria-file-actions{display:flex;align-items:center;gap:6px}.criteria-action{display:inline-flex;align-items:center;gap:5px}.criteria-action[hidden]{display:none}.criteria-action svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}.criteria-editable{border-radius:3px;white-space:pre-wrap;outline:none;min-width:16px}.criteria-editable:hover{background:#f7f8fb}.criteria-editable:focus{background:#f7f8fb;box-shadow:0 0 0 2px #d4d8ed}.criteria-editable:empty:before{content:attr(data-placeholder);color:var(--muted)}
+.criteria-file-actions{display:flex;align-items:center;gap:6px}.criteria-action{display:inline-flex;align-items:center;gap:5px}.criteria-action[hidden]{display:none}.criteria-action svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}.criteria-editable{border-radius:3px;white-space:pre-wrap;outline:none;min-width:16px}.criteria-editable:hover{background:#f7f8fb}.criteria-editable:focus{background:#f7f8fb;box-shadow:0 0 0 2px #d4d8ed}.criteria-document{display:block;cursor:text;min-height:48px}.criteria-document [data-criteria-control]{cursor:auto}
 
 .btn,.framework,.criterion-option,.step-btn,.lang,.collapse-toggle,.machine-tool{height:32px;min-height:32px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;line-height:1.2}
 .btn,.framework,.criterion-option,.step-btn,.lang{padding:0 10px;min-width:60px;width:auto}
@@ -74,7 +74,7 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261120-criteria-release-35"></script>
+<script src="app/criteria-grounding.js?v=20261120-criteria-release-36"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
 <script defer src="app/tool-i18n-catalog.js?v=20261118-criteria-actions-1"></script>
@@ -97,15 +97,16 @@
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div></div><p id="criteria-timing" hidden><span id="criteria-working-label" data-ui-localize>Working</span><span id="criteria-finished-label" data-ui-localize hidden>Elapsed time</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed generation time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
-<script src="app/eligibility/registries.js?v=20261120-criteria-release-35"></script>
-<script src="app/eligibility/domain.js?v=20261120-criteria-release-35"></script>
-<script src="app/eligibility/methodology.js?v=20261120-criteria-release-35"></script>
-<script src="app/eligibility/sparse-input.js?v=20261120-criteria-release-35"></script>
-<script src="app/eligibility/engine.js?v=20261120-criteria-release-35"></script>
-<script src="app/eligibility/lessons.js?v=20261120-criteria-release-35"></script>
-<script src="app/eligibility/model.js?v=20261120-criteria-release-35"></script>
-<script src="app/eligibility-reset.js?v=20261120-criteria-release-35"></script>
-<script src="app/eligibility/background.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility/registries.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility/domain.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility/methodology.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility/document.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility/sparse-input.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility/engine.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility/lessons.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility/model.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility-reset.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility/background.js?v=20261120-criteria-release-36"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -211,11 +212,12 @@ function useBackgroundCriteria(stage,runData,resetDecisions=true,{presentationRe
   const signature=machineSourceSignature(runData.question,runData.reviewType,runData.sourceRevision??0,state.machineCriteria);
   const paragraph=result.manuscriptParagraph;
   const {snapshot,...refinement}=result;state.machineRefinement={...refinement,rows,signature,generatedAt:state.machineRun.generatedAt,modelName:runData.modelName,manuscriptParagraph:paragraph};
-  if(previous?.topicEditedByAuthor){
+  if(previous?.topicEditedByAuthor||previous?.documentEditedByAuthor){
     state.machineRefinement.reviewTopic=previous.reviewTopic;
-    state.machineRefinement.topicEditedByAuthor=true;
+    state.machineRefinement.topicEditedByAuthor=previous.topicEditedByAuthor;
+    state.machineRefinement.documentEditedByAuthor=previous.documentEditedByAuthor;
   }
-  if(previous?.descriptionEditedByAuthor&&previous.eligibilityPolicy===result.eligibilityPolicy&&(presentationRefresh||JSON.stringify(previous.rows)===JSON.stringify(rows))){
+  if(previous?.descriptionEditedByAuthor&&previous.eligibilityPolicy===result.eligibilityPolicy){
     state.machineRefinement.manuscriptParagraph=previous.manuscriptParagraph;
     state.machineRefinement.descriptionEditedByAuthor=true;
   }
@@ -258,7 +260,7 @@ function save(options={}){
   try{previous=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
   let methodology=null;
   try{
-    methodology=pendingBackgroundStage||(eligibilityBackgroundService&&previous?eligibilityBackgroundService.recordEdit(previous,state):null);
+    methodology=pendingBackgroundStage||(eligibilityBackgroundService&&previous?eligibilityBackgroundService.recordEdit(previous,state,options.documentEdit):null);
     const write=()=>{if(window.AimstepEligibilityLibrary){const result=window.AimstepEligibilityLibrary.commit(localStorage,projectId,state,options);state.criteriaLibraryId=result.criteriaLibraryId;}else localStorage.setItem(key,JSON.stringify(state));};
     if(methodology)eligibilityBackgroundService.transaction(methodology,write);else write();
     pendingBackgroundStage=null;
@@ -935,6 +937,7 @@ async function autoCriteriaPipeline(model,input,signature,signal,progress){
   return result;
 }
 async function refineManualCriteria(){
+  if(previewDirty&&!savePreviewEdits(false))return;
   if($('generation-method').value!=='manual')return;
   save();
   if(!state.criteria.length||!state.criteria.some(row=>String(row.condition||'').trim())){setManualStatus('Enter at least one eligibility rule before standardizing.',true);return}
@@ -993,6 +996,7 @@ async function attachmentDigests(files,signal){
 }
 async function generateMachineCriteria(){
   if(refreshAfterExternalClear()||$('generation-method').value!=='machine')return;
+  if(previewDirty&&!savePreviewEdits(false))return;
   if(confirmationQueue?.run===generationNonce)return;
   const beforeVoice=generationNonce;
   await finishVoiceInput();
@@ -1090,7 +1094,7 @@ function criteriaForPage(data,refinement=currentRefinement()){
   let paragraph=data.paragraph||'';
   if(strict){
     const current=refinement?.eligibilityPolicy==='framework-only-v1';
-    if(!current){
+    if(!current&&!refinement?.descriptionEditedByAuthor){
       // Historical generated prose may contain a subgroup plan or a setting
       // outside the chosen framework. Project the stored rules without rerunning a model.
       paragraph=questions.length?questions.map(q=>{
@@ -1101,8 +1105,8 @@ function criteriaForPage(data,refinement=currentRefinement()){
     }
     return {...data,strict,framework,rows,slots,questions,limits:[],pending:[],paragraph,hasExtraRows:false};
   }
-  if(!paragraph&&(extraRows.length||data.limits.length))paragraph=manuscriptDraft(data.rows,data.exclusions,data.limits,refinement?.descriptionContext);
-  else if(paragraph&&refinement){
+  if(!paragraph&&!refinement?.descriptionEditedByAuthor&&(extraRows.length||data.limits.length))paragraph=manuscriptDraft(data.rows,data.exclusions,data.limits,refinement?.descriptionContext);
+  else if(paragraph&&refinement&&!refinement.descriptionEditedByAuthor){
     const supplementRows=!refinement.frameworkSlots||refinement.descriptionEditedByAuthor?extraRows:[];
     if(supplementRows.length||data.limits.length||refinement.descriptionEditedByAuthor)paragraph=supplementDescription(paragraph,supplementRows,data.limits,refinement);
   }
@@ -1222,7 +1226,7 @@ function summaryTopic(rows,framework,suggested='',source=state.activeGenerator==
   return window.AIMSTEPEligibilityMethodology?.topic({framework_mapping:{framework_id},original_text:source,review_topic:suggested},elements)||validatedReviewTopic(suggested,source)||validatedReviewTopic(source)||'Eligibility criteria';
 }
 function savedReviewTopic(refinement,rows,framework){
-  if(refinement.topicEditedByAuthor)return refinement.reviewTopic;
+  if(refinement.topicEditedByAuthor||refinement.documentEditedByAuthor)return refinement.reviewTopic;
   const title=validatedReviewTopic(refinement.reviewTopic,undefined,true);
   if(refinement.topicStyle==='concise-v4'&&title)return title;
   const questions=refinement.frameworkQuestions;
@@ -1288,59 +1292,129 @@ const summaryKey='aimstep-eligibility-summary:'+(projectId);
 function summaryRowsSig(rows){let h=2166136261;for(const c of JSON.stringify((rows||[]).map(r=>[String(r.title||''),String(r.condition||''),String(r.uncertain||''),String(r.definition||'')])))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0).toString(16)}
 function shareSummary(data){if(embeddedPreview){embeddedPreviewSummary=data?{version:1,savedAt:new Date().toISOString(),...data}:null;return}if(embeddedManual)return;try{if(window.AimstepEligibilityReset&&window.AimstepEligibilityReset.currentEpoch(localStorage,projectId)!==(state.criteria_epoch??null))return;if(data)localStorage.setItem(summaryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),...data}));else localStorage.removeItem(summaryKey)}catch(e){}}
 let previewDirty=false,previewBase=null;
-function editableCriteriaText(value,attributes,label,placeholder=''){
-  return `<span class="criteria-editable" contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="${escapeHtml(label)}" data-placeholder="${escapeHtml(placeholder)}" ${attributes}>${escapeHtml(value)}</span>`;
+function criteriaHeading(row){
+  return [row.questionNumber,row.label].filter(Boolean).join(' · ');
+}
+function documentFields(page,display){
+  const fields=new Map();
+  const add=(label,questionNumber)=>{
+    const heading=criteriaHeading({label,questionNumber});
+    if(!fields.has(heading))fields.set(heading,{heading,domain:label,questionNumber,include:[],exclude:[]});
+    return fields.get(heading);
+  };
+  for(const question of page.questions.length?page.questions:[{frameworkSlots:page.slots}]){
+    for(const label of question.frameworkSlots||[])add(label,question.display_number);
+  }
+  for(const row of display.rows){
+    const field=add(row.label,row.questionNumber);
+    field.unlabelledExclusion=row.unlabelledExclusion;
+    for(const side of ['include','exclude'])field[side]=row[side].filter(line=>line.position!==null||line.outcomeGroup);
+  }
+  return [...fields.values()];
+}
+function documentRuleGroups(lines,value,focusByDefault){
+  const doc=window.AIMSTEPEligibilityDocument;
+  const original=lines.flatMap(line=>line.outcomeGroup?doc.clauses(line.displayText??line.text).map(text=>({text,focus:true})):
+    [{text:line.displayText??line.text,original:line.text}]).map(entry=>({...entry,keys:doc.clauses(entry.text).map(doc.ruleKey)}));
+  // Keep an unchanged rule’s exact stored wording and identity.
+  const rules=[],outcomes=[];
+  const parts=doc.clauses(value);
+  for(let index=0;index<parts.length;index++){
+    const part=parts[index];
+    const matched=original.find(entry=>entry.keys.every((key,offset)=>parts[index+offset]&&doc.ruleKey(parts[index+offset])===key));
+    const focus=matched?.focus||(!matched&&focusByDefault&&!/\b(?:must|required to|only studies that).{0,45}(?:measur|report|assess)/iu.test(part));
+    (focus?outcomes:rules).push(matched?.original??(focus?part.replace(/^\d+[.)]\s*/u,''):part));
+    if(matched)index+=matched.keys.length-1;
+  }
+  return {rules,outcomes};
 }
 function savePreviewEdits(notify=true){
   if(!previewDirty){const ok=save();if(notify)toast(ok?'Criteria saved.':'Could not save criteria on this device.');return ok;}
   if(!previewBase||previewBase.signature!==criteriaSignature(state)){
     toast('Source criteria changed. Copy your edits before refreshing this preview.');return false;
   }
+  const editor=$('preview').querySelector('[data-criteria-document]'),doc=window.AIMSTEPEligibilityDocument;
+  if(!editor||!doc)return false;
   const before=structuredClone(state),machine=state.activeGenerator==='machine',source=machine?state.machineCriteria:state.criteria;
-  const full=standardizedCriteria(),refinementKey=machine?'machineRefinement':'manualRefinement',edits=new Map(),changes=[];
-  for(const el of $('preview').querySelectorAll('[data-criteria-row]')){
-    const viewIndex=Number(el.dataset.criteriaRow),index=previewBase.data.rows[viewIndex]?.sourceIndex??viewIndex,kind=el.dataset.criteriaKind,position=Number(el.dataset.criteriaRule);
-    if(!Number.isInteger(index)||!full.rows[index]||!['include','exclude'].includes(kind))continue;
-    const original=previewBase.data.rows[viewIndex]?.[kind]?.[position]||'';
-    const value=String(el.innerText??el.textContent??'').replace(/\r\n?/g,'\n').trim();
-    if(value===(el.dataset.criteriaInitial??original))continue;
-    const key=index+':'+kind;
-    if(!edits.has(key))edits.set(key,{index,viewIndex,kind,rules:[...(previewBase.data.rows[viewIndex]?.[kind]||[''])]});
-    edits.get(key).rules[position]=value;
-  }
+  const refinementKey=machine?'machineRefinement':'manualRefinement',prior=currentRefinement(),full=standardizedCriteria();
+  const {data,fields}=previewBase,changes=[],outcomeEdits=[];
+  const context=structuredClone(prior?.descriptionContext||{});
+  const questions=prior?.frameworkQuestions?.length?structuredClone(prior.frameworkQuestions):null;
   try{
-    for(const {index,viewIndex,kind,rules} of edits.values()){
-      const row=source[index],field=kind==='include'?'condition':'uncertain';
-      const hidden=[splitVisibleRules(row,field).hidden,kind==='include'?splitVisibleRules(row,'definition').hidden:''].filter(Boolean).join('\n');
-      const visible=rules.flatMap(rule=>rule.split(/\n+/)).map(rule=>rule.trim()).filter(Boolean);
-      changes.push({domain:row.title,kind,before:previewBase.data.rows[viewIndex][kind],after:visible});
-      row[field]=[...visible,hidden].filter(Boolean).join('\n');
-      if(kind==='include')row.definition='';
-      full.rows[index][kind]=uniqueRules([...visible,...ruleClauses(hidden,kind)]);
+    const unnamed=fields.filter(field=>field.unlabelledExclusion).map(field=>({...field,text:formatCriteriaRules(field.exclude.map(line=>line.displayText??line.text),{finalPeriod:true})}));
+    const edited=doc.parse(doc.read(editor),fields,unnamed);
+    for(const field of fields)for(const kind of ['include','exclude']){
+      const lines=field[kind],value=edited.rows.get(doc.rowKey(kind,field.heading))?.text||'';
+      const shown=formatCriteriaRules(lines.map(line=>line.displayText??line.text),{finalPeriod:true});
+      if(doc.normalize(value)===doc.normalize(shown))continue;
+      const focus=machine&&kind==='include'&&dimensionKey(field.domain)==='outcomes'&&(!lines.length||lines.some(line=>line.outcomeGroup));
+      const {rules,outcomes}=documentRuleGroups(lines,value,focus);
+      const previous=lines.filter(line=>!line.outcomeGroup).map(line=>line.text);
+      if(focus){
+        const local=context.question_contexts?.find(item=>item.display_number===field.questionNumber)||context;
+        const original=(local.outcome_groups||[]).flatMap(group=>group.items).map(doc.ruleKey);
+        if(JSON.stringify(original)!==JSON.stringify(outcomes.map(doc.ruleKey))){
+          const groups=outcomes.length?[{label:'',items:outcomes}]:[];
+          local.outcome_groups=groups;
+          outcomeEdits.push({questionNumber:field.questionNumber,groups});
+        }
+      }
+      if(JSON.stringify(previous)===JSON.stringify(rules))continue;
+      changes.push({domain:field.domain,questionNumber:field.questionNumber,kind,before:previous,after:rules});
     }
-    let topic=full.topic||summaryTopic(full.rows,full.framework),paragraph=previewBase.data.paragraph||full.paragraph||'',paragraphEdited=false,topicEdited=false;
-    for(const el of $('preview').querySelectorAll('[data-criteria-text]')){
-      const field=el.dataset.criteriaText,value=String(el.innerText??el.textContent??'').trim();
-      if(field==='topic'&&value!==(el.dataset.criteriaInitial??previewBase.data.topic??'')){topic=value;topicEdited=true;}
-      if(field==='paragraph'&&value!==(previewBase.data.paragraph||'')){paragraph=value;paragraphEdited=true;if(hasConfirmedRules())state.visibleDescription={text:value,signature:JSON.stringify(source.map(visibleCriterion))};}
+    const paragraphChanged=doc.normalize(edited.paragraph)!==doc.normalize(data.paragraph||'');
+    if(!changes.length&&!outcomeEdits.length&&!paragraphChanged){previewDirty=false;return savePreviewEdits(notify);}
+    const touched=new Set();
+    function rowIn(rows,domain,labelKey){
+      let row=rows.find(item=>dimensionKey(item[labelKey])===dimensionKey(domain));
+      if(!row){row={[labelKey]:domain,include:[],exclude:[]};rows.push(row);}
+      return row;
     }
-    if(changes.length&&!paragraphEdited){paragraph=state[refinementKey]?.descriptionContext&&window.AIMSTEPEligibilityBackground?window.AIMSTEPEligibilityBackground.renderDescription(full.rows.map(row=>({dimension:row.label,include:row.include,exclude:row.exclude})),state[refinementKey].descriptionContext):manuscriptDraft(full.rows,full.rows.flatMap(row=>row.exclude.map(rule=>({rule,domains:[row.label]}))),full.limits||[]);state.visibleDescription=null;}
-    if(changes.length&&!topicEdited&&!state[refinementKey]?.topicEditedByAuthor)topic=summaryTopic(full.rows,full.framework);
-    const topicEditedByAuthor=topicEdited||!!state[refinementKey]?.topicEditedByAuthor;
-    const descriptionEditedByAuthor=paragraphEdited||(!changes.length&&!!state[refinementKey]?.descriptionEditedByAuthor);
-    state[refinementKey]={...(state[refinementKey]||{}),descriptionEditedByAuthor,topicEditedByAuthor,topicStyle:'sentence-v1',rows:full.rows.map(row=>({dimension:row.label,include:row.include,exclude:row.exclude})),reviewTopic:topic,manuscriptParagraph:paragraph,uncertainties:state[refinementKey]?.uncertainties||[],trace:full.trace||state[refinementKey]?.trace||[],editedAt:new Date().toISOString()};
-    // Preserve original domain spelling for the refinement validity check.
-    state[refinementKey].rows.forEach((row,index)=>{row.dimension=source[index].title;});
-    state[refinementKey].signature=machine?machineSourceSignature(state.machineRun?.question,state.machineRun?.reviewType,state.machineRun?.sourceRevision??0,state.machineCriteria):manualSourceSignature();
-    if(state[refinementKey]?.audit){state[refinementKey].audit={...state[refinementKey].audit,status:'author-edited'};state[refinementKey].ruleEvidence=(state[refinementKey].ruleEvidence||[]).filter(link=>!changes.some(change=>change.domain===link.dimension&&change.kind===link.side));}
-    state.previewEditHistory=[...(state.previewEditHistory||[]),{at:new Date().toISOString(),changes,topic,paragraph}].slice(-200);
+    for(const change of changes){
+      const {domain,questionNumber,kind,after}=change;
+      const question=questions?.find(item=>item.display_number===questionNumber);
+      const aggregate=rowIn(full.rows,domain,'label');
+      if(question){
+        rowIn(question.rows,domain,'dimension')[kind]=after;
+        aggregate[kind]=questions.flatMap(item=>(item.rows.find(row=>dimensionKey(row.dimension)===dimensionKey(domain))?.[kind]||[]).map(rule=>item.display_number+' · '+rule));
+      }else aggregate[kind]=after;
+      let sourceRow=source.find(row=>dimensionKey(row.title)===dimensionKey(domain));
+      if(!sourceRow){
+        const type=criterionTypesByFramework[state.framework]?.find(type=>dimensionKey(type.title)===dimensionKey(domain));
+        sourceRow={title:domain,id:type?.id||'author-'+Date.now()+'-'+source.length,condition:'',uncertain:'',definition:'',
+          ...(type&&{typeKey:type.key}),source:machine?'machine':'manual',purpose:'Eligibility',stage:''};
+        source.push(sourceRow);
+      }
+      sourceRow[kind==='include'?'condition':'uncertain']=aggregate[kind].join('\n');
+      if(kind==='include')sourceRow.definition='';
+      touched.add(dimensionKey(domain)+':'+kind);
+    }
+    const rows=source.map(row=>{
+      const view=full.rows.find(item=>dimensionKey(item.label)===dimensionKey(row.title));
+      return {dimension:row.title,include:view?.include||[],exclude:view?.exclude||[]};
+    });
+    if(questions&&context.question_contexts){
+      for(const local of context.question_contexts)local.rows=questions.find(q=>q.display_number===local.display_number)?.rows||local.rows;
+      context.combined_rows=rows.filter(row=>row.include.length||row.exclude.length);
+    }
+    const descriptionEditedByAuthor=paragraphChanged||!!prior?.descriptionEditedByAuthor;
+    const description=paragraphChanged?edited.paragraph:descriptionEditedByAuthor?prior.manuscriptParagraph:manuscriptDraft(rows,
+      rows.flatMap(row=>row.exclude.map(rule=>({rule,domains:[row.dimension]}))),full.limits||[],context);
+    const topic=data.topic||summaryTopic(data.rows,data.framework);
+    state[refinementKey]={...prior,descriptionEditedByAuthor,documentEditedByAuthor:true,topicStyle:'concise-v4',rows,reviewTopic:topic,manuscriptParagraph:description,descriptionContext:context,
+      ...(questions&&{frameworkQuestions:questions}),uncertainties:prior?.uncertainties||[],trace:full.trace||prior?.trace||[],editedAt:new Date().toISOString()};
+    const next=state[refinementKey];
+    next.signature=machine?machineSourceSignature(state.machineRun?.question,state.machineRun?.reviewType,state.machineRun?.sourceRevision??0,state.machineCriteria):manualSourceSignature();
+    if(next.audit){next.audit={...next.audit,status:'author-edited'};next.ruleEvidence=(next.ruleEvidence||[]).filter(link=>!touched.has(dimensionKey(link.dimension)+':'+link.side));}
+    state.visibleDescription=null;
+    state.previewEditHistory=[...(state.previewEditHistory||[]),{at:next.editedAt,changes,topic,paragraph:description}].slice(-200);
     state.confirmed=false;
-    if(!save({updateEntry:true}))throw new Error('Could not save criteria on this device. Your edits are still available here.');
+    if(!save({updateEntry:true,documentEdit:{changes,outcomeEdits}}))throw Error('Could not save criteria on this device. Your edits are still available here.');
     previewDirty=false;fill();if(notify)toast('Criteria saved.');return true;
-  }catch(e){state=before;toast(e.message);return false;}
+  }catch(error){state=before;toast(error.message);return false;}
 }
 $('preview').addEventListener('input',event=>{
-  if(!event.target?.closest?.('.criteria-editable'))return;
+  if(!event.target?.closest?.('[data-criteria-document]')||event.target.closest('[data-criteria-control]'))return;
   previewDirty=true;stopMachineGeneration();stopManualRefinement();
   $('save-criteria').title='Save edited criteria';
 });
@@ -1559,22 +1633,21 @@ function criterionNotes(line){
  return {pending,checks:line.checks};
 }
 const unreportedExclusion='Not reporting.';
+function criteriaControls(markup,inline=false){
+ return markup?'<'+(inline?'span':'div')+' contenteditable="false" data-criteria-control>'+markup+'</'+(inline?'span':'div')+'>':'';
+}
 function renderCriteriaSide(display,side){
  const markup=display.rows.filter(row=>row[side].length).map(row=>{
-  const heading=[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · ');
+  const heading=row.unlabelledExclusion?(row.questionNumber||''):criteriaHeading(row);
   const title=heading?'<strong>'+escapeHtml(heading)+':</strong> ':'';
-  const rules=row[side].filter(line=>line.position!==null||line.outcomeGroup);
+  const values=row[side].filter(line=>line.position!==null||line.outcomeGroup).map(line=>line.displayText??line.text);
   const details=row[side].map(criterionNotes),outcomes=dimensionKey(row.label)==='outcomes';
-  const values=rules.map(line=>line.displayText??line.text);
-  if(outcomes)values.push(...details.map(note=>note.pending));
-  const paragraph=formatCriteriaRules(values,{finalPeriod:true,render:(text,index)=>{
-   const line=rules[index];
-   if(!line||row.index===null||line.outcomeGroup)return escapeHtml(text);
-   const initial=text===line.text?'':` data-criteria-initial="${escapeHtml(text)}"`;
-   return editableCriteriaText(text,`data-criteria-row="${row.index}" data-criteria-kind="${side}" data-criteria-rule="${line.position}"`+initial,row.label+' '+side+' rule '+(line.position+1));
-  }});
-  const notes=details.map(({pending,checks})=>(pending&&!outcomes?'<span>'+escapeHtml(withFinalPeriod(pending))+'</span>':'')+checks.map(sourceConfirmationHtml).join('')).join('');
-  return '<div class="'+(row.unlabelledExclusion?'summary-independent-exclusion':'summary-inclusion')+'"><span>'+title+paragraph+'</span>'+notes+'</div>';
+  const pending=details.map(note=>note.pending).filter(Boolean);
+  const paragraph=formatCriteriaRules(values,{finalPeriod:!outcomes||!pending.length,render:text=>outcomes?escapeHtml(text):'<span>'+escapeHtml(text)+'</span>'});
+  const inline=outcomes&&pending.length?criteriaControls((paragraph?'；':'')+escapeHtml(formatCriteriaRules(pending,{finalPeriod:true})),true):'';
+  const notes=details.map(note=>note.checks.map(sourceConfirmationHtml).join('')).join('');
+  const pendingNotes=outcomes?'':pending.map(text=>'<p>'+escapeHtml(withFinalPeriod(text))+'</p>').join('');
+  return '<div class="'+(row.unlabelledExclusion?'summary-independent-exclusion':'summary-inclusion')+'"><span>'+title+paragraph+inline+'</span>'+criteriaControls(pendingNotes+notes)+'</div>';
  }).join('');
  if(markup)return markup;
  const empty=side==='include'?'No explicit inclusion rules entered.':unreportedExclusion;
@@ -1606,17 +1679,16 @@ function renderPreview(){
   if(!rows.length&&!hasConfirmations&&!paragraph&&(!page.strict||!topic)){area.innerHTML='<p class="empty" data-ui-localize>'+(state.activeGenerator==='machine'&&state.machineRun?'No eligibility rules could be generated from this input.':'No criteria have been entered.')+'</p>';$('download').hidden=true;shareSummary(null);return}
   $('download').hidden=!rows.length&&!hasConfirmations&&!paragraph;
   $('save-criteria').hidden=false;$('clear-criteria').hidden=false;
-  previewBase={signature:criteriaSignature(state),data:structuredClone(page)};
   const display=criteriaDisplay(page,refinement);
   const includes=renderCriteriaSide(display,'include'),exclusionHtml=renderCriteriaSide(display,'exclude');
   const renderCheck=check=>sourceConfirmationHtml({...check,context:[check.domain,check.subject].filter(Boolean).join(' · ')});
   const focusChecks=display.focus.map(renderCheck).join(''),descriptionChecks=display.description.map(renderCheck).join('');
   const legacyNote=state.activeGenerator==='machine'&&state.machineRefinement&&!state.machineRefinement.audit?'<p class="summary-muted">This saved draft has not been checked against the original sources with the updated method. Generate again to run the new checks.</p>':'';
   const section=(heading,html)=>html?'<section class="summary-block"><h3 data-ui-localize>'+heading+'</h3>'+html+'</section>':'';
-  const showInclusion=!page.strict||display.rows.some(row=>row.include.length);
-  const prose=paragraph?'<p class="summary-paragraph">'+editableCriteriaText(paragraph,'data-criteria-text="paragraph"','Description')+'</p>':
-    (hasConfirmations?'<p class="summary-muted" data-ui-localize>Description updates when a rule is confirmed.</p>':'');
-  area.innerHTML=`<div class="criteria-summary">${legacyNote}<div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> ${editableCriteriaText(display.reviewTopic,'data-criteria-text="topic" data-criteria-initial="'+escapeHtml(display.reviewTopic)+'"','Review topic')}</p>${display.topic.map(sourceConfirmationHtml).join('')}${focusChecks}<p><strong data-ui-localize>Framework:</strong> ${escapeHtml(framework)}</p>${display.framework.map(sourceConfirmationHtml).join('')}</div>${section('Inclusion',showInclusion?includes:'')}${section('Exclusion',exclusionHtml)}${section('Description',descriptionChecks+prose)}</div>`;
+  const prose=paragraph?'<p class="summary-paragraph">'+escapeHtml(paragraph)+'</p>':'';
+  const body=section('Inclusion',includes)+section('Exclusion',exclusionHtml)+section('Description',criteriaControls(descriptionChecks)+(prose||'<p><br></p>'));
+  previewBase={signature:criteriaSignature(state),data:structuredClone(page),fields:documentFields(page,display)};
+  area.innerHTML=`<div class="criteria-summary">${legacyNote}<div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> <span>${escapeHtml(display.reviewTopic)}</span></p>${display.topic.map(sourceConfirmationHtml).join('')}${focusChecks}<p><strong data-ui-localize>Framework:</strong> ${escapeHtml(framework)}</p>${display.framework.map(sourceConfirmationHtml).join('')}</div><div class="criteria-editable criteria-document" data-criteria-document contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="Eligibility criteria text">${body}</div></div>`;
 
 }
 function xmlEscape(value){return String(value==null?'':value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
@@ -1658,7 +1730,7 @@ function criteriaWordFile(){
  const frameworkChecks=display.framework.map(check=>wordParagraph(check.domain+' · '+checkText(check),false)).join('');
  const contextualCheck=check=>wordParagraph(checkText(check)+' ('+[check.domain,check.subject].filter(Boolean).join(' · ')+')',false);
  const focusChecks=display.focus.map(contextualCheck).join(''),descriptionChecks=display.description.map(contextualCheck).join('');
- const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>';const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+display.reviewTopic,false)+topicChecks+focusChecks+wordParagraph('Framework: '+normalized.framework,false)+frameworkChecks+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+emptyExclusion+(normalized.paragraph||descriptionChecks?wordParagraph('Description',true)+descriptionChecks+(normalized.paragraph?wordParagraph(normalized.paragraph,false):''):'')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
+ const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>';const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+display.reviewTopic,false)+topicChecks+focusChecks+wordParagraph('Framework: '+normalized.framework,false)+frameworkChecks+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+emptyExclusion+(normalized.paragraph||descriptionChecks?wordParagraph('Description',true)+descriptionChecks+(normalized.paragraph?normalized.paragraph.split(/\r?\n/u).map(line=>line.trim()).filter(Boolean).map(line=>wordParagraph(line,false)).join(''):''):'')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';syncGenerationMethodOptions();$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';state.reviewType=reviewTypeForProject();document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});

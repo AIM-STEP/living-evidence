@@ -1070,6 +1070,50 @@ function apply_decisions(original,request,env=environment()){
  }
  state.model_calls.push(...(request.model_calls||[]));finish(state,'apply_decisions',changes,options);rebuild(state,env);return {state,status:state.status};
 }
+function edit_author_document(original,edits,env=environment()){
+ const state=start(original).state;
+ configFor(state,env);
+ const decision_id=id('decision'),changes=[];
+ let decisionSource;
+ for(const edit of edits){
+  const q=state.questions.find(q=>q.question_id===edit.questionId&&active(q));
+  if(!q)continue;
+  if(edit.outcomeGroups){q.author_outcome_groups=clone(edit.outcomeGroups);changes.push({question_id:q.question_id,outcome_groups:clone(edit.outcomeGroups)});continue;}
+  const removed=new Set(edit.removed.flat()),added=[];
+  for(const e of currentElements(state,q))if(removed.has(e.element_id)){
+   e.active=false;e.author_omission_id=decision_id;e.revision++;
+   changes.push({element_id:e.element_id,active:false});
+  }
+  for(const text of edit.added){
+   const answer={answer_text:text,author_confirmed:true};
+   const source=addSource(state,'human_answer',text,[q.question_id],null,{input_kind:'author_criteria_text'});
+   decisionSource ||= ref(source);
+   addAuthorCriterion(state,q,answer,edit.dimension,text,edit.side);
+   const update=answer.updates[0],element=state.elements.at(-1);
+   answerUpdate(state,q,element,update,answer,source,{});
+   element.source_decision_ids=[decision_id];added.push(element.element_id);
+   changes.push({element_id:element.element_id,normalized_text:element.normalized_text});
+  }
+  // A replacement stays in the same expression branch. A new rule is an
+  // independent requirement, as it is when accepted from an author suggestion.
+  if(edit.side==='include'&&edit.removed.length===1&&added.length===1){
+   const replace=node=>{
+    if(!node)return node;
+    if(D.walkLeaves(node).every(element_id=>removed.has(element_id)))return {op:'predicate',element_id:added[0]};
+    return node.children?{...node,children:node.children.map(replace)}:node;
+   };
+   q.logic=replace(q.logic);
+   if(q.unresolved_fragment_logic){
+    const pending=q.unresolved_fragment_logic;
+    pending.branches=pending.branches.map(replace);
+    if(pending.alternatives)pending.alternatives=pending.alternatives.map(item=>({...item,tree:replace(item.tree)}));
+   }
+  }
+ }
+ if(!decisionSource)decisionSource=ref(addSource(state,'human_answer',JSON.stringify(edits),edits.map(edit=>edit.questionId),null,{input_kind:'author_criteria_text'}));
+ state.decisions.push({decision_id,source_ref:decisionSource,issue_ids:[],answer_text:decisionSource.quote,action:'edit_criteria_text',at:now(),revision:state.revision+1,changes,status:'applied'});
+ finish(state,'edit_criteria_text',changes);rebuild(state,env);return state;
+}
 function edit_context(original,questionId,context,options={},env=environment()){
  const tx=start(original,options);if(tx.status==='duplicate')return tx;const state=tx.state;configFor(state,env);const q=state.questions.find(q=>q.question_id===questionId);if(!q)fail('QUESTION_NOT_FOUND','context','Unknown research question.');const before=clone(q.context);
  if(context.framework_id){const frame=env.frameworks.get(context.framework_id);if(!frame)fail('FRAMEWORK_NOT_FOUND','context','Unknown framework.');q.context.framework_requested=frame.display_name;q.framework_mapping={framework_id:frame.framework_id,display_name:frame.display_name,version:frame.version,explicit:true,provisional:false,basis:'human_selection',candidates:[]};for(const e of currentElements(state,q))e.framework_bindings=env.frameworks.map(e.dimension_id,frame);}
@@ -1082,5 +1126,5 @@ function render_output(state,{snapshot_revision=null}={}){
  return {project_id:state.project_id,status:view.status,revision:view.revision,output_language:view.output_language||state.output_language,review_methods:view.review_methods||state.review_methods,question_relation:view.question_relation,questions:view.questions.filter(active).map(q=>({question_id:q.question_id,display_number:q.display_number,...(frameworkOnly(q)&&{eligibility_policy:q.eligibility_policy}),research_question:q.original_text,objective:q.review_topic||q.original_text,context:q.context,framework_mapping:q.framework_mapping,elements:es.filter(e=>e.question_id===q.question_id),include:view.criteria.filter(c=>c.question_ids.includes(q.question_id)&&c.disposition==='include'),exclude:view.criteria.filter(c=>c.question_ids.includes(q.question_id)&&c.disposition==='exclude'),logic:view.logic?.questions[q.question_id],logic_text:expression_text(view.logic?.questions[q.question_id]?.eligibility,view.criteria,view.output_language||state.output_language),focus:es.filter(e=>e.question_id===q.question_id&&e.semantic_role==='review_focus'),unrestricted:es.filter(e=>e.question_id===q.question_id&&e.scope_status==='unrestricted'),unspecified:es.filter(e=>e.question_id===q.question_id&&e.scope_status==='unspecified'),no_independent_exclusions:!view.criteria.some(c=>c.question_ids.includes(q.question_id)&&c.disposition==='exclude')})),issues:snap?(snap.issues||[]).filter(i=>i.status==='open'):state.issues.filter(i=>i.status==='open'),decisions:state.decisions.filter(d=>!snap||snap.decision_ids.includes(d.decision_id)),sources:state.sources,validation:view.validation,changes:state.changes.filter(c=>c.revision<=view.revision),config_versions:view.config_versions};
 }
 function render_text(state,options={}){const out=render_output(state,options),zh=out.output_language.startsWith('zh'),lines=[(zh?'纳入与排除标准':'Eligibility criteria')+' — v'+out.revision+' — '+out.status];for(const q of out.questions){lines.push('\n'+q.display_number+' '+q.objective,(zh?'框架：':'Framework: ')+(q.framework_mapping?.display_name||'待确定'),zh?'纳入标准':'Inclusion');q.include.forEach(c=>lines.push('- '+c.text));lines.push(zh?'排除标准':'Exclusion');q.exclude.forEach(c=>lines.push('- '+c.text));if(q.no_independent_exclusions&&!frameworkOnly(q))lines.push(zh?'无独立排除条款；资格范围由现有纳入条件确定。':'No independent exclusion clauses; eligibility is determined by the inclusion conditions.');if(q.logic_text)lines.push((zh?'逻辑关系：':'Logic: ')+q.logic_text);if(q.focus.length)lines.push((zh?'研究关注内容：':'Review focus: ')+q.focus.map(e=>e.normalized_text).join('；'));if(q.unrestricted.length)lines.push((zh?'明确不限：':'Explicitly unrestricted: ')+q.unrestricted.map(e=>e.dimension_id).join(', '));if(!frameworkOnly(q))lines.push((zh?'未设定的非必要限制：':'Unspecified optional limits: ')+q.unspecified.filter(e=>OPTIONAL.includes(e.dimension_id)).map(e=>e.dimension_id).join(', '));}if(out.issues.some(i=>i.blocking))lines.push(zh?'此版本为草案，仍有必要事项待确认。':'Draft: required decisions remain unresolved.');return lines.join('\n');}
-return {VERSION:'eligibility-v3.2.0',environment,create_project,save_input,addSource,ref,extraction_payload,numericReviewReason,resolve_review_context,explicitOutcomeRequirement,ingest_candidates,detect_clarification_issues,authorTargetGroups,passageWording,apply_decisions,edit_context,register_framework,build_criteria,validate_criteria,render_output,render_text,expression_text,rebuild,accepted,guard,SourceStore:{add:addSource,get:D.sourceAt,locate:D.locate},ProvenanceValidator:{validate:D.validate_provenance},ElementNormalizer:{validate:D.check_semantics},CriteriaBuilder:{build:build_criteria},CriteriaValidator:{validate:validate_criteria},DecisionApplier:{apply:apply_decisions}};
+return {VERSION:'eligibility-v3.2.0',environment,create_project,save_input,addSource,ref,extraction_payload,numericReviewReason,resolve_review_context,explicitOutcomeRequirement,ingest_candidates,detect_clarification_issues,authorTargetGroups,passageWording,apply_decisions,edit_author_document,edit_context,register_framework,build_criteria,validate_criteria,render_output,render_text,expression_text,rebuild,accepted,guard,SourceStore:{add:addSource,get:D.sourceAt,locate:D.locate},ProvenanceValidator:{validate:D.validate_provenance},ElementNormalizer:{validate:D.check_semantics},CriteriaBuilder:{build:build_criteria},CriteriaValidator:{validate:validate_criteria},DecisionApplier:{apply:apply_decisions}};
 });

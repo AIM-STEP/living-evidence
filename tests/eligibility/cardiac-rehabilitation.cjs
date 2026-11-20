@@ -129,7 +129,7 @@ async function replay() {
   state.machineRefinement.pendingLogicRows=[{domain:'Outcomes',subject:'minimum duration of pain relief',side:'include'}];
   page.api.fill();
   const pending='Pending relationship · minimum duration of pain relief';
-  assert(page.el('preview').innerHTML.includes('<strong>Outcomes:</strong> '+pending+'.</span>'));
+  assert(page.el('preview').innerHTML.includes('<strong>Outcomes:</strong> <span contenteditable="false" data-criteria-control>'+pending+'.</span>'));
   assert(Buffer.from(page.api.export()).toString('utf8').includes('>Outcomes: '+pending+'.</w:t>'));
 }
 
