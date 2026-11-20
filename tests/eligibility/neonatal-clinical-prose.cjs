@@ -27,7 +27,7 @@ test('reproduce the neonatal example through analysis, independent review and pr
  const analyzed=await M.analyze(state,E.environment(),adapter);
  const project=E.ingest_candidates(state,analyzed.candidates).state;
  const view=B.projectToClassic(project);
- assert.equal(view.reviewTopic,'Air for resuscitation of term or late preterm infants at birth');
+ assert.equal(view.reviewTopic,'Air for resuscitation of term or late preterm infants');
  const included=name=>view.rows.find(r=>r.dimension===name).include;
  assert.deepEqual(included('Population'),['term and late preterm infants who received respiratory support at birth']);
  assert.deepEqual(included('Intervention'),['air']);

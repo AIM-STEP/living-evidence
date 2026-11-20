@@ -60,7 +60,7 @@ async function replay() {
   const {candidates}=await M.analyze(project,E.environment(),adapter,{retries:0});
   const saved=E.ingest_candidates(project,candidates).state, view=B.projectToClassic(saved);
   const field=name=>view.rows.find(row=>row.dimension===name)?.include.join(' ');
-  assert.equal(view.reviewTopic,'Clinical and cost-effectiveness of exercise-based cardiac rehabilitation in adults with coronary heart disease');
+  assert.equal(view.reviewTopic,'Exercise-based cardiac rehabilitation in adults with coronary heart disease');
   assert.match(view.manuscriptParagraph,/compared with no exercise/i);
   assert.equal(field('Comparison'),'no exercise');
   const comparison=saved.elements.find(e=>e.active!==false&&e.dimension_id==='comparator');

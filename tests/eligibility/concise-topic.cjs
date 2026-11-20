@@ -17,7 +17,7 @@ assert.equal(topic('pecos',[item('exposure','wood smoke'),item('outcome','asthma
 const neonatalAim='To assess the benefits and harms of air compared with supplemental oxygen for resuscitation of term or late preterm infants at birth in reducing rates of mortality and long‐term neurodevelopmental impairment (NDI)';
 const neonatalQuestion={...question('picos',neonatalAim+'. To assess whether the benefits and harms differ by gestational age. We included trials comparing air with any supplemental oxygen.'),review_topic:'Interventions in term or late preterm infants'};
 const neonatalGroup=[item('population','term or late preterm infants'),item('population','received respiratory support at birth'),item('population','delivery room')];
-const neonatalTitle='Air for resuscitation of term or late preterm infants at birth';
+const neonatalTitle='Air for resuscitation of term or late preterm infants';
 assert.equal(Methods.topic(neonatalQuestion,[...neonatalGroup,item('intervention','air'),item('comparator','any supplemental oxygen')]),neonatalTitle);
 assert.equal(Methods.topic(neonatalQuestion,[...neonatalGroup,item('intervention',neonatalAim),item('comparator',neonatalAim)]),neonatalTitle);
 const reported={...neonatalQuestion,original_text:neonatalAim+'. We included randomised trials in term and late preterm infants who received respiratory support at birth comparing air with any supplemental oxygen.',review_topic:'Interventions compared with supplemental oxygen in term and late preterm infants or infants'};
@@ -53,6 +53,12 @@ const longPopulation='adults with fibromyalgia experiencing recurrent widespread
 const longScope=[item('population',longPopulation),item('intervention','exercise')];
 assert.equal(Methods.topic({...question('pico'),review_topic:'Exercise in adults with fibromyalgia'},longScope),'Exercise in adults with fibromyalgia');
 assert.equal(Methods.topic({...question('pico'),review_topic:'Exercise in adults with COPD'},longScope),'Exercise in adults with fibromyalgia');
+const dose='hormone therapy (oestrogen with or without progestogens) for at least one year';
+assert.equal(topic('picos',[item('intervention',dose),item('outcome','mortality, cancer and fractures')],
+ 'To assess long-term outcomes of hormone therapy. We included double-blind randomised trials in perimenopausal and postmenopausal women.'),
+ 'Hormone therapy in perimenopausal and postmenopausal women');
+assert.equal(topic('pico',[item('intervention','exercise'),item('population','adults aged 65 years or older with arthritis')],
+ 'To assess exercise in adults with arthritis.'),'Exercise in adults with arthritis');
 const titles=['Exercise in children','Exercise in children','Workplace exposures in adults'].map(objective=>({objective}));
 assert.equal(Methods.projectTopic(titles),'Exercise in children · Workplace exposures in adults');
 const other={objective:'Continuous blood glucose monitoring for adults with newly diagnosed type 2 diabetes'};

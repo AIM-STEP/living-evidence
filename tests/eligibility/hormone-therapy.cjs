@@ -46,7 +46,7 @@ async function generate(question,additional=[],compound=false){
 test('separate the treatment, its qualifiers, clinical outcomes and review scope',async()=>{
  const {project,view}=await generate(text);
  if(process.argv.includes('--show'))console.log(view.reviewTopic+'\n'+JSON.stringify(view.rows)+'\n'+JSON.stringify(view.descriptionContext.outcome_groups)+'\n'+view.manuscriptParagraph);
- assert.equal(view.reviewTopic,'Long-term effects of hormone therapy in perimenopausal and postmenopausal women');
+ assert.equal(view.reviewTopic,'Hormone therapy in perimenopausal and postmenopausal women');
  const include=dimension=>view.rows.find(row=>row.dimension===dimension)?.include.join(' ')||'';
  const intervention=include('Intervention');
  assert.match(intervention,/hormone therapy/i);
@@ -86,7 +86,7 @@ test('separate the treatment, its qualifiers, clinical outcomes and review scope
 
 test('merge a formulation repeated beside a complete arm without duplicating the shared treatment duration',async()=>{
  const {view}=await generate(text,[],true);
- assert.equal(view.reviewTopic,'Long-term effects of hormone therapy in perimenopausal and postmenopausal women');
+ assert.equal(view.reviewTopic,'Hormone therapy in perimenopausal and postmenopausal women');
  assert.deepEqual(view.rows.find(row=>row.dimension==='Intervention').include,[
   'hormone therapy (oestrogen formulations with or without progestogens)'
  ]);
@@ -124,7 +124,7 @@ test('opening a saved v7 machine draft repairs its original citations without ge
  const store=()=>{storage.setItem(service.keys.project,JSON.stringify(project));storage.setItem(service.keys.legacy,JSON.stringify(legacy));};
  store();
  const stage=service.refreshPresentation(legacy);
- assert.equal(stage.classic.reviewTopic,'Long-term effects of hormone therapy in perimenopausal and postmenopausal women');
+ assert.equal(stage.classic.reviewTopic,'Hormone therapy in perimenopausal and postmenopausal women');
  const arm=stage.classic.rows.find(row=>row.dimension==='Intervention').include;
  assert.deepEqual(arm,['hormone therapy (oestrogen formulations with or without progestogens)']);
  assert.match(stage.classic.manuscriptParagraph,/for at least one year/i);

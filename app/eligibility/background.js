@@ -4,8 +4,8 @@
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
-const presentationVersion='framework-display-v9';
-// Bump when extraction or criteria output changes. Interface-only updates retain the same results.
+const presentationVersion='framework-display-v10';
+// Bump when eligibility semantics change. Presentation updates can use the saved evidence.
 const generationVersion='20261120-criteria-release-26';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
@@ -256,12 +256,12 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   }
   project.revision++;project.updated_at=D.now();
   let corrected=false;
-  if(legacy.activeGenerator==='machine'&&!legacy.confirmed&&!legacy.finalCriteria){
+  if(saved.presentation_version!=='framework-display-v9'&&legacy.activeGenerator==='machine'&&!legacy.confirmed&&!legacy.finalCriteria){
    for(const question of project.questions.filter(q=>q.active!==false)){
     if(M.repairSavedExtraction(project,question))corrected=true;
    }
   }
-  if(!corrected&&/^framework-display-v[2-8]$/.test(saved.presentation_version)&&saved.elements.some(e=>e.active!==false)){
+  if(!corrected&&/^framework-display-v[2-9]$/.test(saved.presentation_version)&&saved.elements.some(e=>e.active!==false)){
    const visible=E.render_output(project).questions;
    for(const question of project.questions.filter(q=>q.active!==false)){
     const elements=visible.find(q=>q.question_id===question.question_id).elements;

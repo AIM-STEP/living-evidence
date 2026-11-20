@@ -326,7 +326,24 @@ function compactTitle(value,maxWords=14,maxLength=105){
   (value.match(/[\u3400-\u9fff]/gu)||[]).length<=28;
 }
 function populationTitleHead(value){
- return value.split(/[,;]\s+|\s+(?:who (?:were|are|have|had|received)|experiencing|recruited|enrolled|followed up|participating in)\s+/iu)[0];
+ return value.split(/[,;]\s+|\s+(?:who (?:were|are|have|had|received)|experiencing|recruited|enrolled|followed up|participating in)\s+/iu)[0]
+  .replace(/\s+aged\s+(?:(?:at least|at most|between|over|under)\s+)?[<>≥≤=\s]*\d+(?:[.\d]*)(?:\s*(?:to|and|[-–])\s*\d+(?:[.\d]*))?\s+(?:days?|weeks?|months?|years?)(?:\s+or (?:older|younger))?(?=$|\s)/iu,'')
+  .trim();
+}
+const populationNoun=/\b(?:adults?|participants?|patients?|infants?|neonates?|newborns?|children|adolescents?|people|men|women|survivors?|caregivers?|inpatients?|outpatients?)\b/iu;
+function statedPopulation(original){
+ const [primary,...sentences]=original.split(/[.!?](?=\s|$)|[;\n]/u);
+ const inclusions=sentences.filter(sentence=>/^\s*(?:we\s+)?(?:included|include|eligible studies included)\b/iu.test(sentence));
+ // Read complete noun phrases from the objective. Ignore trailing settings and time cues.
+ for(const sentence of [primary,...inclusions]){
+  for(const lead of [...sentence.matchAll(/\s+(?:in|among|of|for|enrolling)\s+/giu)].reverse()){
+   const group=sentence.slice(lead.index+lead[0].length).split(/\s+(?:at birth|at baseline|in (?:the |reducing|improving)|took|were assigned|compared with|versus|to (?:assess|determine|improve|reduce))\b/iu)[0];
+   const candidate=populationTitleHead(titlePhrase(group));
+   const noun=populationNoun.exec(candidate);
+   if(noun&&noun.index<=40&&compactTitle(candidate)&&!/[?;,:()]|\b(?:versus|compared|outcomes?|trials?)\b/iu.test(candidate))return lower(candidate);
+  }
+ }
+ return '';
 }
 function comparisonTitleTerms(value,original){
  let text=value.replace(/[‐‑]/gu,'-')
@@ -341,14 +358,14 @@ function genericArmTitle(text){
 }
 function interventionTitleName(value){
  if(/^(?:to |we (?:aim(?:ed)? to )?)(?:assess|evaluate|examine|investigate|determine|compare)\b/iu.test(value))return treatmentObjective(value)?.name||'';
- let text=titlePhrase(value).replace(/^(?:various|different|multiple|several)\s+/iu,'');
+ let text=titlePhrase(value).replace(treatmentDuration,'').replace(/^(?:various|different|multiple|several)\s+/iu,'');
  const definition=/^(.+?)\s*\(([^()]+)\)$/u.exec(text);
  if(definition){
   const [,head,detail]=definition;
   // A placeholder may introduce the actual arm name. A named arm may instead
   // be followed by a description of how it was delivered.
   if(unnamedIntervention.test(head))text=/^(?:e\.g\.|including\b|such as\b|for example\b)/iu.test(detail)?'':detail.trim();
-  else if(/^(?:sessions?\b|(?:administered|delivered|provided|performed|conducted)\s+|[^()]+\balone or (?:combined |in combination )?with\b)/iu.test(detail))text=head.trim();
+  else text=head.trim();
  }
  const delivery=/^(.+?)\s*,?\s+(?:delivered|administered|provided|performed)\s+(?:in|over|during|by|for|at)\b/iu.exec(text);
  if(delivery&&!/\b(?:and|or|plus|combined with)\b/iu.test(text.slice(delivery[1].length)))text=delivery[1].trim();
@@ -372,11 +389,11 @@ function clinicalComparisonTitle(original,intervention,comparison,populations){
  const armPattern=value=>value.replace(/^(?:any|the)\s+/i,'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const pair=new RegExp('(?:^|\\s)('+armPattern(intervention)+')\\s*,?\\s*(compared (?:with|to)|versus|vs\\.?|with)\\s+(?:any |the )?('+armPattern(comparison)+')\\s+(for .+)$','i').exec(primary);
  if(!pair||/^with$/i.test(pair[2])&&!/\bcompar(?:e|ing)\s*$/i.test(primary.slice(0,pair.index)))return '';
- const use=titlePhrase(pair[4].split(/,?\s+(?:in (?:reducing|improving|increasing|decreasing)\b|(?:to|and to) (?:assess|evaluate|determine|reduce|improve)\b|using (?:a |an )?(?:network )?meta[- ]analysis\b)|[,;]\s*(?:including|with particular|according to)\b/i)[0]);
+ const use=titlePhrase(pair[4].split(/,?\s+(?:in (?:reducing|improving|increasing|decreasing)\b|(?:to|and to) (?:assess|evaluate|determine|reduce|improve)\b|using (?:a |an )?(?:network )?meta[- ]analysis\b)|[,;]\s*(?:including|with particular|according to)\b/i)[0]).replace(/\s+at birth$/iu,'');
  if(!/^for (?:the )?(?:[\w-]+ ){0,2}(?:[\w-]+(?:tion|sion|ment|ing)|diagnosis|repair|relief|control)\b/i.test(use))return '';
  const contains=(whole,part)=>(' '+whole.toLowerCase()+' ').includes(' '+part.toLowerCase()+' ');
  const groups=populations.map(e=>({value:lower(titlePhrase(e.normalized_text)),confirmed:e.explicit_revision||e.decision_status==='confirmed_by_user'}));
- let candidate=intervention+' '+use;
+ let candidate=(interventionTitleName(intervention)||intervention)+' '+use;
  function matchesPopulation(g){
   const head=populationTitleHead(g.value);
   if(!head)return false;
@@ -404,12 +421,16 @@ function topic(question,elements){
      e.source_refs?.some(ref=>ref.quote===e.title_population))return titlePhrase(e.title_population);
   const arm=['intervention','exposure'].includes(e.dimension_id)&&objectiveArms(e.normalized_text);
   const value=arm?arm.intervention:e.normalized_text;
-  return e.dimension_id==='intervention'?interventionTitleName(value):titlePhrase(value);
+  if(e.dimension_id==='intervention')return interventionTitleName(value);
+  return ['population','sample'].includes(e.dimension_id)?populationTitleHead(titlePhrase(value)):titlePhrase(value);
  }
  // Project only the named dimension onto the original logic tree. Alternatives
  // and combined interventions must not be reduced to the first listed arm.
  function wording(dimension){
-  const group=scope.filter(e=>e.dimension_id===dimension);
+  let group=scope.filter(e=>e.dimension_id===dimension);
+  if(['population','sample'].includes(dimension)&&group.some(e=>populationNoun.test(elementTitle(e)))){
+   group=group.filter(e=>populationNoun.test(elementTitle(e)));
+  }
   const values=[...new Set(group.map(e=>lower(elementTitle(e))).filter(completePhrase))];
   if(values.length<=1)return values[0]||'';
   if(question.logic&&group.every(e=>e.element_id)){
@@ -418,15 +439,20 @@ function topic(question,elements){
    const mapped=new Set(leaves(tree));
    if(group.every(e=>mapped.has(e.element_id)))return naturalExpression(tree,records);
   }
-  return values.join(' / ');
+  return join(values);
  }
  const original=norm(question.original_text||'');
  const compareReview=titleDimensions[frame]==='intervention';
  const revisedPopulation=elements.some(e=>e.active!==false&&['population','sample'].includes(e.dimension_id.split('.')[0])&&
   (e.explicit_revision||e.decision_status==='confirmed_by_user'));
  const effectAim=compareReview?treatmentObjective(original):null;
- const populationValue=(!revisedPopulation&&effectAim?.population)||wording('population')||wording('sample');
- const population=compareReview?comparisonTitleTerms(populationValue,original):populationValue;
+ const pendingPopulation=!revisedPopulation&&elements.find(e=>e.active!==false&&e.review_pending&&!e.source_occurrence_pending&&e.disposition==='include'&&
+  ['population','sample'].includes(e.dimension_id)&&e.source_refs?.some(ref=>armKey(ref.quote)===armKey(e.normalized_text)));
+ const populationValue=(!revisedPopulation&&effectAim?.population)||wording('population')||wording('sample')||
+  (!revisedPopulation&&(statedPopulation(original)||pendingPopulation&&elementTitle(pendingPopulation)))||'';
+ const population=populationTitleHead(compareReview?comparisonTitleTerms(populationValue,original):populationValue);
+ const titlePopulations=scope.filter(e=>['population','sample'].includes(e.dimension_id));
+ if(!titlePopulations.length&&population)titlePopulations.push({normalized_text:population});
  // Keep an intact clinical group before ancillary recruitment or follow-up details.
  const populationHead=populationTitleHead(population);
  const shortPopulation=compactTitle(populationHead)?populationHead:'';
@@ -464,11 +490,11 @@ function topic(question,elements){
    const protectedArm=elements.some(e=>e.active!==false&&['intervention','comparator'].includes(e.dimension_id)&&
     (e.decision_status==='confirmed_by_user'||e.explicit_revision)&&(e.scope_status==='not_applicable'||e.scope_status==='unrestricted'));
    if(!protectedArm&&(dimension!=='intervention'||matches(subject,pair.intervention))&&matches(comparison,pair.comparator)){
-    primaryTitle=clinicalComparisonTitle(original,lower(titlePhrase(pair.intervention)),lower(titlePhrase(pair.comparator)),scope.filter(e=>['population','sample'].includes(e.dimension_id)));
+    primaryTitle=clinicalComparisonTitle(original,lower(titlePhrase(pair.intervention)),lower(titlePhrase(pair.comparator)),titlePopulations);
    }
   }
  }
- const clinicalTitle=primaryTitle||(dimension==='intervention'&&clinicalComparisonTitle(original,subject,comparison,scope.filter(e=>e.dimension_id==='population'||e.dimension_id==='sample')));
+ const clinicalTitle=primaryTitle||(dimension==='intervention'&&clinicalComparisonTitle(original,subject,comparison,titlePopulations));
  if(dimension==='intervention')subject=comparisonTitleTerms(subject,original);
  if(dimension==='index_test'){
   if(/\bdiagnostic accuracy\b/i.test(original))subject='diagnostic accuracy of '+subject;
@@ -479,11 +505,10 @@ function topic(question,elements){
   if(measure&&!subject.toLowerCase().includes(measure.toLowerCase()))subject=measure.toLowerCase()+' of '+subject;
  }
  const outcome=wording('outcome');
- const focus=subject&&outcome&&!/^(?:(?:patient[- ]relevant|patient[- ]important|clinical|health|all|any) )?outcomes?$/i.test(outcome)&&
-  ['exposure','intervention'].includes(dimension)&&!subject.toLowerCase().includes(outcome.toLowerCase())?outcome:'';
- const alternatives=question.logic?.op==='any_of'&&scope.filter(e=>e.dimension_id===dimension).length>1&&scope.filter(e=>['population','sample'].includes(e.dimension_id)).length>1;
- const people=population&&subject&&!alternatives&&!subject.toLowerCase().includes(population.toLowerCase())?' in '+population:'';
- const withFocus=focus?(dimension==='intervention'&&/\beffects?\b/i.test(original)?'effects of '+subject+' on '+focus:subject+' and '+focus):'';
+ const focus=subject&&dimension==='exposure'&&compactTitle(outcome,5,45)&&!/[,(]|\b(?:and|or|outcomes?)\b/iu.test(outcome)&&
+  !subject.toLowerCase().includes(outcome.toLowerCase())?outcome:'';
+ const people=population&&subject&&!subject.toLowerCase().includes(population.toLowerCase())?' in '+population:'';
+ const withFocus=focus?subject+' and '+focus:'';
  // When the full clinical phrase exceeds the display budget, the existing
  // extraction may already contain a short title. Accept only supported wording
  // grounded in the intervention, exposure or other focal dimensions.
@@ -503,17 +528,14 @@ function topic(question,elements){
    return tokens(value).some(token=>terms.includes(token));
   })?suggested:'';
  }
- const economicAim=/^(?:to |we (?:aim(?:ed)? to )?)?(?:assess|evaluate|examine|determine) (?:the )?clinical and cost[‐‑– -]effectiveness of\b/iu.test(original);
- const economicTitle=economicAim&&dimension==='intervention'&&subject&&people?'Clinical and cost-effectiveness of '+subject+people:'';
- const timedAim=effectAim&&/^(?:long|short|medium)-term /iu.test(effectAim.goal)&&armKey(subject)===armKey(effectAim.name)?effectAim.goal+' of '+subject+people:'';
- let result=clinicalTitle||(compactTitle(timedAim)?timedAim:'')||(compactTitle(economicTitle,19,140)?economicTitle:'')||[withFocus&&withFocus+people,subject&&subject+people].find(value=>compactTitle(value));
+ let result=clinicalTitle||[withFocus&&withFocus+people,subject&&subject+people].find(value=>compactTitle(value));
  if(!result){
   const shortPeople=people&&shortPopulation&&population!==shortPopulation?' in '+shortPopulation:'';
   const shorter=[withFocus&&shortPeople&&withFocus+shortPeople,subject&&shortPeople&&subject+shortPeople];
   const supported=supportedTitle();
   const namesPopulation=shortPopulation&&armKey(supported).includes(armKey(shortPopulation));
   result=shorter.find(value=>compactTitle(value))||(people&&compactTitle(subject+people,19,135)?subject+people:'')||
-   (namesPopulation?supported:'')||(people?shortPopulation:'')||supported||[withFocus,subject].find(value=>compactTitle(value));
+   (namesPopulation?supported:'')||(population?(shortPopulation||population):supported||[withFocus,subject].find(value=>compactTitle(value)));
  }
  if(!result){
   const names={exposure:'Exposures',phenomenon_of_interest:'Experiences',concept:'Review concept',index_test:'Diagnostic testing',condition:'Clinical condition',target_condition:'Clinical condition',outcome:'Outcomes',core_scope:'Review scope'};
