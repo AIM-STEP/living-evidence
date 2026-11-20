@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261120-criteria-release-31"></script>
-<script src="app/secure-origin.js?v=20261120-criteria-release-31"></script>
+<script src="app/eligibility-release.js?v=20261120-criteria-release-32"></script>
+<script src="app/secure-origin.js?v=20261120-criteria-release-32"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -68,8 +68,8 @@ p{margin:8px 0}
 .stat span{font-size:11px;color:var(--muted)}
 .team-overview{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:24px;margin-bottom:20px}
 .team-overview h3{font-size:17px;margin:0 0 15px}
-.team-track{height:12px;border-radius:20px;background:#e3e4e8;overflow:hidden;margin:0 0 17px}
-.team-track span{display:block;height:100%;background:#6675be;transition:width .2s}
+
+
 .team-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .team-metric{display:flex;align-items:center;gap:8px;min-width:0;padding:6px 0;background:none;border:0;color:var(--ink);text-align:left}
 .team-metric strong{font-size:22px;line-height:1}
@@ -160,7 +160,7 @@ th{background:#f4f4f4}
 .btn:focus-visible,.vote:focus-visible,.round:focus-visible,.collapse-toggle:focus-visible{outline:2px solid var(--plum);outline-offset:3px}
 .vote:disabled,.round:disabled,.collapse-toggle:disabled{opacity:.48;cursor:not-allowed}
 .fulltext-source-head{flex-wrap:wrap;padding-top:11px;padding-bottom:11px}.pilot-panel-head{flex-wrap:wrap}.pilot-heading{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}.pilot-help-button{display:inline-grid;place-items:center;width:22px;height:22px;padding:1px;border:0;background:none;color:#6d7cc1;cursor:pointer}.pilot-help-button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round}.pilot-help-button .pilot-help-dot{fill:currentColor;stroke:none}.pilot-help-button:focus-visible{outline:2px solid var(--plum);outline-offset:2px;border-radius:50%}.pilot-help-tooltip{position:fixed;z-index:1000;width:min(470px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;padding:15px 17px;background:#fff;border:1px solid #dfe1ea;border-radius:8px;box-shadow:0 5px 20px #24152c20}.pilot-help-tooltip .pilot-steps{margin:0}.pilot-help-tooltip .pilot-steps li+li{margin-top:8px}.pilot-title-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}.pilot-title-actions h2{margin:0}.pilot-panel-head>.toolbar{margin-left:auto}.fulltext-source-head>.source-actions{margin-left:auto}
-.full-intro{margin:0 0 10px}.full-track{margin:12px 0 6px}.full-now{display:flex;align-items:center;gap:8px;margin:4px 0 8px;font-size:12px;color:var(--ink2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.pulse{flex:none;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}.sub-head{font-size:14px;margin:16px 0 6px}.full-feed{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:6px;background:#fff}.full-feed li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--soft);font-size:12px;min-width:0}.full-feed li:first-child{border-top:0}.feed-title{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.feed-why{flex:none;color:var(--muted);max-width:40%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.check-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}.check-head .sub-head{margin:0 8px 0 0}.check-head .label{margin:0}.check-summary .ok{color:var(--green);font-weight:700}.check-summary .warn{color:var(--red);font-weight:700}#check-more{margin-top:8px}
+.full-intro{margin:0 0 10px}.full-now{display:flex;align-items:center;gap:8px;margin:4px 0 8px;font-size:12px;color:var(--ink2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.pulse{flex:none;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}.sub-head{font-size:14px;margin:16px 0 6px}.full-feed{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:6px;background:#fff}.full-feed li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--soft);font-size:12px;min-width:0}.full-feed li:first-child{border-top:0}.feed-title{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.feed-why{flex:none;color:var(--muted);max-width:40%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.check-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}.check-head .sub-head{margin:0 8px 0 0}.check-head .label{margin:0}.check-summary .ok{color:var(--green);font-weight:700}.check-summary .warn{color:var(--red);font-weight:700}#check-more{margin-top:8px}
 .full-summary{grid-template-columns:repeat(6,minmax(0,1fr))}.full-summary>div.alert strong{color:var(--red)}.feed-pass{flex:none;font-size:11px;color:var(--muted);width:44px}.badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}.pilot-filter .count{font-weight:400;color:var(--muted);margin-left:2px}.panel.is-collapsed>.panel-footer{border-top:0}
 @media(max-width:760px){.full-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .export-results{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.export-results .label{margin:0;font-size:12px}
@@ -270,8 +270,8 @@ th{background:#f4f4f4}
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261021-49">
 <script defer src="app/tool-shell.js?v=20261117-project-order-1"></script>
-<link rel="stylesheet" href="app/progress-display.css?v=20261021-1">
-<script src="app/progress-display.js?v=20261021-1" defer></script>
+<link rel="stylesheet" href="app/progress-display.css?v=20261120-workflow-time-1">
+<script src="app/progress-display.js?v=20261120-workflow-time-1"></script>
   <link rel="icon" type="image/svg+xml" href="assets/achieve-pig-favicon.svg?v=20261022-11">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261022-11">
 </head>
@@ -320,7 +320,7 @@ th{background:#f4f4f4}
 <div class="panel-body" id="full-body">
 
 <div class="source-summary pilot-summary full-summary" id="full-categories"><div><strong id="full-decided">0 / 0</strong><span data-ui-localize>Completed</span></div><div><button class="full-category" type="button" data-full-category="include" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-include">0</strong><span data-ui-localize>Yes</span></button></div><div><button class="full-category" type="button" data-full-category="unclear" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-unclear">0</strong><span data-ui-localize>Maybe</span></button></div><div><button class="full-category" type="button" data-full-category="exclude" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-exclude">0</strong><span data-ui-localize>No</span></button></div><div><button class="full-category" type="button" data-full-category="conflicts" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-conflicts">0</strong><span data-ui-localize>Conflicts</span></button></div><div><button class="full-category" type="button" data-full-category="check" aria-pressed="false" aria-expanded="false" aria-controls="check-list"><strong id="full-check">0</strong><span data-ui-localize>Check</span></button></div></div>
-<div class="team-track full-track" role="progressbar" aria-label="Full-text assess complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="full-track"><span id="full-bar" style="width:0"></span></div>
+<p id="screening-timing" class="workflow-time" role="timer" hidden></p>
 <p class="hint" id="full-progress" hidden></p>
 <p class="full-now" id="full-now" hidden></p>
 <div class="notice" id="full-message" hidden role="status"></div>
@@ -403,7 +403,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js?v=20261006-queue1"></script>
 <script src="app/fulltext-assistant.js?v=20261006-queue1"></script>
-<script src="app/eligibility-reset.js?v=20261120-criteria-release-31"></script><script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script><script src="app/search-criteria-editor.js?v=20261119-clear-criteria-1"></script><script src="app/screening-criteria-dialog.js?v=20261120-criteria-release-31"></script><script>
+<script src="app/eligibility-reset.js?v=20261120-criteria-release-32"></script><script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script><script src="app/search-criteria-editor.js?v=20261119-clear-criteria-1"></script><script src="app/screening-criteria-dialog.js?v=20261120-criteria-release-32"></script><script>
 window.AIMSTEPProjectAccess?.run(function(){
 
 'use strict';
@@ -1554,7 +1554,7 @@ async function approvePilot(){
 }
 
 /* ---------------- All reports ---------------- */
-const fullNow=new Map(),fullDone=[];let fullFilter='',fullShown=20,fullReviewSaving=false;
+const fullNow=new Map(),fullDone=[];let screeningStartedAt=null;let fullFilter='',fullShown=20,fullReviewSaving=false;
 const expandedFullAssessments=new Set(),collapsedFullAssessments=new Set(),fullReviewErrors=new Map();
 const ftAI=(storeObj,id)=>{const a=storeObj[id];return a&&screeningStagesReady()&&a.stageSig===screeningStageSig()&&a.criteriaSig===workspace.criteriaSig&&a.prompt?.startsWith(FT_PROMPT)&&a.calibrationHash===workspace.pilot.approved?.calibration?.hash&&a.documentHash===workspace.docs[id]?.hash?a:null};
 const pilotHumanOf=id=>{const h=workspace.pilot.human[id];return h&&validPilotReview(id,h.round)?h:null;};
@@ -1617,7 +1617,7 @@ async function runFull(){
   await resolvePilotModel();if(busy||fullReviewSaving||!approvalsValid())return;
   const approved=workspace.pilot.approved,tasks=screenable().flatMap(r=>[1,2].filter(v=>!ftAI(v===1?workspace.full.ai:workspace.full.ai2,r.uid)).map(v=>[r.uid,v]));
   if(!tasks.length){maybeComplete();await save();render();return}
-  busy='full';controller=new AbortController();render();
+  busy='full';screeningStartedAt=Date.now();controller=new AbortController();render();
   try{
     const model=await resolvePilotModel(controller.signal);
     if(approved.model&&model.name!==approved.model&&!/^local/.test(model.name))throw new Error('The pilot was approved with '+approved.model+', but the local server now runs '+model.name+'. Approve a pilot round with this model first.');
@@ -1639,7 +1639,10 @@ async function runFull(){
     if(failed.length)showNotice('full-message',failed.length+' AI reading'+(failed.length===1?' was':'s were')+' skipped ('+failed[0].message+'). Every other report was read. Click Resume to try again.','warning');
     else if(!controller.signal.aborted)showNotice('full-message',endMessage(summary()),'success');
   }catch(e){showNotice('full-message',e.name==='AbortError'?'Stopped. Every finished reading is saved; click Resume to continue.':e.message,e.name==='AbortError'?'warning':'error');if(e.name!=='AbortError')log('model-error',{stage:'full',message:text(e.message,500)})}
-  finally{busy='';controller=null;fullNow.clear();await save().catch(()=>{});render()}
+  finally{
+    workspace.full.elapsedMs=Math.max(0,Date.now()-screeningStartedAt);
+    screeningStartedAt=null;busy='';controller=null;fullNow.clear();await save().catch(()=>{});render();
+  }
 }
 function endMessage(s){const open=s.humanCheck-s.humanChecked+s.conflicts-s.conflictsResolved;return open?'The AI has read every report twice. Select Check or Conflicts above to review '+open+' report'+(open===1?'':'s')+' (unclear reports, conflicts and selected exclusions).':'Full-text assess is complete. Export the included reports, or the excluded ones with reasons.'}
 async function fullDecide(id,decision){
@@ -1817,12 +1820,12 @@ function renderPilot(){
   gate.title=approved?'Approved. Click to withdraw.':canApprove?'Approve this round to start formal assessment.':'Complete at least one round and save all reviews first.';
 }
 function renderFull(){
-  const s=summary(),valid=approvalsValid(),calls=screenable().reduce((n,r)=>n+(ftAI(workspace.full.ai,r.uid)?0:1)+(ftAI(workspace.full.ai2,r.uid)?0:1),0),share=s.assessed?Math.floor(s.decided/s.assessed*100):0;
+  const s=summary(),valid=approvalsValid(),calls=screenable().reduce((n,r)=>n+(ftAI(workspace.full.ai,r.uid)?0:1)+(ftAI(workspace.full.ai2,r.uid)?0:1),0);
   $('full-decided').textContent=s.decided+' / '+s.assessed;$('full-include').textContent=s.include;$('full-exclude').textContent=s.exclude;$('full-unclear').textContent=s.unclear;
   $('full-conflicts').textContent=s.conflicts;$('full-conflicts').parentElement.classList.toggle('alert',s.conflicts>s.conflictsResolved);$('full-check').textContent=s.humanCheck;
-  $('full-bar').style.width=share+'%';$('full-track').setAttribute('aria-valuenow',String(share));
+  globalThis.AimstepWorkflowTiming?.render($('screening-timing'),screeningStartedAt,workspace.full.elapsedMs);
   const times=workspace.full.times||[],avg=fullDone.length>=4?(fullDone.at(-1)-fullDone[0])/(fullDone.length-1):times.length?times.reduce((a,b)=>a+b,0)/times.length/AI_WORKERS:0;
-  $('full-progress').textContent=share+'% · '+s.decided+' of '+s.assessed+' reports decided'+(calls&&avg?' · '+(avg*calls<60000?'under a minute':'about '+fmtDuration(avg*calls))+' of AI reading left':'')+(s.reasons.length?' · Excluded by reason: '+s.reasons.sort((a,b)=>b[1]-a[1]).map(([r,n])=>r+' '+n).join(', '):'');
+  $('full-progress').textContent=s.decided+' of '+s.assessed+' reports decided'+(calls&&avg?' · '+(avg*calls<60000?'under a minute':'about '+fmtDuration(avg*calls))+' of AI reading left':'')+(s.reasons.length?' · Excluded by reason: '+s.reasons.sort((a,b)=>b[1]-a[1]).map(([r,n])=>r+' '+n).join(', '):'');
   const inFlight=[...fullNow.values()];$('full-now').hidden=true;$('full-now').innerHTML=inFlight.map(t=>'<span class="now-item"><span class="pulse" aria-hidden="true"></span>'+esc(t)+'</span>').join('');
   const start=$('start-full');start.textContent=workspace.full.startedAt&&calls?'Resume':'Start';start.disabled=!valid||!!busy||!calls;start.title=!valid?'Approve the pilot first.':calls?calls+' AI readings left (two per report).':'Both AI readings are complete.';
   $('stop-full').hidden=busy!=='full';

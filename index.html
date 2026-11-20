@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <base href="/">
-<script src="app/eligibility-release.js?v=20261120-criteria-release-31"></script>
-<script src="app/secure-origin.js?v=20261120-criteria-release-31"></script>
+<script src="app/eligibility-release.js?v=20261120-criteria-release-32"></script>
+<script src="app/secure-origin.js?v=20261120-criteria-release-32"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="AIM-STEP workflow: start a project and work through the evidence-based research toolkit." />
@@ -1268,24 +1268,10 @@
         gap: 14px;
         flex: 0 0 auto;
       }
-      .workspace-progress-group { display: flex; align-items: center; gap: 10px; }
-      .workspace-progressbar {
-        width: 142px;
-        height: 17px;
-        padding: 2px;
-        overflow: hidden;
-        border: 1px solid #c7cce7;
-        border-radius: 999px;
-        background: #fff;
-      }
-      .workspace-progressbar span {
-        display: block;
-        width: 12.5%;
-        height: 100%;
-        border-radius: 999px;
-        background: #10258b;
-      }
-      .workspace-progress-label { color: #384482; font-size: 9px; white-space: nowrap; }
+
+
+
+
       .workspace-setup-button {
         min-width: 0;
         width: max-content;
@@ -1358,7 +1344,7 @@
         .project-workspace { padding-top: 16px; }
         .workspace-topbar { align-items: flex-start; flex-direction: column; padding: 20px; }
         .workspace-controls { width: 100%; justify-content: space-between; gap: 8px; }
-        .workspace-progressbar { width: min(24vw, 142px); }
+
         .workspace-steps { gap: 14px; margin-top: 16px; }
         .workspace-accordion summary { min-height: 82px; padding: 18px; }
         .workspace-panel { padding: 20px; }
@@ -1494,13 +1480,8 @@
         font-size: 12px;
         line-height: 1.25;
       }
-      .workspace-progress-track {
-        height: 34px;
-        margin: 0 0 25px;
-        overflow: hidden;
-        background: #e6e8ef;
-      }
-      .workspace-progress-track span { display: block; width: 0; height: 100%; background: #707dc2; }
+
+
       .workspace-stats {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1694,7 +1675,7 @@ body.project-create-mode .workflow-column #project-workspace { display: none !im
 body.project-page-mode .toolset-layout { display: none; }
 .workflow-column .workspace-topbar { flex-wrap: wrap; gap: 16px; padding: 20px; }
 .workflow-column .workspace-controls { flex-wrap: wrap; max-width: 100%; }
-.workflow-column .workspace-progressbar { width: 112px; }
+
 .workflow-column .workspace-dashboard { grid-template-columns: 1fr; }
 .workflow-column .workspace-dashboard-main { padding: 0 0 20px; }
 .workflow-column .workspace-dashboard-side {
@@ -1716,11 +1697,9 @@ body.project-page-mode .toolset-layout { display: none; }
   <link rel="stylesheet" href="app/theme.css?v=20261022-3">
   <link rel="stylesheet" href="app/dashboard.css?v=20261117-header-unified-1">
 <script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
-<script src="app/criteria-grounding.js?v=20261120-criteria-release-31"></script>
+<script src="app/criteria-grounding.js?v=20261120-criteria-release-32"></script>
 <script src="app/project-task-status.js?v=20261118-criteria-actions-1"></script>
 <script defer src="app/header-navigation.js?v=20261021-47"></script>
-<link rel="stylesheet" href="app/progress-display.css?v=20261021-1">
-<script src="app/progress-display.js?v=20261021-1" defer></script>
   <style>.project-task-status{font-size:12px;font-weight:400;color:#686970;margin-left:auto;text-align:right;overflow-wrap:anywhere;max-width:55%}</style>
   <link rel="icon" type="image/svg+xml" href="assets/achieve-pig-favicon.svg?v=20261022-11">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261022-11">
@@ -3565,7 +3544,7 @@ body.project-page-mode .toolset-layout { display: none; }
             // Refresh internal tool documents without changing public links.
             var release = window.AIMSTEPCriteriaRelease, tool = frameTarget.pathname.split("/").pop();
             if (release?.tool(tool)) frameTarget = release.editorURL(frameTarget.href);
-            else if (tool.endsWith(".html")) frameTarget.searchParams.set("appVersion", "20261119-citation-context-1");
+            else if (tool.endsWith(".html")) frameTarget.searchParams.set("appVersion", "20261120-workflow-time-1");
             // Keep proposal documents mounted so in-flight generation survives tool navigation.
             var selectedFrame = defaultFrame;
             if (/\/build-protocol\.html$/i.test(frameTarget.pathname)) {

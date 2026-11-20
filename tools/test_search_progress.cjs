@@ -1,9 +1,24 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync('search-strategy.html','utf8');
-let value,label;const el={};const ctx={state:{concepts:[{}],wordProgressPercent:42},$:()=>el,esc:v=>String(v).replace(/</g,'&lt;').replace(/"/g,'&quot;'),mwController:{},machineWordPending:null,searchWordsReady:()=>false};vm.createContext(ctx);
-vm.runInContext(html.slice(html.indexOf('function progressMarkup('),html.indexOf('function renderWordTerms(')),ctx);
-for(const n of [0,42,100,null]){const markup=ctx.progressMarkup(n,'Test');assert(markup.includes((n??0)+'%'));assert(!markup.includes('…'));assert(markup.includes('progress-fill'));assert(markup.includes('progress-percent'));}
-let updates={};const native={setAttribute:(k,v)=>updates[k]=v},text={};const meter={style:{setProperty:(k,v)=>updates[k]=v},querySelector:q=>q==='progress'?native:text};ctx.updateProgress({querySelector:()=>meter},63,'Actual stage');assert.equal(updates['--progress'],'63%');assert.equal(native.value,63);assert.equal(text.textContent,'63%');
-ctx.updateProgress=(_,v,l)=>{value=v;label=l};ctx.renderWordProgress();assert.equal(value,42);ctx.mwController=null;ctx.searchWordsReady=()=>true;ctx.renderWordProgress();assert.equal(value,100);ctx.searchWordsReady=()=>false;ctx.renderWordProgress();assert.equal(value,0);
-assert(html.includes('transition:width 1.2s ease'));assert(html.includes('onProgress(Math.min(all.length,i+24)/all.length)'));
-console.log('PASS: fill and endpoint percentage, no ellipsis, smooth updates, stage progress, completion and stale states');
+const calls=new Map();
+const state={concepts:[{}],queries:{pubmed:{text:'exercise'}},wordElapsedMs:42000,strategyElapsedMs:18000};
+const runs=[{elapsedMs:19000,endedAt:'2026-01-03'},{elapsedMs:5000,endedAt:'2026-01-02'}];
+const ctx=vm.createContext({state,runs,$:id=>id,machineWordPending:null,
+ AimstepWorkflowTiming:{render:(id,startedAt,elapsedMs)=>calls.set(id,{startedAt,elapsedMs})}});
+vm.runInContext(html.slice(html.indexOf('let wordStartedAt='),html.indexOf('function renderWordTerms(')),ctx);
+vm.runInContext('wordStartedAt=1000; strategyStartedAt=2000; searchStartedAt=3000; activeSearchRun=runs[1];',ctx);
+ctx.renderWordProgress();ctx.renderStrategyTiming();ctx.renderSearchTiming();
+assert.equal(calls.get('word-progress').startedAt,1000);
+assert.equal(calls.get('strategy-progress').startedAt,2000);
+assert.equal(calls.get('search-timing').startedAt,3000);
+vm.runInContext('wordStartedAt=null; strategyStartedAt=null; searchStartedAt=null; activeSearchRun=null;',ctx);
+ctx.renderWordProgress();ctx.renderStrategyTiming();ctx.renderSearchTiming();
+assert.equal(calls.get('word-progress').elapsedMs,42000);
+assert.equal(calls.get('strategy-progress').elapsedMs,18000);
+assert.equal(calls.get('search-timing').elapsedMs,19000);
+state.concepts=[];state.queries={};runs.length=0;
+ctx.renderWordProgress();ctx.renderStrategyTiming();ctx.renderSearchTiming();
+assert(!Number.isFinite(calls.get('word-progress').elapsedMs));
+assert(!Number.isFinite(calls.get('strategy-progress').elapsedMs));
+assert(!Number.isFinite(calls.get('search-timing').elapsedMs));
+console.log('PASS: Search timers use the active run, restore saved durations and clear with the associated results.');

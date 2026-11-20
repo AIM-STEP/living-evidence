@@ -6,7 +6,7 @@ function app(options={}){
  const nodes=new Map(),data=new Map([['aimstep-protocol:test',JSON.stringify(options.saved||fixture)]]),files=new Map(),requests=[],events=new Map();let busyResolve;
  const modelStarted=new Promise(resolve=>{busyResolve=resolve;});
  class E{
-  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.attrs={};this.style={};this.hidden=false;this.disabled=false;this.value='';this._text='';this.classList={toggle(){}};}
+  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.attrs={};this.style={};this.dataset={};this.hidden=false;this.disabled=false;this.value='';this._text='';this.classList={toggle(){}};}
   set id(value){this._id=value;nodes.set(value,this);}get id(){return this._id;}
   set textContent(value){this._text=String(value);this.children=[];}get textContent(){return this._text+this.children.map(child=>child.textContent||'').join('');}
   setAttribute(name,value){this.attrs[name]=String(value);if(name==='hidden')this.hidden=true;}
@@ -21,10 +21,10 @@ function app(options={}){
  }
  for(const match of html.matchAll(/<([a-z][a-z0-9]*)\b[^>]*\bid="([^"]+)"[^>]*>/g)){const node=new E(match[1]);node.id=match[2];node.hidden=/\bhidden(?:\s|>)/.test(match[0]);}
  const get=id=>nodes.get(id)||null;
- const meter=new E('span');meter.appendChild(new E('b'));get('protocol-progress').appendChild(meter);get('generate-protocol').textContent='Generate';get('proposal-import-layout').appendChild(get('proposal-preview'));
+ get('generate-protocol').textContent='Generate';get('proposal-import-layout').appendChild(get('proposal-preview'));
  const storage={getItem:key=>data.get(key)||null,setItem(key,value){if(options.failSave&&key==='aimstep-protocol:test'&&JSON.parse(value).imports.some(file=>file.kind==='generated'))throw Error('Synthetic storage full');data.set(key,value);},removeItem:key=>data.delete(key)};
  class PreviewURL extends URL{}PreviewURL.createObjectURL=()=> 'blob:synthetic-proposal';PreviewURL.revokeObjectURL=()=>{};
- const ctx={console,URL:PreviewURL,URLSearchParams,Blob,AbortController,DOMException,Intl,Date,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,queueMicrotask,Event,
+ const ctx={console,URL:PreviewURL,URLSearchParams,Blob,AbortController,DOMException,Intl,Date,TextEncoder,setTimeout,clearTimeout,setInterval:()=>1,clearInterval(){},queueMicrotask,Event,
   location:{search:'?projectId=test',href:'https://aimsetp.com/build-protocol.html?projectId=test',hostname:'aimsetp.com'},localStorage:storage,
   document:{getElementById:get,documentElement:{lang:'en'},addEventListener(){},querySelectorAll:selector=>selector.startsWith('main ')?[...nodes.values()].filter(node=>['INPUT','BUTTON','TEXTAREA','SELECT'].includes(node.tagName)):[],createElement(tag){const node=new E(tag);if(tag==='canvas'){node.getContext=()=>({fillRect(){},fillText(){},measureText:text=>({width:text.length*10})});node.toBlob=callback=>callback(new Blob([new Uint8Array([255,216,255,217])],{type:'image/jpeg'}));}return node;}},
   indexedDB:{open(){const request={transaction:{abort(){queueMicrotask(()=>request.onerror?.());}}};queueMicrotask(()=>{if(options.blocked)request.onblocked?.();else request.onupgradeneeded?.();});return request;}},confirm:()=>!options.cancelClear,
@@ -46,9 +46,9 @@ function app(options={}){
    return {ok:true,json:async()=>({model:'synthetic-local',message:{content:typeof value==='string'?value:JSON.stringify(value)}})};
   }
  };
- ctx.window=ctx;ctx.parent=ctx;
+ ctx.window=ctx;ctx.parent=ctx;ctx.AIMSTEPProjectAccess={run:fn=>fn()};
  const sandbox=vm.createContext(ctx);
- for(const name of ['protocol-core','protocol-manual','manuscript-core','proposal-context','proposal-drafting','proposal-materials','proposal-pdf','proposal-model','protocol-workspace'])vm.runInContext(fs.readFileSync(path.join(root,'app',name+'.js'),'utf8'),sandbox,{filename:name+'.js'});
+ for(const name of ['protocol-core','protocol-manual','manuscript-core','proposal-context','proposal-drafting','proposal-materials','proposal-pdf','proposal-model','progress-display','protocol-workspace'])vm.runInContext(fs.readFileSync(path.join(root,'app',name+'.js'),'utf8'),sandbox,{filename:name+'.js'});
  return {get,data,files,requests,modelStarted,ctx,state:()=>JSON.parse(data.get('aimstep-protocol:test')),generate:()=>get('generate-protocol').click()};
 }
 test('short but supplied draft fields reach the local model and generate a persisted PDF with right-side preview',async()=>{
@@ -57,6 +57,8 @@ test('short but supplied draft fields reach the local model and generate a persi
  assert(manual.fields.every(field=>!('minWords' in field)&&!('maxWords' in field)));
  assert.deepEqual(manual.validate(fixture.manualProtocolInputs,{draft:true}),[]);
  const page=app();await page.generate();
+ assert.match(page.get('protocol-timing').textContent,/^Elapsed time · \d+:\d{2}$/);
+ assert(Number.isFinite(page.state().elapsedMs));
  assert.equal(page.requests.length,3);assert(page.requests.every(request=>request.url==='http://127.0.0.1:8765/api/eligibility/model'&&request.body.provider==='local'));
  assert.equal(page.state().imports.length,1);const file=page.state().imports[0];assert.equal(file.kind,'generated');assert(file.name.endsWith('.pdf'));assert.equal(page.files.get(file.id).type,'application/pdf');assert((await page.files.get(file.id).text()).startsWith('%PDF-1.4'));
  assert(page.get('proposal-generation-status').textContent.includes('Proposal generated'));assert.equal(page.get('generate-protocol').disabled,false);assert.equal(page.get('generate-protocol').textContent,'Generate');
@@ -144,6 +146,7 @@ test('header Clear empties the form while preserving generated files and earlier
  const page=app();await page.generate();const id=page.state().imports[0].id;
  page.data.set('aimstep-eligibility:test','saved criteria');page.get('clear-create-proposal').click();
  assert.equal(page.state().manualProtocolInputs.reviewTitle,'');assert.equal(page.state().text,'');assert.equal(page.state().imports[0].id,id);assert.equal(page.files.size,1);assert.equal(page.data.get('aimstep-eligibility:test'),'saved criteria');
+ assert(page.get('protocol-timing').hidden);
  assert(html.indexOf('id="clear-create-proposal"')<html.indexOf('id="generate-protocol"'));
 });
 test('cancelled Clear and storage failure retain the previous draft',async()=>{

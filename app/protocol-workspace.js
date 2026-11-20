@@ -7,7 +7,8 @@ let manualFormReady=false;
 let state={version:1,inputs:{},text:'',issues:[],mapping:null,history:[],imports:[]},controller=null,backgroundAnalysis=null,previewFileId=null;
 let proposalGenerating=false,proposalCheckpoint=null;
 let previewToken=0,previewUrl=null,previewLoadedId=null;
-const fileJobs=new Map(),selectedFileActions=new Map(),fileProgress=new Map();
+const fileJobs=new Map(),selectedFileActions=new Map();
+let proposalStartedAt=null;
 try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved)state={...state,...saved};else{const legacy=JSON.parse(localStorage.getItem('aimstep-writing:protocol:'+scope)||'null');if(legacy)state.text=[legacy.title,legacy.text].filter(Boolean).join('\n\n');}}catch(_){status("Saved proposal could not be read. Export any visible work before continuing.",true);}
 if(!Array.isArray(state.imports))state.imports=[];
 state.generationSource='manual';
@@ -36,7 +37,7 @@ function notifyProposals(){
 function removeDeletedProposals(){
  const remaining=state.imports.filter(file=>!file.id||!localStorage.getItem('aimstep-proposal-deleted:'+file.id));
  if(remaining.length===state.imports.length)return;
- for(const file of state.imports){if(remaining.includes(file))continue;const job=fileJobs.get(file.id);job?.controller.abort();if(job)clearInterval(job.timer);fileJobs.delete(file.id);fileProgress.delete(file.id);}
+ for(const file of state.imports){if(remaining.includes(file))continue;const job=fileJobs.get(file.id);job?.controller.abort();fileJobs.delete(file.id);}
  const source=state.importText;state.imports=remaining;
  state.importName=remaining.filter(file=>file.kind!=='generated').map(file=>file.name).join(', ');
  state.importText=remaining.filter(file=>file.kind!=='generated').map(file=>file.text?'File: '+file.name+'\n'+file.text:'').filter(Boolean).join('\n\n');
@@ -45,7 +46,7 @@ function removeDeletedProposals(){
 }
 function save(){removeDeletedProposals();state.text=$('protocol-text').value;state.manualProtocolInputs=readManualInputs();state.generationSource='manual';state.updatedAt=new Date().toISOString();localStorage.setItem(key,JSON.stringify(state));notifyProposals();}
 function safeSave(){cancelBackgroundAnalysis();try{save();return true;}catch(e){status('Could not save the protocol. Export a copy before leaving.',true);return false;}}
-function render(){$('protocol-text').value=state.text;renderImports();renderManualForm();renderGeneration();$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
+function render(){renderProtocolTiming();$('protocol-text').value=state.text;renderImports();renderManualForm();renderGeneration();$('protocol-issues').replaceChildren(...state.issues.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));$('protocol-feedback').hidden=!state.issues.length;$('handoff-preview').hidden=!state.mapping;$('handoff-content').textContent=state.mapping?[...state.mapping.rows.map(r=>r.title+'\nInclusion: '+(r.condition||'Not specified')+'\nExclusion: '+(r.uncertain||'Not specified')),'Search plan\n'+state.mapping.searchQuotes.join('\n'),'Limits\n'+state.mapping.limitQuotes.join('\n')].join('\n\n'):'';$('confirm-protocol').checked=false;}
 function readManualInputs(){
  const values={...(state.manualProtocolInputs||{})};
  for(const [id,control]of manualControls)values[id]=control.value;
@@ -168,7 +169,6 @@ function reconcileFileResults(){
    delete file[field];cleared.push({id:file.id,field,target});
    if(field==='criteriaProjectId'&&file.criteriaEntryId){cleared.push({id:file.id,field:'criteriaEntryId',target:file.criteriaEntryId});delete file.criteriaEntryId;}
    const action=field==='projectId'?'project':'criteria';
-   if(fileProgress.get(file.id)?.action===action&&!fileJobs.has(file.id))fileProgress.delete(file.id);
   }
  }
  if(!cleared.length)return;
@@ -203,11 +203,11 @@ function renderImports(){
    button.onclick=()=>{selectedFileActions.set(file.id,action);actionButtons.forEach(item=>item.setAttribute('data-selected',String(item===button)));return fileAction(file,action);};actionButtons.push(button);
    if(action==='delete'){heading.appendChild(button);continue;}
    const group=document.createElement('div');group.className='proposal-action-group';group.appendChild(button);
-   if(action!=='delete'){
-    const meter=document.createElement('div'),fill=document.createElement('span'),label=document.createElement('b');meter.className='protocol-progress proposal-action-progress';meter.setAttribute('role','progressbar');meter.setAttribute('aria-label',button.textContent);meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax','100');
-    const current=fileProgress.get(file.id),active=current?.action===action,complete=!!(action==='project'?file.projectId:file.criteriaProjectId),visible=active||complete,value=complete?100:active?current.value:0;meter.hidden=!visible;meter.setAttribute('aria-valuenow',String(Math.round(value)));fill.style.width=value+'%';label.textContent=Math.round(value)+'%';fill.appendChild(label);meter.appendChild(fill);group.appendChild(meter);
-    if(active){current.meter=meter;current.fill=fill;current.label=label;}
-   }
+   const timer=document.createElement('span');
+   timer.className='workflow-time';timer.setAttribute('role','timer');timer.hidden=true;group.appendChild(timer);
+   const job=fileJobs.get(file.id);
+   const time=action==='project'?(file.projectId?file.projectElapsedMs:null):(file.criteriaProjectId?file.criteriaElapsedMs:null);
+   globalThis.AimstepWorkflowTiming?.render(timer,job?.action===action?job.startedAt:null,time);
    actions.appendChild(group);
   }
   info.append(heading,date);row.append(info,actions);return row;
@@ -294,12 +294,11 @@ function showFileResult(message,file,target){
  status(message);
  if(target){const link=document.createElement('a');link.href=target;link.textContent=' '+file.name;link.className='proposal-result-link';$('protocol-status').appendChild(link);}
 }
-function setFileProgress(id,value){const current=fileProgress.get(id);if(!current)return;current.value=Math.max(current.value,value);if(current.meter){current.meter.setAttribute('aria-valuenow',String(Math.round(current.value)));current.fill.style.width=current.value+'%';current.label.textContent=Math.round(current.value)+'%';}}
 async function fileAction(file,action){
  if(action==='delete'){
   const existingJob=fileJobs.get(file.id);
   if(existingJob?.committing)return;
-  existingJob?.controller.abort();if(existingJob)clearInterval(existingJob.timer);fileJobs.delete(file.id);fileProgress.delete(file.id);cancelBackgroundAnalysis();
+  existingJob?.controller.abort();fileJobs.delete(file.id);cancelBackgroundAnalysis();
   const previous=JSON.parse(JSON.stringify(state)),oldSource=state.importText;
   state.imports=state.imports.filter(item=>item.id!==file.id);
   state.importName=state.imports.filter(item=>item.kind!=='generated').map(item=>item.name).join(', ');
@@ -315,14 +314,13 @@ async function fileAction(file,action){
  const completedTarget=action==='project'?file.projectId:file.criteriaProjectId;
  if(completedTarget){
   if(action==='criteria')activateCriteriaProject(completedTarget);
-  fileProgress.set(file.id,{action,value:100});renderImports();
+  renderImports();
   showFileResult(action==='project'?'Project already created:':'Eligibility criteria already generated:',file,action==='project'?'index.html?view=project&projectId='+encodeURIComponent(completedTarget):'index.html?view=page&page=eligibility.html&projectId='+encodeURIComponent(completedTarget));
   return;
  }
  if(!file.text?.trim()){status('Re-import this file to recover its individual source text.',true);return;}
  cancelBackgroundAnalysis();
- const job={controller:new AbortController(),committing:false,complete:false};fileJobs.set(file.id,job);fileProgress.set(file.id,{action,value:5});renderImports();
- job.timer=setInterval(()=>{if(fileJobs.get(file.id)!==job)return;const value=fileProgress.get(file.id)?.value||5;if(value<85)setFileProgress(file.id,Math.min(85,value+Math.max(.2,(85-value)/30)));},1000);
+ const job={controller:new AbortController(),committing:false,action,startedAt:Date.now()};fileJobs.set(file.id,job);renderImports();
  const check=()=>{
   const stored=JSON.parse(localStorage.getItem(key)||'null');
   if(projectDeleted(job.target))throw Error('This project was deleted while generation was running. Please try again.');
@@ -336,39 +334,46 @@ async function fileAction(file,action){
   const criteriaKey=target?'aimstep-eligibility:'+target:null;
   const priorCriteria=criteriaKey?localStorage.getItem(criteriaKey):null;
   if(action==='project'||!target){
-   const project=await createProposalProject(file,job.controller.signal,()=>{check();setFileProgress(file.id,75);job.committing=true;renderImports();});
-   check();if(projectDeleted(project.id))throw Error('This project was deleted while generation was running. Please try again.');file.projectId=project.id;target=project.id;job.target=target;save();
+   const project=await createProposalProject(file,job.controller.signal,()=>{check();job.committing=true;renderImports();});
+   check();if(projectDeleted(project.id))throw Error('This project was deleted while generation was running. Please try again.');file.projectId=project.id;target=project.id;job.target=target;
+   if(action==='project')file.projectElapsedMs=Math.max(0,Date.now()-job.startedAt);
+   save();
    if(action==='project'){
-    setFileProgress(file.id,100);job.complete=true;
     showFileResult('Project created:',file,'index.html?view=project&projectId='+encodeURIComponent(target));return;
    }
   }
   job.committing=false;renderImports();
   const before=criteriaKey?priorCriteria:localStorage.getItem('aimstep-eligibility:'+target);
-  const mapping=await map(file.text,job.controller.signal);check();setFileProgress(file.id,90);
+  const mapping=await map(file.text,job.controller.signal);check();
   if(localStorage.getItem('aimstep-eligibility:'+target)!==before)throw Error('Eligibility criteria changed while AI was working. Run this action again to use the latest version.');
   const savedCriteria=C.commitEligibility(localStorage,target,mapping,'proposal file: '+file.name);
-  file.criteriaEntryId=savedCriteria.criteriaLibraryId||null;file.criteriaProjectId=target;file.criteriaGeneratedAt=new Date().toISOString();save();setFileProgress(file.id,100);job.complete=true;
+  file.criteriaEntryId=savedCriteria.criteriaLibraryId||null;file.criteriaProjectId=target;file.criteriaGeneratedAt=new Date().toISOString();file.criteriaElapsedMs=Math.max(0,Date.now()-job.startedAt);save();
   activateCriteriaProject(target);
   showFileResult('Eligibility criteria generated:',file,'index.html?view=page&page=eligibility.html&projectId='+encodeURIComponent(target));
  }catch(error){if(error.name!=='AbortError')status(error.message,true);}
- finally{clearInterval(job.timer);if(fileJobs.get(file.id)===job){fileJobs.delete(file.id);if(!job.complete)fileProgress.delete(file.id);}renderImports();}
+ finally{if(fileJobs.get(file.id)===job)fileJobs.delete(file.id);renderImports();}
 }
 
-function progress(n){const p=$('protocol-progress');n=Math.max(Number(p.getAttribute('aria-valuenow'))||0,n);p.setAttribute('aria-valuenow',String(Math.round(n)));p.firstElementChild.style.width=n+'%';p.querySelector('b').textContent=Math.round(n)+'%';}
+function renderProtocolTiming(){
+ const working=proposalStartedAt!==null;
+ $('run-row').hidden=!working&&!Number.isFinite(state.elapsedMs);
+ $('stop-protocol').hidden=!working;
+ if(!working)$('run-label').textContent='';
+ globalThis.AimstepWorkflowTiming?.render($('protocol-timing'),proposalStartedAt,state.elapsedMs);
+}
 async function run(label,work){
  if(controller)return;
  cancelBackgroundAnalysis();controller=new AbortController();const signal=controller.signal,disabled=[];
- let timer=null;const button=$('generate-protocol'),buttonText=button.textContent,creating=label.startsWith('Generating proposal');
+ proposalStartedAt=Date.now();const button=$('generate-protocol'),buttonText=button.textContent,creating=label.startsWith('Generating proposal');
  try{
   for(const element of document.querySelectorAll('main button,main input,main textarea,main select')){if(element.id==='stop-protocol')continue;disabled.push([element,element.disabled]);element.disabled=true;}
   status('');proposalGenerating=creating;
   if(creating){button.textContent='Generating…';button.setAttribute('aria-busy','true');}
-  $('stop-protocol').disabled=false;$('run-row').hidden=false;$('run-label').textContent=label;$('protocol-progress').setAttribute('aria-valuenow','0');progress(5);status(creating?'Preparing the proposal…':'');
-  let estimate=5;timer=setInterval(()=>{estimate+=Math.max(.2,(85-estimate)/30);progress(estimate);},1000);
-  await work(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');progress(100);
+  $('stop-protocol').disabled=false;$('run-label').textContent=label;renderProtocolTiming();status(creating?'Preparing the proposal…':'');
+  await work(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');
+  state.elapsedMs=Math.max(0,Date.now()-proposalStartedAt);save();
  }catch(error){proposalGenerating=false;status(error.name==='AbortError'?'Stopped. Your draft has been kept.':error.message,error.name!=='AbortError');}
- finally{proposalGenerating=false;if(timer!==null)clearInterval(timer);controller=null;for(const [element,wasDisabled]of disabled)element.disabled=wasDisabled;button.textContent=buttonText;button.removeAttribute('aria-busy');$('stop-protocol').disabled=false;$('run-row').hidden=true;}
+ finally{proposalGenerating=false;proposalStartedAt=null;controller=null;for(const [element,wasDisabled]of disabled)element.disabled=wasDisabled;button.textContent=buttonText;button.removeAttribute('aria-busy');$('stop-protocol').disabled=false;renderProtocolTiming();}
 }
 async function model(system,input,schema,signal){
  if(input.length>120000)throw Error('Use source material under 120,000 characters. Nothing has been truncated.');
@@ -463,22 +468,21 @@ $('generate-protocol').onclick=()=>run('Generating proposal with the local model
  const check=async()=>{const current=await collectProposalInput(signal);if(signal.aborted)throw new DOMException('Stopped','AbortError');if(localStorage.getItem(key)!==base||current.text!==source.text)throw Error('Project information changed during drafting. Generate again using the latest saved information.');};
  if(!proposalCheckpoint||proposalCheckpoint.source!==source.text)proposalCheckpoint={source:source.text,packets:new Map(),batches:new Map(),partial:new Map()};
  const materials=proposalCheckpoint.materials||(proposalCheckpoint.materials=await draftingMaterials(source,signal));
- progress(8);
+
  const batches=[['title','rationale','eligibility','outcomes'],['search','extraction','bias','synthesis','certainty'],['timeline','team','funding','availability','amendments']];
  const batchController=new AbortController(),stopBatches=()=>batchController.abort();
  signal.addEventListener('abort',stopBatches,{once:true});if(signal.aborted)stopBatches();
- let nextBatch=0,completed=0,failure=null;
+ let nextBatch=0,failure=null;
  async function writeBatches(){
  for(;;){
   const index=nextBatch++;if(index>=batches.length||failure)return;
   if(signal.aborted)throw new DOMException('Stopped','AbortError');
   const ids=batches[index],definitions=C.sections.filter(([id])=>ids.includes(id));
-  status('Writing '+guide.reviewType+' proposal: '+(index+1)+' / '+batches.length+'…');progress(15+Math.round(index/batches.length*68));
+  status('Writing '+guide.reviewType+' proposal: '+(index+1)+' / '+batches.length+'…');
   const instructions='Write a complete prospective review protocol in English using the supplied review-specific guidance. Current author form and saved eligibility decisions override older drafts. Preserve supplied decisions, inclusion/exclusion rules, thresholds and negations. No quotations, citations or source matching are needed. Never invent findings, completed activities, registration, people, funding or dates. Label proposed methods "Proposed for author confirmation" and missing factual details "To complete". Return sections as an OBJECT keyed by each requested section id, with a nonempty text string for every key; return issues as an array (empty if none). Include only requested sections. Use paragraph prose with subheadings; no markdown tables. Each methodological section should be focused and substantive, about 150–220 words; title and administrative sections should be concise, about 30–80 words. Follow the JSON schema exactly.';
   if(!proposalCheckpoint.partial.has(index))proposalCheckpoint.partial.set(index,{});
   const result=proposalCheckpoint.batches.get(index)||await D.generateSections({model,instructions,input:JSON.stringify({guidance:guide,materials,requestedSections:definitions}),ids,signal:batchController.signal,checkpoint:proposalCheckpoint.partial.get(index)});
   proposalCheckpoint.batches.set(index,result);
-  completed++;progress(15+Math.round(completed/batches.length*68));
  }
  }
  try{
@@ -488,7 +492,7 @@ $('generate-protocol').onclick=()=>run('Generating proposal with the local model
  const sections=batches.flatMap((_,index)=>proposalCheckpoint.batches.get(index).sections),issues=batches.flatMap((_,index)=>proposalCheckpoint.batches.get(index).issues);
  const draft=C.validateDraft({sections,issues:[...new Set(issues)]});
  if(draft.sections.some(section=>!section.text.trim()))throw Error('The model did not complete all proposal sections. Please try Generate again.');
- await check();status('Preparing the PDF proposal…');progress(88);
+ await check();status('Preparing the PDF proposal…');
  const title=state.manualProtocolInputs.reviewTitle.trim(),at=new Date().toISOString();
  const supplied=savedManualCriteria(),criteriaText=[['Inclusion criteria',supplied.includes],['Exclusion criteria',supplied.exclusions]].map(([label,items])=>label+'\n'+items.map(item=>(item.label||item.domain||'')+': '+item.text).join('\n')).join('\n\n');
  const blocks=[{text:guide.reviewType+' protocol | '+at.slice(0,10)},...draft.sections.map(section=>({heading:section.label,text:section.text}))];
@@ -505,7 +509,7 @@ $('generate-protocol').onclick=()=>run('Generating proposal with the local model
  try{
   await check();state.history.push({date:at,text:state.text,action:'before-generation',mode:'manual'});
   state.imports.push(file);state.proposalDrafts??={};state.proposalDrafts.manual={fileId:id,at,model:state.lastModel};state.text=text;state.issues=draft.issues;state.mapping=null;state.confirmedAt=null;
-  $('protocol-text').value=text;render();save();progress(100);
+  $('protocol-text').value=text;render();save();
  }catch(error){state=previous;$('protocol-text').value=state.text;await window.AimstepProposalFiles.remove(id).catch(()=>{});render();throw error;}
  proposalCheckpoint=null;proposalGenerating=false;status('Proposal generated. Click its filename below Create a proposal to preview the PDF, or choose Build Projects.');
 });
@@ -516,7 +520,7 @@ $('stop-protocol').onclick=()=>controller?.abort();
 function clearProposalDraft(){
  if(controller||!confirm("Clear this proposal draft and inputs? Criteria and search strategies already applied to other tools will be kept."))return;
  cancelBackgroundAnalysis();const previous=state;
- state={...state,inputs:{},manualProtocolInputs:{},text:'',issues:[],mapping:null,confirmedAt:null,history:[...state.history,{date:new Date().toISOString(),action:'before-clear',text:state.text,manualProtocolInputs:{...state.manualProtocolInputs}}]};
+ state={...state,inputs:{},manualProtocolInputs:{},text:'',elapsedMs:null,issues:[],mapping:null,confirmedAt:null,history:[...state.history,{date:new Date().toISOString(),action:'before-clear',text:state.text,manualProtocolInputs:{...state.manualProtocolInputs}}]};
  try{render();save();proposalCheckpoint=null;status("Proposal draft cleared.");}
  catch(error){state=previous;render();status('Could not save the cleared form. Your previous draft has been kept.',true);}
 }

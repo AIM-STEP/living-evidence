@@ -185,7 +185,7 @@ body.project-create-mode .workflow-column .pw-create-title { font-size: 22px; li
 .workspace-heading h2 { font-size: 16px; line-height: 1.5; font-weight: 500; color: var(--dashboard-ink); }
 .workflow-column .workspace-topbar { min-height: 0; padding: 16px; gap: 12px; border-color: var(--dashboard-border); border-radius: 8px 8px 0 0; }
 .workflow-column .workspace-controls { gap: 10px; }
-.workspace-progress-label { font-size: 13px; color: var(--dashboard-muted); font-variant-numeric: tabular-nums; }
+
 .workspace-setup-button { min-height: 40px; padding: 8px 12px; border-radius: 7px; font-size: 14px; line-height: 1.5; font-weight: 500; background: var(--brand-text); }
 .workspace-toggle { width: 40px; height: 40px; border-radius: 7px; }
 .workflow-column .workspace-setup-overview { padding: 16px; border-color: var(--dashboard-border); border-radius: 0 0 8px 8px; }
@@ -214,8 +214,8 @@ body.project-create-mode .workflow-column .pw-create-title { font-size: 22px; li
 .workspace-summary-metrics { font-size: 12px; line-height: 1.5; white-space: normal; gap: 10px; }
 .workspace-dashboard h3 { font-size: 15px; line-height: 1.5; color: var(--dashboard-ink); margin-bottom: 16px; }
 .workspace-dashboard-side p, .workspace-team-note { font-size: 13px; line-height: 1.6; color: var(--dashboard-muted); }
-.workspace-progress-track { height: 8px; border-radius: 4px; margin-bottom: 20px; background: #e7ecf5; }
-.workspace-progress-track span { background: var(--brand); }
+
+
 .workspace-stat { font-size: 13px; line-height: 1.5; gap: 8px; color: var(--dashboard-muted); }
 .workspace-stat strong { font-size: 16px; font-weight: 500; color: var(--dashboard-ink); font-variant-numeric: tabular-nums; }
 .workflow-column .workspace-stats { grid-template-columns: minmax(0, 1fr); gap: 8px; }

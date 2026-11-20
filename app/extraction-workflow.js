@@ -30,20 +30,15 @@ function resetUnverified(study){
  for(const groups of Object.values(study.res||{}))for(const row of Object.values(groups))for(const [key,c] of Object.entries(row))if(removable(c))delete row[key];
 }
 function mount(api){
- const host=document.getElementById('extraction-workflow');let running='',abort=null,progress={done:0,total:0},error='',filter='all';const collapsed={},lastProgress={};
+ const host=document.getElementById('extraction-workflow');let running='',abort=null,startedAt=null,error='',filter='all';const collapsed={};
  const ws=api.state,flow=()=>state(ws()),sig=()=>signature(ws(),api.definition),selected=()=>flow().rounds[flow().selected];
  const button=(label,attrs='')=>`<button type="button" class="btn small" ${attrs}>${label}</button>`;
  const help=text=>`<span class="extract-help" tabindex="0" aria-label="Instructions">ⓘ<span role="tooltip">${text}</span></span>`;
  const clearIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>';
  const toggle=part=>button(collapsed[part]?'⌄':'⌃',`data-action="toggle" data-part="${part}" aria-label="${collapsed[part]?'Expand':'Collapse'} ${part==='pilot'?'Pilot extract':'Main extract'}" aria-expanded="${!collapsed[part]}"`);
- const bar=part=>{
-  const round=selected(),ids=part==='pilot'?(round?.ids||[]):ws().records.map(r=>r.uid);
-  const count=ids.filter(id=>part==='pilot'?!!round.entries[id]?.draft:!!flow().main.done[id]||!!api.study(id).done).length;
-  const percent=Math.round(count/Math.max(1,ids.length)*100);
-  const previous=lastProgress[part]??percent;lastProgress[part]=percent;
-  return `<div class="extract-progress" data-progress="${part}" style="--extract-progress:${percent}%;--extract-previous:${previous}%" role="progressbar" aria-label="${part==='pilot'?'Pilot':'Main'} extraction progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><b>${percent}%</b><div class="extract-progress-track"><span style="width:${percent}%"></span></div></div>`;
- };
- const header=(title,part,instructions,actions)=>`<div class="panel-head"><div class="extract-heading"><h2 data-ui-localize>${title}</h2>${help(instructions)}</div>${part==='main'?bar(part):''}<div class="toolbar">${actions}${button('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export',`data-action="export" data-part="${part}" ${running?'disabled':''}`)}${button(clearIcon+'Clear',`data-action="clear" data-part="${part}" ${running?'disabled':''}`)}${toggle(part)}</div></div>`;
+ const timer=part=>root.AimstepWorkflowTiming?.markup(running===part?startedAt:null,
+  part==='pilot'?selected()?.elapsedMs:flow().main.elapsedMs)||'';
+ const header=(title,part,instructions,actions)=>`<div class="panel-head"><div class="extract-heading"><h2 data-ui-localize>${title}</h2>${help(instructions)}</div>${timer(part)}<div class="toolbar">${actions}${button('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export',`data-action="export" data-part="${part}" ${running?'disabled':''}`)}${button(clearIcon+'Clear',`data-action="clear" data-part="${part}" ${running?'disabled':''}`)}${toggle(part)}</div></div>`;
  function title(uid){const r=api.record(uid);return `<strong>${esc(r?.sourceNumber?'#'+(r.extractionOrigin==='local'?'L':'')+r.sourceNumber+' ':'')}${esc(r?.title||uid)}</strong>`;}
  function render(){
   const f=flow(),r=selected(),s=sig(),valid=approved(f,s),roundReady=complete(r)&&r.signature===s;
@@ -57,7 +52,7 @@ function mount(api){
  async function atomic(fn){const previous=clone(flow());try{fn();await api.persist();}catch(e){ws().extractionFlow=previous;throw e;}}
  function prerequisite(){if(!ws().form.fields.length)throw Error('Add extraction items first.');if(ws().form.outcomes.some(o=>!o.name?.trim()||!o.timepoint?.trim()||!['continuous','binary'].includes(o.type)))throw Error('Set the name, type and time point for each outcome first.');}
  async function run(part){if(running)return;prerequisite();const signatureAtStart=sig(),f=flow();if(part==='main'&&!approved(f,signatureAtStart))throw Error('Complete and approve a pilot round first.');
-  running=part;abort=new AbortController();api.lock(part);error='';
+  running=part;startedAt=Date.now();abort=new AbortController();api.lock(part);error='';let runRecord;render();
   try{
    const readable=[];for(const record of ws().records){if(abort.signal.aborted)break;if(record.fullText?.readable===false)continue;const doc=await api.ready(record.uid);if(doc?.chunks?.length)readable.push(record.uid);}
    if(abort.signal.aborted)return;if(!readable.length)throw Error('No readable full texts are available. Import a readable PDF first.');
@@ -66,16 +61,22 @@ function mount(api){
     if(!r||complete(r)||r.signature!==signatureAtStart){r={form:clone(ws().form),ids:sample(readable,Math.min(f.sampleSize||3,readable.length)),entries:{},signature:signatureAtStart,at:new Date().toISOString()};await atomic(()=>{f.rounds.push(r);f.selected=f.rounds.length-1;f.approved=null;});}
     ids=r.ids.filter(id=>!r.entries[id]?.draft);
    }else ids=readable.filter(id=>!api.study(id).done&&f.main.done[id]!==runKey);
-   progress={done:0,total:ids.length};render();
+   runRecord=part==='pilot'?r:f.main;render();
    for(const id of ids){if(abort.signal.aborted)break;
-    let draft;try{draft=await api.extract(id,abort.signal,learned);}catch(e){if(abort.signal.aborted)break;if(part==='pilot')r.entries[id]={error:e.message};else f.main.errors[id]=e.message;await api.persist();progress.done++;render();continue;}
+    let draft;try{draft=await api.extract(id,abort.signal,learned);}catch(e){if(abort.signal.aborted)break;if(part==='pilot')r.entries[id]={error:e.message};else f.main.errors[id]=e.message;await api.persist();render();continue;}
     if(abort.signal.aborted)break;if(sig()!==signatureAtStart)throw Error('The form or studies changed during extraction. Start a new pilot round.');
     const priorEntry=r?.entries[id],priorStudy=ws().studies[id]?clone(ws().studies[id]):null,priorDone=f.main.done[id];
     if(part==='pilot'){draft.value=normalize(draft.value,ws().form);r.entries[id]={draft:clone({value:draft.value,model:draft.model,prompt:draft.prompt,at:draft.at,verified:flatten(draft.value,ws().form).map(x=>!!draft.verify(x.quote,x.passage))})};}
     else{if(api.study(id).ai)resetUnverified(api.study(id));api.apply(id,draft);f.main.done[id]=runKey;delete f.main.errors[id];}
-    try{await api.persist();}catch(e){if(part==='pilot'){if(priorEntry)r.entries[id]=priorEntry;else delete r.entries[id];}else{if(priorStudy)ws().studies[id]=priorStudy;else delete ws().studies[id];if(priorDone)f.main.done[id]=priorDone;else delete f.main.done[id];}throw e;}progress.done++;render();
+    try{await api.persist();}catch(e){if(part==='pilot'){if(priorEntry)r.entries[id]=priorEntry;else delete r.entries[id];}else{if(priorStudy)ws().studies[id]=priorStudy;else delete ws().studies[id];if(priorDone)f.main.done[id]=priorDone;else delete f.main.done[id];}throw e;}render();
    }
-  }finally{running='';abort=null;api.lock('');api.changed();render();}
+  }finally{
+   if(runRecord){
+    runRecord.elapsedMs=Math.max(0,Date.now()-startedAt);
+    try{await api.persist();}catch(e){error=e.message||String(e);}
+   }
+   running='';startedAt=null;abort=null;api.lock('');api.changed();render();
+  }
  }
  host.addEventListener('change',e=>{if(e.target.id==='extract-sample'){flow().sampleSize=Math.max(1,Math.min(20,Number(e.target.value)||3));api.persist().catch(fail);}});
  function fail(e){error=e.message||String(e);render();}
