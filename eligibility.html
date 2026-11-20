@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261120-criteria-release-34"></script>
-<script src="app/secure-origin.js?v=20261120-criteria-release-34"></script>
+<script src="app/eligibility-release.js?v=20261120-criteria-release-35"></script>
+<script src="app/secure-origin.js?v=20261120-criteria-release-35"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -74,7 +74,7 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261120-criteria-release-34"></script>
+<script src="app/criteria-grounding.js?v=20261120-criteria-release-35"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
 <script defer src="app/tool-i18n-catalog.js?v=20261118-criteria-actions-1"></script>
@@ -97,15 +97,15 @@
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div></div><p id="criteria-timing" hidden><span id="criteria-working-label" data-ui-localize>Working</span><span id="criteria-finished-label" data-ui-localize hidden>Elapsed time</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed generation time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
-<script src="app/eligibility/registries.js?v=20261120-criteria-release-34"></script>
-<script src="app/eligibility/domain.js?v=20261120-criteria-release-34"></script>
-<script src="app/eligibility/methodology.js?v=20261120-criteria-release-34"></script>
-<script src="app/eligibility/sparse-input.js?v=20261120-criteria-release-34"></script>
-<script src="app/eligibility/engine.js?v=20261120-criteria-release-34"></script>
-<script src="app/eligibility/lessons.js?v=20261120-criteria-release-34"></script>
-<script src="app/eligibility/model.js?v=20261120-criteria-release-34"></script>
-<script src="app/eligibility-reset.js?v=20261120-criteria-release-34"></script>
-<script src="app/eligibility/background.js?v=20261120-criteria-release-34"></script>
+<script src="app/eligibility/registries.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility/domain.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility/methodology.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility/sparse-input.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility/engine.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility/lessons.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility/model.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility-reset.js?v=20261120-criteria-release-35"></script>
+<script src="app/eligibility/background.js?v=20261120-criteria-release-35"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -1138,10 +1138,14 @@ function supplementDescription(paragraph,extraRows,limits,refinement){
   }
   return paragraph;
 }
-function formatCriteriaRules(rules,render=(text)=>text){
+function withFinalPeriod(value){
+  const text=String(value||'').trim().replace(/[.!?。！？…;；]+$/u,'').trimEnd();
+  return text?text+'.':'';
+}
+function formatCriteriaRules(rules,{render=(text)=>text,finalPeriod=false}={}){
   const parts=rules.map((rule,index)=>({text:String(rule||'').trim(),index})).filter(part=>part.text);
   return parts.map(({text,index},position)=>{
-    const value=position===parts.length-1?text:text.replace(/(?:[。;；]|(?<!\b[A-Z])\.)$/u,'');
+    const value=position===parts.length-1?(finalPeriod?withFinalPeriod(text):text):text.replace(/(?:[。;；]|(?<!\b[A-Z])\.)$/u,'');
     return render(value,index);
   }).join('；');
 }
@@ -1475,7 +1479,7 @@ function criteriaDisplay(data,refinement,tableOrder=false){
    if(outcomeSlot>=0&&outcomes.length){
     let row=local.find(r=>dimensionKey(r.label)==='outcomes');
     if(!row){row={label:layout.slots[outcomeSlot],index:null,questionNumber:layout.number,include:[],exclude:[]};local.push(row);}
-    const text=formatCriteriaRules(outcomes,(value,i)=>outcomes.length===1?value:(i+1)+'.'+value);
+    const text=formatCriteriaRules(outcomes,{render:(value,i)=>outcomes.length===1?value:(i+1)+'.'+value});
     row.include.push({text,outcomeGroup:true,position:null,checks:[]});
    }
    const position=row=>{const i=slotNames.indexOf(dimensionKey(row.label));return i<0?slotNames.length:i;};
@@ -1513,6 +1517,7 @@ function criteriaDisplay(data,refinement,tableOrder=false){
   const first=row[side].find(line=>line.position!==null||line.outcomeGroup);
   if(first)first.displayText=capitalizeCriterionStart(first.displayText??first.text);
  }
+ display.reviewTopic=withFinalPeriod(display.reviewTopic);
  return display;
 }
 function sourceConfirmationHtml({detail,index,context='',targetId}){
@@ -1559,17 +1564,17 @@ function renderCriteriaSide(display,side){
   const heading=[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · ');
   const title=heading?'<strong>'+escapeHtml(heading)+':</strong> ':'';
   const rules=row[side].filter(line=>line.position!==null||line.outcomeGroup);
-  const paragraph=formatCriteriaRules(rules.map(line=>line.displayText??line.text),(text,index)=>{
+  const details=row[side].map(criterionNotes),outcomes=dimensionKey(row.label)==='outcomes';
+  const values=rules.map(line=>line.displayText??line.text);
+  if(outcomes)values.push(...details.map(note=>note.pending));
+  const paragraph=formatCriteriaRules(values,{finalPeriod:true,render:(text,index)=>{
    const line=rules[index];
-   if(row.index===null||line.outcomeGroup)return escapeHtml(text);
+   if(!line||row.index===null||line.outcomeGroup)return escapeHtml(text);
    const initial=text===line.text?'':` data-criteria-initial="${escapeHtml(text)}"`;
    return editableCriteriaText(text,`data-criteria-row="${row.index}" data-criteria-kind="${side}" data-criteria-rule="${line.position}"`+initial,row.label+' '+side+' rule '+(line.position+1));
-  });
-  const details=row[side].map(criterionNotes);
-  const outcomes=dimensionKey(row.label)==='outcomes';
-  const inline=outcomes?[paragraph,...details.map(note=>escapeHtml(note.pending))].filter(Boolean).join('；'):paragraph;
-  const notes=details.map(({pending,checks})=>(pending&&!outcomes?'<span>'+escapeHtml(pending)+'</span>':'')+checks.map(sourceConfirmationHtml).join('')).join('');
-  return '<div class="'+(row.unlabelledExclusion?'summary-independent-exclusion':'summary-inclusion')+'"><span>'+title+inline+'</span>'+notes+'</div>';
+  }});
+  const notes=details.map(({pending,checks})=>(pending&&!outcomes?'<span>'+escapeHtml(withFinalPeriod(pending))+'</span>':'')+checks.map(sourceConfirmationHtml).join('')).join('');
+  return '<div class="'+(row.unlabelledExclusion?'summary-independent-exclusion':'summary-inclusion')+'"><span>'+title+paragraph+'</span>'+notes+'</div>';
  }).join('');
  if(markup)return markup;
  const empty=side==='include'?'No explicit inclusion rules entered.':unreportedExclusion;
@@ -1585,7 +1590,7 @@ function renderPreview(){
     const entries=all.filter(row=>withinFramework(row.title,slots));
     const extras=all.filter(row=>!withinFramework(row.title,slots)&&(row.include||row.exclude));
     const paragraph=extras.length?manuscriptDraft(extras.map(r=>({label:r.title,include:r.include.split('\n').filter(Boolean),exclude:r.exclude.split('\n').filter(Boolean)})),extras.filter(r=>r.exclude).map(r=>({rule:r.exclude,domains:[r.title]})),[]):'';
-    const ruleText=value=>escapeHtml(capitalizeCriterionStart(formatCriteriaRules(value.split(/\r?\n+/))));
+    const ruleText=value=>escapeHtml(capitalizeCriterionStart(formatCriteriaRules(value.split(/\r?\n+/),{finalPeriod:true})));
     const lines=field=>entries.filter(r=>r[field]).map(r=>`<div class="summary-inclusion"><span><strong>${escapeHtml(r.title)}:</strong> ${ruleText(r[field])}</span></div>`).join('')+(field==='exclude'?extras.filter(r=>r.exclude).map(r=>'<div class="summary-inclusion"><span>'+ruleText(r.exclude)+'</span></div>').join(''):'');
     area.innerHTML='<div class="criteria-summary"><section class="summary-block"><h3 data-ui-localize>Inclusion</h3>'+(lines('include')||'<p class="summary-muted" data-ui-localize>Enter eligibility rules above to generate criteria.</p>')+'</section><section class="summary-block"><h3 data-ui-localize>Exclusion</h3>'+(lines('exclude')||'<p class="summary-muted" data-ui-localize>'+unreportedExclusion+'</p>')+'</section>'+(paragraph?'<section class="summary-block"><h3 data-ui-localize>Description</h3><p class="summary-paragraph">'+escapeHtml(paragraph)+'</p></section>':'')+'</div>';
     return;
@@ -1633,12 +1638,12 @@ function criteriaWordFile(){
   const values=lines.filter(line=>line.position!==null||line.outcomeGroup).map(line=>line.displayText??line.text);
   const notes=lines.map(criterionNotes);
   if(label){
-   const text=formatCriteriaRules([...values,...notes.map(note=>note.pending)]);
+   const text=formatCriteriaRules([...values,...notes.map(note=>note.pending)],{finalPeriod:true});
    const paragraphs=[text,...notes.flatMap(note=>note.checks.map(checkText))].filter(Boolean);
    if(paragraphs.length)paragraphs[0]=label+': '+paragraphs[0];
    return paragraphs;
   }
-  return [formatCriteriaRules(values),...notes.flatMap(({pending,checks})=>[pending,...checks.map(checkText)])].filter(Boolean);
+  return [formatCriteriaRules(values,{finalPeriod:true}),...notes.flatMap(({pending,checks})=>[withFinalPeriod(pending),...checks.map(checkText)])].filter(Boolean);
  };
  const tableRows=['<w:tr>'+headers.map((value,i)=>wordCell(value,widths[i],true)).join('')+'</w:tr>',...display.rows.map(row=>{
   const label=[row.questionNumber,row.unlabelledExclusion?'':row.label].filter(Boolean).join(' · ');

@@ -103,7 +103,7 @@ async function replay() {
     }
   }
   const outcomeList=[...primary.items,...secondary.items].map((item,index)=>(index+1)+'.'+(index===0?'M'+item.slice(1):item)).join('；');
-  inOrder(html,['Review topic:','Framework:','>Inclusion<','Population:','>Adults with coronary heart disease<','Intervention:','Comparison:','>No exercise<','Outcomes:</strong> '+outcomeList,'Study design:','>Exclusion<','>Not reporting.<','>Description<']);
+  inOrder(html,['Review topic:','>'+view.reviewTopic+'.<','Framework:','>Inclusion<','Population:','>Adults with coronary heart disease.<','Intervention:','Comparison:','>No exercise.<','Outcomes:</strong> '+outcomeList+'.</span>','Study design:','>Exclusion<','>Not reporting.<','>Description<']);
   assert.equal(state.machineCriteria.find(row=>row.title==='Comparison').condition,'no exercise');
   assert.doesNotMatch(html.slice(html.indexOf('Outcomes:'),html.indexOf('Study design:')),/primary|secondary/i);
   assert.doesNotMatch(html,/<strong>(?:Context|Other):/i);
@@ -112,9 +112,9 @@ async function replay() {
   assert.match(xml,/>Framework: PICOS<\/w:t>/);
   inOrder(xml,['>Exclusion<','>Not reporting.<','>Description<']);
   const table=xml.slice(xml.indexOf('<w:tbl>'),xml.indexOf('</w:tbl>'));
-  inOrder(table,['>Include<','>Population<','>Adults with coronary heart disease<','>Intervention<','>Comparison<','>No exercise<','>Outcomes: '+outcomeList+'</w:t>','>Study design<']);
+  inOrder(table,['>Include<','>Population<','>Adults with coronary heart disease.<','>Intervention<','>Comparison<','>No exercise.<','>Outcomes: '+outcomeList+'.</w:t>','>Study design<']);
   assert.doesNotMatch(table.slice(table.indexOf('>Outcomes: '),table.indexOf('>Study design<')), /primary|secondary/i);
-  inOrder(xml,['Review topic:','Framework:','<w:tbl>','</w:tbl>','>Description<']);
+  inOrder(xml,['Review topic: '+view.reviewTopic+'.</w:t>','Framework:','<w:tbl>','</w:tbl>','>Description<']);
   const descriptionStart=html.indexOf('>Description<');
   checkFirstUse(html.slice(0,descriptionStart));
   checkFirstUse(html.slice(descriptionStart));
@@ -129,8 +129,8 @@ async function replay() {
   state.machineRefinement.pendingLogicRows=[{domain:'Outcomes',subject:'minimum duration of pain relief',side:'include'}];
   page.api.fill();
   const pending='Pending relationship · minimum duration of pain relief';
-  assert(page.el('preview').innerHTML.includes('<strong>Outcomes:</strong> '+pending+'</span>'));
-  assert(Buffer.from(page.api.export()).toString('utf8').includes('>Outcomes: '+pending+'</w:t>'));
+  assert(page.el('preview').innerHTML.includes('<strong>Outcomes:</strong> '+pending+'.</span>'));
+  assert(Buffer.from(page.api.export()).toString('utf8').includes('>Outcomes: '+pending+'.</w:t>'));
 }
 
 replay().catch(error=>{console.error(error);process.exitCode=1;});

@@ -63,7 +63,7 @@ test('separate the copied objective from the enrolled population and critical ou
  const markup=page.el('preview').innerHTML;
  assert.match(markup,/Outcomes:<\/strong> 1\.Incidence of acute bilirubin encephalopathy and kernicterus/);
  assert(markup.includes('；4.serum bilirubin levels'));
- assert(markup.includes('>Cross-over studies<'));
+ assert(markup.includes('>Cross-over studies.<'));
  assert(!markup.includes('To assess'));
 
  const accepted=elements.map(e=>({...e,semantic_review:{status:'supported'}}));
