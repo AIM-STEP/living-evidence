@@ -86,3 +86,40 @@ test('retain an explicit study exclusion in a question with an outcome scope bou
  assert(exclusions.some(c=>c.dimension_id==='population'&&/history of breast cancer/i.test(c.text)));
  assert(!exclusions.some(c=>/menopausal symptoms/i.test(c.text)));
 });
+
+test('opening a saved v7 machine draft repairs its original citations without generating again',async()=>{
+ const state=E.save_input(E.create_project('stored-treatment'),{research_question:text,question_framework:'PICOS',output_language:'en'}).state;
+ const q=state.questions[0],source=state.sources.find(s=>s.input_kind==='research_question');
+ const records=[['population',population],['intervention',aim],['intervention','oestrogen formulations, with or without progestogens'],
+  ['comparator','placebo'],['study_design','randomised, double‐blind trials'],['outcome','efficacy in managing menopausal symptoms']];
+ const elements=records.map(([dimension_id,quote],i)=>({candidate_id:'c'+i,dimension_id,normalized_text:quote,
+  source_refs:[E.ref(source,quote)],information_status:'explicit',semantic_role:'eligibility_condition',scope_status:'restricted',
+  disposition:dimension_id==='outcome'?'exclude':'include',structured_value:null,semantic_review:{status:'supported'}}));
+ const project=E.ingest_candidates(state,{questions:[{question_id:q.question_id,review_topic:aim,framework_candidates:['picos'],
+  elements,issues:[],eligibility_policy:'framework-only-v1',logic:{op:'all_of',children:elements.map(e=>({op:'predicate',element_id:e.candidate_id}))}}]}).state;
+ project.elements.find(e=>e.dimension_id==='outcome').semantic_role='eligibility_condition';
+ E.build_criteria(project);
+ project.questions[0].review_topic=aim;
+ project.presentation_version='framework-display-v7';
+ const legacy={activeGenerator:'machine',question:text,framework:'PICOS',machineCriteria:B.projectToClassic(project).rows};
+ project.last_published_legacy_signature=B.signature(legacy);
+ const memory=new Map(),storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
+ const service=await B.create({projectId:project.project_id,storage,frameworkConfig:require('../../config/eligibility-frameworks.json'),
+  profileConfig:require('../../config/eligibility-review-profiles.json'),baseURL:'http://localhost/'});
+ const store=()=>{storage.setItem(service.keys.project,JSON.stringify(project));storage.setItem(service.keys.legacy,JSON.stringify(legacy));};
+ store();
+ const stage=service.refreshPresentation(legacy);
+ assert.equal(stage.classic.reviewTopic,'Long-term effects of hormone therapy in perimenopausal and postmenopausal women');
+ const arm=stage.classic.rows.find(row=>row.dimension==='Intervention').include;
+ assert.equal(arm.length,1);assert.match(arm[0],/^hormone therapy.*oestrogen formulations.*at least one year/i);
+ assert.deepEqual(stage.classic.rows.flatMap(row=>row.exclude),[]);
+ assert.deepEqual(stage.classic.pendingLogicRows,[]);
+ assert.deepEqual(stage.classic.sourceConfirmations,[]);
+ assert.deepEqual(stage.project.model_calls,project.model_calls);
+ service.transaction(stage,()=>{});
+ assert.equal(service.refreshPresentation(legacy),null);
+ // An affirmative author decision remains authoritative, including its exact wording.
+ project.elements.find(e=>e.dimension_id==='intervention').decision_status='confirmed_by_user';
+ store();
+ assert(service.refreshPresentation(legacy).classic.rows.find(row=>row.dimension==='Intervention').include.some(line=>line.includes('To assess')));
+});

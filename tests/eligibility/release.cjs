@@ -55,22 +55,23 @@ test('release discovery is background-only, rate limited and carries no project 
  await events.visibilitychange();await events.interval();assert.equal(calls,1);
 });
 
-test('the editor only reloads after an explicit click with all working inputs safe',()=>{
+test('idle Criteria updates silently without saving or applying a decision',()=>{
+ assert.doesNotMatch(html,/Load updated Criteria|update-criteria-version/i);
  const source=html.slice(html.indexOf('if(!embeddedManual&&!embeddedPreview&&window.AIMSTEPCriteriaRelease){',html.indexOf('let composingQuestion=false;')),html.indexOf("$('question').addEventListener('compositionstart'"));
- let click,applied=0,saves=0,allowed=true;
- const button={hidden:true,addEventListener:(_,fn)=>click=fn};
- const env={embeddedManual:false,embeddedPreview:false,$:()=>button,toast(){},document:{querySelectorAll:()=>[]},
-  generationController:null,manualRefinementController:null,voiceRecognition:null,composingQuestion:false,attachedFiles:[],previewDirty:false,
-  save(){saves++;return allowed;},location:{href:'https://aimsetp.com/eligibility.html?projectId=p',replace(url){
+ let check,applied=0;
+ const env={embeddedManual:false,embeddedPreview:false,document:{querySelectorAll:()=>[]},
+  generationController:null,manualRefinementController:null,confirmationQueue:null,pendingBackgroundStage:null,lastWorkspaceSaveFailed:false,
+  voiceRecognition:null,composingQuestion:false,attachedFiles:[],previewDirty:false,
+  location:{href:'https://aimsetp.com/eligibility.html?projectId=p',replace(url){
    assert.equal(new URL(url).searchParams.get('appVersion'),future);assert.equal(new URL(url).searchParams.get('projectId'),'p');applied++;
-  }},window:{AIMSTEPCriteriaRelease:{...release,watch(_,show){show(future);}}}};
- vm.runInNewContext(source,env);assert.equal(button.hidden,false);assert.equal(applied,0);
- for(const key of ['generationController','manualRefinementController','voiceRecognition','composingQuestion','previewDirty']){
-  env[key]=true;click();env[key]=false;
+  }},window:{AIMSTEPCriteriaRelease:{...release,watch(_,fn){check=()=>fn(future);}}}};
+ vm.runInNewContext(source,env);
+ for(const key of ['generationController','manualRefinementController','confirmationQueue','pendingBackgroundStage','voiceRecognition','composingQuestion','previewDirty','lastWorkspaceSaveFailed']){
+  env[key]=true;check();env[key]=false;
  }
- env.attachedFiles.push({});click();env.attachedFiles.pop();
- env.document.querySelectorAll=()=>[{value:'unsaved answer'}];click();env.document.querySelectorAll=()=>[];
- assert.equal(applied,0);assert.equal(saves,0);
- allowed=false;click();assert.equal(applied,0);
- allowed=true;click();assert.equal(applied,1);
+ env.attachedFiles.push({});check();env.attachedFiles.pop();
+ env.document.activeElement={matches:()=>true};check();env.document.activeElement=null;
+ env.document.querySelectorAll=()=>[{value:'unsaved answer'}];check();env.document.querySelectorAll=()=>[];
+ assert.equal(applied,0);
+ check();assert.equal(applied,1);
 });

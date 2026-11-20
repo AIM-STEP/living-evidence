@@ -708,6 +708,58 @@ function reconcileEligibilityFields(state,result,q,ranges,passages,onLesson,fram
  result.elements=keep;result.logic={op:'all_of',children};
  for(const issue of result.issues)if(issue.element_candidate_ids)issue.element_candidate_ids=[...new Set(issue.element_candidate_ids.map(id=>replacement.get(id)||id))];
 }
+// Repair a previous machine projection using the same evidence rules as a fresh
+// extraction. Only previously accepted, source-linked fields can change here.
+function repairSavedExtraction(state,q){
+ if(q.eligibility_policy!=='framework-only-v1'||q.unresolved_fragment_logic||q.fragment_logic_decision)return false;
+ const original=q.source_refs?.length===1&&D.sourceAt(state,q.source_refs[0]);
+ if(original?.input_kind!=='research_question'||original.original_text!==q.original_text)return false;
+ const records=state.elements.filter(e=>e.question_id===q.question_id);
+ if(records.some(e=>e.author_omission_id||e.explicit_revision||e.decision_status==='confirmed_by_user'||e.source_decision_ids?.length))return false;
+ const active=records.filter(e=>e.active!==false);
+ const aim=Methods.treatmentObjective(q.original_text);
+ const copied=aim&&active.some(e=>e.dimension_id==='intervention'&&e.disposition==='include'&&literalWording(e.normalized_text)===literalWording(aim.primary));
+ const boundary=active.some(e=>e.dimension_id==='outcome'&&(e.disposition==='exclude'||e.review_pending))&&
+  Methods.declaredFocus(q.original_text).some(d=>d.dimension==='review_boundary');
+ if(!copied&&!boundary)return false;
+ const ranges=citedRanges([{...original,start_codepoint:original.start_codepoint||0}]),ids=new Map(active.map(e=>[e.element_id,e.element_id]));
+ const result={elements:active.map(e=>({...D.clone(e),candidate_id:e.element_id})),issues:(q.model_issues||[]).map(i=>({...D.clone(i),element_candidate_ids:i.element_ids||[]})),
+  logic:q.logic&&D.mapExpression(q.logic,ids,'element_id')};
+ // The stored citations must belong to this particular version of the question.
+ const characters=Array.from(original.original_text);
+ if(result.elements.some(e=>e.source_refs.some(ref=>ref.source_id!==original.source_id||ref.source_revision!==original.revision||
+  !Number.isInteger(ref.start)||characters.slice(ref.start,ref.end).join('')!==ref.quote)))return false;
+ classifyDeclaredOutcomes(result,ranges);
+ if(copied)reconcileEligibilityFields(state,result,q,ranges,readSourcePassages(state,ranges),null,q.framework_mapping?.framework_id);
+ const changedRole=new Set(result.elements.filter(e=>e.disposition===null&&['background_information','review_focus'].includes(e.semantic_role)&&
+  active.some(old=>old.element_id===e.candidate_id&&(old.disposition!=null||old.semantic_role!==e.semantic_role))).map(e=>e.candidate_id));
+ const replacements=new Map(result.elements.filter(e=>!changedRole.has(e.candidate_id)).map(e=>[e.candidate_id,e]));
+ // Missing fields or ambiguous, unresolved treatment decisions still need the
+ // normal generation and verification path. Never synthesize a new accepted ID.
+ if([...replacements.keys()].some(id=>!ids.has(id)))return false;
+ const updated=active.filter(e=>{
+  const next=replacements.get(e.element_id);
+  return !next||e.normalized_text!==next.normalized_text||e.dimension_id!==next.dimension_id||
+   JSON.stringify(e.source_refs)!==JSON.stringify(next.source_refs);
+ });
+ if(!updated.length||updated.some(e=>e.source_occurrence_pending||e.source_occurrence_alternatives?.length||
+   (replacements.has(e.element_id)||e.dimension_id!=='outcome')&&(!E.accepted(e)||e.review_pending)))return false;
+ for(const old of updated){
+  const next=replacements.get(old.element_id);
+  if(next){D.validate_provenance(state,next.source_refs,q.question_id);D.check_semantics(next,next.source_refs);}
+ }
+ for(const old of updated){
+  const next=replacements.get(old.element_id);
+  if(!next){old.active=false;continue;}
+  old.metadata_corrections=[...(old.metadata_corrections||[]),{field:'normalized_text',from:old.normalized_text,to:next.normalized_text,basis:'Restored the treatment assignment and its qualifications from the original eligibility clause.'}];
+  Object.assign(old,{normalized_text:next.normalized_text,raw_text:D.quoteText(next.source_refs,'\n'),source_refs:next.source_refs,dimension_id:next.dimension_id,
+   structured_value:next.structured_value,revision:old.revision+1,...(next.treatment_name&&{treatment_name:next.treatment_name}),...(next.title_population&&{title_population:next.title_population})});
+ }
+ q.element_ids=active.filter(e=>e.active!==false).map(e=>e.element_id);
+ q.logic=result.logic&&D.mapExpression(result.logic,new Map(q.element_ids.map(id=>[id,id])),'element_id');
+ q.model_issues=result.issues.map(i=>({...i,element_ids:i.element_candidate_ids.filter(id=>replacements.has(id))})).filter(i=>i.element_ids.length);
+ return true;
+}
 function bindLabelledInclusions(result,q,passages,onLesson){
  if(!result.logic||q.confirmed_elements?.length)return;
  const labels=passages.filter(p=>p.inclusionHeading!=null&&p.labelled&&p.dimension);
@@ -1774,5 +1826,5 @@ async function parse_answers(state,answerText,issueIds,adapter,options={}){
  }
  return {base_revision:state.revision,request_id:options.request_id||D.id('answer_request'),answers:result.answers,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
 }
-return {client,analyze,extract_elements,review_elements,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,httpError,serializationInstruction,backendTask,decodeReply,executableOption};
+return {client,analyze,extract_elements,review_elements,repairSavedExtraction,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,httpError,serializationInstruction,backendTask,decodeReply,executableOption};
 });

@@ -103,8 +103,7 @@ async function replay() {
     }
   }
   const outcomeList=[...primary.items,...secondary.items].map((item,index)=>(index+1)+'.'+item).join('；');
-  inOrder(html,['Review topic:','Framework:','>Inclusion<','Population:','Intervention:','Comparison:','>no exercise<','Outcomes:',
-    outcomeList,'Study design:','>Exclusion<','>Not reporting.<','>Description<']);
+  inOrder(html,['Review topic:','Framework:','>Inclusion<','Population:','Intervention:','Comparison:','>no exercise<','Outcomes:</strong> '+outcomeList,'Study design:','>Exclusion<','>Not reporting.<','>Description<']);
   assert.doesNotMatch(html.slice(html.indexOf('Outcomes:'),html.indexOf('Study design:')),/primary|secondary/i);
   assert.doesNotMatch(html,/<strong>(?:Context|Other):/i);
   const file=Buffer.from(page.api.export()).toString('utf8');
@@ -112,8 +111,8 @@ async function replay() {
   assert.match(xml,/>Framework: PICOS<\/w:t>/);
   inOrder(xml,['>Exclusion<','>Not reporting.<','>Description<']);
   const table=xml.slice(xml.indexOf('<w:tbl>'),xml.indexOf('</w:tbl>'));
-  inOrder(table,['>Include<','>Population<','>Intervention<','>Comparison<','>no exercise<','>Outcomes<',outcomeList,'>Study design<']);
-  assert.doesNotMatch(table.slice(table.indexOf('>Outcomes<'),table.indexOf('>Study design<')), /primary|secondary/i);
+  inOrder(table,['>Include<','>Population<','>Intervention<','>Comparison<','>no exercise<','>Outcomes: '+outcomeList+'</w:t>','>Study design<']);
+  assert.doesNotMatch(table.slice(table.indexOf('>Outcomes: '),table.indexOf('>Study design<')), /primary|secondary/i);
   inOrder(xml,['Review topic:','Framework:','<w:tbl>','</w:tbl>','>Description<']);
   const descriptionStart=html.indexOf('>Description<');
   checkFirstUse(html.slice(0,descriptionStart));
@@ -124,7 +123,13 @@ async function replay() {
   delete page.api.state().machineRefinement.descriptionContext.outcome_groups;
   page.api.fill();
   assert.doesNotMatch(page.el('preview').innerHTML,/<strong>Outcomes:<\/strong>/);
-  assert.doesNotMatch(Buffer.from(page.api.export()).toString('utf8'),/>Outcomes</);
+  assert.doesNotMatch(Buffer.from(page.api.export()).toString('utf8'),/>Outcomes: /);
+  // A genuinely unresolved relationship belongs beside its field label, even with no settled outcome.
+  state.machineRefinement.pendingLogicRows=[{domain:'Outcomes',subject:'minimum duration of pain relief',side:'include'}];
+  page.api.fill();
+  const pending='Pending relationship · minimum duration of pain relief';
+  assert(page.el('preview').innerHTML.includes('<strong>Outcomes:</strong> '+pending+'</span>'));
+  assert(Buffer.from(page.api.export()).toString('utf8').includes('>Outcomes: '+pending+'</w:t>'));
 }
 
 replay().catch(error=>{console.error(error);process.exitCode=1;});

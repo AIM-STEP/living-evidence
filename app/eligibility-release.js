@@ -2,7 +2,9 @@
 (function(root){
   'use strict';
   const commonJS=typeof module==='object'&&module.exports;
-  const current=commonJS?require('./eligibility-release.json').version:new URL(document.currentScript.src).searchParams.get('v');
+  const scriptURL=commonJS?null:new URL(document.currentScript.src);
+  const current=commonJS?require('./eligibility-release.json').version:scriptURL.searchParams.get('v');
+  let latest=current;
   // The standalone route generator embeds this pure function in its tiny entry page.
   function newest(current,requested){
     const pattern=/^(\d{8})-criteria-release-(\d{1,6})$/;
@@ -15,7 +17,10 @@
   }
   function editorURL(url,requested){
     const target=new URL(url);
-    const version=newest(newest(current,target.searchParams.get('appVersion')),requested);
+    let known=latest;
+    // A long-lived workspace can open a fresh editor without reloading itself.
+    if(!commonJS&&root.top!==root)try{known=newest(known,root.top.AIMSTEPCriteriaRelease?.latest);}catch(_){}
+    const version=newest(newest(known,target.searchParams.get('appVersion')),requested);
     target.searchParams.set('appVersion',version);
     target.searchParams.delete('criteriaPreviewVersion');
     return target;
@@ -27,12 +32,13 @@
       if(checking||env.document.visibilityState==='hidden'||now<scheduled)return;
       checking=true;scheduled=now+60000;
       try{
-        const url=new URL('app/eligibility-release.json',env.location.href);
+        // The workspace can expose a nested public route via history.pushState.
+        const url=scriptURL?new URL('eligibility-release.json',scriptURL):new URL('app/eligibility-release.json',env.location.href);
         url.searchParams.set('check',String(Math.floor(now/60000)));
         const response=await env.fetch(url,{cache:'no-store',referrerPolicy:'no-referrer'});
         if(!response.ok)return;
-        const available=newest(current,(await response.json()).version);
-        if(available!==current)onUpdate(available);
+        latest=newest(latest,(await response.json()).version);
+        if(latest!==current)onUpdate?.(latest);
       }catch(_){}finally{checking=false;}
     }
     env.addEventListener('pageshow',check);
@@ -41,6 +47,10 @@
     env.setInterval(check,120000);
     check();
   }
-  const api={current,newest,tool,editorURL,watch};
-  if(commonJS)module.exports=api;else root.AIMSTEPCriteriaRelease=api;
+  const api={current,get latest(){return latest;},newest,tool,editorURL,watch};
+  if(commonJS)module.exports=api;
+  else{
+    root.AIMSTEPCriteriaRelease=api;
+    if(root.top===root&&/(?:\/|\/index\.html)$/i.test(root.location.pathname))watch(root);
+  }
 })(typeof window==='object'?window:globalThis);
