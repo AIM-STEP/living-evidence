@@ -75,7 +75,7 @@ function explicitComparisonPairs(ref){
  return pairs;
 }
 function objectiveArms(value){
- const wording=phrase(value).replace(/^studies comparing\s+/i,'comparing ');
+ const wording=phrase(value).replace(/^studies comparing\s+/i,'comparing ').replace(/\uFB00/gu,'ff');
  const objective=wording.match(/^(?:to |we (?:aim(?:ed)? to )?)?(?:assess|evaluate|examine|determine) (?:the )?(?:(?:clinical|comparative|relative|cost|economic|benefits?|harms?|effects?|efficacy|effectiveness|safety|and)[ ‐‑–-]+)+of (.+)$/i);
  if(!objective){
   const pair=wording.match(/^(?:comparing|to compare) (.+?) (?:with|to) (.+)$/i);
@@ -86,8 +86,11 @@ function objectiveArms(value){
  const arms=objective[1].split(armContrast);
  if(arms.length!==2)return null;
  // Purpose and outcome clauses commonly follow an objective's comparator.
- const comparator=arms[1].split(/(?:,\s*|\s+)(?:for (?:the )?(?:resuscitation|treatment|management|prevention|diagnosis) of|in (?:reducing|preventing|improving)|on (?:the )?(?:risks?|rates?|incidence|mortality|morbidity|survival|quality of life|health[‐‑– -]related quality of life|outcomes?))\b/i)[0];
- return {objective:true,intervention:arms[0].replace(/,$/,'').trim(),comparator:comparator.trim(),sharedPurpose:comparator!==arms[1]&&/^,?\s*for\b/i.test(arms[1].slice(comparator.length))};
+ const comparator=arms[1].split(/(?:,\s*|\s+)(?:for (?:the )?(?:resuscitation|treatment|management|prevention|diagnosis) of|in (?:reducing|preventing|improving)|on (?:the )?(?:risks?|rates?|incidence|mortality|morbidity|survival|quality of life|health[‐‑– -]related quality of life|outcomes?|[\w-]+(?: [\w-]+){0,3} (?:levels?|outcomes?)))\b/i)[0];
+ let intervention=arms[0].replace(/,$/,'').trim();
+ const sharedName=/^[\p{L}]+[‐‑–-]dose ([\p{L}][\p{L} ‐‑–-]{1,45})$/iu.exec(comparator.trim());
+ if(sharedName&&/^[\p{L}]+[‐‑–-]dose$/iu.test(intervention))intervention+=' '+sharedName[1];
+ return {objective:true,intervention,comparator:comparator.trim(),sharedPurpose:comparator!==arms[1]&&/^,?\s*for\b/i.test(arms[1].slice(comparator.length))};
 }
 // In “effects of X on Y”, X is the treatment and Y is the outcome. A
 // duration in the X phrase qualifies treatment and is never a second arm.
@@ -328,6 +331,9 @@ function compactTitle(value,maxWords=14,maxLength=105){
 function populationTitleHead(value){
  return value.split(/[,;]\s+|\s+(?:who (?:were|are|have|had|received)|experiencing|recruited|enrolled|followed up|participating in)\s+/iu)[0]
   .replace(/\s+aged\s+(?:(?:at least|at most|between|over|under)\s+)?[<>≥≤=\s]*\d+(?:[.\d]*)(?:\s*(?:to|and|[-–])\s*\d+(?:[.\d]*))?\s+(?:days?|weeks?|months?|years?)(?:\s+or (?:older|younger))?(?=$|\s)/iu,'')
+  .replace(/\s*\((?:[≥≤<>˂˃=]\s*)?\d+(?:\.\d+)?\s+weeks?'? gestation\)/giu,'')
+  .replace(/\s+who required [^,;]+$/iu,'')
+  .replace(/^(?:term and preterm|preterm and term) (infants|neonates)\b/iu,'$1')
   .trim();
 }
 const populationNoun=/\b(?:adults?|participants?|patients?|infants?|neonates?|newborns?|children|adolescents?|people|men|women|survivors?|caregivers?|inpatients?|outpatients?)\b/iu;
@@ -571,10 +577,10 @@ function declaredFocus(source){
   const text=raw.trim().replace(/[.!?]$/,'').trim();
   const position=offset;offset+=Array.from(raw).length;cursor=end;
   if(!text)continue;
-  const ranked=text.match(/^(?:(?:our|the) )?(primary|secondary) outcomes?\s*(?:(?:included?|comprised?|was|were|is|are)\s+|:\s*)(.+)$/is);
+  const ranked=text.match(/^(?:(?:our|the) )?(primary|secondary|critical) outcomes?\s*(?:(?:included?|comprised?|was|were|is|are)\s+|:\s*)(.+)$/is);
   const list=ranked?[text,ranked[2]]:text.match(/^(?:(?:our|the) )?outcomes? of interest (?:were|are|included?)\s+(.+)$/is);
   const modifiers=text.match(/^(?:(?:to |we (?:aim(?:ed)? to )?)?(?:assess|determine|examine|investigate|evaluate) whether (?:the )?((?:benefits and harms|effects?)\b.+? (?:differ(?:ed)?|var(?:y|ied)) (?:according to|by) .+))$/is);
-  const objective=text.match(/^(?:to |we (?:aim(?:ed)? to )?)(?:assess|evaluate|examine|investigate|determine)\s+(?:the )?[^.;:!?]*?\b(?:effects?|impact|effectiveness|benefits? and harms?) of .+?\s+on\s+(.+)$/iu);
+  const objective=text.match(/^(?:to |we (?:aim(?:ed)? to )?)(?:assess|evaluate|examine|investigate|determine)\s+(?:the )?[^.;:!?]*?\b(?:e(?:ff|ﬀ)ects?|impact|e(?:ff|ﬀ)ectiveness|benefits? and harms?) of .+?\s+on\s+(.+)$/iu);
   // Keep endpoint modifiers, while separating a final clause naming the cohort.
   const endpoints=objective?.[1].split(/,?\s+(?:in|among)\s+(?=(?:(?:[\w‐‑–-]+\s+){0,5})(?:women|men|adults?|children|people|patients?|participants?|infants?|newborns?)\b)|,\s+and to\s+/iu)[0];
   const examples=text.match(/^(?:we|the review) focus(?:es|ed)? on (?:studies?|trials?) (?:assessing|evaluating|examining|reporting) .+?\boutcomes?,\s*(?:including|such as)\s+(.+)$/iu);
@@ -606,9 +612,10 @@ function listedOutcomes(text){
   if(token===')'||token===']'){if(--depth<0)return [text];continue;}
   if(depth)continue;
   const before=text.slice(start,match.index).trim(),after=text.slice(match.index+token.length);
-  if(!before||/^(?:including|defined as|measured|assessed|at |as |with |without )/iu.test(after))continue;
+  if(!before||/^(?:including|defined as|measured|assessed|which included|at |as |with |without )/iu.test(after)||
+     /^\d+(?:\.\d+)?(?=\s*,|\s+and\b|\s+(?:days?|weeks?|months?|hours?)\b)/iu.test(after))continue;
   if(token.trim().toLowerCase()==='and'&&
-     (!/^(?:[A-Z][A-Za-z0-9]{1,8}\b|(?:cost[‐‑– -]effectiveness|(?:health[‐‑– -]related )?quality of life|mortality|morbidity|pain|hospitali[sz]ation|revascularisation|survival|cognition|fractures?|cancer|adverse events?|incidence of|length of stay)\b)/u.test(after)||
+     (!/^(?:[A-Z][A-Za-z0-9]{1,8}\b|(?:cost[‐‑– -]effectiveness|(?:health[‐‑– -]related )?quality of life|mortality|morbidity|pain|hospitali[sz]ation|revascularisation|survival|cognition|fractures?|cancer|adverse events?|incidence of|length of stay|(?:serum|blood) [a-z-]+ (?:levels?|concentrations?))\b)/u.test(after)||
       /^(?:fatal|non[‐‑– -]fatal|primary|secondary|all[‐‑– -]cause|cardiovascular|moderate|mild|severe|short[‐‑– -]term|long[‐‑– -]term)$/iu.test(before)))continue;
   items.push(before);start=match.index+token.length;
  }
@@ -622,11 +629,13 @@ function outcomeGroups(source){
  // preserve the endpoints named in the objective before the illustrative list.
  const kind=['outcome','objective_endpoints','outcome_examples'].find(kind=>declarations.some(d=>d.dimension===kind));
  for(const d of declarations.filter(d=>d.dimension===kind)){
-  const label=d.rank==='primary'?'Primary':d.rank==='secondary'?'Secondary':'';
+  const label=d.rank?d.rank[0].toUpperCase()+d.rank.slice(1):'';
   let group=groups.find(g=>g.label===label);
   if(!group){group={label,items:[]};groups.push(group);}
   for(const item of listedOutcomes(d.value)){
-   const label=names.get(item)?names.get(item)+' ('+item+')':item;
+   const label=names.get(item)?names.get(item)+' ('+item+')':item
+    .replace(/at the latest periods of measurements, which included /iu,'at the latest recorded time points, including ')
+    .replace(/\b(hours?|days?|weeks?) (?:after|aOer) treatment commencement\b/giu,'$1 after treatment began');
    if(!group.items.includes(label))group.items.push(label);
   }
  }
@@ -915,9 +924,17 @@ function manuscriptContext(source){
  const intervals=source.match(/(?:^|[.!?]\s+)we (?:categorised|categorized|classified|grouped) follow[-‐‑ ]up (?:as|into) ([^.!?\n]+(?:\.\d+[^.!?\n]*)*)[.]?(?=\s|$)/iu)?.[1];
  const declarations=declaredFocus(source);
  const scopeNotes=declarations.filter(d=>d.dimension==='review_boundary').map(d=>d.value);
+ const noParticipantExclusions=/\bwe specified no exclusion criteria for (?:the )?(?:infants?|patients?|participants?|adults?|children)\b/iu.test(source);
+ if(noParticipantExclusions)scopeNotes.push('There were no additional participant-level exclusions');
+ const delivery=norm(source).match(/\bare achieved in various ways:\s*([^.!?]+)\.\s*We compared these different methods of delivering ([^.!?]+?) to each other\b/iu);
+ const deliveryMethods=delivery&&delivery[1].split(/\s*;\s*(?:or\s+)?/iu).map(method=>
+  method.replace(/^by the use of /iu,'the use of ').replace(/^different levels of light intensity\b/iu,'different light intensities')
+   .replace(/^positioning of the devices /iu,'placing devices '));
+ const deliveryNote=deliveryMethods&&deliveryMethods.length>1?
+  'We also compared methods of delivering '+delivery[2]+' directly, including '+join(deliveryMethods,'all_of'):'';
  const examples=declarations.filter(d=>d.dimension==='outcome_examples').flatMap(d=>listedOutcomes(d.value));
  const outcomeSubject=declarations.find(d=>d.dimension==='outcome_examples')?.text.match(/\b((?:(?:long|short)[‐‑– -]term )?(?:clinical |patient[‐‑– -]relevant )?outcomes),\s*(?:including|such as)\b/iu)?.[1];
- return {completed,abbreviations:abbreviationDefinitions(source),...(aim&&{aim}),...(intervals&&{intervals}),...(scopeNotes.length&&{scopeNotes}),...(examples.length&&{examples,outcomeSubject})};
+ return {completed,abbreviations:abbreviationDefinitions(source),...(aim&&{aim}),...(intervals&&{intervals}),...(scopeNotes.length&&{scopeNotes}),...(examples.length&&{examples,outcomeSubject}),...(deliveryNote&&{deliveryNote})};
 }
 function description(rows,context={}){
  if(context.pending_inclusion_relation){
@@ -978,6 +995,7 @@ function description(rows,context={}){
   sharedDuration=shared||sharedDuration;
  }else if(population||studies!=='studies')sentences.push(sentence(include+studies+(population?' of '+population:'')));
  if(sharedDuration)sentences.push(sentence((completed?'Participants received':'Participants must receive')+' their assigned treatment '+sharedDuration.trim()));
+ if(manuscript?.deliveryNote)sentences.push(sentence(manuscript.deliveryNote));
  const focusPeople=populationProse(context.source_population||[]),focusIntervention=join(context.source_interventions||[],'all_of'),focusComparison=join(context.source_comparisons||[],'all_of');
  if(focusIntervention||focusComparison){
   const subject=focusIntervention||intervention,control=focusComparison||comparison;
@@ -1014,7 +1032,8 @@ function description(rows,context={}){
  const examples=new Set((manuscript?.examples||[]).filter(item=>!allOutcomes.includes(endpointKey(item))));
  for(const group of outcomeGroups){
   const items=group.items.map(item=>{
-   const term=prosePhrase(item).replace(/^(mortality|hospitalisation) \(all[-‐‑ ]cause and cardiovascular\)$/iu,'all-cause and cardiovascular $1');
+   const term=prosePhrase(item).replace(/^(mortality|hospitalisation) \(all[-‐‑ ]cause and cardiovascular\)$/iu,'all-cause and cardiovascular $1')
+    .replace(/^incidence of /iu,'the incidence of ');
    if(/^cardiovascular (?:events|outcomes)$/iu.test(term)&&allOutcomes.filter(name=>name===endpointKey(term)).length===1){
     const coronary=[...examples].filter(example=>/^coronary events?$/iu.test(example));
     if(coronary.length){for(const example of coronary)examples.delete(example);return term+' (including '+join(coronary,'all_of')+')';}
@@ -1039,5 +1058,5 @@ function description(rows,context={}){
  return result;
 }
 
-return {ageClause,plan,classifyAnalysis,restoreAge,treatmentObjective,studyDesignWording,sharedTreatmentDuration,standaloneObjectiveArms,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,comparatorDisplayText,criterionPhrase,naturalExpression,splitDimensions,frameworkUnits,combinePopulationUnits,clause,topic,projectTopic,declaredFocus,outcomeGroups,abbreviationDefinitions,abbreviationFormatter,descriptionContext,manuscriptContext,description};
+return {ageClause,plan,classifyAnalysis,restoreAge,treatmentObjective,objectiveArms,studyDesignWording,sharedTreatmentDuration,standaloneObjectiveArms,normalizeComparisonArms,normalizeComparators,isInterventionStudyExclusion,normalizeExcludedIntervention,interventionReference,phrase,join,comparatorDisplayText,criterionPhrase,naturalExpression,splitDimensions,frameworkUnits,combinePopulationUnits,clause,topic,projectTopic,declaredFocus,outcomeGroups,abbreviationDefinitions,abbreviationFormatter,descriptionContext,manuscriptContext,description};
 });

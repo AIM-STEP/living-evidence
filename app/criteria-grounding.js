@@ -2,7 +2,7 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.AIMSTEPCriteriaGrounding=api;})(typeof window!=='undefined'?window:globalThis,function(){
   'use strict';
   const VERSION='original-source-v2';
-  const clean=value=>String(value||'').normalize('NFKC').replace(/\s+/g,' ').trim();
+  const clean=value=>String(value||'').normalize('NFKC').replace(/[˂˃]/gu,sign=>sign==='˂'?'<':'>').replace(/\s+/g,' ').trim();
   function segments(sources){
     const result=[];
     for(const [index,source] of sources.entries()){
@@ -39,7 +39,7 @@
     hour:'hour',hours:'hour',hr:'hour',hrs:'hour',h:'hour',小时:'hour',minute:'minute',minutes:'minute',min:'minute',mins:'minute',分钟:'minute',
     mg:'mg',g:'g',µg:'mcg',μg:'mcg',mcg:'mcg','%':'%'
   };
-  const unitPattern=/^\s*[-‐‑]?\s*(years?|yrs?|months?|mos?|weeks?|wks?|days?|hours?|hrs?|h|minutes?|mins?|mg|mcg|μg|g|%|岁|年|个月|月|周|天|日|小时|分钟)(?![a-z])/i;
+  const unitPattern=/^\s*[-‐‑]?\s*(years?|yrs?|months?|mos?|weeks?|wks?|days?|hours?|hrs?|h|minutes?|mins?|mg|mcg|μg|μw(?=\s*\/)|g|%|岁|年|个月|月|周|天|日|小时|分钟)(?![a-z])/i;
   function unitName(unit){
     const key=clean(unit).toLowerCase().replace(/\s*\/\s*/g,'/');
     return unitAliases[key]||key;

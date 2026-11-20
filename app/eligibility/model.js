@@ -332,7 +332,7 @@ function readSourcePassages(state,ranges){
    const inherited=explicitFields[head];
    const kind=field||(direction?(/exclud|not include|排除|不纳入/i.test(direction[0])?'exclude':'include'):null)||
     (/^(?:to |we (?:aim(?:ed)? to )?)(?:assess|examine|investigate|determine|evaluate) whether\b|^亚组分析/u.test(text.toLowerCase())?'analysis_objective':null)||
-    (/^(?:(?:our|the) outcomes of interest (?:were|are)|(?:primary|secondary) outcomes? (?:were|are))\b/i.test(text)?'outcome':null)||
+    (/^(?:(?:our|the) outcomes of interest (?:were|are)|(?:(?:our|the) )?(?:primary|secondary|critical) outcomes? (?:were|are))\b/i.test(text)?'outcome':null)||
     (/\b(?:compared (?:with|to)|versus|comparing .+? with)\b/i.test(text)?'comparison_clause':null)||inherited;
    if(!kind)continue;
    const ref={source_id:span.id,source_revision:span.revision,start:sourceOffset(span,line.start),end:sourceOffset(span,line.end),quote};
@@ -491,12 +491,30 @@ function assignedTrialFields(passage,passages,source){
  const designRef=quotedField(ref,design);
  return [{dimension:'study_design',quote:Methods.studyDesignWording(design),ref:designRef,refs:[designRef],forms:[design]},population,arm,comparison];
 }
+function trialPopulationFields(passage){
+ const trial=/^(.+?) (?:of|in|enrolling|involving) (.+)$/iu.exec(passage.value);
+ if(!trial)return null;
+ const [,design,population]=trial;
+ const designs=design.split(/,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+/iu);
+ if(!designs.every(name=>/^(?:(?:double[-‐‑– ]blind[,]? )?(?:randomi[sz]ed|quasi[-‐‑– ]randomi[sz]ed|cluster[-‐‑– ]randomi[sz]ed)(?:,? double[-‐‑– ]blind)? (?:controlled )?trials?(?: \(RCTs?\))?|(?:quasi[-‐‑– ]|cluster(?:ed)?[-‐‑– ])?RCTs?)$/iu.test(name)))return null;
+ if(!/\b(?:infants?|neonates?|newborns?|adults?|children|participants?|patients?|people|women|men)\b/iu.test(population)||
+    /\b(?:comparing|compared|versus|took|receiv(?:e|ed|ing)|assigned|randomi[sz]ed|allocated|participants who may)\b/iu.test(population))return null;
+ const study=designs.length===1?Methods.studyDesignWording(design):Methods.join(designs.map(name=>
+  name.replace(/\s+\(RCTs?\)$/iu,'').replace(/^quasi[-‐‑– ]RCTs$/iu,'quasi-randomised controlled trials')
+   .replace(/^cluster(?:ed)?[-‐‑– ]RCTs$/iu,'cluster-randomised controlled trials').replace(/^RCTs$/u,'randomised controlled trials')),'any_of');
+ const people=G.clean(population).replace(/,?\s+and requiring\s+/iu,' who required ').replace(/([<>≥≤])\s+(?=\d)/gu,'$1');
+ return [['study_design',study,design],['population',people,population]].map(([dimension,quote,original])=>{
+  const ref=quotedField(passage.ref,original);
+  return {dimension,quote,ref,refs:[ref],forms:[original]};
+ });
+}
 function comparisonEligibilityFields(passage,passages,source){
  if(passage.kind!=='include'||!passage.value)return null;
  const value=passage.value.trim();
  if(/\b(?:except|unless|provided|if|either of the following|respectively|alternatively|whereas|otherwise|or (?:in|among|comparing|trials?|studies))\b|[;:]/i.test(value))return null;
  const trials=trialComparisonFields(passage,passages);if(trials)return trials;
  const assigned=assignedTrialFields(passage,passages,source);if(assigned)return assigned;
+ const cohort=trialPopulationFields(passage);if(cohort)return cohort;
  const parts=value.split(/\s+(?:comparing|(?:that|which) compar(?:e|ed))\s+/i);
  if(parts.length!==2)return null;
  let [design,population]=parts[0].split(/\s+(?:in|among|enrolling|involving|recruiting)\s+(.+)$/i);
@@ -611,7 +629,7 @@ function classifyDeclaredOutcomes(question,ranges){
   if(E.explicitOutcomeRequirement(evidence.map(r=>({quote:r.context||r.quote}))))continue;
   const boundTo=kind=>e.source_refs.every(ref=>declarations.some(d=>{
    if(!kind(d.dimension)||ref.source_id!==d.source_id||ref.source_revision!==d.source_revision||ref.start<d.start||ref.end>d.end)return false;
-   if(d.dimension!=='objective_endpoints')return true;
+   if(d.dimension!=='objective_endpoints'||e.dimension_id.split('.')[0]==='outcome')return true;
    return ref.start>=d.valueStart&&ref.end<=d.valueEnd+1||
     ref.start<=d.valueStart&&ref.end>=d.valueEnd&&d.value.toLowerCase().includes(e.normalized_text.trim().toLowerCase());
   }));
@@ -629,6 +647,41 @@ function classifyDeclaredOutcomes(question,ranges){
   question.logic=D.mapExpression(question.logic,new Map(ids.filter(id=>!focusIds.has(id)).map(id=>[id,id])),'element_id');
  }
  if(focusIds.size)question.issues=question.issues.filter(issue=>!issue.element_candidate_ids?.length||!issue.element_candidate_ids.every(id=>focusIds.has(id)));
+}
+function retainIrradianceDefinitions(state,result,q,ranges,frame){
+ if(!['pico','picos'].includes(frame)||q.confirmed_elements?.length)return;
+ const source=ranges.find(r=>D.sourceAt(state,{source_id:r.id,source_revision:r.revision})?.input_kind==='research_question');
+ if(!source)return;
+ const objective=source.text.split(/[;\n]|[.!?](?=\s|$)/u)[0];
+ const pair=Methods.objectiveArms(objective);
+ if(!pair?.objective)return;
+ const definitions=[...source.text.matchAll(/\b([\p{L}]+[‐‑–-]dose [\p{L}‐‑–-]+(?: [\p{L}‐‑–-]+){0,2}), defined as (?:the use of )?(?:(?:high|low) levels? of )?measured (?:levels? of )?spectral irradiance (greater than|more than|below|less than|[<>])\s*(\d+(?:\.\d+)?)\s+([μµ]W\s*\/\s*[\p{L}²2]+\s*\/\s*nm)(\s+over the same bandwidth)?(?=,|[.!?;]|\s*$)/giu)];
+ const boundFor=name=>definitions.filter(match=>literalWording(match[1]).toLowerCase()===literalWording(name).toLowerCase());
+ const active=boundFor(pair.intervention),control=boundFor(pair.comparator);
+ if(active.length!==1||control.length!==1)return;
+ const roles=[['intervention',active[0]],['comparator',control[0]]];
+ for(const [dimension,definition] of roles){
+  const aliases=dimension==='comparator'?['comparison','comparator','control_group']:['intervention'];
+  const candidates=result.elements.filter(e=>aliases.includes(e.dimension_id)&&e.disposition!=='exclude');
+  if(candidates.length!==1)continue;
+  const [e]=candidates;
+  if(e.explicit_revision||e.decision_status==='confirmed_by_user'||e.scope_conditions?.length||e.exceptions?.length||e.source_occurrence_alternatives?.length||
+     !e.source_refs.every(r=>r.source_id===source.id&&r.source_revision===source.revision&&r.end<=sourceOffset(source,definitions.at(-1).index+definitions.at(-1)[0].length)))continue;
+  const [quote,name,operator,amount,unit,bandwidth='']=definition;
+  const symbol=/^(?:greater than|more than|>)$/iu.test(operator)?'>':'<';
+  const normalized_text=literalWording(name)+' (measured spectral irradiance '+symbol+amount+' '+unit+bandwidth+')';
+  const ref={source_id:source.id,source_revision:source.revision,quote,
+   start:sourceOffset(source,definition.index),end:sourceOffset(source,definition.index+quote.length)};
+  const previous=D.sourceConstraints(e.normalized_text);
+  const expected=D.sourceConstraints(normalized_text)[0];
+  if(previous.length===1&&!D.sameConstraint(previous[0],expected))continue;
+  const updated={...e,normalized_text,dimension_id:dimension,source_refs:[ref],structured_value:null};
+  D.check_semantics(updated,[ref]);
+  Object.assign(e,updated);
+  delete e[reviewCitations];delete e[locatedContexts];
+  checkExtractedSources(state,e,q.question_id,ranges);
+  markLiteralField(e,dimension,'include',normalized_text);
+ }
 }
 // A complete population in a clinical objective or a standalone eligibility
 // directive supplies its own field and direction without a "Population:" label.
@@ -692,10 +745,11 @@ function reconcileEligibilityFields(state,result,q,ranges,passages,onLesson,fram
    fieldById.set(e.candidate_id,null);
    continue;
   }
-  const objectiveTreatment=fields.find(f=>f.fullObjective&&value===key(f.fullObjective));
-  const fullAim=arm&&/^(?:to (?:assess|compare|evaluate|determine)|we (?:aim|assess|compare))/i.test(primary)&&
-    value===key(primary)&&(objectiveTreatment||fields.filter(f=>['intervention','comparator'].includes(f.dimension)).every(f=>contains(key(primary),key(f.quote).replace(/^any /,''))))&&
+  const objectiveTreatment=arm&&fields.find(f=>f.fullObjective&&value===key(f.fullObjective));
+  const wholeAim=/^(?:to (?:assess|compare|evaluate|determine)|we (?:aim|assess|compare))/i.test(primary)&&value===key(primary)&&
     e.source_refs.every(r=>sameClause(r)||contains(key(primary),key(r.quote))||contains(key(r.quote),key(primary)));
+  const arms=fields.filter(f=>['intervention','comparator'].includes(f.dimension));
+  const fullAim=wholeAim&&(e.dimension_id==='population'||arm&&(objectiveTreatment||arms.length&&arms.every(f=>contains(key(primary),key(f.quote).replace(/^any /,'')))));
   const domain=e.dimension_id==='design'?'study_design':['comparison','control_group'].includes(e.dimension_id)?'comparator':e.dimension_id;
   const matchField=f=>{
    const spans=[...(f.refs||[f.ref]),...(f.matchRefs||[])];
@@ -768,14 +822,18 @@ function repairSavedExtraction(state,q){
  if(records.some(e=>e.author_omission_id||e.explicit_revision||e.decision_status==='confirmed_by_user'||e.source_decision_ids?.length))return false;
  const active=records.filter(e=>e.active!==false);
  const aim=Methods.treatmentObjective(q.original_text);
+ const objective=q.original_text.split(/[.!?](?=\s|$)/u)[0];
+ const copiedCohort=/^(?:to |we (?:aim(?:ed)? to )?)(?:assess|compare|evaluate|determine)\b/iu.test(objective)&&
+  active.some(e=>e.dimension_id==='population'&&literalWording(e.normalized_text)===literalWording(objective));
  const copied=aim&&active.some(e=>e.dimension_id==='intervention'&&e.disposition==='include'&&literalWording(e.normalized_text)===literalWording(aim.primary));
  const boundary=active.some(e=>e.dimension_id==='outcome'&&(e.disposition==='exclude'||e.review_pending))&&
   Methods.declaredFocus(q.original_text).some(d=>d.dimension==='review_boundary');
- if(!aim&&!boundary)return false;
+ if(!aim&&!boundary&&!copiedCohort)return false;
  const ranges=citedRanges([{...original,start_codepoint:original.start_codepoint||0}]),ids=new Map(active.map(e=>[e.element_id,e.element_id]));
- const passages=aim?readSourcePassages(state,ranges):[];
+ const passages=aim||copiedCohort?readSourcePassages(state,ranges):[];
  const assigned=aim&&passages.some(p=>p.kind==='include'&&p.value&&assignedTrialFields(p,passages,ranges[0]));
- if(!copied&&!boundary&&!assigned)return false;
+ const cohort=copiedCohort&&passages.some(p=>p.kind==='include'&&p.value&&trialPopulationFields(p));
+ if(!copied&&!boundary&&!assigned&&!cohort)return false;
  const result={elements:active.map(e=>({...D.clone(e),candidate_id:e.element_id})),issues:(q.model_issues||[]).map(i=>({...D.clone(i),element_candidate_ids:i.element_ids||[]})),
   logic:q.logic&&D.mapExpression(q.logic,ids,'element_id')};
  // The stored citations must belong to this particular version of the question.
@@ -783,7 +841,8 @@ function repairSavedExtraction(state,q){
  if(result.elements.some(e=>e.source_refs.some(ref=>ref.source_id!==original.source_id||ref.source_revision!==original.revision||
   !Number.isInteger(ref.start)||characters.slice(ref.start,ref.end).join('')!==ref.quote)))return false;
  classifyDeclaredOutcomes(result,ranges);
- if(copied||assigned)reconcileEligibilityFields(state,result,q,ranges,passages,null,q.framework_mapping?.framework_id);
+ if(copied||assigned||cohort)reconcileEligibilityFields(state,result,q,ranges,passages,null,q.framework_mapping?.framework_id);
+ if(cohort)retainIrradianceDefinitions(state,result,q,ranges,q.framework_mapping?.framework_id);
  const changedRole=new Set(result.elements.filter(e=>e.disposition===null&&['background_information','review_focus'].includes(e.semantic_role)&&
   active.some(old=>old.element_id===e.candidate_id&&(old.disposition!=null||old.semantic_role!==e.semantic_role))).map(e=>e.candidate_id));
  const replacements=new Map(result.elements.filter(e=>!changedRole.has(e.candidate_id)).map(e=>[e.candidate_id,e]));
@@ -1007,7 +1066,7 @@ function checkExtractedSources(state,candidate,questionId,ranges){
  }
 }
 function* explicitStudyExclusions(span){
- const direct=/(?:^|(?<=[.!?])\s+|\n[ \t]*)((?:we (?:also )?(?:excluded?|will exclude)|exclude|exclusion criteria[ \t]*:)[ \t]+)((?:(?:case reports|case series|animal studies|in vitro studies|studies|trials|reports)\b)[^.!?;\n]*?)(?=[.!?](?:\s|$)|$)/gi;
+ const direct=/(?:^|(?<=[.!?])\s+|\n[ \t]*)((?:we (?:also )?(?:excluded?|will exclude)|exclude|exclusion criteria[ \t]*:)[ \t]+)((?:(?:case reports|case series|cross[-‐‑– ]?over (?:studies|trials)|animal studies|in vitro studies|studies|trials|reports)\b)[^.!?;\n]*?)(?=[.!?](?:\s|$)|$)/gi;
  for(const match of span.text.matchAll(direct)){
   const list=match[2],bodyAt=match.index+match[0].length-list.length;
   yield {list,bodyAt,sentenceAt:bodyAt-match[1].length};
@@ -1029,7 +1088,7 @@ function* explicitStudyExclusions(span){
    continue;
   }
   if(!heading)continue;
-  const bullet=value.match(/^(?:[-*•]|\d+[.)、])[ \t]*((?:studies|trials|reports)\s+[^;.!?]+|case reports|case series|animal studies|in vitro studies|[\u3400-\u9fff][^。！？?;；]*?)[.。]?$/i);
+  const bullet=value.match(/^(?:[-*•]|\d+[.)、])[ \t]*((?:studies|trials|reports)\s+[^;.!?]+|case reports|case series|cross[-‐‑– ]?over (?:studies|trials)|animal studies|in vitro studies|[\u3400-\u9fff][^。！？?;；]*?)[.。]?$/i);
   if(!bullet){heading=null;continue;}
   const following=span.text.slice(line.index+line[0].length).match(/^\r?\n([^\r\n]+)/)?.[1].trim();
   if(following&&!/[.。]$/.test(value)&&!/^(?:[-*•]|\d+[.)、])\s*|^(?:inclusion criteria|outcomes|study design|纳入标准|纳入条件|研究结局)\s*[:：]?$/i.test(following)){heading=null;continue;}
@@ -1046,6 +1105,7 @@ function exclusionSubject(text){
  if(setting)return 'outside '+setting[1];
  return value.replace(/^(?:studies|trials|reports) of\s+/u,'');
 }
+const studyDesignExclusion=/^(?:case reports|case series|cross[-‐‑– ]?over (?:studies|trials)|病例报告|病例系列)$/iu;
 function retainStudyExclusions(state,result,questionId,ranges,sources,onLesson){
  const authorSources=new Set(sources.filter(s=>['research_question','additional_requirement'].includes(s.input_kind)).map(s=>s.source_id));
  const used=new Set(result.elements.map(e=>e.candidate_id));
@@ -1057,7 +1117,7 @@ function retainStudyExclusions(state,result,questionId,ranges,sources,onLesson){
   for(const {list,bodyAt,sentenceAt,heading} of explicitStudyExclusions(span)){
    if(/[\u3400-\u9fff]/u.test(list)&&!/(?:研究|试验|队列|病例|报告|系列|文献|摘要|综述|患者|婴儿|孕妇|儿童|新生儿|成人|参与者|受试者|人群|样本|者)$/u.test(list))continue;
    if(/\b(?:except|unless|if|when|depending|provided|including|such as|for example|but|whereas|although|rather than|(?:from|for|in) (?:the |our |this )?(?:primary |secondary |sensitivity |subgroup |pooled |quantitative )*(?:(?:meta[- ]?)?analys[ie]s|synthesis|comparison|pooling)|(?:and|or) (?:did|will|we|retained|included))\b|如果|若|除非|除外|但|仅当|例外|敏感性分析|亚组分析|合并分析|定量分析|[()（）“”"]/i.test(list))continue;
-   let units=list.split(/(?:,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+)(?=(?:studies|trials|reports)\s+|(?:case reports|case series|animal studies|in vitro studies)\b)/i);
+   let units=list.split(/(?:,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+)(?=(?:studies|trials|reports)\s+|(?:case reports|case series|cross[-‐‑– ]?over (?:studies|trials)|animal studies|in vitro studies)\b)/i);
    // Shared qualifiers are common in Chinese enumeration. Split only when
    // each entire item independently names a study category.
    const categories=list.split(/\s*(?:、|和|及|或)\s*/u);
@@ -1115,12 +1175,12 @@ function retainStudyExclusions(state,result,questionId,ranges,sources,onLesson){
     if(translate&&!translated)candidate.source_wording_needs_translation=true;
     if(setting)candidate.dimension_id='context';
     else if(population)candidate.dimension_id='population';
-    else if(/^(?:case reports|case series|病例报告|病例系列)$/i.test(wording))candidate.dimension_id='study_design';
+    else if(studyDesignExclusion.test(wording))candidate.dimension_id='study_design';
     D.validate_candidate_element(candidate);
     checkExtractedSources(state,candidate,questionId,ranges);
     candidate[reviewCitations]=[{...ref,context,context_start:start,...(heading&&{heading})}];
     const excludedField=setting?'context':population?'population':Methods.isInterventionStudyExclusion(wording)?'intervention':
-     /^(?:case reports|case series|病例报告|病例系列)$/i.test(wording)?'study_design':null;
+     studyDesignExclusion.test(wording)?'study_design':null;
     markLiteralField(candidate,excludedField,'exclude',wording);
     for(const duplicate of equivalent)if(duplicate!==candidate)aliases.set(duplicate.candidate_id,candidate.candidate_id);
     if(corrected||equivalent.some(e=>e!==candidate))onLesson?.('exclusion_list');
@@ -1425,6 +1485,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
    classifyFollowUpGroups(result.elements);
    const frameId=E.resolve_review_context(originals.get(q.question_id),result,env).framework_mapping.framework_id;
    if(batches.length===1)reconcileEligibilityFields(state,result,q,ranges,passages,options.onLesson,frameId);
+   retainIrradianceDefinitions(state,result,q,ranges,frameId);
    for(const e of result.elements){
     if(!['study_design','design'].includes(e.dimension_id)||e.explicit_revision||e.decision_status==='confirmed_by_user')continue;
     const wording=Methods.studyDesignWording(e.normalized_text);

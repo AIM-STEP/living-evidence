@@ -4,9 +4,9 @@
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
-const presentationVersion='framework-display-v11';
+const presentationVersion='framework-display-v12';
 // Bump when eligibility semantics change. Presentation updates can use the saved evidence.
-const generationVersion='20261120-criteria-release-26';
+const generationVersion='20261120-criteria-release-30';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -261,7 +261,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
     if(M.repairSavedExtraction(project,question))corrected=true;
    }
   }
-  if(!corrected&&/^framework-display-v(?:[2-9]|10)$/.test(saved.presentation_version)&&saved.elements.some(e=>e.active!==false)){
+  if(!corrected&&/^framework-display-v(?:[2-9]|1[01])$/.test(saved.presentation_version)&&saved.elements.some(e=>e.active!==false)){
    const visible=E.render_output(project).questions;
    for(const question of project.questions.filter(q=>q.active!==false)){
     const elements=visible.find(q=>q.question_id===question.question_id).elements;
