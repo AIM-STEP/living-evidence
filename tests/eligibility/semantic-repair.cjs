@@ -119,7 +119,50 @@ async function check(mode){
   assert(!omitted.validation.errors.length);
   assert.deepEqual(run.steps,expected,'the author decision took no further model calls');
 }
+async function checkThreshold(){
+  const question='Population: adults with asthma.\nIntervention: supervised exercise.';
+  const state=engine.save_input(engine.create_project('decision-threshold'),{
+    research_question:question,question_framework:'PICO',output_language:'en'
+  }).state;
+  const source=state.sources.find(s=>s.input_kind==='research_question');
+  const element=(dimension_id,wording,information_status='explicit')=>({
+    candidate_id:dimension_id,dimension_id,normalized_text:wording,source_refs:[engine.ref(source,wording)],
+    information_status,semantic_role:'eligibility_condition',disposition:'include',scope_status:'restricted',structured_value:null
+  });
+  const input={question_id:state.questions[0].question_id,review_topic:'Exercise in adults with asthma',framework_candidates:['pico'],
+    logic:null,issues:[{reason_code:'AMBIGUOUS_MEANING',question_text:'Should this intervention be included?',element_candidate_ids:['intervention']}],
+    elements:[element('population','adults with asthma'),element('intervention','supervised exercise','ambiguous')]};
+  const steps=[];
+  const adapter={async request(step,project,payload){
+    steps.push(step);
+    if(step==='extract_elements')return {questions:[structuredClone(input)]};
+    assert.equal(step,'review_normalization');
+    assert.equal(payload.items.length,2);
+    return {items:payload.items.map(item=>({...item,...(item.dimension_id==='intervention'?
+      {status:'uncertain',issue_type:'ambiguous_source',reason:'Weak objection.',
+       reviewer:{provider:'typesafe',verdict:'low_confidence',original_verdict:'wrong_field',confidence:.75,choice_probability:.68}}:
+      {status:'supported',issue_type:'none',reason:'Agrees with source.'})}))};
+  }};
+  const {candidates}=await model.analyze(state,engine.environment(),adapter,{retries:0});
+  const project=engine.ingest_candidates(state,candidates).state;
+  assert.deepEqual(steps,['extract_elements','review_normalization']);
+  assert.equal(project.status,'final');
+  assert.equal(project.elements.find(e=>e.dimension_id==='intervention').semantic_review.reviewer.corroboration,'exact_source_field');
+  assert.deepEqual(background.projectToClassic(project).sourceConfirmations,[]);
+
+  const intervention=project.elements.find(e=>e.dimension_id==='intervention');
+  const legacy=structuredClone(project);
+  const saved=legacy.elements.find(e=>e.element_id===intervention.element_id);
+  saved.information_status='ambiguous';saved.decision_status='pending';saved.initial_information_status='explicit';
+  saved.review_pending={original_dimension:'intervention',original_disposition:'include',original_role:'eligibility_condition'};
+  saved.semantic_review={status:'uncertain',issue_type:'ambiguous_source',
+    reviewer:{provider:'typesafe',verdict:'low_confidence',original_verdict:'supported',confidence:.90,choice_probability:.89}};
+  assert.equal(model.applySavedReviewThreshold(legacy),true);
+  assert.equal(saved.decision_status,'accepted_from_input');
+  assert.equal(model.applySavedReviewThreshold(legacy),false);
+}
 (async()=>{
   for(const mode of ['supported','contradicted','ambiguous','field','recover','outage'])await check(mode);
+  await checkThreshold();
   console.log('PASS single-pass independent source checks, scoped author routing, direct correction and omission.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -6,9 +6,10 @@ import time
 from eligibility_transport import OutputSyntaxError, review_context
 import typesafe_model as ts
 
-VERSION = 'eligibility-hybrid-v9'
+VERSION = 'eligibility-hybrid-v10'
 TASK = 'eligibility-review-v1'
 MIN_CONFIDENCE = .95
+MIN_SUPPORT = .85
 TIMEOUT = 20
 CHOICES = {
     'status': {
@@ -210,6 +211,8 @@ def _review_once(envelope, messages):
                                 f'state.questions[{question_index[items[i]["question_id"]]}] for context. '
                                 'Apply state.review_rules and select the most specific applicable verdict.'} for name, i in entries.items()}
             rules = '\n'.join(m['content'] for m in messages if m.get('role') == 'system')
+            rules += ('\nDispute only a difference that could change which studies qualify. '
+                      'Accept equivalent wording when the source clearly states the field and its direction.')
             if any(q.get('framework') for q in payload['questions']):
                 rules += ('\nWhen a question supplies a framework, check the assigned dimension against its fields. '
                           'A qualified dimension such as population.age belongs to its parent field. '
@@ -237,7 +240,8 @@ def _review_once(envelope, messages):
         reviewer = {'provider': 'typesafe', 'version': VERSION, 'verdict': choice}
         if confidence is not None:
             reviewer.update(model=actual_model, confidence=confidence, choice_probability=probability)
-            if choice in ('supported', 'wrong_field') and min(confidence, probability) < MIN_CONFIDENCE:
+            threshold = MIN_SUPPORT if choice == 'supported' else MIN_CONFIDENCE
+            if min(confidence, probability) < threshold:
                 reviewer['original_verdict'] = choice
                 choice = reviewer['verdict'] = 'low_confidence'
         reviewed.append({'id': item['id'], 'status': 'supported' if choice == 'supported' else 'uncertain',

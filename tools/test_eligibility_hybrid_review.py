@@ -123,6 +123,13 @@ class HybridReviewTest(unittest.TestCase):
         rows, _ = self.single_review(dict(c0=('supported', 1)))
         self.assertEqual(rows[1]['reviewer']['verdict'], 'ambiguous')
 
+    def test_single_review_uses_separate_support_and_objection_thresholds(self):
+        rows, _ = self.single_review(dict(c0=('supported', .85), c1=('supported', .84)))
+        self.assertEqual([row['reviewer']['verdict'] for row in rows], ['supported', 'low_confidence'])
+        rows, _ = self.single_review(dict(c0=('ambiguous', .94), c1=('wording_or_scope', .95)))
+        self.assertEqual([row['reviewer']['verdict'] for row in rows], ['low_confidence', 'wording_or_scope'])
+        self.assertEqual(rows[0]['reviewer']['original_verdict'], 'ambiguous')
+
     def test_confident_agreement_avoids_local_review_and_keeps_metadata(self):
         before = copy.deepcopy(self.items)
         items, audit = self.run_review()

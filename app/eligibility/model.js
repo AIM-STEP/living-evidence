@@ -546,7 +546,7 @@ function markLiteralField(e,dimension,side,wording){
  if(!dimension||literalWording(e.normalized_text)!==literalWording(wording)||e.disposition!==side||
     e.semantic_role!=='eligibility_condition'||e.scope_status!=='restricted'||e.source_occurrence_alternatives?.length||
     e.scope_conditions?.length||e.exceptions?.length||e.explicit_revision||e.decision_status==='confirmed_by_user'||
-    /[?？]|\b(?:to be (?:defined|decided|determined)|uncertain|unclear|if applicable|unless|except)\b|待定|待确认|不明确|除非/u.test(wording.toLowerCase()))return;
+    /[?？]|\b(?:to be (?:defined|decided|determined)|uncertain|unclear|if applicable|(?:where|as) appropriate|as needed|unless|except)\b|待定|待确认|不明确|除非/u.test(wording.toLowerCase()))return;
  e[literalField]={dimension,side,wording:e.normalized_text};
 }
 // A source label is not a quote. Replace it only when a complete field, or
@@ -812,6 +812,33 @@ function repairSavedExtraction(state,q){
  q.logic=result.logic&&D.mapExpression(result.logic,new Map(q.element_ids.map(id=>[id,id])),'element_id');
  q.model_issues=result.issues.map(i=>({...i,element_ids:i.element_candidate_ids.filter(id=>replacements.has(id))})).filter(i=>i.element_ids.length);
  return true;
+}
+// Older runs sent a supported verdict below 0.95 to the author. Apply the
+// current Jev support threshold using the recorded evidence and vote.
+function applySavedReviewThreshold(state){
+ const questions=new Set(state.questions.filter(q=>q.active!==false&&q.eligibility_policy==='framework-only-v1').map(q=>q.question_id));
+ let changed=false;
+ for(const e of state.elements){
+  const review=e.semantic_review,reviewer=review?.reviewer,pending=e.review_pending;
+  if(e.active===false||!questions.has(e.question_id)||!pending||e.decision_status!=='pending'||e.initial_information_status!=='explicit'||
+     e.explicit_revision||e.source_decision_ids?.length||e.source_occurrence_pending||review?.validation_code||
+     pending.original_dimension!==e.dimension_id||pending.original_disposition!==e.disposition||pending.original_role!==e.semantic_role||
+     reviewer?.provider!=='typesafe'||reviewer.verdict!=='low_confidence'||reviewer.original_verdict!=='supported'||
+     !(Math.min(reviewer.confidence,reviewer.choice_probability)>=.85))continue;
+  const assessment={...review,status:'supported',issue_type:'none',reason:'Jev supported this source-defined criterion under the current review threshold.',
+   reviewer:{...reviewer,verdict:'supported'}};
+  try{
+   const refs=D.validate_provenance(state,e.source_refs,e.question_id);
+   D.check_semantics({...e,semantic_review:assessment},refs);
+  }catch(error){if(error instanceof D.EligibilityError)continue;throw error;}
+  e.semantic_review=assessment;
+  e.information_status='explicit';
+  e.decision_status=e.source_rule_ids?.length?'accepted_by_authorized_rule':'accepted_from_input';
+  e.revision++;
+  delete e.review_pending;
+  changed=true;
+ }
+ return changed;
 }
 function bindLabelledInclusions(result,q,passages,onLesson){
  if(!result.logic||q.confirmed_elements?.length)return;
@@ -1659,6 +1686,7 @@ function sourceReview(state,adapter,options,env){
   }
   reviewQuestions.set(q.question_id,reviewQuestion);
   const items=tail;
+  const explicitDeferral=/\b(?:to be (?:confirmed|clarified|specified|decided|determined|defined)|undecided|pending|tbd|tbc)\b|待定|待确认|待明确|尚未确定/iu.test(original);
   for(const e of q.elements){
    if(q.eligibility_policy==='framework-only-v1'){
     // Only settled candidates need independent verification. The local model
@@ -1667,9 +1695,10 @@ function sourceReview(state,adapter,options,env){
     markNarrativeField(e,state);
     const ageAsWritten=sourceAgeGroup(e,q,sourceQuestion);
     const proof=e[literalField];
-    const openDecision=q.issues.some(i=>i.reason_code!=='PROPOSED_RESTRICTION'&&i.element_candidate_ids?.includes(e.candidate_id));
+    const openDecision=q.issues.some(i=>i.element_candidate_ids?.includes(e.candidate_id)&&i.reason_code!=='PROPOSED_RESTRICTION'&&
+      (i.reason_code!=='AMBIGUOUS_MEANING'||i.element_candidate_ids.length!==1));
     if(proof&&proof.dimension===e.dimension_id&&proof.side===e.disposition&&proof.wording===e.normalized_text&&
-       !q.unresolved_fragment_logic&&(ageAsWritten||!openDecision))literalCandidates.add(e);
+       !q.unresolved_fragment_logic&&!explicitDeferral&&(ageAsWritten||!openDecision))literalCandidates.add(e);
     // Send a complete, source-defined field to the existing independent check
     // when extraction marked it uncertain without identifying an open decision.
     // Qualitative age has its own check for a threshold requested elsewhere.
@@ -1740,8 +1769,8 @@ function sourceReview(state,adapter,options,env){
     continue;
    }
    e.initial_information_status=e.information_status;
-   if(literalCandidates.has(e)&&assessment.status==='uncertain'&&assessment.reviewer?.provider==='typesafe'&&
-      assessment.reviewer.verdict==='low_confidence'&&assessment.reviewer.original_verdict==='supported'){
+   if(literalCandidates.has(e)&&e[literalField].wording===e.normalized_text&&assessment.status==='uncertain'&&
+      assessment.reviewer?.provider==='typesafe'&&assessment.reviewer.verdict==='low_confidence'){
     assessment.status='supported';assessment.issue_type='none';
     assessment.reason='The complete source field independently establishes this wording and its eligibility direction.';
     assessment.reviewer={...assessment.reviewer,corroboration:'exact_source_field'};
@@ -1889,5 +1918,5 @@ async function parse_answers(state,answerText,issueIds,adapter,options={}){
  }
  return {base_revision:state.revision,request_id:options.request_id||D.id('answer_request'),answers:result.answers,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
 }
-return {client,analyze,extract_elements,review_elements,repairSavedExtraction,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,httpError,serializationInstruction,backendTask,decodeReply,executableOption};
+return {client,analyze,extract_elements,review_elements,repairSavedExtraction,applySavedReviewThreshold,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,httpError,serializationInstruction,backendTask,decodeReply,executableOption};
 });
