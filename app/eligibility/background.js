@@ -5,10 +5,11 @@ const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
 const presentationVersion='framework-display-v9';
+// Bump when extraction or criteria output changes. Interface-only updates retain the same results.
+const generationVersion='20261120-criteria-release-26';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
-function progressPercent(event={}){const stages={extract:[15,60],review:[60,90],validate:[94,94],ready:[98,98]},range=stages[event.phase];if(!range)return undefined;const fraction=event.total?Math.max(0,Math.min(1,event.completed/event.total)):0;return Math.round(range[0]+(range[1]-range[0])*fraction);}
 function optionLabel(option){
  if(!option)return 'Confirm';
  if(option.source_occurrence_ref)return option.label;
@@ -162,7 +163,6 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  const base=baseURL||new URL('.',root.location.href).href,version='20261119-framework-description-1';
  const configs=await Promise.all([frameworkConfig||root.fetch(new URL('config/eligibility-frameworks.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load framework definitions.');return r.json();}),profileConfig||root.fetch(new URL('config/eligibility-review-profiles.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load review profiles.');return r.json();})]);
  const registry=E.environment(...configs).frameworks;
- const release=root.AIMSTEPCriteriaRelease?.current||(typeof require==='function'?require('../eligibility-release.json').version:presentationVersion);
  const configKey=D.stableId('config',JSON.stringify(configs));
  const projectView=project=>projectToClassic(project,registry);
  const keys=projectKeys(projectId);
@@ -177,7 +177,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  }
  function staged(project,expectedRevision,expectedSignature,classic=projectView(project)){return {project,expectedRevision,expectedSignature,classic};}
  function inputKey({question,reviewType,questionType,modelSettings},material){
-  return D.stableId('input',JSON.stringify([release,configKey,question||'',reviewType||'',questionType||'',modelSettings||null,material]));
+  return D.stableId('input',JSON.stringify([generationVersion,configKey,question||'',reviewType||'',questionType||'',modelSettings||null,material]));
  }
  function sourceKey(input,sources){
   const passages=sources.filter(s=>s.name!=='Question / voice input'||s.text!==input.question)
@@ -381,5 +381,5 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  }
  return {generate,publishedGeneration,decide,validate,transaction,recordEdit,refreshPresentation,current,projectToClassic:projectView,keys};
 }
-return {create,resetProject,currentEpoch,projectToClassic,signature,issueText,optionLabel,progressPercent,renderDescription:Methods.description};
+return {create,resetProject,currentEpoch,projectToClassic,signature,issueText,optionLabel,renderDescription:Methods.description};
 });

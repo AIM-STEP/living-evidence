@@ -21,8 +21,12 @@ test('Generate reuses only the current verified result, including pending and au
   assert.equal(page.el('generation-status').textContent,'');
   assert.deepEqual(page.storage,before);
   assert.equal(page.el('preview').innerHTML,markup);
+  assert.equal(page.el('criteria-elapsed').textContent,'0:12');
+  assert.equal(page.el('criteria-finished-label').hidden,false);
  }
  const page=open(),calls=[];
+ let clock=Date.now();
+ page.ctx.Date=class extends Date{static now(){return clock;}};
  page.api.transport(async(url,options)=>{
   const request=JSON.parse(JSON.parse(options.body).messages[1].content),payload=request.payload;
   calls.push(request.step);
@@ -35,6 +39,7 @@ test('Generate reuses only the current verified result, including pending and au
    answer={questions:[{question_id:q.question_id,framework_candidates:['pico'],elements,issues:[],logic:{op:'any_of',children:['p','s'].map(element_id=>({op:'predicate',element_id}))}}]};
   }else{
    assert.equal(request.step,'review_normalization');
+   clock+=12000;
    answer={items:payload.items.map(e=>({...e,status:'supported',issue_type:'none',reason:'Source verified.'}))};
   }
   return {ok:true,json:async()=>({message:{content:JSON.stringify(answer)},...(request.step==='review_normalization'?{provider:'typesafe',review:{policy:'jev-once-v1'}}:{})})};
@@ -47,9 +52,13 @@ test('Generate reuses only the current verified result, including pending and au
  await page.el('start-machine').handlers.click();
  assert.equal(page.el('generation-status').textContent,'');
  assert.deepEqual(calls,['extract_elements','review_normalization']);
+ assert.equal(page.api.state().machineRun.elapsedMs,12000);
+ assert.equal(page.el('criteria-elapsed').textContent,'0:12');
  assert(page.api.state().machineRefinement.sourceConfirmations.length);
  await repeat(page);
- const reloaded=open(page.storage);await repeat(reloaded);
+ const reloaded=open(page.storage);
+ assert.equal(reloaded.el('criteria-elapsed').textContent,'0:12');
+ await repeat(reloaded);
  const detail=reloaded.api.state().machineRefinement.sourceConfirmations[0];
  const choice=detail.options.findIndex(o=>o.option_id==='use_proposed');
  assert(choice>=0);assert(await reloaded.api.confirm(0,choice));

@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261120-criteria-release-26"></script>
-<script src="app/secure-origin.js?v=20261120-criteria-release-26"></script>
+<script src="app/eligibility-release.js?v=20261120-criteria-release-27"></script>
+<script src="app/secure-origin.js?v=20261120-criteria-release-27"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -49,13 +49,9 @@
 .embedded-preview .right-column{position:static;width:100%;min-width:0}
 .embedded-preview .right-column>.panel{margin:0;border:0;border-radius:0;box-shadow:none}
 .embedded-preview .preview-body{padding:0}
-.criteria-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.criteria-heading .criteria-file-actions{flex:none;flex-wrap:nowrap}.criteria-heading .criteria-file-actions .btn{min-width:0;padding:0 6px;white-space:nowrap}.criteria-heading h2{flex:none;margin:0}.criteria-heading .head-actions{flex:0 0 auto;min-width:0;align-items:center;flex-wrap:nowrap}#criteria-progress{position:relative;flex:1 1 80px;min-width:40px;max-width:none;height:18px;padding:0;margin:0;align-self:center;--progress:0%}.criteria-progress-track{height:18px;background:#e5e7f1;border-radius:9px;overflow:hidden}.criteria-progress.is-processing .criteria-progress-fill{animation:criteria-wait 1.4s ease-in-out infinite alternate}@keyframes criteria-wait{from{opacity:.35}to{opacity:1}}.criteria-progress-fill{height:100%;width:var(--progress);background:#4d6bfe;border-radius:9px;transition:width .35s ease}.criteria-progress-percent{position:absolute;top:50%;left:clamp(18px,var(--progress),calc(100% - 18px));transform:translate(-50%,-50%);min-width:32px;padding:0 2px;border-radius:8px;background:#fff;font-size:10px;line-height:16px;text-align:center;white-space:nowrap;color:#253b9c;transition:left .35s ease}@media(prefers-reduced-motion:reduce){.criteria-progress-fill,.criteria-progress-percent{transition:none;animation:none!important}}
+.criteria-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.criteria-heading .criteria-file-actions{flex:none;flex-wrap:nowrap}.criteria-heading .criteria-file-actions .btn{min-width:0;padding:0 6px;white-space:nowrap}.criteria-heading h2{flex:none;margin:0}.criteria-heading .head-actions{flex:0 0 auto;min-width:0;align-items:center;flex-wrap:nowrap}
 #machine-generate-panel:not(.is-collapsed){padding-bottom:10px}#machine-generate-panel .machine-actions{margin-top:8px}
-.criteria-progress.is-processing .criteria-progress-fill{animation:criteria-flow 1.2s linear infinite;background:repeating-linear-gradient(110deg,#4d6bfe 0 14px,#8295ff 14px 28px);background-size:60px 100%}
-#criteria-working{margin:3px 17px 0;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
-@media(prefers-reduced-motion:no-preference){#criteria-progress.is-processing .criteria-progress-fill{animation:criteria-flow 1.2s linear infinite!important}}
-@keyframes criteria-flow{from{background-position:0 0}to{background-position:60px 0}}
-@media(prefers-reduced-motion:reduce){.criteria-progress.is-processing .criteria-progress-fill{animation:none}}
+#criteria-timing{margin:3px 17px 0;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
 
 /* Editor and criteria preview. */
 .wrap{max-width:1440px}
@@ -78,7 +74,7 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261120-criteria-release-26"></script>
+<script src="app/criteria-grounding.js?v=20261120-criteria-release-27"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
 <script defer src="app/tool-i18n-catalog.js?v=20261118-criteria-actions-1"></script>
@@ -101,16 +97,16 @@
 <div class="section" id="machine-generate-panel" hidden><div class="section-head" data-collapse-name="Machine generate"><button class="btn btn-primary" id="start-machine" type="button" data-ui-localize>Generate</button><button class="btn" id="stop-machine" type="button" hidden data-ui-localize>Stop</button><button class="btn criteria-action" id="clear-question" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div class="machine-input"><textarea id="question" class="textarea" rows="20" aria-label="Review question for automatic criteria generation" placeholder="What population, intervention or phenomenon are you studying?"></textarea><div class="machine-input-tools"><button class="machine-tool" id="add-source" type="button" aria-label="Upload Word, PDF, text or image" title="Upload a document or image">＋</button><button class="machine-tool" id="voice-toggle" type="button" aria-label="Start voice input" aria-pressed="false" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg></button><input id="source-files" type="file" accept=".docx,.pdf,.txt,.md,.csv,image/png,image/jpeg,image/webp" multiple hidden></div></div><div id="machine-attachments" class="machine-attachments" aria-live="polite" hidden></div><div id="generation-status" class="hint machine-status" role="status" aria-live="polite" hidden></div></div>
 <div class="section" id="manual-generate-panel" hidden><div class="section-head" data-collapse-name="Manual generate"><div class="manual-actions"><button class="btn btn-primary" id="refine-manual" type="button" data-ui-localize>Generate</button><button class="btn criteria-action" id="manual-generate" type="button" aria-label="Clear all entered eligibility content" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker" data-ui-localize>＋ Add criterion</button></div></div><label class="field-label" data-ui-localize>Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden data-ui-localize><strong data-ui-localize>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PICOS">PICOS</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PECOS">PECOS</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other" data-ui-localize>Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading manual-limits-heading" style="margin-top:18px" data-ui-localize>Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label" data-ui-localize>Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date" data-ui-localize>Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date" data-ui-localize>End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language" data-ui-localize>Language</label><select id="language" class="select"><option value="" data-ui-localize>Select language</option><option value="Chinese" data-ui-localize>Chinese</option><option value="English" data-ui-localize>English</option></select></div><div><label class="field-label" for="limits-other" data-ui-localize>Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div id="description-criteria-list" hidden></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
-<aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div id="criteria-progress" class="criteria-progress" role="progressbar" aria-label="Criteria generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="criteria-progress-track"><div class="criteria-progress-fill"></div></div><span class="criteria-progress-percent">0%</span></div></div><p id="criteria-working" hidden><span data-ui-localize>Working</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div></div><p id="criteria-timing" hidden><span id="criteria-working-label" data-ui-localize>Working</span><span id="criteria-finished-label" data-ui-localize hidden>Generation time</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed generation time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
-<script src="app/eligibility/registries.js?v=20261120-criteria-release-26"></script>
-<script src="app/eligibility/domain.js?v=20261120-criteria-release-26"></script>
-<script src="app/eligibility/methodology.js?v=20261120-criteria-release-26"></script>
-<script src="app/eligibility/engine.js?v=20261120-criteria-release-26"></script>
-<script src="app/eligibility/lessons.js?v=20261120-criteria-release-26"></script>
-<script src="app/eligibility/model.js?v=20261120-criteria-release-26"></script>
-<script src="app/eligibility-reset.js?v=20261120-criteria-release-26"></script>
-<script src="app/eligibility/background.js?v=20261120-criteria-release-26"></script>
+<script src="app/eligibility/registries.js?v=20261120-criteria-release-27"></script>
+<script src="app/eligibility/domain.js?v=20261120-criteria-release-27"></script>
+<script src="app/eligibility/methodology.js?v=20261120-criteria-release-27"></script>
+<script src="app/eligibility/engine.js?v=20261120-criteria-release-27"></script>
+<script src="app/eligibility/lessons.js?v=20261120-criteria-release-27"></script>
+<script src="app/eligibility/model.js?v=20261120-criteria-release-27"></script>
+<script src="app/eligibility-reset.js?v=20261120-criteria-release-27"></script>
+<script src="app/eligibility/background.js?v=20261120-criteria-release-27"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -275,49 +271,48 @@ function save(options={}){
   renderPreview();return saved;
 }
 const generationStatus=$('generation-status');
-let generationController=null,generationNonce=0,criteriaWaitTimer=null,confirmationQueue=null;
-function criteriaWaiting(working){
-  const status=$('criteria-working');
-  status.hidden=!working;
-  if(!working){
-    clearTimeout(criteriaWaitTimer);
-    criteriaWaitTimer=null;
-    return;
-  }
-  if(criteriaWaitTimer!==null)return;
-  const started=Date.now(),elapsed=$('criteria-elapsed');
-  function update(){
-    const seconds=Math.max(0,Math.floor((Date.now()-started)/1000));
-    const value=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
-    if(elapsed.firstChild)elapsed.firstChild.nodeValue=value;
-    else elapsed.textContent=value;
-    criteriaWaitTimer=setTimeout(update,1000);
-  }
-  update();
+let generationController=null,generationNonce=0,criteriaWaitTimer=null,generationStartedAt=null,confirmationQueue=null;
+function hasCurrentMachineResult(){
+  const run=state.machineRun,question=$('question').value.trim();
+  return !!run&&(!question||run.question===question)&&run.reviewType===state.reviewType&&
+    (run.sourceRevision??0)===(Number(state.machineSourceRevision)||0);
 }
-function criteriaProgress(percent){
-  const el=$('criteria-progress'),value=Math.max(0,Math.min(100,Math.round(percent)));
-  el.hidden=false;
-  el.style.setProperty('--progress',value+'%');
-  el.setAttribute('aria-valuenow',String(value));
-  el.setAttribute('aria-valuetext',value===100?'Completed':value+'% of workflow stages completed');
-  el.querySelector('.criteria-progress-percent').textContent=value+'%';
-  el.classList.toggle('is-processing',value<100);
+function renderCriteriaTiming(){
+  const running=generationStartedAt!==null;
+  const saved=$('generation-method').value==='machine'&&hasCurrentMachineResult()?state.machineRun.elapsedMs:null;
+  const duration=running?Date.now()-generationStartedAt:saved;
+  $('criteria-timing').hidden=!Number.isFinite(duration);
+  $('criteria-working-label').hidden=!running;
+  $('criteria-finished-label').hidden=running;
+  if(!Number.isFinite(duration))return;
+  const seconds=Math.max(0,Math.floor(duration/1000)),elapsed=$('criteria-elapsed');
+  const value=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
+  if(elapsed.textContent!==value)elapsed.textContent=value;
 }
-
-function setMachineStatus(message,error=false,percent){
+function startCriteriaTiming(){
+  generationStartedAt=Date.now();
+  function tick(){
+    renderCriteriaTiming();
+    criteriaWaitTimer=setTimeout(tick,1000);
+  }
+  tick();
+}
+function stopCriteriaTiming(){
+  clearTimeout(criteriaWaitTimer);
+  criteriaWaitTimer=null;
+  generationStartedAt=null;
+  renderCriteriaTiming();
+}
+function setMachineStatus(message,error=false){
   generationStatus.textContent=message;
   generationStatus.hidden=!message||!!(generationController&&!error);
   generationStatus.classList.toggle('error',error);
-  if(Number.isFinite(percent))criteriaProgress(percent);
-  if(error)$('criteria-progress').classList.remove('is-processing');
-  if(!message&&!generationController)$('criteria-progress').hidden=true;
   // A progress event is not a project edit. Persist the log with the next real save.
   if(message&&generationController){
     state.generationProgressLog=[...(state.generationProgressLog||[]),{message,error,date:new Date().toISOString()}].slice(-60);
   }
 }
-function stopMachineGeneration(){generationNonce++;if(generationController){generationController.abort();generationController=null}criteriaWaiting(false);$('criteria-progress').classList.remove('is-processing');$('start-machine').disabled=false;$('start-machine').textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}
+function stopMachineGeneration(){generationNonce++;if(generationController){generationController.abort();generationController=null}stopCriteriaTiming();$('start-machine').disabled=false;$('start-machine').textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}
 const attachedFiles=[];
 let nextAttachmentId=0,voiceRecognition=null,voiceDone=Promise.resolve(),resolveVoiceDone=null,pdfModulePromise=null;
 function renderAttachments(){
@@ -1007,7 +1002,7 @@ async function generateMachineCriteria(){
   const savedFiles=!files.length&&state.machineRun?.sourceFiles?.length&&(state.machineRun.sourceRevision??0)===sourceRevision;
   if(!question&&!files.length&&!savedFiles){setMachineStatus('Enter text, record speech, or attach a document or image before starting.',true);$('question').focus();return}
   stopMachineGeneration();const run=++generationNonce,controller=new AbortController();generationController=controller;
-  const button=$('start-machine');button.disabled=true;button.textContent='Generating…';$('stop-machine').hidden=false;$('stop-machine').disabled=false;criteriaProgress(5);criteriaWaiting(true);setMachineStatus('');
+  const button=$('start-machine');button.disabled=true;button.textContent='Generating…';$('stop-machine').hidden=false;$('stop-machine').disabled=false;startCriteriaTiming();setMachineStatus('');
   try{
     const [service,fileDigests]=await Promise.all([generationService(),savedFiles?state.machineRun.fileDigests:attachmentDigests(files,controller.signal)]);
     if(run!==generationNonce||controller.signal.aborted)return;
@@ -1021,7 +1016,7 @@ async function generateMachineCriteria(){
         pendingBackgroundStage=stage;
         if(!save({updateEntry:true})){setMachineStatus('Could not save the attached source reference on this device.',true);return;}
       }
-      criteriaProgress(100);setMachineStatus('');
+      setMachineStatus('');
     }
     const published=service.publishedGeneration?.({legacy:state,...inputs},fileDigests);
     if(published){showPublished(published);return;}
@@ -1037,17 +1032,18 @@ async function generateMachineCriteria(){
     setMachineStatus('Preparing original source passages…');
     const originalSources=await originalMachineSources(model,input,reviewType,controller.signal);
     if(run!==generationNonce||controller.signal.aborted)return;
-    const stage=await service.generate({legacy:structuredClone(state),...inputs,sources:originalSources,fileDigests,modelClient:backgroundModelClient(model),signal:controller.signal,onProgress:(message,event)=>{if(run===generationNonce&&!controller.signal.aborted)setMachineStatus(message,false,window.AIMSTEPEligibilityBackground.progressPercent(event))}});
+    const stage=await service.generate({legacy:structuredClone(state),...inputs,sources:originalSources,fileDigests,modelClient:backgroundModelClient(model),signal:controller.signal,onProgress:message=>{if(run===generationNonce&&!controller.signal.aborted)setMachineStatus(message)}});
     if(run!==generationNonce||controller.signal.aborted)return;
     if(stage.reused){showPublished(stage);return;}
-    useBackgroundCriteria(stage,{question,reviewType,sourceRevision,sourceFiles:files.map(entry=>entry.file.name),fileDigests,modelName:model.name});
+    const elapsedMs=Math.max(0,Date.now()-generationStartedAt);
+    useBackgroundCriteria(stage,{question,reviewType,sourceRevision,sourceFiles:files.map(entry=>entry.file.name),fileDigests,modelName:model.name,elapsedMs});
     document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));
-    const saved=save({fresh:true,createdAt:state.machineRun.generatedAt});if(saved)criteriaProgress(100);setMachineStatus(saved?'':'Criteria generated, but could not be saved on this device.',!saved);
+    const saved=save({fresh:true,createdAt:state.machineRun.generatedAt});setMachineStatus(saved?'':'Criteria generated, but could not be saved on this device.',!saved);
 
   }catch(error){
     if(run===generationNonce)setMachineStatus(error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);
     if(run===generationNonce&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===generationNonce&&!generationController)setMachineStatus(message,true)});
-  }finally{if(run===generationNonce){generationController=null;criteriaWaiting(false);$('criteria-progress').classList.remove('is-processing');button.disabled=false;button.textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}}
+  }finally{if(run===generationNonce){generationController=null;stopCriteriaTiming();button.disabled=false;button.textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}}
 }
 
 function renderPicker(){const types=criterionTypesByFramework[state.framework]||criterionTypesByFramework.Other;picker.innerHTML=types.map(t=>{const added=state.criteria.some(c=>c.typeKey===t.key||c.title===t.title);return `<button type="button" class="criterion-option" data-add-type="${t.key}" ${added?'disabled':''}>${t.title}${added?' · Added':''}</button>`}).join('');picker.querySelectorAll('[data-add-type]:not(:disabled)').forEach(button=>button.addEventListener('click',()=>{const type=types.find(t=>t.key===button.dataset.addType);if(!type||state.criteria.some(c=>c.typeKey===type.key||c.title===type.title))return;markManual();state.criteria.push({id:type.id,typeKey:type.key,title:type.title,condition:'',definition:'',purpose:'Eligibility',stage:'',uncertain:''});$('add-criterion').setAttribute('aria-expanded','false');picker.hidden=true;renderCards();save();const card=list.lastElementChild;if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'})}))}
@@ -1571,6 +1567,7 @@ function renderCriteriaSide(display,side){
 }
 function renderPreview(){
   const area=$('preview');
+  renderCriteriaTiming();
   if(previewDirty)return;
   $('save-criteria').hidden=true;$('clear-criteria').hidden=embeddedManual||embeddedPreview||!projectId;
   if(embeddedManual){
@@ -1584,8 +1581,7 @@ function renderPreview(){
     return;
   }
   if(!$('generation-method').value){area.innerHTML='';$('download').hidden=true;shareSummary(null);return}
-  const questionInput=$('question').value.trim();
-  if($('generation-method').value==='machine'&&(!state.machineRun||(questionInput&&state.machineRun.question!==questionInput)||state.machineRun.reviewType!==state.reviewType||(state.machineRun.sourceRevision??0)!==(Number(state.machineSourceRevision)||0))){area.innerHTML='<p class="empty" data-ui-localize>Click Generate to generate criteria from the current text and attachments.</p>';$('download').hidden=true;shareSummary(null);return}
+  if($('generation-method').value==='machine'&&!hasCurrentMachineResult()){area.innerHTML='<p class="empty" data-ui-localize>Click Generate to generate criteria from the current text and attachments.</p>';$('download').hidden=true;shareSummary(null);return}
   $('download').hidden=false;
   const complete=standardizedCriteria();
   const refinement=currentRefinement();
@@ -1655,7 +1651,7 @@ if(window.AIMSTEPEligibilityBackground&&!embeddedManual&&!embeddedPreview)getEli
 window.addEventListener('load',()=>{try{if(window.parent!==window)window.parent.AIMSTEP?.setLanguage?.('en');}catch(_){}window.AIMSTEP?.setLanguage?.('en');},{once:true});
 $('generation-method').addEventListener('change',()=>{const locked=lockedGenerationMethod();if(locked&&$('generation-method').value!==locked){syncGenerationMethodOptions();return;}stopMachineGeneration();stopManualRefinement();abortVoiceInput();setMachineStatus('');setManualStatus('');const mode=$('generation-method').value;syncProposalCriteria();state.generationMethodChoice=mode;state.activeGenerator=mode;state.generationMode=mode==='machine'?'machine':mode==='manual'?'manual':'';$('machine-generate-panel').hidden=mode!=='machine';$('manual-generate-panel').hidden=mode!=='manual';renderPreview();save()});
 $('start-machine').addEventListener('click',generateMachineCriteria);
-$('stop-machine').addEventListener('click',()=>{if(generationController){$('stop-machine').disabled=true;criteriaWaiting(false);generationController.abort()}});
+$('stop-machine').addEventListener('click',()=>{if(generationController){$('stop-machine').disabled=true;generationController.abort();stopCriteriaTiming()}});
 $('refine-manual').addEventListener('click',refineManualCriteria);
 $('add-source').addEventListener('click',()=>$('source-files').click());
 $('source-files').addEventListener('change',event=>{
@@ -1961,9 +1957,8 @@ if(embeddedManual){
     const head=[...box.children].find(el=>el.matches('.section-head,.panel-head,.criteria-heading'));
     if(!head||head.querySelector('.collapse-toggle'))return;
     const name=(head.querySelector('h2')?.textContent||head.dataset.collapseName||'section').replace(/\s+/g,' ').trim(),key='aimstep-collapsed:'+page+':'+pid+':'+name;
-    // Keep the progress bar beside the title; only controls enter the button group.
     const actions=document.createElement('div');actions.className='head-actions';
-    [...head.children].slice(head.dataset.collapseName?0:1).filter(el=>el.id!=='criteria-progress'&&!el.classList.contains('criteria-file-actions')).forEach(el=>actions.appendChild(el));
+    [...head.children].slice(head.dataset.collapseName?0:1).filter(el=>!el.classList.contains('criteria-file-actions')).forEach(el=>actions.appendChild(el));
     const btn=document.createElement('button');btn.type='button';btn.className='collapse-toggle';btn.innerHTML=icon+'<span class="sr-only"></span>';
     actions.appendChild(btn);head.appendChild(actions);head.classList.add('has-collapse');
     const set=c=>{box.classList.toggle('is-collapsed',c);btn.setAttribute('aria-expanded',String(!c));const t=(c?'Expand ':'Collapse ')+name;btn.title=t;btn.querySelector('.sr-only').textContent=t};

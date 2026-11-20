@@ -30,7 +30,7 @@
 | 同一治疗的限定 | 从目标和纳入段分别读到疗法、制剂和共同疗程时，曾重复列出同一治疗，或把人群内部的选择误解为整个标准的选择。题目使用目标指明的疗法和人群。制剂并入对应治疗，两组共同疗程在 Description 统一说明，并保留为内部纳入条件。真正待确认的条目直接注明字段、纳入或排除方向以及原文依据。 | [治疗、人群和疗程](../../tests/eligibility/hormone-therapy.cjs) · [人工核对](../../tests/eligibility/semantic-repair.cjs) |
 | `clear_project` | 旧草稿或来源污染新任务。清除项目标准、旧记录和反馈，保留有独立清除键的研究问题，拒绝清除前发出的旧请求回写。 | [Clear 与并发保护](../../tests/eligibility/clear-project.cjs) |
 | `author_decision` | 确认项离开对应要素，作者明确回答后仍要等待再次推理。把确认定位到规则，并直接应用作者决定。 | [作者决定路由](../../tests/eligibility/author-answer-routing.cjs) · [确认目标](../../tests/eligibility/author-targets.cjs) |
-| `progress_display` | 工作期间进度停在 0% 或 15%，用户无法判断是否仍在运行。显示阶段进度、等待状态及实际完成的批次。 | [进度反馈](../../tests/eligibility/wait-progress.cjs) |
+| `progress_display` | 工作期间进度停在 0% 或 15%，用户无法判断是否仍在运行。工作期间在 Criteria 下实时显示用时，成功后保存并显示本次耗时。 | [用时显示](../../tests/eligibility/wait-progress.cjs) |
 | `service_availability` | 上游服务超时或缺少判定时，曾为每个未核对条目生成一个作者任务。仅对缺少服务判定的条目自动重试一次。若仍无法完成，页面显示一条服务提示。[部分恢复及服务故障](../../tests/eligibility/semantic-repair.cjs) | [传输层](../../tools/test_eligibility_transport.py) · [用户可见错误](../../tests/eligibility/semantic-error-display.cjs) |
 | `residual_validation` | 程序发现尚未归入具体技巧的校验错误。累计发生运行次数，待可复现后分配更具体的记录代码。 | [校验不变量](../../tests/eligibility/invariants.cjs) |
 
