@@ -97,7 +97,7 @@ function extraction_payload(state,env=environment()){
 function resolve_review_context(q,candidate,env){
  const context=clone(q.context),types=array(candidate.question_types||context.question_types);if(!context.question_types.length)context.question_types=types;
  if(!context.review_methods.length)context.review_method_candidates=array(candidate.review_methods);if(!context.evidence_units.length)context.evidence_unit_candidates=array(candidate.evidence_units);
- const sparse_input=frameworkOnly(candidate)&&Sparse.isSparse(q,candidate.elements||[]);
+ const sparse_dimension=frameworkOnly(candidate)?Sparse.suppliedDimension(q,candidate.elements||[]):null;
  let resolved=env.frameworks.resolve(context.framework_requested,{question_types:context.question_types,dimensions:(candidate.elements||[]).map(e=>e.dimension_id.split('.')[0])});
  if(!context.framework_requested){
   const dimensions=new Set((candidate.elements||[]).filter(e=>e.information_status!=='missing'&&e.source_refs?.length&&e.disposition!=='exclude').map(e=>e.dimension_id.split('.')[0]));
@@ -106,8 +106,11 @@ function resolve_review_context(q,candidate,env){
    const frame=env.frameworks.resolve(id,{question_types:context.question_types,dimensions:[...dimensions]}).framework||env.frameworks.get(id);
    return frame?[frame]:[];
   });
-  const registered=sparse_input&&env.frameworks.get(Sparse.registeredFramework(q));
-  let framework=registered||options[0],basis=registered?'registered_scope_for_sparse_input':'model_mapping_suggestion';
+  const compatible=frame=>env.frameworks.map(sparse_dimension,frame).length||
+   ['design','study_design'].includes(sparse_dimension)&&frame.slots.some(slot=>['design','study_design'].includes(slot.slot_id));
+  const proposed=sparse_dimension&&env.frameworks.get(Sparse.registeredFramework(q,sparse_dimension));
+  const registered=proposed&&compatible(proposed)?proposed:null;
+  let framework=registered||(sparse_dimension&&options.find(compatible))||options[0],basis=registered?'registered_scope_for_sparse_input':'model_mapping_suggestion';
   if(!framework){
    // Match a missing model recommendation to the distinguishing fields in the
    // source. Common fields such as Population alone cannot identify a framework.
@@ -125,7 +128,7 @@ function resolve_review_context(q,candidate,env){
   if(['pico','peco'].includes(framework?.framework_id)&&dimensions.has('study_design'))framework=env.frameworks.get(framework.framework_id+'s')||framework;
   resolved={framework,candidates:registered?[registered]:options.length?options:env.frameworks.list(),basis,explicit:false};
  }
- return {context,sparse_input,framework_mapping:{framework_id:resolved.framework?.framework_id||null,display_name:resolved.framework?.display_name||null,version:resolved.framework?.version||null,candidates:resolved.candidates.map(f=>({framework_id:f.framework_id,display_name:f.display_name})),basis:resolved.basis,explicit:resolved.explicit,provisional:!resolved.explicit,source_refs:resolved.basis==='registered_scope_for_sparse_input'?[]:resolved.explicit&&q.context_source_ref?[clone(q.context_source_ref)]:clone(q.source_refs)}};
+ return {context,sparse_dimension,framework_mapping:{framework_id:resolved.framework?.framework_id||null,display_name:resolved.framework?.display_name||null,version:resolved.framework?.version||null,candidates:resolved.candidates.map(f=>({framework_id:f.framework_id,display_name:f.display_name})),basis:resolved.basis,explicit:resolved.explicit,provisional:!resolved.explicit,source_refs:resolved.basis==='registered_scope_for_sparse_input'?[]:resolved.explicit&&q.context_source_ref?[clone(q.context_source_ref)]:clone(q.source_refs)}};
 }
 function explicitOutcomeRequirement(refs){
  const reporting=/\b(?:measur(?:e[ds]?|ing|ement)|report(?:ed|s|ing)?|provid(?:e[ds]?|ing)|assess(?:ed|es|ing)?)\b/i;
@@ -243,7 +246,7 @@ function ingest_candidates(original,response,options={},env=environment()){
   const q=state.questions.find(q=>q.question_id===candidate.question_id&&active(q));if(!q||seen.has(q.question_id))fail('INVALID_QUESTION_REFERENCE','extraction','A question is missing, duplicated or outside this project.');seen.add(q.question_id);
   if(!Array.isArray(candidate.elements)||!candidate.framework_candidates)fail('INVALID_STRUCTURE','extraction','Each question needs elements and framework_candidates.');
   if(frameworkOnly(candidate))q.eligibility_policy=candidate.eligibility_policy;
-  const resolved=resolve_review_context(q,candidate,env);q.context=resolved.context;q.framework_mapping=resolved.framework_mapping;q.sparse_input=resolved.sparse_input;q.review_topic=normalizeTopic(candidate.review_topic,q.original_text,state.output_language);
+  const resolved=resolve_review_context(q,candidate,env);q.context=resolved.context;q.framework_mapping=resolved.framework_mapping;q.sparse_dimension=resolved.sparse_dimension;delete q.sparse_input;q.review_topic=normalizeTopic(candidate.review_topic,q.original_text,state.output_language);
   const map=new Map();for(const c of candidate.elements){if(map.has(c.candidate_id))fail('DUPLICATE_ELEMENT_ID','extraction','Candidate IDs must be unique within a question.');const e=elementFromCandidate(state,q,c,env);map.set(c.candidate_id,e.element_id);const old=state.elements.findIndex(x=>x.element_id===e.element_id);if(old<0)state.elements.push(e);else state.elements[old]=e;}
   const incomingIds=new Set(map.values());
   for(const e of currentElements(state,q))if(e.decision_status!=='confirmed_by_user'&&!incomingIds.has(e.element_id))e.active=false;
@@ -529,7 +532,7 @@ function detect_clarification_issues(state,env=environment()){
   if(!q.framework_mapping?.framework_id)createIssue(state,desired,issueData(q,'FRAMEWORK_AMBIGUITY',[],'case_sensitive_framework','请确认此问题使用的框架及字段含义。','影响问题字段的含义和必要决定。',true,(q.framework_mapping?.candidates||[]).map(f=>({option_id:f.framework_id,label:f.display_name,context_updates:{framework_id:f.framework_id}}))));
   const known=elements.filter(e=>e.information_status!=='missing'&&withinEligibilityFramework(q,e));
   if(strict)for(const advice of Sparse.suggestions(q,frame,known)){
-   const options=advice.criterion?[{option_id:'adopt',label:advice.criterion}]:[];
+   const options=array(advice.criterion).map((label,index)=>({option_id:index?'adopt_'+index:'adopt',label}));
    options.push({option_id:'omit',label:'Skip suggestion'});
    const trigger='sparse_scope:'+frame.framework_id+':'+advice.dimension+':'+q.source_refs[0].source_revision;
    createIssue(state,desired,{...issueData(q,'PROPOSED_RESTRICTION',[],trigger,advice.prompt,advice.rationale,false,options),method_advice:{dimension:advice.dimension,references:advice.references}});

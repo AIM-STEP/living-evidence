@@ -1361,7 +1361,7 @@ function alignVerbatimValue(e){
 // neighbouring predicate falls outside the selected framework.
 function restrictToFramework(question,original,savedQuestion,env,trees){
  question.eligibility_policy='framework-only-v1';
- const mapping=E.resolve_review_context(savedQuestion,question,env).framework_mapping;
+ const {framework_mapping:mapping,sparse_dimension}=E.resolve_review_context(savedQuestion,question,env);
  const frame=env.frameworks.get(mapping.framework_id);
  if(frame&&!original.context.framework_requested)question.framework_candidates=[
   {framework_id:frame.framework_id,basis:mapping.basis}
@@ -1398,6 +1398,11 @@ function restrictToFramework(question,original,savedQuestion,env,trees){
    }
    const declaredInterest=/\b(?:outcomes? of interest|(?:primary|secondary) outcomes? (?:were|are)|we (?:will )?(?:assess|examine) whether)\b|关注的结局|亚组分析/i.test(citedText);
    const statedInterest=e.semantic_role!=='undecided'||/\b(?:our |the )?outcomes? of interest (?:were|are|included?)\b|\b(?:our |the )(?:primary|secondary) outcomes? (?:were|are)\b|关注的结局(?:为|是|包括)/iu.test(citedText);
+   if(!gate&&sparse_dimension==='outcome'&&slots.has('outcome')){
+    Object.assign(e,{semantic_role:'review_focus',scope_status:'unspecified',disposition:null,outcome_use:'interest'});
+    byId.set(e.candidate_id,e);
+    continue;
+   }
    if(!gate&&(e.semantic_role==='review_focus'||declaredInterest&&statedInterest))continue;
    if(gate&&e.semantic_role==='review_focus'){e.semantic_role='eligibility_condition';e.disposition=/\b(?:exclude[ds]?|ineligible)\b|排除/i.test(citedText)?'exclude':'include';e.scope_status='restricted';}
   }
@@ -1459,7 +1464,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
   const {registration,...sourceContext}=question.context;
   const briefRegistration=original_text.length<=180&&batches.length===1&&sources.length===1&&questionInBatch?registration:null;
   const request={question:{...question,context:{...sourceContext,...(briefRegistration&&{registration:briefRegistration})},sources,original_text:questionContext},frameworks,review_profiles:profiles[qi],source_passages:passageIndex(passages),part_index:bi,part_count:batches.length,extraction_encoding:'compact-elements-v3'};
-  const briefInstruction=briefRegistration?' If the question consists of a population or clinical group, extract that group with exact source evidence even when it is a sentence fragment. Use registration only to interpret the scope and framework. Extract no criteria from the registered title.':'';
+  const briefInstruction=briefRegistration?' If the source is a short phrase supplying only one framework field, extract that field with exact source evidence. A field heading such as Comparison, Exposure or Study design identifies the role of its value. Retain an outcome alone as a review interest unless the source explicitly requires measurement or reporting for eligibility. Use registration to interpret the scope and framework. Extract no criteria from the registered title.':'';
   const responseSchema=D.clone(extractionSchema);responseSchema.properties.questions.items.required.push('review_topic');responseSchema.properties.questions.minItems=1;responseSchema.properties.questions.maxItems=1;responseSchema.properties.questions.items.properties.question_id={type:'string',enum:[q.question_id]};
   let answer;for(let attempt=0;attempt<=(options.retries??1);attempt++)try{
    answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+briefInstruction+(batches.length>1?' Extract only from sources in this part. If supplied, question.original_text is whole-question context, not another source for this part. Preserve the within-part logic of all eligibility conditions.':'')+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
@@ -1486,6 +1491,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
    const result=answer.questions[0];
    classifyDeclaredOutcomes(result,ranges);
    classifyFollowUpGroups(result.elements);
+   result.eligibility_policy='framework-only-v1';
    const frameId=E.resolve_review_context(originals.get(q.question_id),result,env).framework_mapping.framework_id;
    if(batches.length===1)reconcileEligibilityFields(state,result,q,ranges,passages,options.onLesson,frameId);
    retainIrradianceDefinitions(state,result,q,ranges,frameId);

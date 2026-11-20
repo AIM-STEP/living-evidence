@@ -6,7 +6,7 @@ const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
 const presentationVersion='framework-display-v12';
 // Bump when eligibility semantics change. Presentation updates can use the saved evidence.
-const generationVersion='20261120-criteria-release-33';
+const generationVersion='20261120-criteria-release-34';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
@@ -78,6 +78,7 @@ function projectToClassic(project,registry){
  }
  const multiple=output.questions.length>1;
  const frameworkQuestions=[],pendingLogicRows=[],bindings=new Map();
+ const questionById=new Map(project.questions.map(q=>[q.question_id,q]));
  const contexts=output.questions.map(q=>{
   const target=multiple?[]:rows;
   const mapping=q.framework_mapping;
@@ -116,6 +117,11 @@ function projectToClassic(project,registry){
    add(rows,row.dimension,side,q.display_number+' · '+rule,[],false);
   }
   const outcomes=fields.has('outcome')?Methods.outcomeGroups(q.research_question):[];
+  if(fields.has('outcome')&&!outcomes.length&&questionById.get(q.question_id)?.sparse_dimension==='outcome'){
+   const items=project.elements.filter(e=>e.question_id===q.question_id&&e.active!==false&&e.dimension_id.split('.')[0]==='outcome'&&e.semantic_role==='review_focus')
+    .map(e=>E.accepted(e)?e.normalized_text:e.raw_text).filter(Boolean);
+   if(items.length)outcomes.push({label:'',items:[...new Set(items)]});
+  }
   return {display_number:q.display_number,manuscript:Methods.manuscriptContext(q.research_question||''),...(outcomes.length?{outcome_groups:outcomes}:{}),...(multiple?{rows:target}:{}),...(pending&&!awaiting.size?{pending_inclusion_relation:true}:{}),...(linked.length?{linked_conditions:linked}:{}),...(duration&&{shared_treatment_duration:{suffix:duration.suffix,intervention:duration.intervention,comparison:duration.comparison}})};
  });
  const frameNames=[...new Set(frameworkQuestions.map(q=>q.framework))],framework=frameNames.length===1?frameNames[0]:'Other';

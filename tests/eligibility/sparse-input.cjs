@@ -2,6 +2,7 @@ const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const B=require('../../app/eligibility/background');
 const E=require('../../app/eligibility/engine');
+const M=require('../../app/eligibility/model');
 const {setup}=require('../../tools/test_eligibility_grounding.cjs');
 
 const population='Adults with coronary heart disease';
@@ -84,4 +85,52 @@ test('the registered purpose controls advice and complete source coverage takes 
  assert.equal(generate({withSource:true}).classic.sourceConfirmations.length,0);
  assert.equal(generate({text:population+' receiving exercise training.',extra:[['intervention','exercise training']]}).classic.sourceConfirmations.length,0);
  assert.equal(generate({text:population+' receiving exercise training.'}).classic.sourceConfirmations.length,0);
+ assert.equal(generate({text:'Population: '+population+'; Intervention: Exercise training'}).classic.sourceConfirmations.length,0);
+});
+
+test('suggest the missing fields for any supported single-field input',async()=>{
+ const cases=[
+  ['effectiveness','Intervention: Exercise training','Exercise training','intervention','PICOS',['Population','Comparison']],
+  ['effectiveness','Comparison: No exercise','No exercise','comparator','PICOS',['Population','Intervention']],
+  ['effectiveness','Randomised controlled trials','Randomised controlled trials','study_design','PICOS',['Population','Intervention']],
+  ['effectiveness','Outcome: All-cause mortality','All-cause mortality','outcome','PICOS',['Population','Intervention']],
+  ['etiology','Exposure: Fine particulate air pollution','Fine particulate air pollution','exposure','PEO',['Population']],
+  ['etiology','No exposure','No exposure','comparator','PECO',['Population','Exposure']],
+  ['diagnosis','Index test: Rapid antigen testing','Rapid antigen testing','index_test','PIRD',['Target condition','Reference test']],
+  ['qualitative','Context: Community clinics','Community clinics','context','PICo',['Population','Phenomenon of Interest']],
+  ['qualitative','Study design: Ethnography','Ethnography','design','SPIDER',['Sample','Phenomenon of Interest']],
+  ['mapping','Concept: Access to telemedicine','Access to telemedicine','concept','PCC',['Population','Context']]
+ ];
+ for(const [question_type,text,quote,dimension,framework,domains] of cases){
+  const env=E.environment(),state=E.save_input(E.create_project('single-field'),{research_question:text,output_language:'en',
+   registration:{project_type:'systematic',question_type,title:dimension==='intervention'?'Exercise in adults with coronary heart disease: a meta-analysis':'Registered review title'}}).state;
+  const steps=[];
+  const adapter={async request(step,project,payload){
+   steps.push(step);
+   if(step==='extract_elements'){
+    const q=payload.question,field=eligibilityElement('field',dimension,quote,q.sources[0]);
+    if(dimension==='outcome')Object.assign(field,{semantic_role:'review_focus',scope_status:'unspecified',disposition:null});
+    return {questions:[{question_id:q.question_id,review_topic:quote,framework_candidates:['pcc'],elements:[field],issues:[],logic:null}]};
+   }
+   assert.equal(step,'review_normalization');
+   return {items:payload.items.map(e=>({...e,status:'supported',issue_type:'none',reason:'Source verified.'}))};
+  }};
+  const {candidates}=await M.analyze(state,env,adapter);
+  const project=E.ingest_candidates(state,candidates,{},env).state,classic=B.projectToClassic(project,env.frameworks);
+  assert.equal(classic.framework,framework,text);
+  assert.deepEqual(classic.sourceConfirmations.filter(d=>d.methodAdvice).map(d=>d.domain),domains,text);
+  assert(steps.length<=2,text);
+  if(dimension==='outcome'){
+   assert.equal(project.criteria.length,0);
+   assert.match(classic.manuscriptParagraph,/review outcome is all-cause mortality/i);
+  }else assert.equal(project.criteria.length,1,text);
+  if(dimension==='intervention'){
+   assert.equal(classic.sourceConfirmations.find(d=>d.domain==='Population').options[0].label,population);
+   const comparison=classic.sourceConfirmations.find(d=>d.domain==='Comparison');
+   assert.deepEqual(comparison.options.map(o=>o.label),['Usual care','No intervention','Skip suggestion']);
+   const revised=E.apply_decisions(project,{request_id:'choose',answers:[{issue_id:comparison.issue_id,option_id:'adopt_1',answer_text:'No intervention',author_confirmed:true}]},env).state;
+   assert.equal(revised.criteria.find(c=>c.dimension_id==='comparator').text.toLowerCase(),'no intervention');
+   assert.deepEqual(B.projectToClassic(revised,env.frameworks).sourceConfirmations.filter(d=>d.methodAdvice).map(d=>d.domain),['Population']);
+  }
+ }
 });
