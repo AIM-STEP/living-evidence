@@ -1,7 +1,7 @@
 /* Project-scoped saved criteria sets. Only review content is copied into sets. */
 (function(root){
 'use strict';
-const fields=['criteria_epoch','eligibilityV3Snapshot','eligibility_v3_revision','framework','question','reviewType','activeGenerator','generationMethodChoice','generationMode','generationMethod','criteria','machineCriteria','machineRun','machineSourceRevision','manualRefinement','machineRefinement','finalCriteria','resolvedPending','pendingDecisions','visibleDescription','dateRange','language','limitsOther','years','dateEnd','reportType','reportTypeOther','limitsReason','outcomeGate','outcomeReason','protocolSource','confirmed'];
+const fields=['criteria_epoch','eligibilityV3Snapshot','eligibility_v3_revision','framework','manualFramework','question','reviewType','activeGenerator','generationMethodChoice','generationMode','generationMethod','criteria','machineCriteria','machineRun','machineSourceRevision','manualRefinement','machineRefinement','finalCriteria','resolvedPending','pendingDecisions','visibleDescription','dateRange','language','limitsOther','years','dateEnd','reportType','reportTypeOther','limitsReason','outcomeGate','outcomeReason','protocolSource','confirmed'];
 const clone=value=>JSON.parse(JSON.stringify(value));
 const key=id=>'aimstep-eligibility-library:'+id;
 function blankWorkspace(previous={}){
@@ -56,7 +56,7 @@ function read(storage,id){
 function rows(value){return (value.activeGenerator==='machine'?value.machineCriteria:value.criteria)||[];}
 function hasRules(value){return !!value.generationMethodChoice&&rows(value).some(row=>['condition','uncertain','definition'].some(field=>{const text=String(row[field]||'').trim();return text&&!['Adults with the condition or population of interest','Eligible study designs','Define age threshold, diagnosis and how mixed populations are handled.','Specify design features; distinguish design from report format.'].includes(text);}));}
 function snapshot(value){return clone(Object.fromEntries(fields.filter(field=>value[field]!==undefined).map(field=>[field,value[field]])));}
-function kind(value){return value.protocolSource?.sharedCriteria?'proposal':value.activeGenerator==='machine'?'machine':'manual';}
+function kind(value){return value.protocolSource?.sharedCriteria?'proposal':value.generationMethodChoice==='manual'?'manual':value.activeGenerator==='machine'?'machine':'manual';}
 function rowKey(value){return JSON.stringify(rows(value).map(row=>[row.title,row.condition,row.uncertain,row.definition]));}
 function assertCurrent(storage,id,value){
  const epoch=storage.getItem('aimstep-eligibility-epoch:'+id);

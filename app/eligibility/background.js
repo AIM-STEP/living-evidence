@@ -9,7 +9,13 @@ const presentationVersion='framework-display-v12';
 const generationVersion='20261120-criteria-release-34';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
-function signature(value){return D.stableId('legacy',JSON.stringify(value?{question:value.question,framework:value.framework,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='machine'?value.machineRefinement:value.manualRefinement}:null));}
+function signature(value){
+ if(!value)return D.stableId('legacy','null');
+ const machine=value.activeGenerator==='machine';
+ const view={question:value.question,framework:value.framework,rows:machine?value.machineCriteria:value.criteria,refinement:machine?value.machineRefinement:value.manualRefinement};
+ if(value.generationMethodChoice==='manual')view.manualInput=[value.manualFramework,value.criteria,value.dateRange,value.language,value.limitsOther,value.reviewType];
+ return D.stableId('legacy',JSON.stringify(view));
+}
 function optionLabel(option){
  if(!option)return 'Confirm';
  if(option.source_occurrence_ref)return option.label;
@@ -176,7 +182,7 @@ function projectToClassic(project,registry,editBindings){
    options:authorChoices(issue).map(({label,option_id})=>({label,option_id})),
    evidence:[...new Map(elements.flatMap(element=>issue.trigger_rule_id==='source_occurrence'?(element.source_occurrence_alternatives||[]).flatMap(a=>[a.heading,a].filter(Boolean)):element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
  });
- return {eligibilityPolicy,manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows:[],pendingLogicRows,framework,frameworkSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v4',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.input_kind==='research_question'?'Question / voice input':s.name||'Author requirements',text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
+ return {eligibilityPolicy,manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows:[],pendingLogicRows,framework,frameworkSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v4',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.name||(s.input_kind==='research_question'?'Question / voice input':'Author requirements'),text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
 }
 async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
  if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');
@@ -196,8 +202,10 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   return project;
  }
  function staged(project,expectedRevision,expectedSignature,classic=projectView(project)){return {project,expectedRevision,expectedSignature,classic};}
- function inputKey({question,reviewType,questionType,registration,modelSettings},material){
-  return D.stableId('input',JSON.stringify([generationVersion,configKey,question||'',reviewType||'',questionType||'',registration||null,modelSettings||null,material]));
+ function inputKey({question,reviewType,questionType,registration,modelSettings,manualFramework},material){
+  const parts=[generationVersion,configKey,question||'',reviewType||'',questionType||'',registration||null,modelSettings||null,material];
+  if(manualFramework)parts.push(manualFramework);
+  return D.stableId('input',JSON.stringify(parts));
  }
  function sourceKey(input,sources){
   const passages=sources.filter(s=>s.name!=='Question / voice input'||s.text!==input.question)
@@ -292,11 +300,11 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_criteria_presentation',at:project.updated_at,changes:[]});
   return staged(project,saved.revision,signature(read(keys.legacy)));
  }
- async function generate({legacy,question,reviewType,questionType,registration,sources=[],fileDigests,modelSettings,modelClient,signal,onProgress}){
+ async function generate({legacy,question,reviewType,questionType,registration,sources=[],fileDigests,modelSettings,manualFramework,modelClient,signal,onProgress}){
   requireEpoch(storage,projectId,legacy?.criteria_epoch);
   requireCurrentView(legacy);
   const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs);
-  const input={legacy,question,reviewType,questionType,registration,modelSettings},key=sourceKey(input,sources);
+  const input={legacy,question,reviewType,questionType,registration,modelSettings,manualFramework},key=sourceKey(input,sources);
   if((!Array.isArray(fileDigests)||saved.generation_files_key===inputKey(input,fileDigests))&&matchesPublished(input,saved,key,'generation_source_key')){
    return publishedStage(saved,legacy);
   }
@@ -306,7 +314,9 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   const raw=question||sources.map(source=>source.text).join('\n\n');
   const questionTypes={effectiveness:'intervention_effect',prevention:'intervention_effect',etiology:'exposure_outcome',qualitative:'experience',diagnosis:'diagnostic_accuracy'};
   const registeredScope=registration?{...registration,question_type:registration.question_type||questionType||''}:null;
-  let project=E.save_input(saved,{research_question:raw,document_input_only:!question&&sources.length>0,review_method:methods[reviewType]||reviewType||null,question_type:questionTypes[questionType]||questionType||null,registration:registeredScope,output_language:'en',legacy_archive:saved.criteria_epoch?null:legacy},{base_revision:revision},env).state;
+  let project=E.save_input(saved,{research_question:raw,document_input_only:!question&&sources.length>0,review_method:methods[reviewType]||reviewType||null,question_type:questionTypes[questionType]||questionType||null,
+   question_framework:manualFramework==='Other'?null:manualFramework,question_source_name:manualFramework?'Author-entered criteria':null,
+   registration:registeredScope,output_language:'en',legacy_archive:saved.criteria_epoch?null:legacy},{base_revision:revision},env).state;
   const activeQuestions=project.questions.filter(q=>q.active!==false);
   let questionOffset=0,documentOffset=0;
   const ranges=activeQuestions.map(q=>{
@@ -378,6 +388,8 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   requireEpoch(storage,projectId,previous.criteria_epoch);
   const saved=read(keys.project);if(!saved||(saved.criteria_epoch??null)!==(next.criteria_epoch??null)||signature(previous)===signature(next))return null;
   const before=previous.machineRefinement,after=next.machineRefinement;
+  if(!documentEdit&&next.generationMethodChoice==='manual'&&previous.generationMethodChoice==='manual'&&
+    JSON.stringify(previous.machineCriteria)===JSON.stringify(next.machineCriteria)&&JSON.stringify(before)===JSON.stringify(after))return null;
   if(documentEdit&&previous.activeGenerator==='machine'&&next.activeGenerator==='machine'&&
     ['final','needs_clarification'].includes(saved.status)&&(documentEdit.changes.length||documentEdit.outcomeEdits.length)){
    const env=E.environment(...configs),links=new Map(),questions=saved.questions.filter(q=>q.active!==false);

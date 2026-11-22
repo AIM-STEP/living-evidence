@@ -1,11 +1,11 @@
 # Eligibility Criteria 技术流程图
 
-![机器生成和人工生成两条路径，以及 Criteria 预览、作者核查、导出和筛选交接](figures/eligibility-workflow.png)
+![完整问题和逐项填写两种输入汇入同一套提取、核对、作者确认与交接流程](figures/eligibility-workflow.png)
 
 [打开高清 PNG](figures/eligibility-workflow.png) · [制图源码](sources/workflow.py)
 
-图示主流程适用于线上 `20261120-criteria-release-36`，也适用于工作区 `20261120-criteria-release-37`。[线上实现对应提交](https://github.com/AIM-STEP/living-evidence/commit/c6a6d88843d958b48ba4b4209a12a894404e61e3)
+本图对应 `20261122-criteria-release-38`。机器生成接收一次性提交的完整研究问题。人工生成保留作者选定的框架及逐项填写的纳入、排除和例外。输入准备完成后，两种方式共用候选提取、原文校验、TypeSafe Jev 核对与标准构建流程。
 
-机器生成时，作者对待确认项的选择直接应用到标准和预览，无需再次调用模型。点击 **Clear** 会保留问题框内容，清除该项目的标准、草稿和附件，并使清除前的任务无法回写。
+作者对待确认项的选择直接应用到标准和预览，无需再次调用模型。点击 **Clear** 会保留问题框内容，清除该项目的标准、草稿和附件，并使清除前的任务无法回写。
 
 [详细技术说明](../source-grounded-extraction.md) · [提取记录本](../extraction-notebook.md)

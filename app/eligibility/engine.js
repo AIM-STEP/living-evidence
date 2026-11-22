@@ -39,7 +39,8 @@ function save_input(original,input,options={},env=environment()){
   let q=state.questions.find(q=>q.question_id===entry.question_id)||(!entry.question_id?state.questions[index]:null);
   if(!q){q={question_id:entry.question_id||id('question'),display_number:'RQ'+(state.questions.length+1),source_refs:[],element_ids:[],framework_mapping:null,logic:null,context:{},revision:1};state.questions.push(q);}else q.revision++;
   const prior=state.sources.find(s=>s.source_id===q.source_refs[0]?.source_id&&s.revision===q.source_refs[0]?.source_revision);
-  const source=addSource(state,'user_input',raw,[q.question_id],'question:'+q.question_id,{input_kind:'research_question',...(manifest?{derived_from:[ref(manifest,raw)]}:{})});
+  const source=addSource(state,'user_input',raw,[q.question_id],'question:'+q.question_id,{input_kind:'research_question',
+   ...(input.question_source_name?{name:input.question_source_name}:{}),...(manifest?{derived_from:[ref(manifest,raw)]}:{})});
   if(prior&&prior.revision!==source.revision)for(const e of state.elements.filter(e=>e.question_id===q.question_id&&e.decision_status!=='confirmed_by_user'))e.active=false;
   const previousEvidenceUnits=JSON.stringify(q.context.evidence_units||[]);q.original_text=raw;q.source_refs=[ref(source)];q.context={...q.context,review_methods:array(entry.review_method||input.review_method||state.review_methods),review_method_inherited:!entry.review_method,question_types:array(entry.question_type||input.question_type),evidence_units:array(entry.evidence_unit||input.evidence_unit),framework_requested:entry.question_framework??input.question_framework??null};
   if(input.registration)q.context.registration=clone(input.registration);else delete q.context.registration;

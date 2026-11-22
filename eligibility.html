@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261120-criteria-release-36"></script>
-<script src="app/secure-origin.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility-release.js?v=20261122-criteria-release-38"></script>
+<script src="app/secure-origin.js?v=20261122-criteria-release-38"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -65,7 +65,7 @@
 <style>
 .embedded-manual body{background:#fff}
 .embedded-manual .header,.embedded-manual .steps,.embedded-manual .crumb,.embedded-manual .heading,.embedded-manual .preview-actions,.embedded-manual .criteria-file-actions,.embedded-manual .editor>.section:not(#manual-generate-panel){display:none!important}
-.embedded-manual .manual-limits-heading,.embedded-manual .limits-grid,.embedded-manual .manual-refine-controls,.embedded-manual #refine-manual,.embedded-manual #manual-refine-status{display:none!important}
+.embedded-manual .manual-limits-heading,.embedded-manual .limits-grid,.embedded-manual .manual-refine-controls,.embedded-manual #refine-manual,.embedded-manual #stop-manual,.embedded-manual #manual-refine-status{display:none!important}
 .embedded-manual .wrap{max-width:none;margin:0;padding:0}
 .embedded-manual .layout{display:block}
 .embedded-manual .panel{box-shadow:none;border:0;border-radius:0}
@@ -74,7 +74,7 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261120-criteria-release-36"></script>
+<script src="app/criteria-grounding.js?v=20261122-criteria-release-38"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
 <script defer src="app/tool-i18n-catalog.js?v=20261118-criteria-actions-1"></script>
@@ -93,20 +93,20 @@
 <div class="layout eligibility-workspace"><section class="panel editor" aria-label="Criteria editor">
 <div class="section"><label class="generation-method-label" for="generation-method" data-ui-localize>Generation Method</label><select class="select" id="generation-method"><option value="" hidden></option><option value="machine" data-ui-localize>Machine generate</option><option value="manual" data-ui-localize>Manual generate</option></select></div>
 <div class="section" id="machine-generate-panel" hidden><div class="section-head" data-collapse-name="Machine generate"><button class="btn btn-primary" id="start-machine" type="button" data-ui-localize>Generate</button><button class="btn" id="stop-machine" type="button" hidden data-ui-localize>Stop</button><button class="btn criteria-action" id="clear-question" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div><div class="machine-input"><textarea id="question" class="textarea" rows="20" aria-label="Review question for automatic criteria generation" placeholder="What population, intervention or phenomenon are you studying?"></textarea><div class="machine-input-tools"><button class="machine-tool" id="add-source" type="button" aria-label="Upload Word, PDF, text or image" title="Upload a document or image">＋</button><button class="machine-tool" id="voice-toggle" type="button" aria-label="Start voice input" aria-pressed="false" title="Start voice input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg></button><input id="source-files" type="file" accept=".docx,.pdf,.txt,.md,.csv,image/png,image/jpeg,image/webp" multiple hidden></div></div><div id="machine-attachments" class="machine-attachments" aria-live="polite" hidden></div><div id="generation-status" class="hint machine-status" role="status" aria-live="polite" hidden></div></div>
-<div class="section" id="manual-generate-panel" hidden><div class="section-head" data-collapse-name="Manual generate"><div class="manual-actions"><button class="btn btn-primary" id="refine-manual" type="button" data-ui-localize>Generate</button><button class="btn criteria-action" id="manual-generate" type="button" aria-label="Clear all entered eligibility content" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker" data-ui-localize>＋ Add criterion</button></div></div><label class="field-label" data-ui-localize>Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden data-ui-localize><strong data-ui-localize>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PICOS">PICOS</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PECOS">PECOS</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other" data-ui-localize>Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading manual-limits-heading" style="margin-top:18px" data-ui-localize>Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label" data-ui-localize>Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date" data-ui-localize>Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date" data-ui-localize>End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language" data-ui-localize>Language</label><select id="language" class="select"><option value="" data-ui-localize>Select language</option><option value="Chinese" data-ui-localize>Chinese</option><option value="English" data-ui-localize>English</option></select></div><div><label class="field-label" for="limits-other" data-ui-localize>Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div id="description-criteria-list" hidden></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
+<div class="section" id="manual-generate-panel" hidden><div class="section-head" data-collapse-name="Manual generate"><div class="manual-actions"><button class="btn btn-primary" id="refine-manual" type="button" data-ui-localize>Generate</button><button class="btn" id="stop-manual" type="button" hidden data-ui-localize>Stop</button><button class="btn criteria-action" id="manual-generate" type="button" aria-label="Clear all entered eligibility content" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker" data-ui-localize>＋ Add criterion</button></div></div><label class="field-label" data-ui-localize>Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden data-ui-localize><strong data-ui-localize>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PICOS">PICOS</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PECOS">PECOS</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other" data-ui-localize>Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading manual-limits-heading" style="margin-top:18px" data-ui-localize>Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label" data-ui-localize>Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date" data-ui-localize>Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date" data-ui-localize>End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language" data-ui-localize>Language</label><select id="language" class="select"><option value="" data-ui-localize>Select language</option><option value="Chinese" data-ui-localize>Chinese</option><option value="English" data-ui-localize>English</option></select></div><div><label class="field-label" for="limits-other" data-ui-localize>Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div id="description-criteria-list" hidden></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div></div><p id="criteria-timing" hidden><span id="criteria-working-label" data-ui-localize>Working</span><span id="criteria-finished-label" data-ui-localize hidden>Elapsed time</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed generation time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="app/eligibility-library.js?v=20261119-clear-criteria-2"></script>
-<script src="app/eligibility/registries.js?v=20261120-criteria-release-36"></script>
-<script src="app/eligibility/domain.js?v=20261120-criteria-release-36"></script>
-<script src="app/eligibility/methodology.js?v=20261120-criteria-release-36"></script>
-<script src="app/eligibility/document.js?v=20261120-criteria-release-36"></script>
-<script src="app/eligibility/sparse-input.js?v=20261120-criteria-release-36"></script>
-<script src="app/eligibility/engine.js?v=20261120-criteria-release-36"></script>
-<script src="app/eligibility/lessons.js?v=20261120-criteria-release-36"></script>
-<script src="app/eligibility/model.js?v=20261120-criteria-release-36"></script>
-<script src="app/eligibility-reset.js?v=20261120-criteria-release-36"></script>
-<script src="app/eligibility/background.js?v=20261120-criteria-release-36"></script>
+<script src="app/eligibility-library.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility/registries.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility/domain.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility/methodology.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility/document.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility/sparse-input.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility/engine.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility/lessons.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility/model.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility-reset.js?v=20261122-criteria-release-38"></script>
+<script src="app/eligibility/background.js?v=20261122-criteria-release-38"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -168,8 +168,9 @@ if(projectId){const linkedName=(project&&project.id===projectId&&project.name)||
 function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function dateFromInput(value){const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(value);return {year:match?.[1]||'',month:match?.[2]||'',day:match?.[3]||''}}
 function dateToInput(date,side){if(typeof date==='string')return /^\d{4}-\d{2}-\d{2}$/.test(date)?date:'';if(!date?.year)return '';const year=String(date.year).padStart(4,'0');const month=String(date.month||(side==='end'?12:1)).padStart(2,'0');const day=String(date.day||(side==='end'?new Date(Number(year),Number(month),0).getDate():1)).padStart(2,'0');return `${year}-${month}-${day}`}
-function criteriaSignature(value){return JSON.stringify({mode:value.generationMethodChoice,framework:value.framework,reviewType:value.reviewType,question:value.question,machineSourceRevision:value.machineSourceRevision,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='manual'?value.manualRefinement:value.machineRefinement,dateRange:value.dateRange,language:value.language,limitsOther:value.limitsOther})}
-function manualSourceSignature(){return JSON.stringify({framework:state.framework,reviewType:state.reviewType,criteria:state.criteria.map(({title,condition,uncertain,definition})=>({title,condition,uncertain,definition})),dateRange:state.dateRange,language:state.language,limitsOther:state.limitsOther})}
+function criteriaSignature(value){return JSON.stringify({mode:value.generationMethodChoice,framework:value.framework,reviewType:value.reviewType,question:value.question,machineSourceRevision:value.machineSourceRevision,rows:value.activeGenerator==='machine'?value.machineCriteria:value.criteria,refinement:value.activeGenerator==='manual'?value.manualRefinement:value.machineRefinement,dateRange:value.dateRange,language:value.language,limitsOther:value.limitsOther,manualInput:value.generationMethodChoice==='manual'?value.criteria:undefined,manualFramework:value.manualFramework})}
+function manualFramework(){return state.manualFramework||state.framework}
+function manualSourceSignature(){return JSON.stringify({framework:manualFramework(),reviewType:state.reviewType,criteria:state.criteria.map(({title,condition,uncertain,definition})=>({title,condition,uncertain,definition})),dateRange:state.dateRange,language:state.language,limitsOther:state.limitsOther})}
 function machineSourceSignature(question,reviewType,revision,rows){return JSON.stringify({question,reviewType,revision,rows:rows.map(({title,condition,uncertain,definition})=>({title,condition,uncertain,definition}))})}
 let manualRefinementController=null,manualRefinementNonce=0,manualRunSignature='';
 let eligibilityBackgroundService=null,eligibilityBackgroundPromise=null,pendingBackgroundStage=null;
@@ -206,8 +207,11 @@ function backgroundModelClient(model){return {get exchanges(){return model.audit
 function useBackgroundCriteria(stage,runData,resetDecisions=true,{presentationRefresh=false}={}){
   const result=stage.classic,rows=result.rows.filter(row=>row.include.length||row.exclude.length);
   const previous=resetDecisions?null:state.machineRefinement;
+  const inputMode=runData.inputMode||'machine';
+  if(inputMode==='manual')state.manualFramework=runData.manualFramework;
   state.framework=result.framework;state.machineCriteria=rows.map((row,index)=>({id:'INC-'+String(index+1).padStart(2,'0'),title:row.dimension,condition:row.include.join('\n'),uncertain:row.exclude.join('\n'),definition:'',purpose:'Eligibility',stage:'',source:'machine'}));
-  state.activeGenerator='machine';state.generationMode='machine';state.generationMethodChoice='machine';state.generationMethod='source-structured-v3';
+  // Both input methods save the shared structured output in the established result fields.
+  state.activeGenerator='machine';state.generationMode=inputMode;state.generationMethodChoice=inputMode;state.generationMethod='source-structured-v3';
   state.machineRun={...runData,methodVersion:window.AIMSTEPEligibilityEngine.VERSION,generatedAt:new Date().toISOString(),backgroundRevision:stage.project.revision};
   const signature=machineSourceSignature(runData.question,runData.reviewType,runData.sourceRevision??0,state.machineCriteria);
   const paragraph=result.manuscriptParagraph;
@@ -229,11 +233,12 @@ function useBackgroundCriteria(stage,runData,resetDecisions=true,{presentationRe
 }
 
 function setManualStatus(message,error=false){const area=$('manual-refine-status');area.textContent=message;area.hidden=!message;area.classList.toggle('error',error)}
-function stopManualRefinement(){manualRefinementNonce++;if(manualRefinementController){manualRefinementController.abort();manualRefinementController=null}$('refine-manual').disabled=false;$('refine-manual').textContent='Generate'}
+function stopManualRefinement(){manualRefinementNonce++;if(manualRefinementController){manualRefinementController.abort();manualRefinementController=null;stopCriteriaTiming()}$('refine-manual').disabled=false;$('refine-manual').textContent='Generate';$('stop-manual').hidden=true;$('stop-manual').disabled=false}
 // A generated criteria set keeps its original generation method until cleared.
 function lockedGenerationMethod(){
   if(embeddedManual||embeddedPreview)return '';
   const mode=state.generationMethodChoice;
+  if(mode==='manual'&&state.machineRun?.inputMode==='manual')return mode;
   const rows=mode==='machine'?state.machineCriteria:state.criteria;
   if(!rows?.some(row=>String(row.condition||'').trim()))return '';
   if(mode==='machine'&&state.machineRun)return mode;
@@ -275,12 +280,14 @@ const generationStatus=$('generation-status');
 let generationController=null,generationNonce=0,criteriaWaitTimer=null,generationStartedAt=null,confirmationQueue=null;
 function hasCurrentMachineResult(){
   const run=state.machineRun,question=$('question').value.trim();
+  if(state.generationMethodChoice==='manual')return run?.inputMode==='manual'&&run.manualSignature===manualSourceSignature();
+  if(run?.inputMode==='manual')return false;
   return !!run&&(!question||run.question===question)&&run.reviewType===state.reviewType&&
     (run.sourceRevision??0)===(Number(state.machineSourceRevision)||0);
 }
 function renderCriteriaTiming(){
   const running=generationStartedAt!==null;
-  const saved=$('generation-method').value==='machine'&&hasCurrentMachineResult()?state.machineRun.elapsedMs:null;
+  const saved=($('generation-method').value==='machine'||state.machineRun?.inputMode==='manual')&&hasCurrentMachineResult()?state.machineRun.elapsedMs:null;
   const duration=running?Date.now()-generationStartedAt:saved;
   $('criteria-timing').hidden=!Number.isFinite(duration);
   $('criteria-working-label').hidden=!running;
@@ -463,7 +470,11 @@ async function prepareSources(question,files,signal){
   if(!texts.some(item=>item.text.trim())&&!images.length)throw new Error('Enter text, record speech, or attach a readable document or image.');
   return {texts,images};
 }
-function markManual(){stopMachineGeneration();stopManualRefinement();state.generationMode='manual';state.activeGenerator='manual';state.generationMethodChoice='manual';$('generation-method').value='manual';renderPreview()}
+function manualGenerator(){
+  if(state.machineRun?.inputMode==='manual')return 'machine';
+  return embeddedManual||state.protocolSource?.sharedCriteria||state.manualRefinement?'manual':'machine';
+}
+function markManual(){stopMachineGeneration();stopManualRefinement();state.generationMode='manual';state.activeGenerator=manualGenerator();state.generationMethodChoice='manual';$('generation-method').value='manual';renderPreview()}
 function privateModelAddress(address){
   try{const host=new URL(address).hostname.toLowerCase();return host==='localhost'||host==='127.0.0.1'||host==='[::1]'||/^10\./.test(host)||/^192\.168\./.test(host)||/^172\.(?:1[6-9]|2\d|3[01])\./.test(host)}catch(e){return false}
 }
@@ -936,25 +947,78 @@ async function autoCriteriaPipeline(model,input,signature,signal,progress){
   result.audit={version:window.AIMSTEPCriteriaGrounding.VERSION,decisionPolicy:'direct-draft-v1',status:result.rows.some(row=>row.include.length||row.exclude.length)?'reviewed-draft':'empty-draft',calls:model.auditTrail||[],model:{name:model.name,provider:model.provider,requestedTemperature:0},sources:await window.AIMSTEPCriteriaGrounding.manifest(input.originalSources||input.criteria.flatMap(row=>['eligibilityRule','exclusionRule','otherRule'].filter(field=>row[field]).map(field=>({name:row.dimension+' / '+field,text:row[field]})))),atomReviews:[...atomReview].map(([id,review])=>({id,...review}))};
   return result;
 }
+function manualQuestion(){
+  const fields=[['condition','Inclusion criteria'],['uncertain','Exclusion criteria'],['definition','Conditions and exceptions']];
+  const sections=fields.flatMap(([field,heading])=>{
+    const lines=state.criteria.filter(row=>String(row[field]||'').trim()).map(row=>(row.title||'Other')+': '+String(row[field]).trim());
+    return lines.length?[heading+':\n'+lines.join('\n')]:[];
+  });
+  if(!sections.length)return '';
+  const limits=[],start=dateToInput(state.dateRange?.start,'start'),end=dateToInput(state.dateRange?.end,'end');
+  if(start||end)limits.push('Publication date: '+(start&&end?start+' to '+end:start?'From '+start:'Through '+end));
+  if(state.language)limits.push('Language: '+state.language);
+  if(state.limitsOther?.trim())limits.push(state.limitsOther.trim());
+  if(limits.length)sections.push('Additional limits:\n'+limits.join('\n'));
+  return sections.join('\n\n');
+}
+function generationInputs(question,reviewType){
+  const record=registeredProject(),questionType=record?.question_type||record?.question;
+  const registration=record?{title:record.name||'',project_type:record.project_type||record.type||'',question_type:questionType||'',area:record.area_of_research||''}:null;
+  const model=localModelConfig();
+  const modelSettings=[LOCAL_SERVER,model.provider,model.base,model.name||'',model.slot||''];
+  return {question,reviewType,questionType,registration,modelSettings};
+}
+async function generateStructuredCriteria(service,inputs,input,fileDigests,signal,report){
+  report('Connecting to the selected model…');
+  const model=await resolveLocalModel(!!input.images.length,signal);
+  signal.throwIfAborted();
+  model.auditTrail=[];
+  report('Preparing original source passages…');
+  const sources=await originalMachineSources(model,input,inputs.reviewType,signal);
+  signal.throwIfAborted();
+  const stage=await service.generate({legacy:structuredClone(state),...inputs,sources,fileDigests,modelClient:backgroundModelClient(model),signal,onProgress:report});
+  signal.throwIfAborted();
+  return {stage,modelName:model.name};
+}
+function saveGeneratedCriteria(stage,runData){
+  const elapsedMs=Math.max(0,Date.now()-generationStartedAt);
+  useBackgroundCriteria(stage,{...runData,elapsedMs});
+  document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===manualFramework()));
+  return save({fresh:true,createdAt:state.machineRun.generatedAt});
+}
 async function refineManualCriteria(){
+  if(embeddedManual||embeddedPreview||refreshAfterExternalClear()||$('generation-method').value!=='manual')return;
   if(previewDirty&&!savePreviewEdits(false))return;
-  if($('generation-method').value!=='manual')return;
-  save();
-  if(!state.criteria.length||!state.criteria.some(row=>String(row.condition||'').trim())){setManualStatus('Enter at least one eligibility rule before standardizing.',true);return}
-  const input={framework:state.framework,reviewType:state.reviewType,criteria:state.criteria.map(({title,condition,uncertain,definition})=>({dimension:title,eligibilityRule:condition||'',exclusionRule:uncertain||'',otherRule:definition||''})),limits:{startDate:dateToInput(state.dateRange?.start,'start'),endDate:dateToInput(state.dateRange?.end,'end'),language:state.language||'',other:state.limitsOther||''}};
-  if(JSON.stringify(input).length>24000){setManualStatus('Shorten the manual rules before standardizing.',true);return}
-  stopManualRefinement();const run=++manualRefinementNonce,controller=new AbortController(),signature=manualSourceSignature();manualRefinementController=controller;manualRunSignature=signature;
-  const button=$('refine-manual');button.disabled=true;button.textContent='Generating…';setManualStatus('Connecting to the selected model…');
+  if(confirmationQueue?.run===generationNonce)return;
+  if(!save()){setManualStatus('Could not save the entered rules on this device.',true);return;}
+  const question=manualQuestion();
+  if(!question){setManualStatus('Enter at least one rule before generating.',true);return;}
+  if(question.length>24000){setManualStatus('Shorten the manual rules before generating.',true);return;}
+  const inputs={...generationInputs(question,state.reviewType),manualFramework:manualFramework()};
+  stopMachineGeneration();stopManualRefinement();
+  const run=++manualRefinementNonce,controller=new AbortController(),signature=manualSourceSignature();
+  manualRefinementController=controller;manualRunSignature=signature;
+  const button=$('refine-manual');button.disabled=true;button.textContent='Generating…';$('stop-manual').hidden=false;startCriteriaTiming();
+  const report=message=>{if(run===manualRefinementNonce&&!controller.signal.aborted)setManualStatus(message);};
   try{
-    const model=await resolveLocalModel(false,controller.signal);
-    model.auditTrail=[];
-    if(run!==manualRefinementNonce||controller.signal.aborted)return;
-    const refinement=await autoCriteriaPipeline(model,input,signature,controller.signal,message=>setManualStatus(message));
-    if(run!==manualRefinementNonce||controller.signal.aborted||manualSourceSignature()!==signature)return;
-    state.manualRefinement=refinement;
-    state.confirmed=false;const saved=save({fresh:true,createdAt:new Date().toISOString()});setManualStatus(saved?'Criteria generated.':'Draft generated, but could not be saved on this device.',!saved);
-  }catch(error){if(run===manualRefinementNonce)setManualStatus(error.name==='AbortError'?'Standardization stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);if(run===manualRefinementNonce&&error instanceof TypeError)explainUnreachable().then(message=>{if(run===manualRefinementNonce&&!manualRefinementController)setManualStatus(message,true)})}
-  finally{if(run===manualRefinementNonce){manualRefinementController=null;button.disabled=false;button.textContent='Generate'}}
+    const service=await generationService();
+    controller.signal.throwIfAborted();
+    const fileDigests=[];
+    const published=service.publishedGeneration?.({legacy:state,...inputs},fileDigests);
+    if(published){report('');return;}
+    const input={texts:[{name:'Question / voice input',text:question}],images:[]};
+    const {stage,modelName}=await generateStructuredCriteria(service,inputs,input,fileDigests,controller.signal,report);
+    if(run!==manualRefinementNonce||manualSourceSignature()!==signature)return;
+    if(stage.reused){report('');return;}
+    const saved=saveGeneratedCriteria(stage,{question,reviewType:inputs.reviewType,sourceRevision:0,inputMode:'manual',manualFramework:inputs.manualFramework,manualSignature:signature,modelName});
+    setManualStatus(saved?'':'Criteria generated, but could not be saved on this device.',!saved);
+  }catch(error){
+    if(run!==manualRefinementNonce)return;
+    setManualStatus(error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);
+    if(error instanceof TypeError)explainUnreachable().then(message=>{if(run===manualRefinementNonce&&!manualRefinementController)setManualStatus(message,true);});
+  }finally{
+    if(run===manualRefinementNonce){manualRefinementController=null;button.disabled=false;button.textContent='Generate';$('stop-manual').hidden=true;$('stop-manual').disabled=false;stopCriteriaTiming();}
+  }
 }
 function normalizeScopeSuggestions(items,types){
   const seen=new Set(),suggestions=[];
@@ -1009,10 +1073,7 @@ async function generateMachineCriteria(){
   try{
     const [service,fileDigests]=await Promise.all([generationService(),savedFiles?state.machineRun.fileDigests:attachmentDigests(files,controller.signal)]);
     if(run!==generationNonce||controller.signal.aborted)return;
-    const record=registeredProject(),questionType=record?.question_type||record?.question;
-    const registration=record?{title:record.name||'',project_type:record.project_type||record.type||'',question_type:questionType||'',area:record.area_of_research||''}:null;
-    const modelConfig=localModelConfig(),modelSettings=[LOCAL_SERVER,modelConfig.provider,modelConfig.base,modelConfig.name||'',modelConfig.slot||''];
-    const inputs={question,reviewType,questionType,registration,modelSettings};
+    const inputs=generationInputs(question,reviewType);
     function showPublished(stage){
       if(state.machineRun.sourceRevision!==sourceRevision){
         state.machineRun.sourceRevision=sourceRevision;
@@ -1029,20 +1090,12 @@ async function generateMachineCriteria(){
     save();
     const input=await prepareSources(question,files,controller.signal);
     if(run!==generationNonce||controller.signal.aborted)return;
-    setMachineStatus('Connecting to the selected model…');
-    const model=await resolveLocalModel(!!input.images.length,controller.signal);
-    model.auditTrail=[];
-    if(run!==generationNonce||controller.signal.aborted)return;
-    setMachineStatus('Preparing original source passages…');
-    const originalSources=await originalMachineSources(model,input,reviewType,controller.signal);
-    if(run!==generationNonce||controller.signal.aborted)return;
-    const stage=await service.generate({legacy:structuredClone(state),...inputs,sources:originalSources,fileDigests,modelClient:backgroundModelClient(model),signal:controller.signal,onProgress:message=>{if(run===generationNonce&&!controller.signal.aborted)setMachineStatus(message)}});
+    const report=message=>{if(run===generationNonce&&!controller.signal.aborted)setMachineStatus(message);};
+    const {stage,modelName}=await generateStructuredCriteria(service,inputs,input,fileDigests,controller.signal,report);
     if(run!==generationNonce||controller.signal.aborted)return;
     if(stage.reused){showPublished(stage);return;}
-    const elapsedMs=Math.max(0,Date.now()-generationStartedAt);
-    useBackgroundCriteria(stage,{question,reviewType,sourceRevision,sourceFiles:files.map(entry=>entry.file.name),fileDigests,modelName:model.name,elapsedMs});
-    document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));
-    const saved=save({fresh:true,createdAt:state.machineRun.generatedAt});setMachineStatus(saved?'':'Criteria generated, but could not be saved on this device.',!saved);
+    const saved=saveGeneratedCriteria(stage,{question,reviewType,sourceRevision,sourceFiles:files.map(entry=>entry.file.name),fileDigests,modelName});
+    setMachineStatus(saved?'':'Criteria generated, but could not be saved on this device.',!saved);
 
   }catch(error){
     if(run===generationNonce)setMachineStatus(error.name==='AbortError'?'Generation stopped.':error instanceof TypeError?unreachableModelMessage:backgroundErrorMessage(error),true);
@@ -1050,7 +1103,7 @@ async function generateMachineCriteria(){
   }finally{if(run===generationNonce){generationController=null;stopCriteriaTiming();button.disabled=false;button.textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}}
 }
 
-function renderPicker(){const types=criterionTypesByFramework[state.framework]||criterionTypesByFramework.Other;picker.innerHTML=types.map(t=>{const added=state.criteria.some(c=>c.typeKey===t.key||c.title===t.title);return `<button type="button" class="criterion-option" data-add-type="${t.key}" ${added?'disabled':''}>${t.title}${added?' · Added':''}</button>`}).join('');picker.querySelectorAll('[data-add-type]:not(:disabled)').forEach(button=>button.addEventListener('click',()=>{const type=types.find(t=>t.key===button.dataset.addType);if(!type||state.criteria.some(c=>c.typeKey===type.key||c.title===type.title))return;markManual();state.criteria.push({id:type.id,typeKey:type.key,title:type.title,condition:'',definition:'',purpose:'Eligibility',stage:'',uncertain:''});$('add-criterion').setAttribute('aria-expanded','false');picker.hidden=true;renderCards();save();const card=list.lastElementChild;if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'})}))}
+function renderPicker(){const types=criterionTypesByFramework[manualFramework()]||criterionTypesByFramework.Other;picker.innerHTML=types.map(t=>{const added=state.criteria.some(c=>c.typeKey===t.key||c.title===t.title);return `<button type="button" class="criterion-option" data-add-type="${t.key}" ${added?'disabled':''}>${t.title}${added?' · Added':''}</button>`}).join('');picker.querySelectorAll('[data-add-type]:not(:disabled)').forEach(button=>button.addEventListener('click',()=>{const type=types.find(t=>t.key===button.dataset.addType);if(!type||state.criteria.some(c=>c.typeKey===type.key||c.title===type.title))return;markManual();state.criteria.push({id:type.id,typeKey:type.key,title:type.title,condition:'',definition:'',purpose:'Eligibility',stage:'',uncertain:''});$('add-criterion').setAttribute('aria-expanded','false');picker.hidden=true;renderCards();save();const card=list.lastElementChild;if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'})}))}
 // Confirmed rules are part of the live criteria and remain visible and editable.
 function splitVisibleRules(row,field){return {visible:String(row[field]||''),hidden:''};}
 function visibleCriterion(row){return {...row};}
@@ -1167,7 +1220,7 @@ function publishCriteriaSummary(data,complete){
     ...summarizedRules(rows),...(!data.strict&&(data.questions.length||data.hasExtraRows)?{screeningCriteria:summarizedRules(complete.rows)}:{}),limits,pending,paragraph:paragraph||'',paragraphNote:'Click Generate to generate a publication-style paragraph with the local model.',
     authorChecks:(currentRefinement()?.sourceConfirmations||[]).filter(c=>c.status==='suggested'&&(!data.strict||(c.locations||[{domain:c.domain}]).some(l=>l.section==='framework'||withinFramework(l.domain,data.questions.find(q=>q.display_number===c.questionNumber)?.frameworkSlots||data.slots)))).map(c=>({domain:c.domain,text:c.text,required:!c.reviewOnly})),methodVersion:state.machineRefinement?.audit?.version||state.manualRefinement?.audit?.version||null});
 }
-function renderCards(){const slots=frameworkFields(state.framework),extra=[];list.innerHTML=state.criteria.map((row,i)=>{const c=visibleCriterion(row);if(!c.condition&&!c.uncertain&&!c.definition&&['condition','uncertain','definition'].some(f=>splitVisibleRules(row,f).hidden))return '';const markup=`<article class="criterion" data-index="${i}"><div class="criterion-top"><span class="criterion-title">${escapeHtml(c.title||'Criterion')}</span><button class="remove" title="Remove criterion" aria-label="Remove ${escapeHtml(c.title)}" data-remove="${i}">×</button></div><div class="criterion-grid"><div class="criterion-eligibility"><label class="field-label">Eligibility rule</label><input class="text-input" data-field="condition" value="${escapeHtml(c.condition)}" placeholder="A clear, testable rule"></div><div><label class="field-label">Exclusion rule</label><input class="text-input" data-field="uncertain" value="${escapeHtml(c.uncertain)}" placeholder="Specify the exclusion rule"></div><div><label class="field-label">Conditions and exceptions</label><input class="text-input" data-field="definition" value="${escapeHtml(c.definition)}" placeholder="Thresholds, exceptions, mixed groups"></div></div></article>`;if(withinFramework(c.title,slots))return markup;extra.push(markup);return '';}).join('');
+function renderCards(){const slots=frameworkFields(manualFramework()),extra=[];list.innerHTML=state.criteria.map((row,i)=>{const c=visibleCriterion(row);if(!c.condition&&!c.uncertain&&!c.definition&&['condition','uncertain','definition'].some(f=>splitVisibleRules(row,f).hidden))return '';const markup=`<article class="criterion" data-index="${i}"><div class="criterion-top"><span class="criterion-title">${escapeHtml(c.title||'Criterion')}</span><button class="remove" title="Remove criterion" aria-label="Remove ${escapeHtml(c.title)}" data-remove="${i}">×</button></div><div class="criterion-grid"><div class="criterion-eligibility"><label class="field-label">Eligibility rule</label><input class="text-input" data-field="condition" value="${escapeHtml(c.condition)}" placeholder="A clear, testable rule"></div><div><label class="field-label">Exclusion rule</label><input class="text-input" data-field="uncertain" value="${escapeHtml(c.uncertain)}" placeholder="Specify the exclusion rule"></div><div><label class="field-label">Conditions and exceptions</label><input class="text-input" data-field="definition" value="${escapeHtml(c.definition)}" placeholder="Thresholds, exceptions, mixed groups"></div></div></article>`;if(withinFramework(c.title,slots))return markup;extra.push(markup);return '';}).join('');
   const extraList=$('description-criteria-list');extraList.hidden=!extra.length;extraList.innerHTML=extra.length?'<div class="subheading">Details for Description</div>'+extra.join(''):'';
   [...list.querySelectorAll('[data-index]'),...extraList.querySelectorAll('[data-index]')].forEach(card=>{const i=+card.dataset.index;card.querySelectorAll('[data-field]').forEach(el=>el.addEventListener('input',()=>{markManual();const f=el.dataset.field;state.criteria[i].source='manual';updateVisibleRule(state.criteria[i],f,el.type==='checkbox'?el.checked:el.value);state.confirmed=false;save()}));card.querySelector('[data-remove]').addEventListener('click',()=>{markManual();state.criteria.splice(i,1);state.confirmed=false;renderCards();renderPicker();save()})});}
 function domainInfo(title,framework){
@@ -1249,6 +1302,7 @@ function previewLimits(pending){
 }
 function currentRefinement(){
   const machine=state.activeGenerator==='machine',refinement=machine?state.machineRefinement:state.manualRefinement;
+  if(machine&&state.machineRun?.inputMode==='manual'&&!hasCurrentMachineResult())return null;
   const signature=machine?machineSourceSignature(state.machineRun?.question,state.machineRun?.reviewType,state.machineRun?.sourceRevision??0,state.machineCriteria):manualSourceSignature();
   if(refinement?.signature!==signature)return null;
   restoreSourceConfirmations(refinement);return refinement;
@@ -1669,7 +1723,10 @@ function renderPreview(){
     return;
   }
   if(!$('generation-method').value){area.innerHTML='';$('download').hidden=true;shareSummary(null);return}
-  if($('generation-method').value==='machine'&&!hasCurrentMachineResult()){area.innerHTML='<p class="empty" data-ui-localize>Click Generate to generate criteria from the current text and attachments.</p>';$('download').hidden=true;shareSummary(null);return}
+  if(state.activeGenerator==='machine'&&!hasCurrentMachineResult()){
+    const prompt=$('generation-method').value==='manual'?'Click Generate to generate criteria from the entered rules.':'Click Generate to generate criteria from the current text and attachments.';
+    area.innerHTML='<p class="empty" data-ui-localize>'+prompt+'</p>';$('download').hidden=true;shareSummary(null);return;
+  }
   $('download').hidden=false;
   const complete=standardizedCriteria();
   const refinement=currentRefinement();
@@ -1732,14 +1789,15 @@ function criteriaWordFile(){
  const focusChecks=display.focus.map(contextualCheck).join(''),descriptionChecks=display.description.map(contextualCheck).join('');
  const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>';const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+display.reviewTopic,false)+topicChecks+focusChecks+wordParagraph('Framework: '+normalized.framework,false)+frameworkChecks+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+emptyExclusion+(normalized.paragraph||descriptionChecks?wordParagraph('Description',true)+descriptionChecks+(normalized.paragraph?normalized.paragraph.split(/\r?\n/u).map(line=>line.trim()).filter(Boolean).map(line=>wordParagraph(line,false)).join(''):''):'')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
-function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';syncGenerationMethodOptions();$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';state.reviewType=reviewTypeForProject();document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===state.framework));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
+function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';syncGenerationMethodOptions();$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';state.reviewType=reviewTypeForProject();document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===manualFramework()));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});
-if(window.AIMSTEPEligibilityBackground&&!embeddedManual&&!embeddedPreview)getEligibilityBackground().then(service=>{if(generationController||previewDirty||state.activeGenerator!=='machine')return;const stage=service.refreshPresentation?.(state);if(!stage)return;const generatedAt=state.machineRun?.generatedAt;useBackgroundCriteria(stage,state.machineRun||{},false,{presentationRefresh:true});if(generatedAt){state.machineRun.generatedAt=generatedAt;state.machineRefinement.generatedAt=generatedAt;}save({updateEntry:true,presentationRefresh:true});}).catch(()=>{});
+if(window.AIMSTEPEligibilityBackground&&!embeddedManual&&!embeddedPreview)getEligibilityBackground().then(service=>{if(generationController||manualRefinementController||previewDirty||state.activeGenerator!=='machine'||(state.machineRun?.inputMode==='manual'&&!hasCurrentMachineResult()))return;const stage=service.refreshPresentation?.(state);if(!stage)return;const generatedAt=state.machineRun?.generatedAt;useBackgroundCriteria(stage,state.machineRun||{},false,{presentationRefresh:true});if(generatedAt){state.machineRun.generatedAt=generatedAt;state.machineRefinement.generatedAt=generatedAt;}save({updateEntry:true,presentationRefresh:true});}).catch(()=>{});
 window.addEventListener('load',()=>{try{if(window.parent!==window)window.parent.AIMSTEP?.setLanguage?.('en');}catch(_){}window.AIMSTEP?.setLanguage?.('en');},{once:true});
-$('generation-method').addEventListener('change',()=>{const locked=lockedGenerationMethod();if(locked&&$('generation-method').value!==locked){syncGenerationMethodOptions();return;}stopMachineGeneration();stopManualRefinement();abortVoiceInput();setMachineStatus('');setManualStatus('');const mode=$('generation-method').value;syncProposalCriteria();state.generationMethodChoice=mode;state.activeGenerator=mode;state.generationMode=mode==='machine'?'machine':mode==='manual'?'manual':'';$('machine-generate-panel').hidden=mode!=='machine';$('manual-generate-panel').hidden=mode!=='manual';renderPreview();save()});
+$('generation-method').addEventListener('change',()=>{const locked=lockedGenerationMethod();if(locked&&$('generation-method').value!==locked){syncGenerationMethodOptions();return;}stopMachineGeneration();stopManualRefinement();abortVoiceInput();setMachineStatus('');setManualStatus('');const mode=$('generation-method').value;syncProposalCriteria();state.generationMethodChoice=mode;state.activeGenerator=mode==='manual'?manualGenerator():mode;state.generationMode=mode==='machine'?'machine':mode==='manual'?'manual':'';$('machine-generate-panel').hidden=mode!=='machine';$('manual-generate-panel').hidden=mode!=='manual';renderPreview();save()});
 $('start-machine').addEventListener('click',generateMachineCriteria);
 $('stop-machine').addEventListener('click',()=>{if(generationController){$('stop-machine').disabled=true;generationController.abort();stopCriteriaTiming()}});
 $('refine-manual').addEventListener('click',refineManualCriteria);
+$('stop-manual').addEventListener('click',()=>{if(manualRefinementController){$('stop-manual').disabled=true;manualRefinementController.abort();stopCriteriaTiming()}});
 $('add-source').addEventListener('click',()=>$('source-files').click());
 $('source-files').addEventListener('change',event=>{
   const files=Array.from(event.target.files||[]);event.target.value='';if(!files.length)return;
@@ -1752,7 +1810,7 @@ $('source-files').addEventListener('change',event=>{
 });
 $('voice-toggle').addEventListener('click',toggleVoiceInput);
 $('clear-question').addEventListener('click',clearQuestionInput);
-document.querySelectorAll('.framework').forEach(b=>b.addEventListener('click',()=>{markManual();state.framework=b.dataset.framework;state.confirmed=false;renderCards();document.querySelectorAll('.framework').forEach(x=>x.classList.toggle('selected',x===b));renderPicker();save()}));
+document.querySelectorAll('.framework').forEach(b=>b.addEventListener('click',()=>{markManual();if(state.machineRun?.inputMode==='manual')state.manualFramework=b.dataset.framework;else state.framework=b.dataset.framework;state.confirmed=false;renderCards();document.querySelectorAll('.framework').forEach(x=>x.classList.toggle('selected',x===b));renderPicker();save()}));
 $('manual-generate').addEventListener('click',clearPreviewCriteria);
 $('add-criterion').addEventListener('click',()=>{markManual();const open=picker.hidden;renderPicker();picker.hidden=!open;$('add-criterion').setAttribute('aria-expanded',String(open));save()});
 let composingQuestion=false;
@@ -1801,8 +1859,9 @@ function saveBeforeToolNavigation(event){
   let saved=false;try{saved=save()}catch(e){}
   if(!saved){event.preventDefault();toast('Could not save criteria on this device. Your edits are still available here.');return;}
   const mode=$('generation-method').value;
-  const machineCurrent=mode!=='machine'||(state.machineRun&&state.machineRun.question===$('question').value.trim()&&state.machineRun.reviewType===state.reviewType&&(state.machineRun.sourceRevision??0)===(Number(state.machineSourceRevision)||0));
-  const rows=mode==='machine'?state.machineCriteria:state.criteria;
+  const machineCurrent=mode==='manual'?state.activeGenerator!=='machine'||hasCurrentMachineResult():
+    !!state.machineRun&&state.machineRun.question===$('question').value.trim()&&hasCurrentMachineResult();
+  const rows=state.activeGenerator==='machine'?state.machineCriteria:state.criteria;
   const unresolvedScope=hasRequiredAuthorChecks();
   if(unresolvedScope)clearPendingCompletion();
   const ready=saved&&!!mode&&machineCurrent&&rows.length>0&&rows.some(row=>String(row.condition||'').trim())&&!unresolvedScope;
@@ -1949,7 +2008,7 @@ async function confirmBackgroundIssue(detail,choice,answerField,targetField){
       toast('Criteria saved.');return true;
     }catch(error){
       if(!active())return false;
-      state=before;pendingBackgroundStage=null;renderPreview();setMachineStatus(backgroundErrorMessage(error),true);return false;
+      state=before;pendingBackgroundStage=null;renderPreview();(state.generationMethodChoice==='manual'?setManualStatus:setMachineStatus)(backgroundErrorMessage(error),true);return false;
     }
   };
   const saved=queue.tail.then(apply);

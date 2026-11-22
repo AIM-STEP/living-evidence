@@ -59,26 +59,26 @@ def render(output):
     text(98, 158, '从研究输入到可供检索和筛选使用的纳入与排除标准', 32, MUTED)
     draw.line((96, 222, 1728, 222), fill=RULE, width=2)
 
-    card(96, 258, 1038, 72, '机器生成   Machine generate', fill=TEAL_PALE,
+    card(96, 258, 770, 72, '机器生成   Machine generate', fill=TEAL_PALE,
          border=TEAL_PALE, title_size=35)
-    card(1188, 258, 540, 72, '人工生成   Manual generate', fill=BLUE_PALE,
+    card(925, 258, 803, 72, '人工生成   Manual generate', fill=BLUE_PALE,
          border=BLUE_PALE, accent=BLUE, title_size=33)
 
-    for start, end in [(330, 358), (473, 512), (631, 668), (781, 816),
+    for start, end in [(330, 358), (473, 512), (781, 816),
                        (930, 967), (1084, 1120), (1230, 1282)]:
         arrow([(478, start), (478, end)])
+    draw.line([(1326, 631), (1326, 649), (478, 649)], fill=BLUE_LINE, width=5, joint='curve')
+    arrow([(478, 631), (478, 668)])
     arrow([(866, 1027), (907, 1027)], ERROR)
     for start, end in [(330, 358), (473, 512)]:
-        arrow([(1458, start), (1458, end)], BLUE_LINE)
-    arrow([(1458, 657), (1458, 693), (1760, 693), (1760, 1342), (1728, 1342)],
-          BLUE_LINE)
+        arrow([(1326, start), (1326, end)], BLUE_LINE)
     arrow([(474, 1401), (474, 1445)])
     arrow([(1326, 1401), (1326, 1445)])
     arrow([(96, 1518), (65, 1518), (65, 1342), (96, 1342)])
 
-    card(96, 358, 770, 115, '输入研究材料', ('研究问题、语音转写或附件',))
+    card(96, 358, 770, 115, '一次性输入完整研究问题', ('可通过文本、语音或附件提供',))
     card(96, 512, 770, 119, '读取来源', ('读取文本和文档，转写图片、扫描页并记录出处',))
-    card(96, 668, 770, 113, '提取候选条件', ('本地模型分批抽取，结合项目登记和原文确定框架',))
+    card(96, 668, 770, 113, '共用流程 · 提取候选条件', ('本地模型依据来源与研究框架分批提取',))
     card(96, 816, 770, 114, '定位原文并校验', ('核对引文、入排方向、阈值、单位、时点及例外',))
     card(96, 967, 770, 117, 'TypeSafe Jev 独立核对', ('对有明确引文的候选项逐条核对',))
     card(907, 964, 227, 124, '缺少判定', ('仅重试缺失项一次', '仍缺则报错'),
@@ -86,8 +86,8 @@ def render(output):
     text(495, 1090, '核对完成', 23, TEAL, bold=True)
     card(96, 1120, 770, 110, '构建规则与待确认项', ('区分筛选条件、关注结局和可选建议',))
 
-    card(1188, 358, 540, 115, '作者填写规则', ('选择框架，填写纳入、排除与例外',), accent=BLUE)
-    card(1188, 512, 540, 145, '点击 Generate', ('按手填原文定位并核对规则', '整理措辞，再复核规则含义'), accent=BLUE)
+    card(925, 358, 803, 115, '作者逐项填写研究问题', ('选择框架，按字段填写纳入、排除与例外',), accent=BLUE)
+    card(925, 512, 803, 119, '点击 Generate', ('将各字段的手填内容作为原始材料提交',), accent=BLUE)
 
     card(1212, 795, 488, 226, '什么会进入筛选？',
          ('有效的纳入与排除条件。', '关注结局仅在原文明确要求研究',
@@ -99,13 +99,13 @@ def render(output):
          fill=TEAL_PALE, border='#aacbc0', title_size=35, body_size=30)
     card(96, 1445, 770, 146, '作者核查与编辑',
          ('逐项采纳、改写或舍弃，也可直接编辑正文。',
-          '机器生成的待确认项由作者处理后直接生效。'))
+          '待确认项由作者处理后直接生效。'))
     card(925, 1445, 803, 146, '保存、导出与交接',
          ('按项目保存，并可导出 Word。', '已生效的规则供 Search strategy 与筛选使用。'))
 
     draw.line((96, 1645, 1728, 1645), fill=RULE, width=2)
     text(96, 1665, 'AIM-STEP   /   2026-11-22', 24, MUTED, bold=True)
-    text(610, 1665, '主流程覆盖线上 release 36 与工作区 release 37', 24, MUTED,
+    text(610, 1665, 'release 38 · 两种输入共用后续处理', 24, MUTED,
          max_width=1118)
 
     output.parent.mkdir(parents=True, exist_ok=True)
