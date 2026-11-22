@@ -32,13 +32,14 @@ test('separate the copied objective from the enrolled population and critical ou
   if(step==='extract_elements')return {questions:[{question_id:q.question_id,review_topic:'The effects of high-dose versus low-dose phototherapy on bilirubin and related outcomes',
    framework_candidates:['picos'],issues:[],elements:structuredClone(elements),logic:structuredClone(logic)}]};
   assert.equal(step,'review_normalization');
+  assert.equal(payload.items.length,1);
   assert(payload.items.every(e=>e.dimension_id!=='outcome'&&!e.normalized_text.startsWith('To assess')));
   return {items:payload.items.map(e=>({...e,status:'supported',issue_type:'none',reason:'Fixture source assessment.'}))};
  }};
  const {candidates}=await M.analyze(state,E.environment(),adapter,{retries:0});
  const project=E.ingest_candidates(state,candidates).state,view=B.projectToClassic(project);
  if(process.argv.includes('--show'))console.log(view.reviewTopic,view.rows,view.descriptionContext.outcome_groups,view.manuscriptParagraph);
- assert.deepEqual(steps,['extract_elements','review_normalization']);
+ assert.deepEqual(steps,['extract_elements',...Array(5).fill('review_normalization')]);
  assert.equal(view.reviewTopic,'High-dose phototherapy in infants with hyperbilirubinaemia');
  const row=dimension=>view.rows.find(r=>r.dimension===dimension);
  assert.deepEqual(row('Population').include,["term (≥37 weeks' gestation) and preterm (<37 weeks' gestation) infants with hyperbilirubinaemia who required any type of phototherapy"]);

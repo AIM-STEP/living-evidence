@@ -77,12 +77,12 @@ test('permuted model records and equivalent same-slot predicates use source orde
   const question = result.candidates.questions[0];
   const expected = ['group A alpha', 'group A bravo', 'group A charlie'];
   assert.deepEqual(question.elements.map(e => e.normalized_text), expected);
-  assert.deepEqual(reviews(adapter)[0].items.map(e => e.normalized_text), expected);
+  assert.deepEqual(reviews(adapter).flatMap(review => review.items.map(e => e.normalized_text)), expected);
   assert.equal(question.logic.op, 'any_of');
   assert.deepEqual(question.logic.children.map(n => n.element_id), question.elements.map(e => e.candidate_id));
 });
 
-test('a sealed batch overlaps the last extraction with unchanged requests, results and monotonic progress', async () => {
+test('each ready item overlaps the last extraction with unchanged results and monotonic progress', async () => {
   const state = fixture([7, 2]), progress = [];
   let release;
   const gate = new Promise(resolve => { release = resolve; });
@@ -92,7 +92,7 @@ test('a sealed batch overlaps the last extraction with unchanged requests, resul
   const run = M.analyze(state, env, adapter, { onProgress: (_, event) => progress.push(event) });
   try {
     await tick();
-    assert.deepEqual(reviews(adapter).map(p => p.items.length), [7]);
+    assert.deepEqual(reviews(adapter).map(p => p.items.length), Array(7).fill(1));
     assert.deepEqual(reviews(adapter)[0].questions.map(q => q.question_id), [state.questions[0].question_id]);
     assert(progress.every(p => p.phase === 'extract'));
   } finally { release(); }
@@ -105,10 +105,10 @@ test('a sealed batch overlaps the last extraction with unchanged requests, resul
   assert.equal(adapter.peak, 2);
   const reviewStart = progress.findIndex(p => p.phase === 'review');
   assert(reviewStart > 0 && progress.slice(reviewStart).every(p => p.phase === 'review'));
-  assert.deepEqual(progress.at(-1), { phase: 'review', completed: 2, total: 2, waiting: false });
+  assert.deepEqual(progress.at(-1), { phase: 'review', completed: 9, total: 9, waiting: false });
 });
 
-test('a partial earlier batch stays open and question order survives out-of-order extraction', async () => {
+test('an out-of-order ready question is reviewed immediately while output keeps source order', async () => {
   const state = fixture([3, 2]);
   let release;
   const gate = new Promise(resolve => { release = resolve; });
@@ -118,14 +118,49 @@ test('a partial earlier batch stays open and question order survives out-of-orde
   const run = M.analyze(state, env, adapter);
   try {
     await tick();
-    assert.equal(reviews(adapter).length, 0);
+    assert.deepEqual(reviews(adapter).map(p=>p.items[0].question_id),Array(2).fill(state.questions[1].question_id));
   } finally { release(); }
   const result = await run;
   assert.deepEqual(result.candidates.questions.map(q => q.question_id), state.questions.map(q => q.question_id));
-  assert.deepEqual(reviews(adapter).map(p => p.items.length), [5]);
-  assert.deepEqual(reviews(adapter)[0].items.map(i => i.question_id), [
-    ...Array(3).fill(state.questions[0].question_id), ...Array(2).fill(state.questions[1].question_id),
+  assert.deepEqual(reviews(adapter).map(p=>p.items.length),Array(5).fill(1));
+  assert.deepEqual(reviews(adapter).flatMap(p=>p.items.map(i=>i.question_id)),[
+    ...Array(2).fill(state.questions[1].question_id), ...Array(3).fill(state.questions[0].question_id),
   ]);
+});
+
+test('a completed source part can be checked before the rest of the same question is extracted', async () => {
+  const state=E.save_input(E.create_project('split-source'),{
+    research_question:'Adults receiving care.',
+    additional_requirements:['This is background material. '.repeat(260)],
+    question_framework:'PICO',output_language:'en',
+  }).state;
+  let release;
+  const gate=new Promise(resolve=>{release=resolve;});
+  const calls=[];
+  const adapter={async request(step,project,payload){
+    calls.push({step,payload});
+    if(step==='review_normalization'){
+      assert.equal(payload.items.length,1);
+      return {items:payload.items.map(item=>({...item,status:'supported',issue_type:'none',reason:'Source confirmed.'}))};
+    }
+    assert.equal(step,'extract_elements');
+    assert(payload.part_count>1);
+    if(payload.part_index!==0)await gate;
+    const {question:q}=payload,source=q.sources.find(item=>item.input_kind==='research_question');
+    const elements=source?[{candidate_id:'adult',dimension_id:'population',normalized_text:'Adults receiving care',
+      structured_value:null,semantic_role:'eligibility_condition',information_status:'explicit',scope_status:'restricted',
+      disposition:'include',source_refs:[E.ref(source,'Adults receiving care')]}]:[];
+    return {questions:[{question_id:q.question_id,framework_candidates:[],elements,issues:[],logic:null}]};
+  }};
+  const run=M.analyze(state,env,adapter);
+  try{
+    await tick();
+    assert.equal(calls.filter(call=>call.step==='review_normalization').length,1);
+  }finally{release();}
+  const {candidates}=await run;
+  assert.equal(calls.filter(call=>call.step==='review_normalization').length,1,'Final assembly reuses the identical assessment.');
+  const project=E.ingest_candidates(state,candidates).state;
+  assert.deepEqual(project.criteria.map(rule=>rule.text),['Adults receiving care']);
 });
 
 test('early review failure cancels the in-flight extraction and discards queued checks', async () => {

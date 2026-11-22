@@ -6,7 +6,7 @@ const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
 const presentationVersion='framework-display-v12';
 // Bump when eligibility semantics change. Presentation updates can use the saved evidence.
-const generationVersion='20261120-criteria-release-34';
+const generationVersion='20261122-criteria-release-40';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){
@@ -355,7 +355,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    project.presentation_version=presentationVersion;
    const visible=projectView(project);
    if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');
-   const verified=['final','needs_clarification'].includes(project.status)&&project.validation?.errors?.length===0;
+   const verified=!result.incomplete_review&&['final','needs_clarification'].includes(project.status)&&project.validation?.errors?.length===0;
    project.generation_source_key=verified?key:null;
    project.generation_files_key=verified&&Array.isArray(fileDigests)?inputKey(input,fileDigests):null;
    onProgress?.('Saving eligibility criteria…',{phase:'ready'});

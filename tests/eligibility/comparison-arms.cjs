@@ -31,21 +31,23 @@ async function cardiacRehabilitation() {
   }).state;
   const question = project.questions[0], source = project.sources.find(s => s.input_kind==='research_question');
   const records = [['i','intervention',intervention],['c','comparator',original],['p','population',population]];
-  const steps = [];
+  const steps = [],reviewed=new Map();
   const result = await M.analyze(project,E.environment(),{async request(step,state,payload) {
     steps.push(step);
     if(step==='extract_elements')return {questions:[{question_id:question.question_id,review_topic:'',
       framework_candidates:['pico'],issues:[],logic:{op:'all_of',children:records.map(([element_id])=>({op:'predicate',element_id}))},
       elements:records.map(([id,dimension,text])=>element(id,dimension,text,source))}]};
     assert.equal(step,'review_normalization');
-    for(const [dimension,wording] of [['intervention',intervention],['comparator',comparator]]){
-      assert.equal(payload.items.find(e=>e.dimension_id===dimension)?.normalized_text,wording);
-    }
+    assert.equal(payload.items.length,1);
+    const [item]=payload.items;
+    reviewed.set(item.dimension_id,item.normalized_text);
     return {items:payload.items.map(i=>({...i,...(i.dimension_id==='comparator'?{status:'uncertain',issue_type:'ambiguous_source',
       reason:'Low confidence.',reviewer:{provider:'typesafe',verdict:'low_confidence',original_verdict:'supported'}}:
       {status:'supported',issue_type:'none',reason:'Matches source.'})}))};
   }},{retries:0});
-  assert.deepEqual(steps,['extract_elements','review_normalization']);
+  assert.deepEqual(steps,['extract_elements',...Array(3).fill('review_normalization')]);
+  assert.equal(reviewed.get('intervention'),intervention);
+  assert.equal(reviewed.get('comparator'),comparator);
   const saved = E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision}).state;
   const displayed = B.projectToClassic(saved);
   assert.deepEqual(displayed.rows.find(row=>row.dimension==='Comparison')?.include,['no exercise']);
@@ -55,7 +57,7 @@ async function cardiacRehabilitation() {
 }
 
 async function run() {
-  const steps = [];
+  const steps = [], reviewed=[];
   const adapter = {async request(step, state, payload) {
     steps.push(step);
     if (step === 'extract_elements') return {questions: [{
@@ -63,7 +65,8 @@ async function run() {
       elements: copied(), logic: {op:'all_of', children:['i','c'].map(element_id => ({op:'predicate',element_id}))}
     }]};
     assert.equal(step, 'review_normalization');
-    assert.deepEqual(payload.items.map(e => e.normalized_text), expected);
+    assert.equal(payload.items.length, 1);
+    reviewed.push(payload.items[0].normalized_text);
     for (const item of payload.items) {
       const ref = item.source_quotes.find(ref => ref.quote === 'comparing air with any supplemental oxygen');
       assert(ref);
@@ -73,7 +76,8 @@ async function run() {
       semantic_role:e.semantic_role,scope_status:e.scope_status,disposition:e.disposition,information_status:'explicit'}))};
   }};
   const result = await M.analyze(state,E.environment(),adapter,{retries:0});
-  assert.deepEqual(steps, ['extract_elements', 'review_normalization']);
+  assert.deepEqual(steps, ['extract_elements', 'review_normalization', 'review_normalization']);
+  assert.deepEqual(reviewed, expected);
   assert.deepEqual(result.candidates.questions[0].elements.map(e => e.normalized_text), expected);
   const legacy = copied();
   Methods.normalizeComparators(legacy, question.source_refs);

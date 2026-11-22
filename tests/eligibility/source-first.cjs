@@ -29,7 +29,7 @@ test('explicit fields are located in the original before normalization and recov
   assert(!payload.items.some(i=>i.dimension_id==='outcome'),'An outcome of interest is not a screening condition.');
   return support(payload.items);
  }},{onLesson:lesson=>lessons.push(lesson)});
- assert.deepEqual(steps,['extract_elements','review_normalization']);
+ assert.deepEqual(steps,['extract_elements','review_normalization','review_normalization']);
  assert(lessons.includes('source_coverage'));
  const project=E.ingest_candidates(state,candidates).state;
  const c=project.elements.find(e=>e.dimension_id==='comparator');

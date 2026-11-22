@@ -1309,8 +1309,8 @@ async function runModelTasks(tasks,options){
  try{
   while((next<tasks.length||ready.length||running.size)&&!controller.signal.aborted){
    while(running.size<limit&&(ready.length||next<tasks.length)){
-    // Start unscheduled extractions before using a free slot for an early review.
-    const task=next<tasks.length?tasks[next++]:ready.shift();
+    // Review a ready candidate before starting another extraction.
+    const task=ready.length?ready.shift():tasks[next++];
     const request=Promise.resolve().then(()=>{
      if(!controller.signal.aborted)return task(controller.signal,job=>ready.push(job));
     }).catch(error=>{
@@ -1452,7 +1452,8 @@ async function extract_elements(state,env,adapter,options={},review=null){
  const payload=E.extraction_payload(state,env),plans=payload.questions.map(sourceBatches),jobs=plans.flatMap((batches,qi)=>batches.map((sources,bi)=>({qi,bi,sources}))),total=jobs.length,frameworks=compactFrames(payload.frameworks);
  const profiles=payload.questions.map(q=>profileContext(env.profiles.resolve(q.context.review_methods)));
  const originals=new Map(state.questions.map(q=>[q.question_id,q]));
- const parts=plans.map(batches=>new Array(batches.length)),remaining=plans.map(batches=>batches.length),questions=[];
+ const parts=plans.map(batches=>new Array(batches.length)),remaining=plans.map(batches=>batches.length),questions=new Array(plans.length);
+ const sourceOrder=payload.questions.map(q=>new Map(q.sources.map((source,index)=>[source.source_id,index])));
  let completed=0;
  const tasks=jobs.map(({qi,bi,sources},index)=>async(signal,enqueue)=>{
   const q=payload.questions[qi],batches=plans[qi];
@@ -1545,29 +1546,33 @@ async function extract_elements(state,env,adapter,options={},review=null){
   }
   completed++;
   options.onProgress?.('Source conditions extracted ('+completed+'/'+total+').',{phase:'extract',completed,total,waiting:completed<total});
-  parts[qi][bi]=answer.questions[0];
+  const item=answer.questions[0],prefix='q'+qi+'b'+bi+'_';
+  if(!state.decisions.length)orderExtractedElements(item,sourceOrder[qi]);
+  const part={...item,logic:prefixLogic(item.logic,prefix),elements:item.elements.map(e=>({...e,candidate_id:prefix+e.candidate_id})),
+   issues:item.issues.map(issue=>({...issue,element_candidate_ids:(issue.element_candidate_ids||[]).map(id=>prefix+id)}))};
+  parts[qi][bi]=part;
   remaining[qi]--;
-  commitReady(enqueue);
+  if(remaining[qi]===0){
+   const merged=questions[qi]=mergeQuestion(q,qi);
+   review?.add(merged,enqueue,completed===total);
+  }else if(review){
+   // An independently checkable part can start while other sources are still
+   // being extracted. Final assembly can reuse a verdict with the same evidence.
+   const preview={...part,elements:part.elements.map(e=>({...e,source_refs:[...e.source_refs]}))};
+   restrictToFramework(preview,q,originals.get(q.question_id),env,[]);
+   review.add(preview,enqueue,false,true);
+  }
  });
- commitReady(job=>tasks.push(job));
+ for(let qi=0;qi<plans.length;qi++)if(!remaining[qi]){
+  questions[qi]=mergeQuestion(payload.questions[qi],qi);
+ }
  await runModelTasks(tasks,options);
  return {questions};
- // Commit whole questions in source order even if a later part finished first.
- function commitReady(enqueue){
-  while(questions.length<plans.length&&remaining[questions.length]===0){
-   const n=questions.length,question=mergeQuestion(payload.questions[n],n);
-   questions.push(question);
-   review?.add(question,enqueue,questions.length===plans.length);
-  }
- }
  function mergeQuestion(q,qi){
   const merged={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null},trees=[];
-  const sourceOrder=new Map(q.sources.map((source,index)=>[source.source_id,index]));
-  for(let bi=0;bi<plans[qi].length;bi++){
-   const item=parts[qi][bi],prefix='q'+qi+'b'+bi+'_';
-   if(!state.decisions.length)orderExtractedElements(item,sourceOrder);
-   for(const e of item.elements)merged.elements.push({...e,candidate_id:prefix+e.candidate_id});for(const issue of item.issues)merged.issues.push({...issue,element_candidate_ids:(issue.element_candidate_ids||[]).map(eid=>prefix+eid)});
-   trees.push({tree:prefixLogic(item.logic,prefix),ids:item.elements.map(e=>prefix+e.candidate_id)});if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;
+  for(const item of parts[qi]){
+   merged.elements.push(...item.elements);merged.issues.push(...item.issues);
+   trees.push({tree:item.logic,ids:item.elements.map(e=>e.candidate_id)});if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;
    for(const field of ['question_types','review_methods','evidence_units'])merged[field]=[...new Set([...(merged[field]||[]),...(item[field]||[])])];
   }
   if(!merged.review_topic){
@@ -1611,7 +1616,7 @@ async function assessWording(state,adapter,questions,items,signal){
     if(assessment.reviewer?.verdict!=='unavailable')byId.set(id,assessment);
    }
   }catch(error){
-   if(signal?.aborted||!reviewUnavailable(error))throw error;
+   if(signal?.aborted||error.code!=='MODEL_SCHEMA_ERROR'&&!reviewUnavailable(error))throw error;
   }
   // A missing service verdict is a technical failure. Retry only the missing
   // items and keep actual semantic disagreements for the ordinary review path.
@@ -1700,21 +1705,6 @@ async function proposeWording(state,adapter,questions,items,first,signal){
   return {...item,previous_wording:item.normalized_text,normalized_text:proposal.normalized_text,structured_value:proposal.structured_value};
  });
 }
-async function routeReviewFields(state,adapter,questions,items,allowed,signal){
- if(!items.length)return new Map();
- const rows=items.map(item=>({...item,available_fields:allowed.get(item.question_id)||[item.dimension_id]}));
- const schema=obj({items:list(obj({id:str,dimension_id:str,section:{enum:['include','exclude']}}))});
- try{
-  const result=await adapter.request('route_author_checks',state,{questions,items:rows},schema,
-   'The independent source check disputed the field or role of these items. Choose the best field from each item’s available_fields using its original text. Use only an inclusion or exclusion field of the selected framework; retain the proposed field for author review if no available field is supported. Return only the supplied IDs, field and section; the author decides each item.',signal);
-  const byId=indexReviewReplies(result,items,'route_author_checks');
-  return new Map(rows.filter(row=>row.available_fields.includes(byId.get(row.id).dimension_id)&&
-   ['include','exclude'].includes(byId.get(row.id).section)).map(row=>[row.id,byId.get(row.id)]));
- }catch(error){
-  if(signal?.aborted||!(reviewUnavailable(error)||error.code==='MODEL_SCHEMA_ERROR'))throw error;
-  return new Map();
- }
-}
 function sourceAgeGroup(e,q,sourceQuestion){
  if(e.information_status!=='ambiguous'||!['population','population.age'].includes(e.dimension_id)||
     e.structured_value||e.semantic_role!=='eligibility_condition'||e.disposition!=='include'||e.scope_status!=='restricted'||
@@ -1736,29 +1726,27 @@ function sourceAgeGroup(e,q,sourceQuestion){
 }
 function sourceReview(state,adapter,options,env){
  adapter=guidedRequests(adapter,options);
- const allowed=new Map();
- const candidatesById=new Map(),reviewQuestions=new Map(),literalCandidates=new Set();
- const originals=new Map(state.questions.map(q=>[q.question_id,q.original_text]));
- const maxItems=7;
- let tail=[],total=0,completed=0,closed=false;
- function add(q,enqueue,last){
-  const original=originals.get(q.question_id)||'';
-  const sourceQuestion=state.questions.find(source=>source.question_id===q.question_id);
-  const reviewQuestion={
-   question_id:q.question_id,original_question:original.length<3500?original:null,logic:q.logic,
-   ...(q.unresolved_fragment_logic?{unresolved_fragment_logic:q.unresolved_fragment_logic}:{})
-  };
+ const originals=new Map(state.questions.map(q=>[q.question_id,q]));
+ const jobs=new Map();
+ let total=0,completed=0,closed=false;
+ function relevantLogic(node,id){
+  if(!node||node.op==='predicate'||!D.walkLeaves(node).includes(id))return null;
+  if(node.op!=='all_of')return node;
+  const child=node.children.find(branch=>D.walkLeaves(branch).includes(id));
+  // An exception belongs to the whole conjunction it qualifies.
+  return node.children.some(branch=>branch.op==='not')?node:relevantLogic(child,id);
+ }
+ function add(q,enqueue,last,preview=false){
+  const sourceQuestion=originals.get(q.question_id),original=sourceQuestion?.original_text||'';
+  let framework;
   if(env){
    const mapping=E.resolve_review_context(sourceQuestion,q,env).framework_mapping;
    const frame=env.frameworks.get(mapping.framework_id);
-   const fields=frame?.slots.map(s=>s.slot_id)||[];
-   if(frame)reviewQuestion.framework={id:frame.framework_id,fields};
-   allowed.set(q.question_id,fields);
+   if(frame)framework={id:frame.framework_id,fields:frame.slots.map(slot=>slot.slot_id)};
   }
-  reviewQuestions.set(q.question_id,reviewQuestion);
-  const items=tail;
   const explicitDeferral=/\b(?:to be (?:confirmed|clarified|specified|decided|determined|defined)|undecided|pending|tbd|tbc)\b|待定|待确认|待明确|尚未确定/iu.test(original);
   for(const e of q.elements){
+   let corroborated=false;
    if(q.eligibility_policy==='framework-only-v1'){
     // Only settled candidates need independent verification. The local model
     // has already placed genuine source uncertainty under its native field.
@@ -1769,11 +1757,11 @@ function sourceReview(state,adapter,options,env){
     const openDecision=q.issues.some(i=>i.element_candidate_ids?.includes(e.candidate_id)&&i.reason_code!=='PROPOSED_RESTRICTION'&&
       (i.reason_code!=='AMBIGUOUS_MEANING'||i.element_candidate_ids.length!==1));
     if(proof&&proof.dimension===e.dimension_id&&proof.side===e.disposition&&proof.wording===e.normalized_text&&
-       !q.unresolved_fragment_logic&&!explicitDeferral&&(ageAsWritten||!openDecision))literalCandidates.add(e);
+       !q.unresolved_fragment_logic&&!explicitDeferral&&(ageAsWritten||!openDecision))corroborated=true;
     // Send a complete, source-defined field to the existing independent check
     // when extraction marked it uncertain without identifying an open decision.
     // Qualitative age has its own check for a threshold requested elsewhere.
-    if(ageAsWritten||(e.information_status==='ambiguous'&&literalCandidates.has(e)&&
+    if(ageAsWritten||(e.information_status==='ambiguous'&&corroborated&&
        !qualitativeAgeGroup.test(e.normalized_text)&&
        !q.issues.some(i=>i.reason_code!=='PROPOSED_RESTRICTION'&&!i.element_candidate_ids?.length)&&
        !/\b(?:to be (?:confirmed|clarified|specified|decided|determined|defined)|undecided|unclear|pending|possibly|tbd|tbc)\b|待定|可能|待确认|待明确|尚未确定/iu.test(original+' '+e.normalized_text))){
@@ -1788,92 +1776,131 @@ function sourceReview(state,adapter,options,env){
     }
    }
    const id=q.question_id+'/'+e.candidate_id;
-   candidatesById.set(id,e);
-   items.push({
+   const item={
     id,question_id:q.question_id,dimension_id:e.dimension_id,normalized_text:e.normalized_text,
     structured_value:e.structured_value,semantic_role:e.semantic_role,information_status:e.information_status,
     scope_status:e.scope_status,disposition:e.disposition,source_quotes:e[reviewCitations]||e.source_refs,
     ...(e.source_occurrence_alternatives?.length?{source_occurrence_pending:true}:{}),
     scope_conditions:e.scope_conditions,exceptions:e.exceptions,...(e.outcome_use?{outcome_use:e.outcome_use}:{})
-   });
+   };
+   const context={question_id:q.question_id,original_question:original.length<3500?original:null,
+    logic:relevantLogic(q.logic,e.candidate_id),...(framework&&{framework})};
+   queue(item,context,e,corroborated,preview,enqueue);
   }
-  // Keep the open tail for the next question so overlapping work never adds a request.
-  const batches=G.batches(items,12500,maxItems);
-  const partial=batches[batches.length-1];
-  tail=!last&&partial&&partial.length<maxItems?batches.pop():[];
-  for(const batch of batches){
-   const index=++total;
-   enqueue(signal=>check(batch,index,signal));
-  }
-  closed=last;
-  if(last&&completed)progress();
+  if(last){closed=true;if(completed)progress();}
  }
  function progress(){
   options.onProgress?.('Source checks complete ('+completed+'/'+total+').',{phase:'review',completed,total,waiting:completed<total});
  }
- async function check(batch,index,signal){
-  // Extraction reports progress until the final review batch count is known.
-  if(closed)options.onProgress?.('Checking criteria against the sources ('+index+'/'+total+')…',{phase:'review',completed,total,waiting:true});
-  const questionIds=new Set(batch.map(item=>item.question_id));
-  const questions=[...questionIds].map(id=>reviewQuestions.get(id));
-  const untranslated=batch.filter(item=>candidatesById.get(item.id).source_wording_needs_translation);
-  if(untranslated.length){
-   const translations=await proposeWording(state,adapter,questions,untranslated,null,signal);
-   for(const translation of translations){
-    const e=candidatesById.get(translation.id);
-    const item=untranslated.find(candidate=>candidate.id===translation.id);
-    if(needsSourceTranslation(translation.normalized_text,state.output_language)&&translation.previous_wording===translation.normalized_text){
-     D.fail('MODEL_SCHEMA_ERROR','repair_candidate_wording','The model returned the original wording without the requested translation.');
-    }
-    item.normalized_text=e.normalized_text=translation.normalized_text;item.structured_value=e.structured_value=translation.structured_value;
-    delete e.source_wording_needs_translation;
-   }
+ function queue(item,context,element,corroborated,preview,enqueue){
+  const key=JSON.stringify([item,context,!!element.source_wording_needs_translation]);
+  let job=jobs.get(key);
+  if(!job){
+   job={targets:[],outcome:null};
+   jobs.set(key,job);
+   enqueue(async signal=>{
+    job.outcome=await check(item,context,element.source_wording_needs_translation,signal);
+    for(const target of job.targets)settle(target,job.outcome);
+    job.targets.length=0;
+   });
   }
-  const assessments=await assessWording(state,adapter,questions,batch,signal);
-  const disputed=batch.filter(item=>!item.source_occurrence_pending&&assessments.get(item.id).reviewer?.verdict==='wrong_field');
-  const routed=await routeReviewFields(state,adapter,questions,disputed,allowed,signal);
-  for(const [id,assessment] of assessments){
-   const e=candidatesById.get(id);
-   if(e.source_occurrence_alternatives?.length){
-    e.initial_information_status=e.information_status;e.information_status='ambiguous';
-    e.semantic_review={status:'uncertain',issue_type:'ambiguous_source',reason:'The quoted text occurs in distinct source contexts. The intended scope requires author confirmation.',assessment:D.clone(assessment)};
-    continue;
+  if(preview)return;
+  total++;
+  const target={element,corroborated};
+  if(job.outcome)settle(target,job.outcome);
+  else job.targets.push(target);
+ }
+ async function check(item,context,translate,signal){
+  const questions=[context];
+  let translated=null;
+  try{
+   if(translate){
+    [translated]=await proposeWording(state,adapter,questions,[item],null,signal);
+    if(needsSourceTranslation(translated.normalized_text,state.output_language)&&translated.previous_wording===translated.normalized_text)return {assessment:null};
+    item={...item,normalized_text:translated.normalized_text,structured_value:translated.structured_value};
    }
-   e.initial_information_status=e.information_status;
-   if(literalCandidates.has(e)&&e[literalField].wording===e.normalized_text&&assessment.status==='uncertain'&&
-      assessment.reviewer?.provider==='typesafe'&&assessment.reviewer.verdict==='low_confidence'){
-    assessment.status='supported';assessment.issue_type='none';
-    assessment.reason='The complete source field independently establishes this wording and its eligibility direction.';
-    assessment.reviewer={...assessment.reviewer,corroboration:'exact_source_field'};
-   }
-   e.semantic_review={status:assessment.status,reason:assessment.reason||'',issue_type:assessment.issue_type,...(assessment.reviewer?{reviewer:D.clone(assessment.reviewer)}:{})};
-   if(e.information_status==='missing')continue;
-   if(assessment.status==='supported'&&assessment.issue_type==='none'){
-    for(const field of ['semantic_role','scope_status','disposition'])if(e[field]!==assessment[field]){
-     e.metadata_corrections=[...(e.metadata_corrections||[]),{field,from:e[field],to:assessment[field],basis:'Separate semantic review against the original input: '+assessment.reason}];
-     e[field]=assessment[field];
-    }
-    e.information_status=assessment.information_status;
-    retainReviewedBounds(e);
-    try{D.check_semantics(e,e.source_refs);continue;}
-    catch(error){
-     if(error.step!=='normalization')throw error;
-     e.semantic_review={...e.semantic_review,status:'uncertain',issue_type:'unsupported_rewrite',reason:E.numericReviewReason(error)||error.message,validation_code:error.code};
-    }
-   }
-   const route=routed.get(id);
-   e.review_pending={reason:e.semantic_review.reason,original_dimension:e.dimension_id,original_role:e.semantic_role,original_disposition:e.disposition};
-   if(route){
-    e.dimension_id=route.dimension_id;e.disposition=route.section;
-    e.semantic_role='eligibility_condition';e.scope_status='restricted';
-    e.review_pending.routed_by='local';
-   }
-   e.information_status='ambiguous';
+   const assessments=await assessWording(state,adapter,questions,[item],signal);
+   return {assessment:assessments.get(item.id),translated};
+  }catch(error){
+   if(signal.aborted||!['MODEL_REVIEW_INCOMPLETE','MODEL_SCHEMA_ERROR','SEMANTIC_REVIEW_FAILED'].includes(error.code)&&
+      !(translate&&(reviewUnavailable(error)||error.step==='provenance')))throw error;
+   return {assessment:null,unavailable:true};
   }
+ }
+ function settle({element,corroborated},{assessment,translated,unavailable}){
+  apply(element,corroborated,assessment&&D.clone(assessment),translated,unavailable);
   completed++;
   if(closed)progress();
  }
+ function apply(e,corroborated,assessment,translated,unavailable){
+  if(!assessment){e.review_rejected=true;if(unavailable)e.review_unavailable=true;return;}
+  if(translated){
+   e.normalized_text=translated.normalized_text;e.structured_value=translated.structured_value;
+   delete e.source_wording_needs_translation;
+  }
+  if(e.source_occurrence_alternatives?.length){
+   e.initial_information_status=e.information_status;e.information_status='ambiguous';
+   e.semantic_review={status:'uncertain',issue_type:'ambiguous_source',reason:'The quoted text occurs in distinct source contexts. The intended scope requires author confirmation.',assessment};
+   return;
+  }
+  e.initial_information_status=e.information_status;
+  const proof=e[literalField],reviewer=assessment.reviewer;
+  if(corroborated&&proof.wording===e.normalized_text&&assessment.status==='uncertain'&&
+     reviewer?.provider==='typesafe'&&reviewer.verdict==='low_confidence'&&reviewer.original_verdict==='supported'){
+   assessment.status='supported';assessment.issue_type='none';
+   assessment.reason='The complete source field independently establishes this wording and its eligibility direction.';
+   reviewer.corroboration='exact_source_field';
+  }
+  e.semantic_review={status:assessment.status,reason:assessment.reason||'',issue_type:assessment.issue_type,...(reviewer?{reviewer}:{})};
+  if(e.information_status==='missing')return;
+  if(assessment.status==='contradicted'||assessment.issue_type==='unsupported_rewrite'||
+     ['wrong_field','wording_or_scope'].includes(reviewer?.verdict)){
+   e.review_rejected=true;return;
+  }
+  if(assessment.status==='supported'&&assessment.issue_type==='none'){
+   for(const field of ['semantic_role','scope_status','disposition'])if(e[field]!==assessment[field]){
+    e.metadata_corrections=[...(e.metadata_corrections||[]),{field,from:e[field],to:assessment[field],basis:'Separate semantic review against the original input: '+assessment.reason}];
+    e[field]=assessment[field];
+   }
+   e.information_status=assessment.information_status;
+   retainReviewedBounds(e);
+   try{D.check_semantics(e,e.source_refs);}
+   catch(error){if(error.step!=='normalization')throw error;e.review_rejected=true;}
+   return;
+  }
+  e.review_pending={reason:e.semantic_review.reason,original_dimension:e.dimension_id,original_role:e.semantic_role,original_disposition:e.disposition};
+  e.information_status='ambiguous';
+ }
  return {add};
+}
+function discardRejected(question){
+ const rejected=new Set(question.elements.filter(e=>e.review_rejected).map(e=>e.candidate_id));
+ if(!rejected.size)return;
+ if(question.elements.some(e=>e.review_unavailable))question.incomplete_review=true;
+ const kept=new Map(question.elements.filter(e=>!rejected.has(e.candidate_id)).map(e=>[e.candidate_id,e]));
+ const markRelated=ids=>{
+  for(const id of ids){
+   const element=kept.get(id);
+   if(element&&!element.review_pending)element.review_pending={reason:'A linked condition did not pass review. Confirm this rule before applying it independently.',
+    original_dimension:element.dimension_id,original_role:element.semantic_role,original_disposition:element.disposition};
+  }
+ };
+ function protect(node){
+  if(!node?.children)return;
+  const ids=D.walkLeaves(node);
+  if(node.op!=='all_of'&&ids.some(id=>rejected.has(id))||
+     node.children.some(child=>child.op==='not'&&D.walkLeaves(child).some(id=>rejected.has(id))))markRelated(ids);
+  else node.children.forEach(protect);
+ }
+ protect(question.logic);
+ const pending=question.unresolved_fragment_logic;
+ if(pending){
+  const ids=pending.branches.flatMap(D.walkLeaves);
+  if(ids.some(id=>rejected.has(id))){markRelated(ids);delete question.unresolved_fragment_logic;}
+ }
+ question.elements=[...kept.values()];
+ if(question.logic)question.logic=D.mapExpression(question.logic,new Map([...kept.keys()].map(id=>[id,id])),'element_id');
+ question.issues=(question.issues||[]).filter(issue=>!(issue.element_candidate_ids||[]).some(id=>rejected.has(id)));
 }
 async function review_elements(state,candidates,adapter,options={}){
  const env=options.env||(typeof require==='function'?E.environment():null);
@@ -1881,6 +1908,7 @@ async function review_elements(state,candidates,adapter,options={}){
  const review=sourceReview(state,adapter,options,env),tasks=[];
  candidates.questions.forEach((q,i)=>review.add(q,task=>tasks.push(task),i===candidates.questions.length-1));
  await runModelTasks(tasks,options);
+ for(const question of candidates.questions)discardRejected(question);
  return candidates;
 }
 async function analyze(state,env,adapter,options={}){
@@ -1894,7 +1922,8 @@ async function analyze(state,env,adapter,options={}){
    mergeFragmentLogic(merged,trees,q);
   }
  }
- return {candidates,base_revision:state.revision,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
+ for(const question of candidates.questions)discardRejected(question);
+ return {candidates,incomplete_review:candidates.questions.some(q=>q.incomplete_review),base_revision:state.revision,model_calls:adapter.exchanges?D.clone(adapter.exchanges.slice(start)):[]};
 }
 function answerElement(record){
  // These internal matching keys repeat source text, conditions and normalized

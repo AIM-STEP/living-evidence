@@ -36,7 +36,7 @@ function scenario(mode) {
   const project = engine.ingest_candidates(state, {questions: [previous]}).state;
   if (['contradicted','field'].includes(mode)) question.elements[1].normalized_text = 'unsupervised exercise';
   const steps = [];
-  let affectedId;
+  let affectedAttempts=0;
 
   const adapter = {async request(step, ignored, payload, schema, instruction) {
     steps.push(step);
@@ -45,30 +45,22 @@ function scenario(mode) {
         'An unrelated question must not receive clinical facts or a title from an example case.');
     }
     if (step === 'extract_elements') return {questions: [structuredClone(question)]};
-    if (step === 'route_author_checks') {
-      assert.equal(mode, 'field');
-      assert.equal(payload.items.length, 1);
-      assert(payload.items[0].available_fields.includes('intervention'));
-      return {items: [{id: affectedId, dimension_id: 'intervention', section: 'include'}]};
-    }
     assert.equal(step, 'review_normalization');
     assert.equal(payload.review_policy, 'jev-once-v1');
-    if (mode === 'recover' && steps.filter(s=>s==='review_normalization').length===2) {
-      assert.deepEqual(payload.items.map(i=>i.id),[affectedId]);
-      return {items: payload.items.map(i=>({...i,status:'supported',issue_type:'none',reason:'Source confirmed.'}))};
-    }
-    assert.equal(payload.items.length, 3);
-    affectedId = payload.items.find(item => item.normalized_text.includes('exercise')).id;
+    assert.equal(payload.items.length, 1);
+    const affected=payload.items[0].id.endsWith('_i1');
+    if(affected)affectedAttempts++;
     if (mode === 'outage') throw Object.assign(new Error('Synthetic gateway outage'), {code: 'MODEL_UPSTREAM_ERROR'});
     return {items: payload.items.map(item => {
       const assessment = {id: item.id, status: 'supported', reason: 'Directly supported.',
         issue_type: 'none', information_status: 'explicit', semantic_role: item.semantic_role,
         scope_status: item.scope_status, disposition: item.disposition};
-      if (item.id !== affectedId || mode === 'supported') return assessment;
-      if (mode === 'recover') return {...assessment,status:'uncertain',issue_type:'ambiguous_source',reviewer:{provider:'typesafe',verdict:'unavailable'}};
+      if (!affected || mode === 'supported') return assessment;
+      if (mode === 'recover') return affectedAttempts===1?
+        {...assessment,status:'uncertain',issue_type:'ambiguous_source',reviewer:{provider:'typesafe',verdict:'unavailable'}}:assessment;
       return {...assessment, status: mode === 'contradicted' ? 'contradicted' : 'uncertain',
         issue_type: ambiguous ? 'ambiguous_source' : 'unsupported_rewrite', reason: rejection,
-        reviewer:{provider:'typesafe',verdict:mode === 'field' ? 'wrong_field' : 'wording_or_scope'}};
+        reviewer:{provider:'typesafe',verdict:mode === 'field'?'wrong_field':ambiguous?'ambiguous':'wording_or_scope'}};
     })};
   }};
   if (mode === 'field') question.elements[1].dimension_id='comparator';
@@ -76,21 +68,23 @@ function scenario(mode) {
 }
 async function check(mode){
   const run=scenario(mode), before=structuredClone(run.project);
-  if(mode==='outage'){
-    await assert.rejects(model.analyze(run.project,engine.environment(),run.adapter,{retries:0}),{code:'MODEL_REVIEW_INCOMPLETE'});
-    assert.deepEqual(run.steps,['extract_elements','review_normalization','review_normalization']);
-    assert.deepEqual(run.project,before);
-    return;
-  }
-  const {candidates}=await model.analyze(run.project,engine.environment(),run.adapter,{retries:0});
+  const {candidates,incomplete_review}=await model.analyze(run.project,engine.environment(),run.adapter,{retries:0});
   const project=engine.ingest_candidates(run.project,candidates).state;
   const checks=project.issues.filter(i=>i.status==='open'&&i.trigger_rule_id==='independent_source_check');
-  const expected=['extract_elements','review_normalization'];
-  if(mode==='field')expected.push('route_author_checks');
-  if(mode==='recover')expected.push('review_normalization');
+  const count=mode==='outage'?6:mode==='recover'?4:3;
+  const expected=['extract_elements',...Array(count).fill('review_normalization')];
   assert.deepEqual(run.steps,expected);
   assert.deepEqual(run.project,before);
+  assert.equal(incomplete_review,mode==='outage');
+  if(mode==='outage'){assert.equal(project.criteria.length,0);return;}
   if(['supported','recover'].includes(mode)){assert.equal(checks.length,0);assert.equal(project.criteria.length,3);return;}
+  if(['contradicted','field'].includes(mode)){
+    assert(project.criteria.some(rule=>rule.text==='adults'));
+    assert(!project.criteria.some(rule=>rule.text==='unsupervised exercise'));
+    assert(!candidates.questions[0].elements.some(e=>e.normalized_text==='unsupervised exercise'));
+    assert(!project.criteria.some(rule=>rule.text==='education'),'A linked OR rule should not be narrowed automatically.');
+    return;
+  }
   assert.equal(checks.length,1);
   assert.equal(project.criteria.length,2);
   const issue=checks.find(i=>project.elements.some(e=>i.element_ids.includes(e.element_id)&&e.dimension_id==='intervention'&&e.normalized_text.includes('exercise')));
@@ -100,7 +94,7 @@ async function check(mode){
   assert(prompt.evidence.some(ref=>ref.quote.includes('exercise')));
   const proposal=project.elements.find(e=>issue.element_ids.includes(e.element_id));
   assert.equal(proposal.decision_status,'pending');
-  assert.equal(proposal.review_pending.routed_by,mode==='field'?'local':undefined);
+  assert(proposal.review_pending);
   assert(!project.criteria.some(c=>c.source_element_ids.includes(proposal.element_id)));
   function answer(text,option_id){
     return engine.apply_decisions(project,{base_revision:project.revision,request_id:'author-'+mode,
@@ -137,15 +131,15 @@ async function checkThreshold(){
     steps.push(step);
     if(step==='extract_elements')return {questions:[structuredClone(input)]};
     assert.equal(step,'review_normalization');
-    assert.equal(payload.items.length,2);
+    assert.equal(payload.items.length,1);
     return {items:payload.items.map(item=>({...item,...(item.dimension_id==='intervention'?
       {status:'uncertain',issue_type:'ambiguous_source',reason:'Weak objection.',
-       reviewer:{provider:'typesafe',verdict:'low_confidence',original_verdict:'wrong_field',confidence:.75,choice_probability:.68}}:
+       reviewer:{provider:'typesafe',verdict:'low_confidence',original_verdict:'supported',confidence:.75,choice_probability:.68}}:
       {status:'supported',issue_type:'none',reason:'Agrees with source.'})}))};
   }};
   const {candidates}=await model.analyze(state,engine.environment(),adapter,{retries:0});
   const project=engine.ingest_candidates(state,candidates).state;
-  assert.deepEqual(steps,['extract_elements','review_normalization']);
+  assert.deepEqual(steps,['extract_elements','review_normalization','review_normalization']);
   assert.equal(project.status,'final');
   assert.equal(project.elements.find(e=>e.dimension_id==='intervention').semantic_review.reviewer.corroboration,'exact_source_field');
   assert.deepEqual(background.projectToClassic(project).sourceConfirmations,[]);
@@ -164,5 +158,5 @@ async function checkThreshold(){
 (async()=>{
   for(const mode of ['supported','contradicted','ambiguous','field','recover','outage'])await check(mode);
   await checkThreshold();
-  console.log('PASS single-pass independent source checks, scoped author routing, direct correction and omission.');
+  console.log('PASS single-candidate review, rejection, retry, and author handling of true ambiguity.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

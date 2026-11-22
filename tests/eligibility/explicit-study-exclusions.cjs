@@ -86,7 +86,7 @@ test('a separate exclusion in another setting keeps its own scope',async()=>{
 test('a therapeutic strategy misfiled as study design reaches independent review in Intervention',async()=>{
  const target='studies of oxygen saturation targeting';
  const {project,view,lessons,requests,reviewed}=await run('We excluded '+target+' and case reports.',false,{misclassified:target});
- assert.equal(requests,1);
+ assert.equal(requests,reviewed.length);
  assert(reviewed.some(e=>e.dimension_id==='intervention'&&e.normalized_text===target&&e.disposition==='exclude'));
  assert.deepEqual(view.rows.find(r=>r.dimension==='Intervention').exclude,[target]);
  assert.deepEqual(view.rows.find(r=>r.dimension==='Study design').exclude,['case reports']);
@@ -112,7 +112,7 @@ test('a study excluded for comparing two treatment strategies keeps its whole co
  const target='studies comparing high versus low oxygen saturation targets';
  const {view,requests}=await run('We excluded '+target+'.',false,{excludedIntervention:target});
  assert.deepEqual(view.rows.find(r=>r.dimension==='Intervention').exclude,[target]);
- assert.equal(requests,1);
+ assert.equal(requests,2);
 });
 
 test('an exclusion from a sensitivity analysis or with a shared exception remains with the original extractor',async()=>{

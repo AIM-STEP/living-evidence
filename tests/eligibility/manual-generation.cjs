@@ -32,7 +32,7 @@ function choose(page,mode){
  const select=page.el('generation-method');
  select.value=mode;select.handlers.change();
 }
-function stubBackend(page,calls,{unavailable=false,ambiguous=false}={}){
+function stubBackend(page,calls,{unavailable=false,ambiguous=false,rejected=false}={}){
  page.api.transport(async(url,options)=>{
   const request=JSON.parse(JSON.parse(options.body).messages[1].content);
   calls.push(request);
@@ -50,12 +50,18 @@ function stubBackend(page,calls,{unavailable=false,ambiguous=false}={}){
   }else{
    assert.equal(request.step,'review_normalization');
    assert.equal(payload.review_policy,'jev-once-v1');
+   assert.equal(payload.items.length,1);
    answer={items:payload.items.map(item=>{
-    if(ambiguous&&item.dimension_id==='study_design'&&item.disposition==='exclude'){
+    const exclusion=item.dimension_id==='study_design'&&item.disposition==='exclude';
+    if(ambiguous&&exclusion){
      return {...item,status:'uncertain',issue_type:'ambiguous_source',reason:'The exclusion needs author confirmation.'};
     }
+    if(rejected&&exclusion){
+     return {...item,status:'uncertain',issue_type:'unsupported_rewrite',reason:'Not supported by the source.',
+      reviewer:{provider:'typesafe',verdict:'wording_or_scope'}};
+    }
     return {...item,status:'supported',issue_type:'none',reason:'Verified.',
-     ...(unavailable?{reviewer:{verdict:'unavailable'}}:{})};
+     ...(unavailable&&exclusion?{reviewer:{verdict:'unavailable'}}:{})};
    })};
   }
   return {ok:true,json:async()=>({message:{content:JSON.stringify(answer)},
@@ -76,7 +82,7 @@ test('manual and machine input enter the same source review and publish the same
  stubBackend(manual,manualCalls);
  await manual.el('refine-manual').handlers.click();
  assert.equal(manual.el('manual-refine-status').textContent,'');
- assert.deepEqual(manualCalls.map(call=>call.step),['extract_elements','review_normalization']);
+ assert.deepEqual(manualCalls.map(call=>call.step),['extract_elements',...Array(4).fill('review_normalization')]);
  assert.equal(manualCalls[0].payload.question.context.framework_requested,'PICOS');
  const source=manualCalls[0].payload.question.sources[0].original_text;
  assert.match(source,/Inclusion criteria:\nPopulation: Adults with chronic pain/);
@@ -110,28 +116,31 @@ test('manual and machine input enter the same source review and publish the same
  assert.deepEqual(JSON.parse(JSON.stringify(machine.api.state().machineCriteria)),persisted.machineCriteria);
 });
 
-test('missing source review is retried and author-entered data survives a failed regeneration',async()=>{
- const page=open(),calls=[];
- choose(page,'manual');
- page.api.state().framework='PICOS';
- page.api.state().criteria=structuredClone(drafts);
- page.api.fill();
- stubBackend(page,calls);
- await page.el('refine-manual').handlers.click();
- const approved=JSON.stringify(page.api.state().machineCriteria);
- const generatedAt=page.api.state().machineRun.generatedAt;
- page.api.state().criteria[0].condition='Adults with arthritis.';
- page.api.fill();
- assert.match(page.el('preview').innerHTML,/Click Generate/);
- const failedCalls=[];
- stubBackend(page,failedCalls,{unavailable:true});
- await page.el('refine-manual').handlers.click();
- assert.deepEqual(failedCalls.map(call=>call.step),['extract_elements','review_normalization','review_normalization']);
- assert.match(page.el('manual-refine-status').textContent,/could not finish checking the source/i);
- assert.equal(page.api.state().machineRun.generatedAt,generatedAt);
- assert.equal(JSON.stringify(page.api.state().machineCriteria),approved);
- assert.equal(page.api.state().criteria[0].condition,'Adults with arthritis.');
-});
+for(const mode of ['unavailable','rejected']){
+ test(mode+' exclusion stays out of the saved criteria without interrupting verified rules',async()=>{
+  const page=open(),calls=[];
+  choose(page,'manual');
+  page.api.state().framework='PICOS';
+  page.api.state().criteria=structuredClone(drafts);
+  page.api.fill();
+  stubBackend(page,calls,{[mode]:true});
+  await page.el('refine-manual').handlers.click();
+  const reviews=calls.filter(call=>call.step==='review_normalization').flatMap(call=>call.payload.items);
+  assert.equal(reviews.filter(item=>item.disposition==='exclude').length,mode==='unavailable'?2:1);
+  assert.equal(reviews.filter(item=>item.disposition==='include').length,3);
+  assert.equal(page.el('manual-refine-status').textContent,'');
+  assert.match(page.el('preview').innerHTML,/Adults with chronic pain/);
+  assert.doesNotMatch(page.el('preview').innerHTML,/Case reports/);
+  const word=Buffer.from(page.api.export()).toString();
+  assert.match(word,/Randomised trials/);
+  assert.doesNotMatch(word,/Case reports/);
+  assert.deepEqual(page.api.state().criteria,drafts);
+  if(mode==='unavailable'){
+   const project=JSON.parse(page.storage.get(Reset.projectKeys(projectId).project));
+   assert.equal(project.generation_source_key,null);
+  }
+ });
+}
 
 test('author confirmation applies to the shared result without changing the manual input or calling the model',async()=>{
  const page=open(),calls=[];
