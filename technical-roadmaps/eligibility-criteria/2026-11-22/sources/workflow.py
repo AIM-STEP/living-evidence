@@ -100,19 +100,17 @@ def render(output):
     card(925, 358, 803, 115, '作者逐项填写研究问题', ('选择框架，按字段填写纳入、排除与例外',), accent=BLUE)
     card(925, 512, 803, 119, '点击 Generate', ('将各字段的手填内容作为原始材料提交',), accent=BLUE)
 
-    card(1212, 795, 488, 189, '什么会进入筛选？',
-         ('有效的纳入与排除条件。', '关注结局仅在原文明确要求研究',
-          '测量或报告时才成为资格条件。'),
-         fill='#f0f5f3', border='#d6e2de', title_size=28, body_size=25)
-
     card(96, 1282, 1632, 119, 'Criteria 预览',
          ('Review topic 与 Framework     ·     Inclusion 与 Exclusion     ·     Description',),
          fill=TEAL_PALE, border='#aacbc0', title_size=35, body_size=30)
-    card(96, 1445, 770, 146, '作者核查与编辑',
+    card(96, 1445, 770, 170, '作者核查与编辑',
          ('逐项采纳、改写或舍弃，也可直接编辑正文。',
           '待确认项由作者处理后直接生效。'))
-    card(925, 1445, 803, 146, '保存、导出与交接',
-         ('按项目保存，并可导出 Word。', '已生效的规则供 Search strategy 与筛选使用。'))
+    card(925, 1445, 803, 170, '保存、导出与交接',
+         ('按项目保存，支持 Word 导出与 Search strategy 交接。',
+          '筛选使用已生效的纳入与排除条件。',
+          '结局仅在原文明确要求测量或报告时用于筛选。'),
+         body_size=27)
 
     draw.line((96, 1645, 1728, 1645), fill=RULE, width=2)
     text(96, 1665, 'AIM-STEP   /   2026-11-22', 24, MUTED, bold=True)
