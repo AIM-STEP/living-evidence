@@ -29,7 +29,7 @@ def font(size, bold=False):
 
 
 def render(output):
-    image = Image.new('RGB', (1824, 1736), '#f7faf8')
+    image = Image.new('RGB', (1824, 1766), '#f7faf8')
     draw = ImageDraw.Draw(image)
 
     def text(x, y, value, size, color=INK, *, bold=False, max_width=None):
@@ -68,30 +68,33 @@ def render(output):
          border=BLUE_PALE, accent=BLUE, title_size=33)
 
     for start, end in [(330, 358), (473, 512), (781, 816),
-                       (930, 967), (1084, 1120), (1230, 1282)]:
+                       (960, 997), (1114, 1150), (1260, 1312)]:
         arrow([(478, start), (478, end)])
     draw.line([(1326, 631), (1326, 649), (478, 649)], fill=BLUE_LINE, width=5, joint='curve')
     arrow([(478, 631), (478, 668)])
-    arrow([(866, 1027), (907, 1027)], ERROR)
-    arrow([(866, 1175), (925, 1175)], ADVICE_LINE)
-    arrow([(1326, 1255), (1326, 1282)], ADVICE_LINE)
+    arrow([(866, 1057), (907, 1057)], ERROR)
+    arrow([(866, 1205), (925, 1205)], ADVICE_LINE)
+    arrow([(1326, 1285), (1326, 1312)], ADVICE_LINE)
     for start, end in [(330, 358), (473, 512)]:
         arrow([(1326, start), (1326, end)], BLUE_LINE)
-    arrow([(474, 1401), (474, 1445)])
-    arrow([(1326, 1401), (1326, 1445)])
-    arrow([(96, 1518), (65, 1518), (65, 1342), (96, 1342)])
+    arrow([(474, 1431), (474, 1475)])
+    arrow([(1326, 1431), (1326, 1475)])
+    arrow([(96, 1548), (65, 1548), (65, 1372), (96, 1372)])
 
     card(96, 358, 770, 115, '一次性提交研究问题', ('支持文本、语音或附件，也可只提供一个要素',))
     card(96, 512, 770, 119, '读取来源', ('读取文本和文档，转写图片、扫描页并记录出处',))
     card(96, 668, 770, 113, '共用流程 · 提取候选条件', ('本地模型依据来源与研究框架分批提取',))
-    card(96, 816, 770, 114, '定位原文并校验', ('核对引文、入排方向、阈值、单位、时点及例外',))
-    card(96, 967, 770, 117, 'TypeSafe Jev 独立核对', ('对有明确引文的候选项逐条核对',))
-    card(907, 964, 227, 124, '缺少判定', ('仅重试缺失项一次', '仍缺则报错'),
+    card(96, 816, 770, 144, '标准化框架要素并校验原文',
+         ('本地模型整理框架字段与措辞，保留条件和例外。',
+          '程序定位引文，校验阈值、单位和时间参照。'))
+    card(96, 997, 770, 117, 'TypeSafe Jev 独立语义核对',
+         ('对照引文及上下文核对字段、纳排方向与规则含义。',))
+    card(907, 994, 227, 124, '缺少判定', ('仅重试缺失项一次', '仍缺则报错'),
          fill=ERROR_PALE, border='#e4c2ba', accent=ERROR, title_size=26, body_size=21)
-    text(495, 1090, '核对完成', 23, TEAL, bold=True)
-    card(96, 1120, 770, 110, '构建规则与待确认项', ('区分筛选条件、关注结局和需核查的条目',))
+    text(495, 1120, '核对完成', 23, TEAL, bold=True)
+    card(96, 1150, 770, 110, '构建规则与待确认项', ('区分筛选条件、关注结局和需核查的条目',))
 
-    card(925, 1099, 803, 156, '机器端短问题 · 可选补充建议',
+    card(925, 1129, 803, 156, '机器端短问题 · 可选补充建议',
          ('已登记项目的短问题仅覆盖一个框架要素时触发。',
           '按框架提示最多两个待补要素，并附方法学出处。',
           '可采纳、补写或跳过。作者确认后才成为规则。'),
@@ -100,21 +103,21 @@ def render(output):
     card(925, 358, 803, 115, '作者逐项填写研究问题', ('选择框架，按字段填写纳入、排除与例外',), accent=BLUE)
     card(925, 512, 803, 119, '点击 Generate', ('将各字段的手填内容作为原始材料提交',), accent=BLUE)
 
-    card(96, 1282, 1632, 119, 'Criteria 预览',
+    card(96, 1312, 1632, 119, 'Criteria 预览',
          ('Review topic 与 Framework     ·     Inclusion 与 Exclusion     ·     Description',),
          fill=TEAL_PALE, border='#aacbc0', title_size=35, body_size=30)
-    card(96, 1445, 770, 170, '作者核查与编辑',
+    card(96, 1475, 770, 170, '作者核查与编辑',
          ('逐项采纳、改写或舍弃，也可直接编辑正文。',
           '待确认项由作者处理后直接生效。'))
-    card(925, 1445, 803, 170, '保存、导出与交接',
+    card(925, 1475, 803, 170, '保存、导出与交接',
          ('按项目保存，支持 Word 导出与 Search strategy 交接。',
           '筛选使用已生效的纳入与排除条件。',
           '结局仅在原文明确要求测量或报告时用于筛选。'),
          body_size=27)
 
-    draw.line((96, 1645, 1728, 1645), fill=RULE, width=2)
-    text(96, 1665, 'AIM-STEP   /   2026-11-22', 24, MUTED, bold=True)
-    text(610, 1665, 'release 39 · 两种输入共用后续处理', 24, MUTED,
+    draw.line((96, 1675, 1728, 1675), fill=RULE, width=2)
+    text(96, 1695, 'AIM-STEP   /   2026-11-22', 24, MUTED, bold=True)
+    text(610, 1695, 'release 39 · 两种输入共用后续处理', 24, MUTED,
          max_width=1118)
 
     output.parent.mkdir(parents=True, exist_ok=True)
