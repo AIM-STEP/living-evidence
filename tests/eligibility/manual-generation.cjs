@@ -70,6 +70,8 @@ test('manual and machine input enter the same source review and publish the same
  state.framework='PICOS';
  state.criteria=structuredClone(drafts);
  manual.api.fill();
+ manual.el('language').value='English';
+ manual.el('start-date').value='2020-01-01';
  assert.doesNotMatch(manual.el('preview').innerHTML,/Adults with chronic pain/);
  stubBackend(manual,manualCalls);
  await manual.el('refine-manual').handlers.click();
@@ -80,6 +82,7 @@ test('manual and machine input enter the same source review and publish the same
  assert.match(source,/Inclusion criteria:\nPopulation: Adults with chronic pain/);
  assert.match(source,/Exclusion criteria:\nStudy design: Case reports/);
  assert.match(source,/Conditions and exceptions:\nOutcomes: Outcomes of interest/);
+ assert.match(source,/Additional limits:\nPublication date: From 2020-01-01\nLanguage: English/);
  assert.equal(manual.api.state().generationMethodChoice,'manual');
  assert.equal(manual.api.state().machineRun.inputMode,'manual');
  assert.equal(manual.api.state().machineRefinement.audit.sources[0].name,'Author-entered criteria');
@@ -87,7 +90,10 @@ test('manual and machine input enter the same source review and publish the same
  assert.equal(manual.el('generation-method').options.find(option=>option.value==='machine').disabled,true);
  assert.equal(Library.read(manual.ctx.localStorage,projectId).entries[0].method,'manual');
  assert.match(manual.el('preview').innerHTML,/Case reports/);
- assert.match(Buffer.from(manual.api.export()).toString(),/Case reports/);
+ const word=Buffer.from(manual.api.export()).toString();
+ assert.match(word,/Case reports/);
+ assert.match(word,/English/);
+ assert.match(word,/2020-01-01/);
  const persisted=JSON.parse(manual.storage.get('aimstep-eligibility:'+projectId));
  const restored=open(manual.storage);
  assert.equal(restored.el('generation-method').value,'manual');

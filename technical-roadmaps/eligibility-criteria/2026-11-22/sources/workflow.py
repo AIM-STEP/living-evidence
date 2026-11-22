@@ -105,7 +105,7 @@ def render(output):
 
     draw.line((96, 1645, 1728, 1645), fill=RULE, width=2)
     text(96, 1665, 'AIM-STEP   /   2026-11-22', 24, MUTED, bold=True)
-    text(610, 1665, 'release 38 · 两种输入共用后续处理', 24, MUTED,
+    text(610, 1665, 'release 39 · 两种输入共用后续处理', 24, MUTED,
          max_width=1118)
 
     output.parent.mkdir(parents=True, exist_ok=True)
