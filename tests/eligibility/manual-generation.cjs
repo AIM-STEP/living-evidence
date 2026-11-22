@@ -136,8 +136,10 @@ for(const mode of ['unavailable','rejected']){
   assert.doesNotMatch(word,/Case reports/);
   assert.deepEqual(page.api.state().criteria,drafts);
   if(mode==='unavailable'){
-   const project=JSON.parse(page.storage.get(Reset.projectKeys(projectId).project));
+   const keys=Reset.projectKeys(projectId);
+   const project=JSON.parse(page.storage.get(keys.project));
    assert.equal(project.generation_source_key,null);
+   assert.equal(JSON.parse(page.storage.get(keys.lessons)).counts.service_availability,1);
   }
  });
 }

@@ -1,4 +1,4 @@
-# 原文要素提取记录本
+# Eligibility Criteria 错误与反馈记录本
 
 本记录本用于 Eligibility criteria 的生成流程。它记录已复现的问题、下次遇到同类原文时的处理方法，以及可以重新运行的检查。通用技巧由版本库保存，模型每次最多读取两条。模型的判断依据始终是本次研究问题、原文附件和作者明确的决定。[模型实际读取的技巧](../../app/eligibility/lessons.js) · [方法来源与本地评估](source-grounded-extraction.md)
 
@@ -17,7 +17,7 @@
 | `logical_scope` | 分段后把并列备选条件合并为全部须满足，或把例外附到错误分支。 | 曾将“可纳入三种试验设计”错读为研究设计、人群、干预和对照任选其一。先确定连接词管辖的短语，再按原文重建各字段与共同条件。排除清单、结局关注和亚组分析中的并列选项各自保留在其原有范围。[明确纳入句](../../tests/eligibility/explicit-inclusion-logic.cjs) 若跨段关系确实未交代，保留针对这一关系的确认。[分段逻辑](../../tests/eligibility/fragment-logic.cjs) |
 | `repeated_passage` | 同一短语在不同段落出现时容易选错方向。PDF 中的排版合字也可能使模型引文与原文逐字比较失败。 | 核对来源版本、Unicode 位置、小标题和否定。遇到排版差异，保留原文切片和全部可能的位置。上下文相同的引文可共享依据；相反语义的出现位置须分开。[重复引文与上下文](../../tests/eligibility/repeated-citations.cjs) |
 | 数值与时间 | 起止年龄、小时缩写及时间参照在标准化后被误判为阈值改变。 | 逐条从同一处原文核对范围两端、严格程度、单位和参照事件。仅机器数值属性与完整原文措辞相冲突时，先按原文校正。 |
-| `source_fidelity` | 候选措辞改变了受试人群、干预实施者或条件，出现引用与表述不符。 | 由 Jev 一次核对候选措辞与对应原文。存疑或核对未完成的候选进入相应位置供作者决定，作者答复立即生效。[独立核对与定向修正](../../tests/eligibility/semantic-repair.cjs) |
+| `source_fidelity` | 候选措辞改变了受试人群、干预实施者或条件，出现引用与表述不符。 | 由 Jev 逐条核对候选措辞与对应原文。明确不符合的候选略过。原文含义或适用范围不清时交作者核对，作者答复立即生效。[独立核对与定向修正](../../tests/eligibility/semantic-repair.cjs) |
 | `question_identity` | 模型遗漏或更改问题 ID。 | 复用该请求提供的标识；由结构约束绑定问题，检查返回的引用属于当前问题。[问题标识](../../tools/test_eligibility_question_id.cjs) |
 | `topic_wording` | 标题只说“某人群的干预”，或重复整句研究目的。 | 用原文支持的最简名称概括干预，如 supervised cycling。仅给出干预类别时保留该类别，如 nutritional interventions。按需补充临床用途和关键人群。对照组在 Comparison 和 Description 中交代。首次使用含义明确的缩写时写出全称，Description 单独处理首次使用。[标题](../../tests/eligibility/concise-topic.cjs) · [各要素描述](../../tests/eligibility/neonatal-clinical-prose.cjs) |
 
@@ -33,7 +33,7 @@
 | `author_decision` | 确认项离开对应要素，作者明确回答后仍要等待再次推理。把确认定位到规则，并直接应用作者决定。 | [作者决定路由](../../tests/eligibility/author-answer-routing.cjs) · [确认目标](../../tests/eligibility/author-targets.cjs) |
 | 人工确认门槛 | 旧规则会把 JEV 已倾向支持的明确条目交给作者。支持达到 0.85 可采用，异议达到 0.95 才视为明确异议。较弱异议只有在程序已核实完整原文、字段和方向时才能直接处理。保留真实范围冲突、明确待定的条件和无法核实的规则。 | [JEV 阈值](../../tools/test_eligibility_hybrid_review.py) · [证据核对与作者决定](../../tests/eligibility/semantic-repair.cjs) |
 | `progress_display` | 工作期间进度停在 0% 或 15%，用户无法判断是否仍在运行。工作期间在 Criteria 下实时显示用时，成功后保存并显示本次耗时。 | [用时显示](../../tests/eligibility/wait-progress.cjs) |
-| `service_availability` | 上游服务超时或缺少判定时，曾为每个未核对条目生成一个作者任务。仅对缺少服务判定的条目自动重试一次。若仍无法完成，页面显示一条服务提示。[部分恢复及服务故障](../../tests/eligibility/semantic-repair.cjs) | [传输层](../../tools/test_eligibility_transport.py) · [用户可见错误](../../tests/eligibility/semantic-error-display.cjs) |
+| `service_availability` | 上游服务超时或缺少判定时，曾为每个未核对条目生成一个作者任务。Jev 缺少判定时，只重试该条一次。仍缺则略过该条，记录服务异常并继续写入已通过的规则。 | [生成、略过与计数](../../tests/eligibility/manual-generation.cjs) · [服务端记录本](../../tools/test_eligibility_notebook.py) |
 | `residual_validation` | 程序发现尚未归入具体技巧的校验错误。累计发生运行次数，待可复现后分配更具体的记录代码。 | [校验不变量](../../tests/eligibility/invariants.cjs) |
 
 ## 一次运行如何反馈到下一次
@@ -42,3 +42,9 @@
 2. 程序在生成成功或失败时记录能由验证器或实际修正识别的类别。同一类别在一次运行内只计一次；一次运行可以命中多个类别。作者决定及原文自身的歧义不作为模型犯错的证据。界面类历史问题保留在表内，其回归测试负责发现重现。
 3. 项目反馈只保存版本、固定类别和计数。它随 Criteria Clear 一起删除。所有项目共用的版本库笔记只记通用方法；模型通过推理时读取技巧来利用反馈。
 4. 出现新的错误模式时，在这里登记触发条件、错误表现、处理办法和一条可重现的回归检查；需要模型提示时，把经过核实的一句通用技巧和匹配条件增补到运行时代码。新增例子使用不含项目内容的最小合成材料，复现正例，并覆盖最容易误伤的反例。[提示与清除回归](../../tests/eligibility/learning-notebook.cjs)
+
+## 服务端记录
+
+本地模型后端将服务错误和 Jev 缺少判定的次数写入 `private/eligibility-criteria/notebook/YYYY-MM-DD.jsonl`。每天一个文件，按 UTC 归档。每条包含时间、阶段、固定代码和数量。日志以模型请求为单位，因此同一候选重试时可能有两条。项目计数以生成操作为单位，每类只计一次。研究原文、模型自由文本和作者答复留在各自的当前项目记录；服务日志供维护时排查，后续提示仍使用记录本中经过验证的固定技巧。
+
+[服务端写入模块](../../tools/eligibility_notebook.py) · [返回结果与日志验证](../../tools/test_eligibility_notebook.py) · [工具保存位置](README.md)

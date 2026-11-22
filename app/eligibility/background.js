@@ -347,6 +347,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   const observed=new Set(),lessonCounts=Lessons?.readCounts(storage,keys.lessons)||{};
   try{
    const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress,lessonCounts,onLesson:code=>observed.add(code)});
+   if(result.incomplete_review)observed.add('service_availability');
    requireEpoch(storage,projectId,saved.criteria_epoch);
    onProgress?.('Validating eligibility criteria…',{phase:'validate'});
    project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;

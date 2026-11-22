@@ -2,6 +2,8 @@
 
 The full supplied specification is preserved in [eligibility-spec.md](eligibility-spec.md). The established input and criteria interface is the production frontend. The implementation retains the project's static HTML, JavaScript/CSS, browser project storage, and existing Python/Ollama or authenticated online model transport.
 
+The [Eligibility Criteria maintenance folder](../technical-roadmaps/eligibility-criteria/README.md) links the workflow, execution skills, error and feedback notebook, and the project and service storage locations.
+
 ## User workflow
 
 Open a registered project's Eligibility criteria tool. The previous layout and controls are retained: Machine/Manual generate, research question, document/image attachments, voice input, Generate/Stop, Review topic, Inclusion, Exclusion, Description, inline editing, Save/Clear and Word export.

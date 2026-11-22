@@ -111,8 +111,9 @@ class HybridReviewTest(unittest.TestCase):
                                  'quote': 'Adults', 'heading': {'source_id': 'S1', 'quote': 'Eligibility'}})
 
     def test_single_review_never_accepts_unchecked_or_low_confidence_items(self):
-        rows, _ = self.single_review(dict(c0=('supported', .7), c1=(None, 0)))
+        rows, audit = self.single_review(dict(c0=('supported', .7), c1=(None, 0)))
         self.assertEqual([row['reviewer']['verdict'] for row in rows], ['low_confidence', 'unavailable'])
+        self.assertEqual(audit['typesafe_unavailable'], 1)
         rows, _ = self.single_review(dict(c0=('wrong_field', .7), c1=('wrong_field', .99)))
         self.assertEqual([row['reviewer']['verdict'] for row in rows], ['low_confidence', 'wrong_field'])
         self.assertEqual(rows[0]['reviewer']['original_verdict'], 'wrong_field')
@@ -120,8 +121,9 @@ class HybridReviewTest(unittest.TestCase):
         rows, _ = self.single_review(outage=True)
         self.assertTrue(all(row['status'] == 'uncertain' and row['reviewer']['verdict'] == 'unavailable' for row in rows))
         self.items[1]['source_occurrence_pending'] = True
-        rows, _ = self.single_review(dict(c0=('supported', 1)))
+        rows, audit = self.single_review(dict(c0=('supported', 1)))
         self.assertEqual(rows[1]['reviewer']['verdict'], 'ambiguous')
+        self.assertEqual(audit['typesafe_unavailable'], 0)
 
     def test_single_review_uses_separate_support_and_objection_thresholds(self):
         rows, _ = self.single_review(dict(c0=('supported', .85), c1=('supported', .84)))

@@ -45,7 +45,7 @@ function errorLesson(error){
  }
  if(['NUMERIC_SCOPE_CHANGE','TEXT_VALUE_MISMATCH','UNSUPPORTED_NUMBER'].includes(code))return 'source_fidelity';
  if(/^(?:SEMANTIC_REVIEW_FAILED|QUOTE_.*|SOURCE_MISMATCH|UNSUPPORTED_.*)$/.test(code))return 'source_fidelity';
- if(/^(?:MODEL_UPSTREAM_ERROR|MODEL_UNAVAILABLE|MODEL_BUSY|MODEL_TIMEOUT)$/.test(code))return 'service_availability';
+ if(/^(?:MODEL_UPSTREAM_ERROR|MODEL_UNAVAILABLE|MODEL_BUSY|MODEL_TIMEOUT|MODEL_REVIEW_INCOMPLETE)$/.test(code))return 'service_availability';
  if(['MODEL_SCHEMA_ERROR','MODEL_INVALID_JSON','INVALID_STRUCTURE','INVALID_ENUM'].includes(code)||
   error?.name==='EligibilityError'&&['schema','normalization','provenance','extract_elements','review_normalization','repair_candidate_wording','logic'].includes(error.step))return 'residual_validation';
  return null;

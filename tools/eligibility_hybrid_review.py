@@ -253,6 +253,7 @@ def _review_once(envelope, messages):
             'provider': 'typesafe', 'model': actual_model or 'Jev',
             'review': {'version': VERSION, 'policy': 'jev-once-v1', 'typesafe_checked': checked,
                        'typesafe_accepted': sum(r['status'] == 'supported' for r in reviewed),
+                       'typesafe_unavailable': sum(r['reviewer']['verdict'] == 'unavailable' for r in reviewed),
                        'local_reviewed': 0, 'typesafe_ms': round((time.monotonic() - started)*1000),
                        'fallback_reason': fallback}}
 

@@ -51,6 +51,7 @@ import eligibility_hybrid_review
 import eligibility_hybrid_answer
 import eligibility_transport
 import eligibility_legacy_citations
+import eligibility_notebook
 from model_service_errors import public_error
 import fulltext_sources
 import fulltext_assistant
@@ -63,6 +64,7 @@ import urllib.error
 import urllib.request
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import urlsplit
 
 SERVICE = "aimstep-local-eligibility"
@@ -263,8 +265,9 @@ class Handler(SimpleHTTPRequestHandler):
     server_version = "AIMSTEP-local/1"
 
     def __init__(self, *args, model, ollama, port, log_dir=None, allowed_origins=(), embed_model=DEFAULT_EMBED_MODEL,
-                 embed_ollama=None, **kwargs):
+                 embed_ollama=None, notebook_dir=None, **kwargs):
         self.model, self.ollama, self.port, self.log_dir, self.embed_model = model, ollama, port, log_dir, embed_model
+        self.notebook_dir = notebook_dir
         # Embeddings may come from a second Ollama: while the chat model is busy
         # with parallel requests, Ollama does not schedule a second model.
         self.embed_ollama = embed_ollama or ollama
@@ -340,6 +343,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self._send_json(200 if ok else 503, {
                 "service": SERVICE if ok else SERVICE + "-unavailable",
                 "model": self.model, "ollama": self.ollama, "status": msg,
+                "eligibilityNotebook": self.notebook_dir is not None,
                 "embedModel": self.embed_model if embed_ok else "",
                 "typesafe": {"available": True, "configured": typesafe_model.configured(), "version": typesafe_model.VERSION,
                              "eligibilityReview": eligibility_hybrid_review.VERSION,
@@ -400,7 +404,12 @@ class Handler(SimpleHTTPRequestHandler):
                 raise BadRequest("Unknown model provider")
         except (ValueError, BadRequest) as e:
             return self._send_json(400, {"error": str(e)})
-        criteria = payload.get('workflow') == 'eligibility-criteria' or payload.get('task') in (eligibility_hybrid_review.TASK, eligibility_hybrid_answer.TASK)
+        task = payload.get('task')
+        stages = {eligibility_hybrid_review.TASK: 'source_review', eligibility_hybrid_answer.TASK: 'author_answer'}
+        stage = stages.get(task) if isinstance(task, str) else None
+        if stage is None and payload.get('workflow') == 'eligibility-criteria':
+            stage = 'transcription' if any(message.get('images') for message in messages) else 'local_model'
+        criteria = stage is not None
         started = time.time()
         attempts = []
         seed = 42 if criteria else None
@@ -418,21 +427,21 @@ class Handler(SimpleHTTPRequestHandler):
             else:
                 reply = (api_model.chat(messages, key=api_key) if api_key is not None else api_model.chat(messages)) if provider == "api" else local_chat(messages)
         except eligibility_legacy_citations.ClientUpdateRequired:
-            return self._model_error('MODEL_CLIENT_UPDATE_REQUIRED')
+            return self._model_error('MODEL_CLIENT_UPDATE_REQUIRED', stage)
         except (eligibility_transport.IdentityError, eligibility_transport.OutputSyntaxError):
-            return self._model_error('MODEL_SCHEMA_ERROR')
+            return self._model_error('MODEL_SCHEMA_ERROR', stage)
         except eligibility_hybrid_review.ReviewInputError:
-            return self._model_error('MODEL_REQUEST_INVALID')
+            return self._model_error('MODEL_REQUEST_INVALID', stage)
         except eligibility_hybrid_review.ReviewOutputError:
-            return self._model_error('MODEL_REVIEW_INCOMPLETE')
+            return self._model_error('MODEL_REVIEW_INCOMPLETE', stage)
         except (ValueError, KeyError, TypeError, AttributeError) as e:
             if criteria:
-                return self._model_error('MODEL_UPSTREAM_ERROR')
+                return self._model_error('MODEL_UPSTREAM_ERROR', stage)
             return self._send_json(502, {"error": str(e) if provider == "local" else "API request failed: " + str(e)})
         except urllib.error.HTTPError as e:
             if criteria:
                 code = {408: 'MODEL_TIMEOUT', 429: 'MODEL_BUSY', 503: 'MODEL_UNAVAILABLE', 504: 'MODEL_TIMEOUT'}
-                return self._model_error(code.get(e.code, 'MODEL_UPSTREAM_ERROR'))
+                return self._model_error(code.get(e.code, 'MODEL_UPSTREAM_ERROR'), stage)
             if provider == "api":
                 return self._send_json(502, {"error": "API provider returned HTTP %d. Check server credentials, quota and model compatibility." % e.code})
             detail = e.read().decode("utf-8", "replace")[:300]
@@ -444,12 +453,16 @@ class Handler(SimpleHTTPRequestHandler):
         except (urllib.error.URLError, OSError) as e:
             if criteria:
                 if isinstance(getattr(e, 'reason', e), TimeoutError):
-                    return self._model_error('MODEL_TIMEOUT')
-                return self._model_error('MODEL_UNAVAILABLE')
+                    return self._model_error('MODEL_TIMEOUT', stage)
+                return self._model_error('MODEL_UNAVAILABLE', stage)
             return self._send_json(502, {"error": "API provider is unreachable or timed out." if provider == "api" else "Ollama is not reachable: %s" % e})
         used_model = api_model.config()["model"] if provider == "api" else reply.get("model", self.model)
         used_provider = reply.get("provider", provider)
         content = reply.get("message", {}).get("content", "")
+        if stage == 'source_review':
+            missing = reply.get('review', {}).get('typesafe_unavailable', 0)
+            if missing:
+                eligibility_notebook.record_error(self.notebook_dir, stage, 'MODEL_REVIEW_INCOMPLETE', missing)
         # Structured Criteria calls from older clients already carry a transport
         # or hybrid response. The workflow marker also covers image transcription.
         if not criteria and 'transport' not in reply:
@@ -464,7 +477,9 @@ class Handler(SimpleHTTPRequestHandler):
                                      **({"review": reply["review"]} if "review" in reply else {}),
                                      **({"transport": reply["transport"]} if "transport" in reply else {})})
 
-    def _model_error(self, code):
+    def _model_error(self, code, stage):
+        if stage:
+            eligibility_notebook.record_error(self.notebook_dir, stage, code)
         self.log_message('model failure code=%s', code)
         return self._send_json(*public_error(code))
 
@@ -530,9 +545,12 @@ def main(argv=None):
 
     allowed = DEFAULT_ALLOWED_ORIGINS if args.allow_origin is None else \
         tuple(o for o in args.allow_origin if o.lower() != "none")
+    notebook_dir = eligibility_notebook.DIRECTORY.resolve()
+    if notebook_dir.is_relative_to(Path(args.root).resolve()):
+        notebook_dir = None  # The private notebook must stay outside the served site.
     handler = partial(Handler, directory=args.root, model=args.model, ollama=ollama, port=args.port,
                       log_dir=args.log_dir, allowed_origins=allowed, embed_model=args.embed_model,
-                      embed_ollama=embed_ollama)
+                      embed_ollama=embed_ollama, notebook_dir=notebook_dir)
     httpd = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
     fulltext_assistant.instance()
     print("AIM-STEP 本地站点：http://127.0.0.1:%d/eligibility.html   (Ctrl+C 停止)" % args.port)
