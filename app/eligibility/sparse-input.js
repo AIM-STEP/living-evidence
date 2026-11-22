@@ -31,22 +31,42 @@ const comparisonCue=/\b(?:versus|vs\.?\s|compar(?:e[ds]?|ing) (?:with|to))\b|与
 const objectiveCue=/\b(?:to (?:assess|evaluate|determine|examine)|(?:benefits?|effects?|effectiveness|efficacy) of)\b|旨在(?:评估|评价)/iu;
 const comparisonLead=/^\s*(?:compar(?:ed|ing) (?:with|to)\b|对照(?:为|是))/iu;
 const participantScope=/\b(?:among|in|for)\s+(?:(?:older|young|hospitali[sz]ed|pregnant)\s+)?(?:adults?|children|patients?|people|infants?|participants?)\b/iu;
+const formSections=/^(?:Inclusion criteria|Exclusion criteria|Conditions and exceptions):[ \t]*(?=\r?$)/gmu;
+const formStart=/^(?:Inclusion criteria|Exclusion criteria|Conditions and exceptions):[ \t]*\r?\n/u;
+function labelRanges(text,dimension){
+ const field=new RegExp('^[ \\t]*(?:'+labels[dimension]+')[ \\t]*[:：=][ \\t]*','gimu');
+ return [...text.matchAll(formSections),...text.matchAll(field)].map(match=>{
+  const start=Array.from(text.slice(0,match.index)).length;
+  return {start,end:start+Array.from(match[0]).length};
+ });
+}
+function maskRanges(text,ranges){
+ return Array.from(text,(char,index)=>ranges.some(ref=>index>=ref.start&&index<ref.end)?' ':char).join('');
+}
 function suppliedDimension(question,elements){
  const registration=question.context.registration;
- const source=question.source_refs?.[0],text=question.original_text.trim();
- if(!registration||!source||question.document_input_only||question.additional_source_refs?.length||question.imported_source_refs?.length||
-    Array.from(text).length>180||(text.match(/[\p{L}\p{N}]+/gu)||[]).length>24)return null;
+ const source=question.source_refs?.[0],original=question.original_text;
+ if(!registration||!source||question.document_input_only||question.additional_source_refs?.length||question.imported_source_refs?.length)return null;
  const cited=elements.filter(e=>e.information_status!=='missing'&&e.source_refs?.length&&e.semantic_role!=='background_information');
  const [dimension,...other]=new Set(cited.map(rootDimension));
  if(!dimension||other.length||!Object.hasOwn(labels,dimension))return null;
+ const formatted=formStart.test(original.trimStart());
+ if(formatted&&/^Additional limits:[ \t]*\r?$/mu.test(original))return null;
+ // The manual editor adds headings around the author's wording. Ignore
+ // those headings for coverage and length while keeping original quote offsets.
+ const headings=formatted?labelRanges(original,dimension):[];
+ const body=formatted?maskRanges(original,headings):original;
+ const text=body.trim();
+ if(Array.from(formatted?text.replace(/\s+/gu,' '):text).length>180||(text.match(/[\p{L}\p{N}]+/gu)||[]).length>24)return null;
  const fieldLabel=new RegExp('^\\s*(?:'+labels[dimension]+')\\s*[:：=]','iu');
+ const labelled=formatted||fieldLabel.test(text);
  const comparisonText=dimension==='comparator'?text.replace(fieldLabel,'').replace(comparisonLead,''):text;
- if((text.match(fieldHeadings)||[]).length>1||comparisonCue.test(comparisonText)||!fieldLabel.test(text)&&objectiveCue.test(text))return null;
+ if((text.match(fieldHeadings)||[]).length>(formatted?0:1)||comparisonCue.test(comparisonText)||!labelled&&objectiveCue.test(text))return null;
  if(['population','sample'].includes(dimension)&&/\b(?:receiving|received|assigned to|treated with|randomi[sz]ed to)\b|接受.{1,15}(?:治疗|干预)/iu.test(text))return null;
- if(['intervention','comparator','exposure','outcome'].includes(dimension)&&!fieldLabel.test(text)&&participantScope.test(text))return null;
+ if(['intervention','comparator','exposure','outcome'].includes(dimension)&&!labelled&&participantScope.test(text))return null;
  const ranges=cited.flatMap(e=>e.source_refs).filter(ref=>ref.source_id===source.source_id&&ref.source_revision===source.source_revision);
- const remainder=Array.from(question.original_text,(char,index)=>ranges.some(ref=>index>=ref.start&&index<ref.end)?' ':char).join('');
- const valueOnly=remainder.replace(fieldLabel,'');
+ const remainder=maskRanges(original,[...ranges,...headings]);
+ const valueOnly=formatted?remainder:remainder.replace(fieldLabel,'');
  const rest=(dimension==='comparator'?valueOnly.replace(comparisonLead,''):valueOnly).replace(/^(?:\s*(?:we\s+(?:will\s+)?)?(?:only\s+)?(?:includ(?:e|ed)|exclud(?:e|ed))\b|\s*(?:仅纳入|不纳入|纳入|排除))/iu,'')
   .replace(/\b(?:and|or|only|among|in|the|of)\b|以及|或者|仅|和|或/giu,'');
  return ranges.length&&!/[\p{L}\p{N}]/u.test(rest)?dimension:null;

@@ -18,6 +18,9 @@ BLUE_PALE = '#eaf1f8'
 ADVICE = '#514273'
 ADVICE_LINE = '#78699e'
 ADVICE_PALE = '#f2edf8'
+REVIEW = '#78490b'
+REVIEW_LINE = '#a46d26'
+REVIEW_PALE = '#fff2dd'
 SKIP = '#485c66'
 SKIP_PALE = '#edf1f3'
 RULE = '#cbd8d5'
@@ -29,7 +32,7 @@ def font(size, bold=False):
 
 
 def render(output):
-    image = Image.new('RGB', (1824, 1766), '#f7faf8')
+    image = Image.new('RGB', (1824, 1949), '#f7faf8')
     draw = ImageDraw.Draw(image)
 
     def text(x, y, value, size, color=INK, *, bold=False, max_width=None):
@@ -68,18 +71,20 @@ def render(output):
          border=BLUE_PALE, accent=BLUE, title_size=33)
 
     for start, end in [(330, 358), (473, 512), (781, 816),
-                       (960, 997), (1114, 1150), (1260, 1312)]:
+                       (960, 997), (1114, 1150), (1260, 1495)]:
         arrow([(478, start), (478, end)])
     draw.line([(1326, 631), (1326, 649), (478, 649)], fill=BLUE_LINE, width=5, joint='curve')
     arrow([(478, 631), (478, 668)])
     arrow([(866, 1057), (907, 1057)], SKIP)
-    arrow([(866, 1205), (925, 1205)], ADVICE_LINE)
-    arrow([(1326, 1285), (1326, 1312)], ADVICE_LINE)
+    arrow([(866, 1179), (925, 1179)], REVIEW_LINE)
+    arrow([(1728, 1207), (1760, 1207), (1760, 1555), (1728, 1555)], REVIEW_LINE)
+    arrow([(866, 1232), (890, 1232), (890, 1390), (925, 1390)], ADVICE_LINE)
+    arrow([(1326, 1466), (1326, 1495)], ADVICE_LINE)
     for start, end in [(330, 358), (473, 512)]:
         arrow([(1326, start), (1326, end)], BLUE_LINE)
-    arrow([(474, 1431), (474, 1475)])
-    arrow([(1326, 1431), (1326, 1475)])
-    arrow([(96, 1548), (65, 1548), (65, 1372), (96, 1372)])
+    arrow([(474, 1614), (474, 1658)])
+    arrow([(1326, 1614), (1326, 1658)])
+    arrow([(96, 1731), (65, 1731), (65, 1555), (96, 1555)])
 
     card(96, 358, 770, 115, '一次性提交研究问题', ('支持文本、语音或附件，也可只提供一个要素',))
     card(96, 512, 770, 119, '读取来源', ('读取文本和文档，转写图片、扫描页并记录出处',))
@@ -92,33 +97,38 @@ def render(output):
     card(907, 994, 470, 124, '略过未通过或未获判定的条目',
          ('明确不符合时略过该条，继续核对。', '缺少判定只重试该条一次，仍缺则略过。'),
          fill=SKIP_PALE, border='#d1dce1', accent=SKIP, title_size=26, body_size=21)
-    text(495, 1120, '通过核对', 23, TEAL, bold=True)
-    card(96, 1150, 770, 110, '通过项直接写入纳排标准', ('原文有歧义的候选单独交作者确认',))
+    card(96, 1150, 770, 110, '汇总核对结果', ('通过项直接写入纳排标准，待核对项单独列出。',))
 
-    card(925, 1129, 803, 156, '机器端短问题 · 可选补充建议',
-         ('已登记项目的短问题仅覆盖一个框架要素时触发。',
-          '按框架提示最多两个待补要素，并附方法学出处。',
+    card(925, 1129, 803, 156, '何时需要人工核对',
+         ('原文有歧义、冲突，或引文语境无法确定。',
+          '框架、纳排方向，或「或」关系与例外的适用范围未定。',
+          '受影响的条目须经作者确认后才能用于筛选。'),
+         fill=REVIEW_PALE, border='#e4c996', accent=REVIEW, title_size=31, body_size=25)
+
+    card(925, 1310, 803, 156, '短问题 · 可选补充建议',
+         ('已登记项目的单要素短问题，两种输入均可触发。',
+          '最多提示两个缺失要素，并附方法学出处。',
           '可采纳、补写或跳过。作者确认后才成为规则。'),
          fill=ADVICE_PALE, border='#d9cde8', accent=ADVICE, title_size=31, body_size=25)
 
-    card(925, 358, 803, 115, '作者逐项填写研究问题', ('选择框架，按字段填写纳入、排除与例外',), accent=BLUE)
+    card(925, 358, 803, 115, '作者逐项填写研究问题', ('选择框架，可只填一个要素，也可逐项填写',), accent=BLUE)
     card(925, 512, 803, 119, '点击 Generate', ('将各字段的手填内容作为原始材料提交',), accent=BLUE)
 
-    card(96, 1312, 1632, 119, 'Criteria 预览',
+    card(96, 1495, 1632, 119, 'Criteria 预览',
          ('Review topic 与 Framework     ·     Inclusion 与 Exclusion     ·     Description',),
          fill=TEAL_PALE, border='#aacbc0', title_size=35, body_size=30)
-    card(96, 1475, 770, 170, '作者核查与编辑',
+    card(96, 1658, 770, 170, '作者核查与编辑',
          ('逐项采纳、改写或舍弃，也可直接编辑正文。',
           '待确认项由作者处理后直接生效。'))
-    card(925, 1475, 803, 170, '保存、导出与交接',
+    card(925, 1658, 803, 170, '保存、导出与交接',
          ('按项目保存，支持 Word 导出与 Search strategy 交接。',
           '筛选使用已生效的纳入与排除条件。',
           '结局仅在原文明确要求测量或报告时用于筛选。'),
          body_size=27)
 
-    draw.line((96, 1675, 1728, 1675), fill=RULE, width=2)
-    text(96, 1695, 'AIM-STEP   /   2026-11-22', 24, MUTED, bold=True)
-    text(610, 1695, 'release 40 · 两种输入共用后续处理', 24, MUTED,
+    draw.line((96, 1858, 1728, 1858), fill=RULE, width=2)
+    text(96, 1878, 'AIM-STEP   /   2026-11-22', 24, MUTED, bold=True)
+    text(610, 1878, 'release 41 · 两种输入共用后续处理', 24, MUTED,
          max_width=1118)
 
     output.parent.mkdir(parents=True, exist_ok=True)

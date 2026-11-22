@@ -6,7 +6,7 @@ const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
 const presentationVersion='framework-display-v12';
 // Bump when eligibility semantics change. Presentation updates can use the saved evidence.
-const generationVersion='20261122-criteria-release-40';
+const generationVersion='20261122-criteria-release-41';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){
@@ -144,7 +144,7 @@ function projectToClassic(project,registry,editBindings){
   if(issue.method_advice){
    const domain=field?.(issue.method_advice.dimension);
    if(!domain)return [];
-   return {item:issue.question_text,text:issue.question_text,kind:'proposal',domain,side:'include',status:'suggested',backgroundIssue:true,
+   return {item:issue.question_text,text:issue.question_text,kind:'proposal',domain,side:'include',status:'suggested',backgroundIssue:true,reviewOnly:true,
     locations:[{section:'include',domain}],issue_id:issue.issue_id,methodAdvice:{rationale:issue.scope_impact,references:issue.method_advice.references},
     questionNumber:multiple?output.questions.find(q=>q.question_id===issue.question_id)?.display_number:null,
     options:authorChoices(issue).map(({label,option_id})=>({label,option_id}))};

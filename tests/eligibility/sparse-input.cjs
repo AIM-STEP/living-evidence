@@ -12,7 +12,7 @@ function eligibilityElement(candidate_id,dimension_id,quote,source){
   semantic_role:'eligibility_condition',information_status:'explicit',scope_status:'restricted',disposition:'include'};
 }
 
-test('a registered intervention review offers source-linked protocol advice only on the sparse path',async()=>{
+for(const method of ['machine','manual'])test(`a registered intervention review offers optional advice for sparse ${method} input`,async()=>{
  const page=setup(),calls=[];
  const record={id:'synthetic-grounding',name:'Effects of exercise-based cardiac rehabilitation in coronary heart disease: a meta-analysis',project_type:'systematic',question_type:'effectiveness',area_of_research:'med'};
  page.ctx.window.AIMSTEP={projectController:{state:()=>({projects:[record]})}};
@@ -25,7 +25,7 @@ test('a registered intervention review offers source-linked protocol advice only
   if(step==='extract_elements'){
    const q=payload.question,source=q.sources[0];
    assert.equal(q.context.registration.title,record.name);
-   assert.equal(source.original_text,population);
+   assert.equal(source.original_text,method==='manual'?'Inclusion criteria:\nPopulation: '+population:population);
    answer={questions:[{question_id:q.question_id,review_topic:population,framework_candidates:['pcc'],
     elements:[eligibilityElement('p','population',population,source)],issues:[],logic:{op:'predicate',element_id:'p'}}]};
   }else{
@@ -35,16 +35,25 @@ test('a registered intervention review offers source-linked protocol advice only
   }
   return {ok:true,json:async()=>({message:{content:JSON.stringify(answer)},...(step==='review_normalization'?{provider:'typesafe',review:{policy:'jev-once-v1'}}:{})})};
  },'backend');
- page.el('generation-method').value='machine';page.el('generation-method').handlers.change();page.el('question').value=population;
- await page.el('start-machine').handlers.click();
- assert.equal(page.el('generation-status').textContent,'');
+ page.el('generation-method').value=method;page.el('generation-method').handlers.change();
+ if(method==='manual'){
+  page.api.state().manualFramework='PICOS';
+  page.api.state().criteria=[{title:'Population',condition:population}];
+  page.api.fill();
+ }else page.el('question').value=population;
+ await page.el(method==='manual'?'refine-manual':'start-machine').handlers.click();
+ assert.equal(page.el(method==='manual'?'manual-refine-status':'generation-status').textContent,'');
  const refinement=()=>page.api.state().machineRefinement;
  assert.equal(refinement().framework,'PICOS');
  assert.deepEqual(Array.from(refinement().rows,r=>r.dimension),['Population']);
  assert.deepEqual(Array.from(refinement().sourceConfirmations,d=>d.domain),['Intervention','Study design']);
+ assert(refinement().sourceConfirmations.every(d=>d.reviewOnly&&d.methodAdvice));
  assert.match(page.el('preview').innerHTML,/Cochrane Handbook/);
  assert.match(page.el('preview').innerHTML,/Exercise-based cardiac rehabilitation/);
  assert.doesNotMatch(Buffer.from(page.api.export()).toString(),/Which study designs|Randomised controlled trials/);
+ const completionKey='aimstep-setup-completed:'+record.id;
+ page.api.navigate({preventDefault:()=>assert.fail('Optional advice must not stop navigation')});
+ assert.deepEqual(JSON.parse(page.storage.get(completionKey)),[1]);
  page.api.denyModelAccess();
  assert(await page.api.confirm(1,0));
  assert.equal(refinement().rows.find(r=>r.dimension==='Study design').include[0],'Randomised controlled trials (RCTs)');
@@ -86,6 +95,8 @@ test('the registered purpose controls advice and complete source coverage takes 
  assert.equal(generate({text:population+' receiving exercise training.',extra:[['intervention','exercise training']]}).classic.sourceConfirmations.length,0);
  assert.equal(generate({text:population+' receiving exercise training.'}).classic.sourceConfirmations.length,0);
  assert.equal(generate({text:'Population: '+population+'; Intervention: Exercise training'}).classic.sourceConfirmations.length,0);
+ assert.equal(generate({text:'Inclusion criteria:\nPopulation: '+population+'\nIntervention: Exercise training'}).classic.sourceConfirmations.length,0);
+ assert.equal(generate({text:'Inclusion criteria:\nPopulation: '+population+'\n\nAdditional limits:\nLanguage: English'}).classic.sourceConfirmations.length,0);
 });
 
 test('suggest the missing fields for any supported single-field input',async()=>{
