@@ -1,6 +1,6 @@
 # Eligibility Criteria 技术流程图
 
-![两种输入共用提取、核对与交接流程，并可触发单要素短问题建议。图中标明何时需要作者核对。](figures/eligibility-workflow.png)
+![机器与人工输入汇合后，候选逐条核对并分别写入标准、交作者确认或略过。两种输入都可触发短问题建议，已生效规则进入下游筛选。](figures/eligibility-workflow.png)
 
 [打开高清 PNG](figures/eligibility-workflow.png) · [制图源码](sources/workflow.py)
 

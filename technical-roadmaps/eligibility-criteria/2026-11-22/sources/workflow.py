@@ -1,4 +1,4 @@
-"""Render the workflow PNG with Pillow and Hiragino Sans GB (macOS)."""
+"""Render the published workflow PNG with Pillow and Hiragino Sans GB."""
 
 from functools import lru_cache
 from pathlib import Path
@@ -7,23 +7,25 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 FONT_PATH = '/System/Library/Fonts/Hiragino Sans GB.ttc'
-INK = '#152b33'
-MUTED = '#42585e'
-TEAL = '#14594f'
-TEAL_LINE = '#39796d'
-TEAL_PALE = '#e4f2ed'
-BLUE = '#244d76'
-BLUE_LINE = '#507397'
-BLUE_PALE = '#eaf1f8'
-ADVICE = '#514273'
-ADVICE_LINE = '#78699e'
-ADVICE_PALE = '#f2edf8'
-REVIEW = '#78490b'
-REVIEW_LINE = '#a46d26'
-REVIEW_PALE = '#fff2dd'
-SKIP = '#485c66'
-SKIP_PALE = '#edf1f3'
-RULE = '#cbd8d5'
+PAPER = '#f8faf9'
+INK = '#192f37'
+BODY = '#354e58'
+RULE = '#c9d9d6'
+TEAL = '#17564d'
+TEAL_LINE = '#397669'
+TEAL_PALE = '#e5f3ee'
+BLUE = '#244d77'
+BLUE_LINE = '#52769a'
+BLUE_PALE = '#eaf2fa'
+AMBER = '#74470b'
+AMBER_LINE = '#92621e'
+AMBER_PALE = '#fff3db'
+VIOLET = '#55427c'
+VIOLET_LINE = '#7965a0'
+VIOLET_PALE = '#f2edf9'
+SLATE = '#435b66'
+SLATE_LINE = '#667c85'
+SLATE_PALE = '#edf1f3'
 
 
 @lru_cache
@@ -32,104 +34,121 @@ def font(size, bold=False):
 
 
 def render(output):
-    image = Image.new('RGB', (1824, 1949), '#f7faf8')
+    image = Image.new('RGB', (1840, 2320), PAPER)
     draw = ImageDraw.Draw(image)
 
-    def text(x, y, value, size, color=INK, *, bold=False, max_width=None):
+    def text(x, y, value, size, color=INK, *, bold=False, width=None):
         face = font(size, bold)
-        if max_width is not None and draw.textlength(value, font=face) > max_width:
+        if width is not None and draw.textlength(value, font=face) > width:
             raise ValueError(f'Text exceeds its allotted width: {value}')
         draw.text((x, y), value, fill=color, font=face, anchor='lt')
 
-    def arrow(points, color=TEAL_LINE):
+    def card(x, y, width, height, title, lines, *, fill='#ffffff',
+             outline=RULE, heading=TEAL, title_size=38, body_size=30):
+        draw.rounded_rectangle((x, y, x + width, y + height), radius=22,
+                               fill=fill, outline=outline, width=2)
+        inset = 28
+        text(x + inset, y + 20, title, title_size, heading, bold=True,
+             width=width - 2 * inset)
+        body_y = y + 30 + title_size
+        if body_y + (len(lines) - 1) * (body_size + 9) + body_size > y + height - 12:
+            raise ValueError(f'Text exceeds its allotted height: {title}')
+        for index, line in enumerate(lines):
+            text(x + inset, body_y + index * (body_size + 9), line, body_size, BODY,
+                 width=width - 2 * inset)
+
+    def connector(points, color=TEAL_LINE, *, arrowhead=True):
         draw.line(points, fill=color, width=5, joint='curve')
+        if not arrowhead:
+            return
         (previous_x, previous_y), (x, y) = points[-2:]
         if previous_x == x:
             direction = 1 if y > previous_y else -1
-            base = [(x - 9, y - direction * 14), (x + 9, y - direction * 14)]
+            base = [(x - 10, y - 15 * direction), (x + 10, y - 15 * direction)]
         else:
             direction = 1 if x > previous_x else -1
-            base = [(x - direction * 14, y - 9), (x - direction * 14, y + 9)]
+            base = [(x - 15 * direction, y - 10), (x - 15 * direction, y + 10)]
         draw.polygon([(x, y), *base], fill=color)
 
-    def card(x, y, width, height, title, lines=(), *, fill='white',
-             border=RULE, accent=TEAL, title_size=33, body_size=29):
-        draw.rounded_rectangle((x, y, x + width, y + height), radius=18,
-                               fill=fill, outline=border, width=2)
-        text(x + 24, y + 17, title, title_size, accent, bold=True, max_width=width - 48)
-        for index, line in enumerate(lines):
-            text(x + 24, y + 24 + title_size + index * (body_size + 8), line,
-                 body_size, MUTED, max_width=width - 48)
+    text(96, 72, 'Eligibility Criteria 技术流程图', 70, bold=True, width=1648)
+    text(100, 170, '从研究问题到可用于检索和筛选的纳入与排除标准', 33, BODY)
+    draw.line((96, 229, 1744, 229), fill=RULE, width=2)
 
-    text(96, 72, 'Eligibility Criteria 技术流程图', 64, bold=True)
-    text(98, 158, '从研究输入到可供检索和筛选使用的纳入与排除标准', 32, MUTED)
-    draw.line((96, 222, 1728, 222), fill=RULE, width=2)
+    # The input paths meet before any extraction or source review.
+    connector([(495, 418), (495, 441), (920, 441)], arrowhead=False)
+    connector([(1345, 418), (1345, 441), (920, 441)], BLUE_LINE, arrowhead=False)
+    for start, end in [(441, 464), (596, 632), (784, 820)]:
+        connector([(920, start), (920, end)])
 
-    card(96, 258, 770, 72, '机器生成   Machine generate', fill=TEAL_PALE,
-         border=TEAL_PALE, title_size=35)
-    card(925, 258, 803, 72, '人工生成   Manual generate', fill=BLUE_PALE,
-         border=BLUE_PALE, accent=BLUE, title_size=33)
+    # Branch separately for accepted rules, author decisions and skipped items.
+    connector([(920, 969), (920, 1016)], arrowhead=False)
+    connector([(920, 1016), (356, 1016), (356, 1080)])
+    connector([(920, 1016), (920, 1080)], AMBER_LINE)
+    connector([(920, 1016), (1484, 1016), (1484, 1080)], SLATE_LINE)
+    draw.ellipse((913, 1009, 927, 1023), fill=TEAL_LINE)
+    connector([(356, 1326), (356, 1638)])
+    connector([(920, 1326), (920, 1638)], AMBER_LINE)
 
-    for start, end in [(330, 358), (473, 512), (781, 816),
-                       (960, 997), (1114, 1150), (1260, 1495)]:
-        arrow([(478, start), (478, end)])
-    draw.line([(1326, 631), (1326, 649), (478, 649)], fill=BLUE_LINE, width=5, joint='curve')
-    arrow([(478, 631), (478, 668)])
-    arrow([(866, 1057), (907, 1057)], SKIP)
-    arrow([(866, 1179), (925, 1179)], REVIEW_LINE)
-    arrow([(1728, 1207), (1760, 1207), (1760, 1555), (1728, 1555)], REVIEW_LINE)
-    arrow([(866, 1232), (890, 1232), (890, 1390), (925, 1390)], ADVICE_LINE)
-    arrow([(1326, 1466), (1326, 1495)], ADVICE_LINE)
-    for start, end in [(330, 358), (473, 512)]:
-        arrow([(1326, start), (1326, end)], BLUE_LINE)
-    arrow([(474, 1614), (474, 1658)])
-    arrow([(1326, 1614), (1326, 1658)])
-    arrow([(96, 1731), (65, 1731), (65, 1555), (96, 1555)])
+    # A sparse input can produce optional advice alongside the review result.
+    connector([(1744, 706), (1785, 706), (1785, 1484), (1744, 1484)], VIOLET_LINE)
+    connector([(1484, 1598), (1484, 1638)], VIOLET_LINE)
+    connector([(920, 1809), (920, 1847)])
+    connector([(920, 1979), (920, 2017)])
 
-    card(96, 358, 770, 115, '一次性提交研究问题', ('支持文本、语音或附件，也可只提供一个要素',))
-    card(96, 512, 770, 119, '读取来源', ('读取文本和文档，转写图片、扫描页并记录出处',))
-    card(96, 668, 770, 113, '共用流程 · 提取候选条件', ('本地模型分批提取，候选条目就绪即送核对',))
-    card(96, 816, 770, 144, '标准化框架要素并校验原文',
-         ('本地模型整理框架字段与措辞，保留条件和例外。',
-          '程序定位引文，校验阈值、单位和时间参照。'))
-    card(96, 997, 770, 117, 'TypeSafe Jev 逐条独立核对',
-         ('每次核对一条，判断框架字段、纳排方向和含义。',))
-    card(907, 994, 470, 124, '略过未通过或未获判定的条目',
-         ('明确不符合时略过该条，继续核对。', '缺少判定只重试该条一次，仍缺则略过。'),
-         fill=SKIP_PALE, border='#d1dce1', accent=SKIP, title_size=26, body_size=21)
-    card(96, 1150, 770, 110, '汇总核对结果', ('通过项直接写入纳排标准，待核对项单独列出。',))
+    card(96, 270, 798, 148, '机器生成  Machine generate',
+         ('一次性提交研究问题，可用文本、语音或附件。',
+          '也可只提供一个框架要素。'),
+         fill=TEAL_PALE, outline='#b9d6ce', body_size=29)
+    card(946, 270, 798, 148, '人工生成  Manual generate',
+         ('选定框架，按字段填写纳入、排除及例外。',
+          '也可只填一个框架要素，再点击 Generate。'),
+         fill=BLUE_PALE, outline='#bed0e6', heading=BLUE, body_size=29)
 
-    card(925, 1129, 803, 156, '何时需要人工核对',
-         ('原文有歧义、冲突，或引文语境无法确定。',
-          '框架、纳排方向，或「或」关系与例外的适用范围未定。',
-          '受影响的条目须经作者确认后才能用于筛选。'),
-         fill=REVIEW_PALE, border='#e4c996', accent=REVIEW, title_size=31, body_size=25)
+    card(96, 464, 1648, 132, '准备原始材料',
+         ('保留问题及手填内容，读取附件和扫描件并记录来源。',))
+    card(96, 632, 1648, 152, '提取候选条件并标准化框架要素',
+         ('本地模型按来源分批提取，归入框架字段并规范措辞。',
+          '程序定位原文，校验阈值、单位、时点和例外。'))
+    card(96, 820, 1648, 149, 'TypeSafe Jev 逐条独立核对',
+         ('核对每条的框架字段、纳排方向和规则含义。',
+          '每生成一条候选就核对一条，其他来源可以继续提取。'))
 
-    card(925, 1310, 803, 156, '短问题 · 可选补充建议',
-         ('已登记项目的单要素短问题，两种输入均可触发。',
-          '最多提示两个缺失要素，并附方法学出处。',
-          '可采纳、补写或跳过。作者确认后才成为规则。'),
-         fill=ADVICE_PALE, border='#d9cde8', accent=ADVICE, title_size=31, body_size=25)
+    card(96, 1080, 520, 246, '通过 · 写入标准',
+         ('核对通过的纳排规则直接写入。',
+          '研究关注内容保留在说明中。'),
+         fill=TEAL_PALE, outline='#b9d6ce', title_size=36, body_size=27)
+    card(660, 1080, 520, 246, '需要人工核对',
+         ('原文有歧义、冲突或语境未定。',
+          '框架或纳排方向尚未确定。',
+          '「或」关系或例外的范围未定。',
+          '待确认的条目暂缓用于筛选。'),
+         fill=AMBER_PALE, outline='#e1c394', heading=AMBER, title_size=36, body_size=27)
+    card(1224, 1080, 520, 246, '略过该条',
+         ('原文明确不支持该候选。',
+          '缺少判定时，仅重试该条一次。',
+          '仍无判定则略过，继续核对。'),
+         fill=SLATE_PALE, outline='#cfdbdf', heading=SLATE, title_size=36, body_size=27)
 
-    card(925, 358, 803, 115, '作者逐项填写研究问题', ('选择框架，可只填一个要素，也可逐项填写',), accent=BLUE)
-    card(925, 512, 803, 119, '点击 Generate', ('将各字段的手填内容作为原始材料提交',), accent=BLUE)
+    card(1224, 1370, 520, 228, '短问题 · 可选补充建议',
+         ('两种输入均可触发。',
+          '适用于已登记项目的单要素短问题。',
+          '最多两项建议，附方法学出处。',
+          '可跳过，采纳后写入标准。'),
+         fill=VIOLET_PALE, outline='#d9cdeb', heading=VIOLET, title_size=33, body_size=26)
 
-    card(96, 1495, 1632, 119, 'Criteria 预览',
-         ('Review topic 与 Framework     ·     Inclusion 与 Exclusion     ·     Description',),
-         fill=TEAL_PALE, border='#aacbc0', title_size=35, body_size=30)
-    card(96, 1658, 770, 170, '作者核查与编辑',
-         ('逐项采纳、改写或舍弃，也可直接编辑正文。',
-          '待确认项由作者处理后直接生效。'))
-    card(925, 1658, 803, 170, '保存、导出与交接',
-         ('按项目保存，支持 Word 导出与 Search strategy 交接。',
-          '筛选使用已生效的纳入与排除条件。',
-          '结局仅在原文明确要求测量或报告时用于筛选。'),
-         body_size=27)
+    card(96, 1638, 1648, 171, 'Criteria 预览与作者确认',
+         ('Review topic  ·  Framework  ·  Inclusion  ·  Exclusion  ·  Description',
+          '作者可确认、改写或舍弃待核对条目。确认后的规则直接更新标准和预览。'),
+         fill=TEAL_PALE, outline='#b9d6ce')
+    card(96, 1847, 1648, 132, '保存、导出与检索交接',
+         ('按项目保存，支持 Word 导出，并将生效标准交接至 Search strategy。',))
+    card(96, 2017, 1648, 155, '什么会进入筛选？',
+         ('应用已生效的纳入和排除规则，保留条件之间的关系及例外。',
+          '原文明确要求测量或报告的结局可用于筛选，其他结局保留在说明中。'))
 
-    draw.line((96, 1858, 1728, 1858), fill=RULE, width=2)
-    text(96, 1878, 'AIM-STEP   /   2026-11-22', 24, MUTED, bold=True)
-    text(610, 1878, 'release 41 · 两种输入共用后续处理', 24, MUTED,
-         max_width=1118)
+    draw.line((96, 2221, 1744, 2221), fill=RULE, width=2)
+    text(96, 2246, 'AIM-STEP', 26, BODY, bold=True)
+    text(1136, 2246, '2026-11-22  /  Eligibility Criteria release 41', 25, BODY, width=608)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, optimize=True)
