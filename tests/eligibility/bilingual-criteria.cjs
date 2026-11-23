@@ -12,7 +12,14 @@ const french=['Adultes âgés d’au moins 18 ans','Rapports de cas'];
 const chinese=['至少18岁的成年人','病例报告'];
 const frenchTerms=new Map([
  ['Eligibility criteria','Critères d’admissibilité'],['Inclusion','Inclusion'],['Exclusion','Exclusion'],
- ['Population','Population'],['Study design','Type d’étude'],['No explicit exclusion rules entered.','Aucun critère d’exclusion explicite.'],
+ ['Population','Population'],['Study design','Type d’étude'],['Not reporting.','Aucune exclusion signalée.'],
+ ['Review topic','Sujet de la revue'],['Framework','Cadre'],['Description','Description'],
+ ['Domain','Domaine'],['Include','Inclure'],['Exclude','Exclure'],['Review population and scope','Population et portée de la revue'],
+ ['We will include studies of participants aged 18 years or older. We will exclude Case reports.',
+  'Nous inclurons les études portant sur des participants de 18 ans ou plus. Nous exclurons les rapports de cas.'],
+ ['The author’s first note.','Première note de l’auteur.'],['The author’s second note.','Deuxième note de l’auteur.'],
+ ['Author check','Vérification de l’auteur'],['Source','Source'],['Pending','En attente'],
+ ['Confirm the proposed setting.','Confirmer le lieu proposé.'],['Community setting','Milieu communautaire'],
  ...english.map((text,index)=>[text,french[index]]),
  ['Aged ≥18 years','Âgés de ≥18 ans'],['Adults aged at least 21 years','Adultes âgés d’au moins 21 ans'],
 ]);
@@ -93,11 +100,15 @@ for(const mode of ['machine','manual'])test(mode+' input saves and exports Engli
  const saved=JSON.parse(page.storage.get('aimstep-eligibility:'+projectId));
  const copy=saved.machineRun.translation;
  assert.equal(copy.language,'fr');
- assert(copy.rows.some(row=>row.include.includes('Âgés de ≥18 ans')));
- assert(copy.rows.some(row=>row.exclude.includes(french[1])));
+ assert.equal(copy.texts['Aged ≥18 years'],'Âgés de ≥18 ans');
+ assert.equal(copy.texts['Case reports'],french[1]);
+ const localized=area.innerHTML.split('data-criteria-localization lang="fr"')[1];
+ assert.match(localized,/<strong>Sujet de la revue:<\/strong>[\s\S]*<strong>Cadre:<\/strong> PICOS[\s\S]*<h3>Inclusion<\/h3>[\s\S]*<h3>Exclusion<\/h3>[\s\S]*<h3>Description<\/h3>[\s\S]*Nous inclurons/);
+ assert.doesNotMatch(localized,/contenteditable="plaintext-only"/);
  assert.match(area.innerHTML,/data-criteria-document[\s\S]*Aged ≥18 years[\s\S]*Case reports[\s\S]*data-criteria-localization lang="fr"[\s\S]*Âgés de ≥18 ans[\s\S]*Rapports de cas/);
  const word=Buffer.from(page.api.export()).toString('utf8');
- assert.match(word,/Aged ≥18 years[\s\S]*Critères d’admissibilité[\s\S]*Âgés de ≥18 ans/);
+ assert.match(word,/Aged ≥18 years[\s\S]*Critères d’admissibilité[\s\S]*Sujet de la revue[\s\S]*Cadre: PICOS[\s\S]*<w:tbl>[\s\S]*Domaine[\s\S]*Inclure[\s\S]*Exclure[\s\S]*Âgés de ≥18 ans[\s\S]*Description[\s\S]*Nous inclurons/);
+ assert.equal((word.match(/<w:tbl>/g)||[]).length,2);
  const savedSet=Library.read(page.ctx.localStorage,projectId).entries[0];
  assert.deepEqual(savedSet.snapshot.machineRun.translation,copy);
  assert.match(open(page.storage).el('preview').innerHTML,/lang="fr"[\s\S]*Rapports de cas/);
@@ -133,14 +144,15 @@ test('saving a revised English rule refreshes the translation from the saved con
  mockModel(page,calls);
  await generate(page,'machine',french);
  await flush();
- const editor={childNodes:[{nodeType:3,nodeValue:'Inclusion\nPopulation: Adults aged at least 21 years.\n\nExclusion\nStudy design: Case reports.'}]};
+ const editor={childNodes:[{nodeType:3,nodeValue:'Inclusion\nPopulation: Adults aged at least 21 years.\n\nExclusion\nStudy design: Case reports.\n\nDescription\nThe author’s first note.\n\nThe author’s second note.'}]};
  area.querySelector=()=>editor;
  area.handlers.input({target:{closest:selector=>selector==='[data-criteria-document]'?editor:null}});
  assert(page.el('save-criteria').handlers.click());
  assert.doesNotMatch(area.innerHTML,/Âgés de ≥18 ans/);
  await flush();
  assert.match(area.innerHTML,/Adults aged at least 21 years[\s\S]*Adultes âgés d’au moins 21 ans/);
- assert.equal(calls.filter(call=>call.step==='translate_criteria').length,2);
+ assert.match(area.innerHTML,/data-criteria-localization[\s\S]*Première note de l’auteur\.\n\nDeuxième note de l’auteur\./);
+ assert(calls.filter(call=>call.step==='translate_criteria').some(call=>call.payload.items.some(item=>item.text.includes('21 years'))));
 });
 
 test('an in-flight translation cannot restore a cleared project',async()=>{
@@ -177,4 +189,45 @@ test('validation of unparsed source-language quantities still requires exact dig
  assert.throws(()=>check_semantics({...element,normalized_text:'Adults aged ≥25 years',structured_value:{operator:'gte',value:25,unit:'year'}},source),
   {code:'NUMERIC_SCOPE_CHANGE'});
  assert.throws(()=>check_semantics(element,[{quote:'Adultes âgés de >18 ans'}]),{code:'NUMERIC_SCOPE_CHANGE'});
+});
+
+test('legacy translations are refreshed and pending author checks remain in their matching section',async()=>{
+ const page=open(),calls=[];
+ mockModel(page,calls);
+ await generate(page,'machine',french);
+ await flush();
+ const state=page.api.state();
+ state.machineRun={...state.machineRun,translation:{key:'legacy',language:'fr',labels:{title:'Old copy'},rows:[]}};
+ state.machineRefinement.sourceConfirmations=[{
+  issue_id:'synthetic-pending',status:'suggested',kind:'proposal',backgroundIssue:true,text:'Confirm the proposed setting.',
+  options:[{label:'Keep the source wording',option_id:'retain'}],evidence:[{quote:'Cadre communautaire'}],
+  locations:[{domain:'Population',section:'include',subject:'Community setting'}],
+ }];
+ page.storage.set('aimstep-eligibility:'+projectId,JSON.stringify(state));
+ const before=calls.length;
+ page.api.fill();
+ await flush();
+ const preview=page.el('preview').innerHTML;
+ const [original,localized]=preview.split('data-criteria-localization lang="fr"');
+ assert.match(original,/Pending · Community setting[\s\S]*Confirm the proposed setting\./);
+ assert.match(localized,/<h3>Inclusion<\/h3>[\s\S]*En attente · Milieu communautaire[\s\S]*Vérification de l’auteur:[\s\S]*Confirmer le lieu proposé\.[\s\S]*Cadre communautaire[\s\S]*<h3>Exclusion<\/h3>/);
+ assert.doesNotMatch(localized,/data-source-confirm=/);
+ assert(calls.slice(before).length);
+ assert(calls.slice(before).every(call=>call.step==='translate_criteria'));
+});
+
+test('translation of a long description carries all sentences across bounded requests',async()=>{
+ const model=require('../../app/eligibility/model.js');
+ const source='Include participants with at least 12 months of follow-up. ';
+ const translated='Inclure les participants ayant au moins 12 mois de suivi.';
+ const prose=source.repeat(90).trim();
+ const plan=model.translationPlan('fr',['Description',prose]);
+ let calls=0;
+ const result=await model.translateCriteria(plan,async({items})=>{
+  calls++;
+  for(const item of items)assert(item.text.length<=2400);
+  return {items:items.map(({id,text})=>({id,text:text==='Description'?'Présentation':text.split(source.trim()).slice(1).map(()=>translated).join(' ')}))};
+ });
+ assert(calls>1);
+ assert.equal(result.texts[prose],Array(90).fill(translated).join(' '));
 });

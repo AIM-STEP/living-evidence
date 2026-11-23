@@ -18,6 +18,8 @@ const chineseByEnglish=new Map(fields.map(([, ,quote,text])=>[text.toLowerCase()
 const listLabels=new Map([
  ['Eligibility criteria','纳入与排除标准'],['Inclusion','纳入标准'],['Exclusion','排除标准'],
  ['Population','人群'],['Intervention','干预'],['Comparison','对照'],['Study design','研究设计'],
+ ['Review topic','研究主题'],['Framework','研究框架'],['Outcomes','结局'],['Description','说明'],
+ ['Domain','要素'],['Include','纳入'],['Exclude','排除'],
 ]);
 const config={frameworkConfig:require('../../config/eligibility-frameworks.json'),profileConfig:require('../../config/eligibility-review-profiles.json'),baseURL:'http://localhost/'};
 function extracted(source,[dimension_id,disposition,quote,normalized_text],index){
@@ -47,7 +49,13 @@ function connect(page,calls,{fullButIncomplete=false}={}){
    })};
   }else{
    assert.equal(step,'translate_criteria');
-   response={items:payload.items.map(({id,text})=>({id,text:listLabels.get(text)||chineseByEnglish.get(text.trim().replace(/\.$/,'').toLowerCase())||text}))};
+   response={items:payload.items.map(({id,text})=>{
+   const normalized=text.trim().replace(/\.$/,'').toLowerCase();
+   let translation=listLabels.get(text)||chineseByEnglish.get(normalized);
+   if(text.startsWith('We will include'))translation='本综述纳入符合条件的随机对照试验，评估随访期间至少跌倒一次的风险。';
+   if(!translation&&normalized.startsWith('home-based exercise programmes')&&normalized.includes('community-dwelling older adults'))translation='社区老年人的居家运动计划。';
+   return {id,text:translation||text};
+  })};
   }
   return {ok:true,json:async()=>({message:{content:JSON.stringify(response)},
    ...(step==='review_normalization'&&{provider:'typesafe',review:{policy:'jev-once-v1'}})})};
@@ -74,6 +82,8 @@ for(const fullButIncomplete of [false,true])test('Chinese comparative question r
  assert(!state.eligibilityV3Snapshot.questions[0].include.some(criterion=>criterion.dimension_id==='outcome'));
  assert(state.eligibilityV3Snapshot.questions[0].exclude.some(criterion=>criterion.text.includes('all training')));
  assert.match(state.machineRefinement.manuscriptParagraph,/at least once during follow-up/i);
- assert.match(preview,/lang="zh"[\s\S]*以平衡训练为必备内容的居家运动计划[\s\S]*所有训练均在医疗机构内完成的项目/);
+ assert.match(preview,/lang="zh"[\s\S]*研究主题：[\s\S]*社区老年人的居家运动计划[\s\S]*研究框架：<\/strong> PICOS[\s\S]*纳入标准[\s\S]*以平衡训练为必备内容的居家运动计划[\s\S]*结局：[\s\S]*随访期间至少跌倒一次的风险[\s\S]*排除标准[\s\S]*所有训练均在医疗机构内完成的项目[\s\S]*<h3>说明<\/h3>[\s\S]*本综述纳入/);
+ const word=Buffer.from(page.api.export()).toString('utf8');
+ assert.match(word,/纳入与排除标准[\s\S]*研究主题[\s\S]*社区老年人的居家运动计划[\s\S]*研究框架： PICOS[\s\S]*<w:tbl>[\s\S]*所有训练均在医疗机构内完成的项目[\s\S]*随访期间至少跌倒一次的风险[\s\S]*说明/);
  assert.equal(calls.filter(call=>call.step==='review_normalization').length,fullButIncomplete?7:6);
 });
