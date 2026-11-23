@@ -163,3 +163,8 @@ test('authentication failures cannot publish recovered comparative rules', async
     throw denied;
   }), error => error === denied);
 });
+
+test('the client budgets four and a half minutes for each extraction batch', () => {
+  assert.equal(M.requestTimeoutMs('extract_elements'), 270_000);
+  assert.equal(M.requestTimeoutMs('review_normalization'), 600_000);
+});

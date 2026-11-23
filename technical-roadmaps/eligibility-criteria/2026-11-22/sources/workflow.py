@@ -152,7 +152,7 @@ def render(output):
 
     draw.line((96, 2260, 1744, 2260), fill=RULE, width=2)
     text(96, 2285, 'AIM-STEP', 26, BODY, bold=True)
-    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 55', 25, BODY, width=608)
+    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 56', 25, BODY, width=608)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, optimize=True)

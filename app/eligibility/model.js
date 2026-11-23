@@ -71,6 +71,7 @@ function httpError(status,detail,step){
  const error=new D.EligibilityError(code,step,(stages[step]||'Criteria generation')+' (HTTP '+status+'). '+message);
  error.status=status;return error;
 }
+function requestTimeoutMs(step){return step==='extract_elements'?270000:600000;}
 function client(options={}){
  let base=options.base||null,model=options.model||null;const exchanges=[];
  const fetcher=options.fetch||((url,init)=>{if(typeof window==='object'&&window.AIMSTEPOnlineModel?.online)return window.AIMSTEPOnlineModel.request(url,init);return fetch(url,/^http:\/\/(?:127\.0\.0\.1|localhost)/.test(url)?{...init,targetAddressSpace:'loopback'}:init);});
@@ -81,7 +82,7 @@ function client(options={}){
   D.fail('MODEL_UNAVAILABLE','connection','无法连接模型。请运行 python3 tools/local_model_server.py，或连接项目已有的在线模型网关。');
  }
  async function request(step,state,payload,schema,instruction,signal){
-  const endpoint=await discover(signal),controller=new AbortController(),abort=()=>controller.abort(signal?.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(()=>controller.abort(),options.timeout_ms||600000);
+  const endpoint=await discover(signal),controller=new AbortController(),abort=()=>controller.abort(signal?.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(()=>controller.abort(),options.timeout_ms||requestTimeoutMs(step));
   const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',workflow:'eligibility-criteria',messages,format:schema,...backendTask(step)};
   try{
    const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let detail;try{detail=await r.json();}catch(_){}throw httpError(r.status,detail,step);}
@@ -2590,5 +2591,5 @@ async function translateCriteria(plan,request,signal){
  }
  return {key:plan.key,language:plan.language,texts};
 }
-return {client,analyze,translationPlan,translateCriteria,needsSourceTranslation,extract_elements,review_elements,repairSavedExtraction,applySavedReviewThreshold,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,httpError,serializationInstruction,backendTask,decodeReply,executableOption};
+return {client,requestTimeoutMs,analyze,translationPlan,translateCriteria,needsSourceTranslation,extract_elements,review_elements,repairSavedExtraction,applySavedReviewThreshold,parse_answers,extractionInstruction,reviewInstruction,answerInstruction,extractionSchema,reviewSchema,answerSchema,modelProjectId,requestEnvelope,httpError,serializationInstruction,backendTask,decodeReply,executableOption};
 });
