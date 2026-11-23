@@ -151,7 +151,7 @@ test('known fields are checked before retrying a missed clause, and a poorer ret
  const input=question.replace(/若电话.*$/u,'除非两组都提供同等家庭访视，否则排除合并家庭访视的试验。');
  const {calls,state}=await generate(input,{extract(payload){
   if(payload.validation_feedback?.code==='SOURCE_COVERAGE'){
-   assert(payload.source_requirements.some(item=>item.source_refs[0].quote.includes('除非')));
+   assert(payload.source_requirements.some(item=>item.source_refs.some(ref=>ref.quote.includes('除非'))));
    assert(!payload.source_requirements.some(item=>item.dimension==='population'));
    return [];
   }

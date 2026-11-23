@@ -25,7 +25,7 @@ function sharedTreatmentDuration(criteria,expression,elementById){
   intervention:pair[0].text.slice(0,-suffix.length),comparison:pair[1].text.slice(0,-suffix.length)}:null;
 }
 function phrase(text){return String(text||'').trim().replace(/[.。]+$/,'').replace(/^(?:include\s+)?studies\s+(?:involving|evaluating|of|in)\s+/i,'').replace(/^various\s+/i,'');}
-function lower(text){return String(text||'').replace(/^(?:Hospitali[sz]ed|Older|Adults?|Patients?|People|Exercise|Nutritional|Standard|Placebo|Another|Various)\b/,s=>s.toLowerCase());}
+function lower(text){return String(text||'').replace(/^(?:Hospitali[sz]ed|Older|Adults?|Patients?|People|Exercise|Nutritional|Insulin-treated|Real-time|Standard|Placebo|Another|Various)\b/,s=>s.toLowerCase());}
 function dataGate(text){const t=norm(text),data='(?:IPD|individual\\s+(?:participant|patient)\\s+data(?:\\s*\\(IPD\\))?)';return new RegExp('(?:only\\s+(?:include\\s+)?(?:studies|trials|reports)|include\\s+only\\s+(?:studies|trials|reports)|eligibility\\s+(?:requires|depends))[\\s\\S]{0,100}(?:with|providing|for which|available|availability|access)[\\s\\S]{0,80}'+data,'i').test(t)||new RegExp('(?:only\\s+include\\s+(?:studies|trials|reports)|studies\\s+must|trials\\s+must)[\\s\\S]{0,100}'+data+'[\\s\\S]{0,40}(?:available|provided|obtained)','i').test(t)||new RegExp(data+'\\s+(?:must\\s+be\\s+available|availability\\s+is\\s+required)','i').test(t)||new RegExp('exclude\\s+(?:studies|trials)\\s+without\\s+'+data,'i').test(t);}
 
 function plan(original){const text=norm(original),nma=original.match(/network\s+meta[-– ]analysis(?:\s*\(NMA\))?|\bNMA\b/i),ipd=original.match(/individual\s+(?:participant|patient)\s+data(?:\s*\(IPD\))?|\bIPD\b/i);const analysis=/\b(?:using|conduct|perform|based\s+on|analyse|analyze)\b[\s\S]{0,160}(?:network\s+meta[- ]analysis|\bNMA\b|individual\s+(?:participant|patient)\s+data|\bIPD\b)|(?:network\s+meta[- ]analysis|\bNMA\b)[\s\S]{0,100}\bbased\s+on\b/i.test(text);return {nma:analysis&&nma?nma[0]:null,ipd:analysis&&ipd?ipd[0]:null,rank:analysis&&/\brank(?:ing)?\b/i.test(text)?original.match(/\brank(?:ing)?\b[^.!?;]*?(?=\s+using\b|\s+by\b|[.!?;]|$)/i)?.[0]:null};}
@@ -428,7 +428,8 @@ function topic(question,elements){
   const arm=['intervention','exposure'].includes(e.dimension_id)&&objectiveArms(e.normalized_text);
   const value=arm?arm.intervention:e.normalized_text;
   if(e.dimension_id==='intervention')return interventionTitleName(value);
-  return ['population','sample'].includes(e.dimension_id)?populationTitleHead(titlePhrase(value)):titlePhrase(value);
+  const population=e.separable_population?value.split(/\s+\(trials?\b/iu)[0]:value;
+  return ['population','sample'].includes(e.dimension_id)?populationTitleHead(titlePhrase(population)):titlePhrase(value);
  }
  // Project only the named dimension onto the original logic tree. Alternatives
  // and combined interventions must not be reduced to the first listed arm.
@@ -846,7 +847,7 @@ function descriptionContext(question,project){
 // Keep proper names and abbreviations intact when joining source phrases into sentences.
 function prosePhrase(text){
  const value=lower(phrase(text));
- return value.replace(/^(?:Children|Adolescents|Women|Men|Participants|Clinical|Usual|Randomised|Randomized|Observational|Prospective|Retrospective|Primary|Secondary|All|Studies|Trials|Reports|At|Follow-up|No)\b/,word=>word.toLowerCase());
+ return value.replace(/^(?:Children|Adolescents|Women|Men|Participants|Clinical|Usual|Randomised|Randomized|Observational|Prospective|Retrospective|Primary|Secondary|All|Studies|Trials|Reports|At|Follow-up|Glycated|No)\b/,word=>word.toLowerCase());
 }
 function populationProse(parts){
  const ages=parts.filter(t=>/^aged\b/i.test(t)),people=parts.filter(t=>!/^aged\b/i.test(t));
@@ -961,9 +962,11 @@ function description(rows,context={}){
    if(linkedFields.has(JSON.stringify([dimension,rule])))continue;
    const value=prosePhrase(rule);
    const qualification=dimension==='Intervention'&&value.match(/^(.+?)\s+\(((?:if|when)\b[^()]+?\b(?:eligible only if|eligible only when|must)\b[^()]+?\b(?:control|comparison|comparator)\b[^()]*)\)$/iu);
-   if(qualification){
-    phrases.push(qualification[1].replace(/^Nurse-led\b/u,'nurse-led'));
-    sourceRules.push(sentence(qualification[2]));
+   const mixed=dimension==='Population'&&value.match(/^(.+?)\s+\(([^()]*\b(?:trials|studies)\b[^()]+\b(?:eligible|included) only if\b[^()]+)\)$/iu);
+   if(qualification||mixed){
+    const [,core,conditional]=qualification||mixed;
+    phrases.push(core.replace(/^Nurse-led\b/u,'nurse-led'));
+    sourceRules.push(sentence(conditional));
    }else if(sourceSentence.test(value))sourceRules.push(sentence(value));
    else if(value)phrases.push(value);
   }

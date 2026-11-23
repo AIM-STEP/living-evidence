@@ -4,7 +4,7 @@
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
-const presentationVersion='framework-display-v13';
+const presentationVersion='framework-display-v14';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){
@@ -202,7 +202,9 @@ function projectToClassic(project,registry,editBindings){
    options:authorChoices(issue).map(({label,option_id})=>({label,option_id})),
    evidence:[...new Map(elements.flatMap(element=>issue.trigger_rule_id==='source_occurrence'?(element.source_occurrence_alternatives||[]).flatMap(a=>[a.heading,a].filter(Boolean)):element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
  });
- return {eligibilityPolicy,manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows:[],pendingLogicRows,framework,frameworkSlots,additionalSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v4',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.name||(s.input_kind==='research_question'?'Question / voice input':'Author requirements'),text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
+ const title=Methods.projectTopic(output.questions);
+ const reviewTopic=project.output_language.startsWith('en')&&M.needsSourceTranslation(title,'en')?'Review population and scope':title;
+ return {eligibilityPolicy,manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows:[],pendingLogicRows,framework,frameworkSlots,additionalSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic,topicStyle:'concise-v4',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.name||(s.input_kind==='research_question'?'Question / voice input':'Author requirements'),text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
 }
 async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
  if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');
@@ -278,6 +280,18 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   }
   project.revision++;project.updated_at=D.now();
   let corrected=M.applySavedReviewThreshold(project);
+  // Earlier cached projections could contain a source-language question as an
+  // English rule. Retire that machine wording without treating it as verified.
+  if(project.output_language.startsWith('en')&&legacy.activeGenerator==='machine'){
+   for(const question of project.questions.filter(q=>q.active!==false&&q.source_requirements?.length)){
+    const active=project.elements.filter(e=>e.active!==false&&e.question_id===question.question_id);
+    const invalid=active.filter(e=>e.decision_status==='accepted_from_input'&&M.needsSourceTranslation(e.normalized_text,'en'));
+    if(!invalid.length)continue;
+    for(const element of invalid)element.active=false;
+    question.logic=D.mapExpression(question.logic,new Map(active.filter(e=>e.active!==false).map(e=>[e.element_id,e.element_id])),'element_id');
+    corrected=true;
+   }
+  }
   if(!['framework-display-v9','framework-display-v10'].includes(saved.presentation_version)&&legacy.activeGenerator==='machine'&&!legacy.confirmed&&!legacy.finalCriteria){
    for(const question of project.questions.filter(q=>q.active!==false)){
     if(M.repairSavedExtraction(project,question))corrected=true;
