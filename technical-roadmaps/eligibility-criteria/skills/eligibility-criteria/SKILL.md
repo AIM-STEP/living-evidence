@@ -5,7 +5,7 @@ description: 执行或维护 AIM-STEP 的 Eligibility Criteria 流程，包括�
 
 # Eligibility Criteria 执行技能
 
-从[技术流程](../../2026-11-22/README.md)定位当前步骤，从[错误与反馈记录本](../../extraction-notebook.md)查找已知错误类别及复现检查。机器和人工输入进入同一条执行流程。
+从[技术流程](../../2026-11-23/README.md)定位当前步骤，从[错误与反馈记录本](../../extraction-notebook.md)查找已知错误类别及复现检查。机器和人工输入进入同一条执行流程。
 
 | 执行技能 | 输入和完成条件 | 实际执行模块 |
 | --- | --- | --- |

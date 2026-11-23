@@ -4,7 +4,7 @@
 
 机器生成一次性提交问题，人工生成按框架逐项填写。两种入口共用原文条款清单、要素标准化、TypeSafe Jev 逐条核对、作者确认、保存和下游交接。明示条款仍有缺项时保存为草稿。待作者确认、验证失败或输入已变更时也暂停下游交接。流程图标出了何时人工核对、何时提示补充短问题，以及哪些条件会进入筛选。
 
-[打开高清流程图](2026-11-22/figures/eligibility-workflow.png) · [流程说明和制图源码](2026-11-22/README.md) · [原文提取技术细节](source-grounded-extraction.md)
+[打开高清流程图](2026-11-23/figures/eligibility-workflow.png) · [流程说明和制图源码](2026-11-23/README.md) · [原文提取技术细节](source-grounded-extraction.md)
 
 ## 2. 执行技能
 
@@ -18,6 +18,13 @@
 
 [错误与反馈记录本](extraction-notebook.md) · [运行时纠错与计数](../../app/eligibility/lessons.js)
 
+## 流程图归档
+
+| 图稿日期 | 对应工具版本 | 归档 |
+| --- | --- | --- |
+| 2026-11-23 | 第 59 版 | [当前流程图](2026-11-23/figures/eligibility-workflow.png) · [说明与源码](2026-11-23/README.md) |
+| 2026-11-22 | 更新至第 59 版 | [前一张流程图](2026-11-22/figures/eligibility-workflow.png) · [原说明与源码](2026-11-22/README.md) |
+
 ## 发布验证
 
 运行 `sh tools/check_eligibility_release.sh` 检查纳排、检索和筛选回归。用 `node tools/evaluate_eligibility_v3.cjs --case stroke-balance-training` 可在本地模型与 Jev 可用时复跑英文比较题。实模复测与程序测试分别记录。
@@ -26,7 +33,7 @@
 
 | 保存内容 | 位置 |
 | --- | --- |
-| 技术流程、执行技能、通用错误与反馈记录 | 仓库的 `technical-roadmaps/eligibility-criteria/`。流程及源文件保存在 `2026-11-22/`，执行技能在 `skills/`，通用记录本为 `extraction-notebook.md`。 |
+| 技术流程、执行技能、通用错误与反馈记录 | 仓库的 `technical-roadmaps/eligibility-criteria/`。当前流程及源文件保存在 `2026-11-23/`，前一张图及源文件保存在 `2026-11-22/`，执行技能在 `skills/`，通用记录本为 `extraction-notebook.md`。 |
 | 项目的标准、原文引用及作者决定 | 按项目保存到当前浏览器的 `aimstep-eligibility-v3:<projectId>` 和 Criteria 工作记录。 |
 | 本次生成中逐条核对通过的规则 | 浏览器的 `aimstep-eligibility-generation-draft:<projectId>`，供 Criteria 预览。完成后的标准通过原有项目记录交接。Criteria Clear 一并清除。 |
 | 项目执行反馈 | 浏览器的 `aimstep-eligibility-lessons:<projectId>`，仅保存固定错误类别和计数。Criteria Clear 一并清除。 |
