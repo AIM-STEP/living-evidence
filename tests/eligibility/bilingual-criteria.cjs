@@ -12,7 +12,7 @@ const french=['Adultes âgés d’au moins 18 ans','Rapports de cas'];
 const chinese=['至少18岁的成年人','病例报告'];
 const frenchTerms=new Map([
  ['Eligibility criteria','Critères d’admissibilité'],['Inclusion','Inclusion'],['Exclusion','Exclusion'],
- ['Population','Population'],['Study design','Type d’étude'],['Not reporting.','Aucune exclusion signalée.'],
+ ['Population','Population'],['Study design','Type d’étude'],['None.','Aucun.'],
  ['Review topic','Sujet de la revue'],['Framework','Cadre'],['Description','Description'],
  ['Domain','Domaine'],['Include','Inclure'],['Exclude','Exclure'],['Review population and scope','Population et portée de la revue'],
  ['We will include studies of participants aged 18 years or older. We will exclude Case reports.',
@@ -51,7 +51,7 @@ function mockModel(page,calls,{language='fr',beforeTranslation,alterTranslation}
     structured_value:index?null:{operator:'gte',value:18,unit:'year'},
     source_refs:[{source_id:source.source_id,source_revision:source.revision,quote}],
     information_status:'explicit',semantic_role:'eligibility_condition',scope_status:'restricted',disposition:index?'exclude':'include',
-   }));
+   })).filter(element=>source.original_text.includes(element.source_refs[0].quote));
    answer={source_language:language,questions:[{question_id:q.question_id,review_topic:'Eligibility of adults',
     framework_candidates:['picos'],elements,issues:[],logic:null}]};
   }else if(step==='repair_candidate_wording'){
@@ -262,3 +262,22 @@ test('author edits made in the original language update one set of screening rul
  const word=Buffer.from(page.api.export()).toString('utf8');
  assert.match(word,/Adults aged at least 21 years[\s\S]*Personnes âgées de 21 ans ou plus[\s\S]*Suivi à domicile/);
 });
+
+for(const [language,source,empty] of [['zh',chinese,'无。'],['fr',french,'Aucun.']]){
+ test('an empty exclusion section uses the meaning of “None” in the '+language+' preview and export',async()=>{
+  const page=open(),calls=[];
+  mockModel(page,calls,{language});
+  await generate(page,'machine',source.slice(0,1));
+  await flush();
+  const preview=page.el('preview').innerHTML;
+  assert.match(preview,/Not reporting\./);
+  assert(preview.split('data-criteria-localization')[1].includes('>'+empty+'</p>'));
+  const word=Buffer.from(page.api.export()).toString('utf8');
+  assert(word.includes('>'+empty+'</w:t>'));
+  if(language==='fr'){
+   const inputs=calls.filter(call=>call.step==='translate_criteria').flatMap(call=>call.payload.items.map(item=>item.text));
+   assert(inputs.includes('None.'));
+   assert(!inputs.includes('Not reporting.'));
+  }
+ });
+}

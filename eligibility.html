@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261123-criteria-release-49"></script>
-<script src="app/secure-origin.js?v=20261123-criteria-release-49"></script>
+<script src="app/eligibility-release.js?v=20261123-criteria-release-50"></script>
+<script src="app/secure-origin.js?v=20261123-criteria-release-50"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -76,10 +76,10 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261123-criteria-release-49"></script>
+<script src="app/criteria-grounding.js?v=20261123-criteria-release-50"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
-<script defer src="app/tool-i18n-catalog.js?v=20261123-criteria-release-49"></script>
+<script defer src="app/tool-i18n-catalog.js?v=20261123-criteria-release-50"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261117-eligibility-heading-1">
@@ -98,17 +98,17 @@
 <div class="section" id="manual-generate-panel" hidden><div class="section-head" data-collapse-name="Manual generate"><div class="manual-actions"><button class="btn btn-primary" id="refine-manual" type="button" data-ui-localize>Generate</button><button class="btn" id="stop-manual" type="button" hidden data-ui-localize>Stop</button><button class="btn criteria-action" id="manual-generate" type="button" aria-label="Clear all entered eligibility content" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker" data-ui-localize>＋ Add criterion</button></div></div><label class="field-label" data-ui-localize>Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden data-ui-localize><strong data-ui-localize>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PICOS">PICOS</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PECOS">PECOS</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other" data-ui-localize>Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading manual-limits-heading" style="margin-top:18px" data-ui-localize>Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label" data-ui-localize>Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date" data-ui-localize>Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date" data-ui-localize>End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language" data-ui-localize>Language</label><select id="language" class="select"><option value="" data-ui-localize>Select language</option><option value="Chinese" data-ui-localize>Chinese</option><option value="English" data-ui-localize>English</option></select></div><div><label class="field-label" for="limits-other" data-ui-localize>Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div id="description-criteria-list" hidden></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div></div><p id="criteria-timing" hidden><span id="criteria-working-label" data-ui-localize>Working</span><span id="criteria-finished-label" data-ui-localize hidden>Elapsed time</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed generation time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="app/eligibility-library.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility/registries.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility/domain.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility/methodology.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility/document.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility/sparse-input.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility/engine.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility/lessons.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility/model.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility-reset.js?v=20261123-criteria-release-49"></script>
-<script src="app/eligibility/background.js?v=20261123-criteria-release-49"></script>
+<script src="app/eligibility-library.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility/registries.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility/domain.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility/methodology.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility/document.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility/sparse-input.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility/engine.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility/lessons.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility/model.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility-reset.js?v=20261123-criteria-release-50"></script>
+<script src="app/eligibility/background.js?v=20261123-criteria-release-50"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -1793,6 +1793,8 @@ function criterionNotes(line,text=originalCriteriaText){
  return {pending,checks:line.checks};
 }
 const unreportedExclusion='Not reporting.';
+const localizedEmptyExclusion='None.';
+const chineseCriteriaLanguage=language=>/^zh(?:-|$)/i.test(language);
 const unreportedInclusion='No explicit inclusion rules entered.';
 function criteriaFramework(framework,text){
  return ['Pending','Other'].includes(framework)?text(framework):framework;
@@ -1804,7 +1806,8 @@ function criteriaTranslationPlan(page,display,refinement,wordDisplay){
  const language=state.machineRun?.inputLanguage;
  if(!language||language.split('-')[0]==='en')return null;
  const phrases=['Eligibility criteria','Review topic','Framework','Inclusion','Exclusion','Description',
-  'Domain','Include','Exclude',unreportedInclusion,unreportedExclusion,...criteriaProseLines(page.paragraph)];
+  'Domain','Include','Exclude',unreportedInclusion,
+  chineseCriteriaLanguage(language)?unreportedExclusion:localizedEmptyExclusion,...criteriaProseLines(page.paragraph)];
  if(['Pending','Other'].includes(page.framework))phrases.push(page.framework);
  for(const question of page.questions.length?page.questions:[{frameworkSlots:page.slots}]){
   phrases.push(...(question.frameworkSlots||[]));
@@ -1830,7 +1833,7 @@ function criteriaTranslationPlan(page,display,refinement,wordDisplay){
 }
 function criteriaLocale(copy){
  if(!copy)return {text:originalCriteriaText,check:sourceConfirmationHtml,colon:':',sentenceEnd:'.',localized:false};
- const chinese=/^zh(?:-|$)/i.test(copy.language);
+ const chinese=chineseCriteriaLanguage(copy.language);
  const traditional=/^zh(?:-Hant(?:-|$)|-(?:TW|HK|MO)$)/i.test(copy.language);
  const headings=chinese?new Map([
   ['Eligibility criteria',traditional?'納排標準':'纳排标准'],
@@ -1838,6 +1841,7 @@ function criteriaLocale(copy){
  ]):null;
  const authored=new Map(state.machineRun?.authorTranslations||[]);
  const text=value=>{
+  if(value===unreportedExclusion)return chinese?(traditional?'無。':'无。'):(copy.texts[localizedEmptyExclusion]||localizedEmptyExclusion);
   const authoredText=typeof value==='string'&&authored.size?authored.get(translationMatchKey(value)):undefined;
   const wording=headings?.get(value)??authoredText??(Object.hasOwn(copy.texts,value)?copy.texts[value]:value);
   return chinese&&typeof wording==='string'?wording.replace(/([。！？])\1+/gu,'$1'):wording;
