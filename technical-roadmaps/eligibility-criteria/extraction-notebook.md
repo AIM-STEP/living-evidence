@@ -25,7 +25,7 @@
 
 | 记录代码 | 现象与处理 | 复现检查 |
 | --- | --- | --- |
-| `framework_display` | 框架外信息落入 Context 或 Other 显示行，或在隐藏这些行时从预览、导出消失。标准与 Description 只展示所选框架内、有原文依据的纳排条件。PICOS 下单独的场所限制不归入人群或干预。框架本身含 Context 且原文明示地点条件时，才呈现场所。 | [框架投影](../../tests/eligibility/framework-projection.cjs) |
+| `framework_display` | 框架外的信息一度混入纳排标准，随后明确的排除和作者确认的规则也曾被过滤。保留所选框架的字段。原文明示且通过核对的排除，以及作者确认的规则，从其实际所属领域进入预览、导出和筛选。 | [框架投影](../../tests/eligibility/framework-projection.cjs) · [作者新增规则](../../tests/eligibility/unbound-author-criteria.cjs) |
 | 重复生成 | 输入未变时，旧版本曾直接沿用原结果。现在每次 Generate 都重新提取和核对。已脱离当前页面的附件须重新提交。模型使用固定采样种子，推理输入保留与研究有关的信息。 | [相同附件重新生成](../../tests/eligibility/repeat-generation.cjs) · [模型请求](../../tools/test_eligibility_transport.py) |
 | 同一治疗的限定 | 从目标和纳入段分别读到疗法、制剂和共同疗程时，曾重复列出同一治疗，或把人群内部的选择误解为整个标准的选择。题目使用目标指明的疗法和人群。制剂并入对应治疗，两组共同疗程在 Description 统一说明，并保留为内部纳入条件。真正待确认的条目直接注明字段、纳入或排除方向以及原文依据。 | [治疗、人群和疗程](../../tests/eligibility/hormone-therapy.cjs) · [人工核对](../../tests/eligibility/semantic-repair.cjs) |
 | 目标与纳入条件 | 原文含排版连字并将研究目的、纳入段、剂量定义和关键结局分开时，模型曾把整段目的填入 Population 和 Outcomes。用明确的纳入段恢复人群和试验设计，按声明逐条展示关键结局。保留辐照度的严格不等号、单位和带宽条件，并识别独立的交叉试验排除。 | [光疗回归](../../tests/eligibility/phototherapy.cjs) |

@@ -4,7 +4,7 @@
 const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
-const presentationVersion='framework-display-v12';
+const presentationVersion='framework-display-v13';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){
@@ -107,7 +107,10 @@ function projectToClassic(project,registry,editBindings){
   const custom=project.custom_frameworks?.find(item=>item.framework_id===mapping?.framework_id);
   const frame=custom||registry?.get(mapping?.framework_id);
   const fields=new Map((frame?.slots||[]).map(slot=>[slot.slot_id,(custom&&slot.display_label)||labels[slot.slot_id]||slot.display_label||label(slot.slot_id)]));
-  const domain=id=>fields.get(id)||fields.get(id.split('.')[0]);
+  const slot=id=>fields.get(id)||fields.get(id.split('.')[0]);
+  const extra=new Map(q.elements.filter(e=>frame&&!slot(e.dimension_id)&&E.additionalEligibility(e))
+   .map(e=>[e.dimension_id,label(e.dimension_id)]));
+  const domain=id=>slot(id)||extra.get(id);
   bindings.set(q.question_id,domain);
   const pending=q.logic?.pending_inclusion_branches,linked=[];
   const duration=fields.has('intervention')&&fields.has('comparator')?
@@ -117,7 +120,8 @@ function projectToClassic(project,registry,editBindings){
    pendingLogicRows.push({domain:domain(e.dimension_id),subject:e.normalized_text,questionNumber:multiple?q.display_number:null,side:'include'});
   }
   for(const side of ['include','exclude']){
-   const criteria=q[side].filter(c=>domain(c.dimension_id));
+   const criteria=q[side].filter(c=>slot(c.dimension_id)||extra.has(c.dimension_id)&&
+    c.source_element_ids.some(id=>E.additionalEligibility(elementsById.get(id))));
    const expression=q.logic?.[side];
    const branches=side==='exclude'&&expression?.op==='any_of'?expression.children:side==='include'&&pending?pending:[expression];
    for(const branch of branches){
@@ -133,8 +137,9 @@ function projectToClassic(project,registry,editBindings){
    }
   }
   const slots=[...fields.values()];
-  target.sort((a,b)=>slots.indexOf(a.dimension)-slots.indexOf(b.dimension));
-  frameworkQuestions.push({display_number:q.display_number,framework:frame?.display_name||mapping?.display_name||'Pending',frameworkSlots:slots,rows:target});
+  const additionalSlots=[...new Set(extra.values())],order=[...slots,...additionalSlots];
+  target.sort((a,b)=>order.indexOf(a.dimension)-order.indexOf(b.dimension));
+  frameworkQuestions.push({display_number:q.display_number,framework:frame?.display_name||mapping?.display_name||'Pending',frameworkSlots:slots,additionalSlots,rows:target});
   if(multiple)for(const row of target)for(const side of ['include','exclude'])for(const rule of row[side]){
    add(rows,row.dimension,side,q.display_number+' · '+rule,[],false);
   }
@@ -149,6 +154,7 @@ function projectToClassic(project,registry,editBindings){
  });
  const frameNames=[...new Set(frameworkQuestions.map(q=>q.framework))],framework=frameNames.length===1?frameNames[0]:'Other';
  const frameworkSlots=frameNames.length===1?frameworkQuestions[0].frameworkSlots:[];
+ const additionalSlots=output.questions.length===1?frameworkQuestions[0].additionalSlots:[];
  const descriptionContext=contexts.length===1?contexts[0]:{question_contexts:contexts,question_relation:project.question_relation,combined_rows:clone(rows)};
  const confirmations=project.issues.filter(issue=>issue.status==='open'&&(issue.blocking||issue.method_advice)).flatMap(issue=>{
   const field=bindings.get(issue.question_id);
@@ -163,7 +169,8 @@ function projectToClassic(project,registry,editBindings){
   const linkedIds=issue.linked_element_ids||issue.element_ids;
   const elements=linkedIds.filter(id=>!issue.answered_element_ids?.includes(id)).map(id=>elementsById.get(id)).filter(e=>
    e&&field?.(e.dimension_id)&&e.information_status!=='missing'&&e.source_refs?.length&&
-   (e.semantic_role==='eligibility_condition'||e.semantic_role==='undecided'||e.role_issue||e.source_occurrence_pending));
+   (e.semantic_role==='eligibility_condition'||e.semantic_role==='undecided'||e.role_issue||e.source_occurrence_pending||
+    e.semantic_role==='review_focus'&&issue.reason_code==='UNRESOLVED_ROLE'));
   if(!elements.length&&issue.reason_code!=='FRAMEWORK_AMBIGUITY'&&!(multiple&&issue.trigger_rule_id==='between_question_relation'))return [];
   const visible=new Set(elements.map(e=>e.element_id));
   const pendingGroups=E.authorTargetGroups(project,issue).map(group=>group.filter(id=>visible.has(id))).filter(group=>group.length);
@@ -193,7 +200,7 @@ function projectToClassic(project,registry,editBindings){
    options:authorChoices(issue).map(({label,option_id})=>({label,option_id})),
    evidence:[...new Map(elements.flatMap(element=>issue.trigger_rule_id==='source_occurrence'?(element.source_occurrence_alternatives||[]).flatMap(a=>[a.heading,a].filter(Boolean)):element.source_refs||[]).map(ref=>[JSON.stringify([ref.source_id,ref.source_revision,ref.start,ref.end,ref.quote]),ref])).values()].map(({quote,source_id,source_revision,start,end})=>({quote,source_id,source_revision,start,end}))};
  });
- return {eligibilityPolicy,manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows:[],pendingLogicRows,framework,frameworkSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v4',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.name||(s.input_kind==='research_question'?'Question / voice input':'Author requirements'),text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
+ return {eligibilityPolicy,manuscriptParagraph:Methods.description(rows,descriptionContext),descriptionContext,focusRows:[],pendingLogicRows,framework,frameworkSlots,additionalSlots,...(multiple?{frameworkQuestions}:{}),rows,reviewTopic:Methods.projectTopic(output.questions),topicStyle:'concise-v4',sourceConfirmations:confirmations,scopeSuggestions:[],uncertainties:[],clarifications:[],trace:[],audit:{version:E.VERSION,methodology:'two-stage-eligibility',status:project.status,project_revision:project.revision,config_versions:clone(project.config_versions),calls:clone(project.model_calls),sources:project.sources.filter(s=>s.source_type==='user_input'&&s.input_kind!=='explicit_context_fields'&&project.questions.filter(q=>q.active!==false).some(q=>[...q.source_refs,...q.additional_source_refs,...(q.imported_source_refs||[])].some(r=>r.source_id===s.source_id&&r.source_revision===s.revision))).map(s=>({id:s.source_id,revision:s.revision,name:s.name||(s.input_kind==='research_question'?'Question / voice input':'Author requirements'),text:s.original_text,verification:s.verification||'original-text'})),checks:clone(project.validation)},snapshot:output};
 }
 async function create({projectId,storage=root.localStorage,frameworkConfig,profileConfig,baseURL}={}){
  if(!projectId)D.fail('PROJECT_REQUIRED','background','Open a registered project first.');

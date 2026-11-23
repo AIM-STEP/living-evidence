@@ -15,7 +15,7 @@ async function generate(question, reviewType, request) {
 
 function extraction(question, source, quote, offsets = {}) {
   return {questions: [{
-    question_id: question.question_id, framework_candidates: [], issues: [],
+    question_id: question.question_id, framework_candidates: ['pico'], issues: [],
     elements: [{
       candidate_id: 'population', dimension_id: 'population', normalized_text: quote,
       structured_value: null, information_status: 'explicit', semantic_role: 'eligibility_condition',
@@ -39,7 +39,7 @@ test('a citation from a different question fails both extraction attempts before
   const question = 'Q1: Include teachers.\nQ2: Include farmers.';
   async function request(step, state, payload) {
     if (step === 'review_normalization') {
-      reviews++;
+      if(payload.items.some(item=>item.source_quotes.some(ref=>ref.quote==='teachers')))reviews++;
       return supported(payload.items);
     }
     assert.equal(step, 'extract_elements');

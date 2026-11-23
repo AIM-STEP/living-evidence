@@ -35,7 +35,7 @@ async function generate(text, { reference = {}, calls = [], onReview, dispositio
       const elements = [{ ...candidate('c4', 'population', target, doc, reference), disposition }];
       if (text.includes(design)) elements.push(candidate('c5', 'study_design', design, doc));
       return { questions: [{
-        question_id: payload.question.question_id, framework_candidates: [], elements, logic: null, issues: [],
+        question_id: payload.question.question_id, framework_candidates: ['picos'], elements, logic: null, issues: [],
       }] };
     }
     assert.equal(step, 'review_normalization');
@@ -86,7 +86,7 @@ test('a repeated standalone direction keeps both locations across an independent
     assert.equal(element.decision_status, 'accepted_from_input');
     assert(project.criteria.some(c => c.disposition === disposition && c.source_element_ids.includes(element.element_id)));
     assert(!project.issues.some(i => i.status === 'open' && i.element_ids.includes(element.element_id)));
-    assert.deepEqual(calls, ['extract_elements', 'review_normalization']);
+    assert.deepEqual(calls, ['extract_elements', 'review_normalization', 'review_normalization']);
   }
 });
 
@@ -113,9 +113,8 @@ test('opposing contexts survive as one open check while an unrelated supported r
   const calls = [];
   // Neither value denotes any occurrence in code points or UTF-16.
   const { project, classic } = await generate(text, { reference: { start: 2, end: 2 + target.length }, calls, onReview: payload => {
-    // Only an attachment includes the opposing instructions. Both must reach the independent reviewer.
-    assert.match(JSON.stringify(payload.items), /Include patients receiving dialysis/);
-    assert.match(JSON.stringify(payload.items), /Exclude patients receiving dialysis/);
+    assert.equal(payload.items.length,1);
+    assert.equal(payload.items[0].normalized_text,design);
   } });
   assert.deepEqual(calls, ['extract_elements', 'review_normalization']);
   const element = project.elements.find(e => e.dimension_id === 'population');
@@ -126,6 +125,8 @@ test('opposing contexts survive as one open check while an unrelated supported r
   const open = project.issues.filter(i => i.status === 'open' && i.element_ids.includes(element.element_id));
   assert.equal(open.length, 1);
   assert(classic.sourceConfirmations.some(c => c.issue_id === open[0].issue_id));
+  assert(open[0].options.some(option=>option.source_occurrence_ref?.quote.includes('Include '+target)));
+  assert(open[0].options.some(option=>option.source_occurrence_ref?.quote.includes('Exclude '+target)));
 });
 
 test('a missing quotation, a different source or a different revision still fails before review', async () => {

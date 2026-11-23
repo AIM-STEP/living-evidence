@@ -29,7 +29,7 @@ async function generate({connector, question = '', separateFiles = false, number
       semantic_role: 'eligibility_condition', scope_status: 'restricted', disposition: 'include'
     }))};
     assert.equal(step, 'extract_elements');
-    assert(!schema.properties.questions.items.required.includes('review_topic'));
+    assert(schema.properties.questions.items.required.includes('review_topic'));
     const q = payload.question, elements = [];
     assert(!payload.validation_feedback, 'An omitted or blank title should never retry extraction');
     requests.push(payload);
@@ -46,7 +46,7 @@ async function generate({connector, question = '', separateFiles = false, number
     }
     const leaves = elements.map(e => leaf(e.candidate_id));
     return {questions: [{question_id: q.question_id, ...(payload.part_index ? {} : {review_topic: ''}),
-      framework_candidates: [], elements, issues: [], logic: leaves.length > 1 ? {op: 'any_of', children: leaves} : leaves[0] || null}]};
+      framework_candidates: ['pico'], elements, issues: [], logic: leaves.length > 1 ? {op: 'any_of', children: leaves} : leaves[0] || null}]};
   }};
   const stage = await service.generate({legacy: {}, question, reviewType: 'Systematic Review', sources, modelClient});
   return {stage, requests, sources};

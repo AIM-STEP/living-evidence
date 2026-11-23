@@ -45,8 +45,9 @@ async function run(exclusionText,grouped=false,{language='en',extractOnly=false,
 
 test('mixed explicit exclusions retain their direction, independent domains, study subjects and exact offsets',async()=>{
  const text='We excluded studies of oxygen saturation targeting, studies not taking place in the delivery room and studies of infants with antenatally diagnosed congenital anomalies.';
- const {view,project,requests}=await run(text);
- assert.equal(requests,1);
+ const {view,project,requests,reviewed}=await run(text);
+ assert.equal(requests,reviewed.length);
+ assert.equal(reviewed.filter(e=>e.disposition==='exclude').length,3);
  assert.equal(project.criteria.filter(c=>c.disposition==='exclude').length,3);
  const row=name=>view.rows.find(r=>r.dimension===name);
  assert.deepEqual(row('Population').exclude,['studies of infants with antenatally diagnosed congenital anomalies']);
@@ -56,7 +57,7 @@ test('mixed explicit exclusions retain their direction, independent domains, stu
  assert(!view.frameworkSlots.includes('Other')&&!view.frameworkSlots.includes('Context'));
  for(const row of view.rows)for(const rule of row.exclude)assert(view.manuscriptParagraph.includes(rule));
  assert(!project.criteria.some(c=>c.text.includes('titrated')));
- assert(view.manuscriptParagraph.includes('titrated to saturation targets'));
+ assert(!view.manuscriptParagraph.includes('titrated to saturation targets'));
  const source=Array.from(project.sources.find(s=>s.input_kind==='research_question').original_text);
  for(const e of project.elements.filter(e=>e.disposition==='exclude')){
   const ref=e.source_refs[0];assert.equal(source.slice(ref.start,ref.end).join(''),ref.quote);

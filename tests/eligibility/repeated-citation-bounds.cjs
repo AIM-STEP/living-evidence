@@ -19,7 +19,7 @@ async function generate({ value = 65, operator = 'gte', repair = false, sourceTe
     if (step === 'extract_elements') {
       const q = payload.question;
       const source = q.sources.find(s => s.input_kind === 'original_document');
-      return { questions: [{ question_id: q.question_id, framework_candidates: [], issues: [], logic: null,
+      return { questions: [{ question_id: q.question_id, framework_candidates: ['pico'], issues: [], logic: null,
         elements: [{ candidate_id: 'c5', dimension_id: 'population.age', normalized_text: wording(value, operator),
           structured_value: { operator, value, unit: 'year' }, semantic_role: 'eligibility_condition',
           information_status: 'explicit', scope_status: 'restricted', disposition: 'include',
@@ -56,16 +56,15 @@ test('a supported threshold in the located passage survives final source validat
 test('a different occurrence cannot supply a threshold even when a simulated reviewer approves it', async () => {
   const {project}=await generate({ value: 18, operator: 'lt' });
   assert.equal(project.criteria.length,0);
-  assert.equal(project.elements.find(e=>e.review_pending)?.semantic_review.validation_code,'NUMERIC_SCOPE_CHANGE');
+  assert(!project.elements.some(e=>e.dimension_id==='population.age'));
+  assert.equal(project.validation.errors.length,0);
 });
 
-test('a failed Jev check keeps the selected source and asks the author once', async () => {
+test('a clearly contradicted Jev check skips the threshold without creating a blocking issue', async () => {
   const { project, calls } = await generate({ value: 70, repair: true });
   assert.equal(project.criteria.length,0);
-  const check=project.issues.find(i=>i.trigger_rule_id==='independent_source_check'&&i.status==='open');
-  assert(check?.blocking);
-  const pending=project.elements.find(e=>check.element_ids.includes(e.element_id));
-  assert.equal(pending.source_refs[0].start,text.indexOf('adults'));
+  assert(!project.issues.some(i=>i.status==='open'&&i.blocking));
+  assert.equal(project.validation.errors.length,0);
   assert.deepEqual(calls, ['extract_elements','review_normalization']);
 });
 
@@ -83,7 +82,8 @@ test('English and Chinese opposing clauses in one sentence cannot supply each ot
     assert.match(project.criteria[0].text, /65/);
     const {project:rejected}=await generate({ ...options, value: 18 });
     assert.equal(rejected.criteria.length,0);
-    assert.equal(rejected.elements.find(e=>e.review_pending)?.semantic_review.validation_code,'NUMERIC_SCOPE_CHANGE');
+    assert(!rejected.elements.some(e=>e.dimension_id==='population.age'));
+    assert.equal(rejected.validation.errors.length,0);
   }
 });
 

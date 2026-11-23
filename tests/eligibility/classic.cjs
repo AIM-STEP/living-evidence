@@ -10,14 +10,19 @@ assert(!html.includes('AIMSTEPEligibilityWorkspace.mount'));assert(!html.include
  const timers=new Map();let timerId=0;t.ctx.setTimeout=(fn,ms)=>{const id=++timerId;if(ms===1000)timers.set(id,fn);return id;};t.ctx.clearTimeout=id=>timers.delete(id);
  t.api.transport(async(url,options)=>{const body=JSON.parse(options.body),payload=JSON.parse(body.messages[1].content);steps.push(payload.step);let answer;
   assert.equal(payload.output_language,'en');assert(t.el('generation-status').hidden,'Source extraction detail stays in the background');assert.equal(t.el('criteria-timing').hidden,false);assert.equal(t.el('criteria-working-label').hidden,false);assert.match(t.el('criteria-elapsed').textContent,/^\d+:\d{2}$/);
-  if(payload.step==='extract_elements'){const q=payload.payload.question,source=q.sources.find(s=>s.input_kind==='research_question');answer={questions:[{question_id:q.question_id,review_topic:'This review examines exercise in older patients.',framework_candidates:[{framework_id:'pico',basis:'SIMULATED'}],elements:[['p','population','older patients'],['i','intervention','exercise'],['x','study_design','animal studies']].map(([id,dimension,quote])=>({candidate_id:id,dimension_id:dimension,normalized_text:quote,structured_value:null,source_refs:[{source_id:source.source_id,source_revision:source.revision,quote}],semantic_role:'eligibility_condition',information_status:'explicit',scope_status:'restricted',disposition:id==='x'?'exclude':'include'})),logic:{op:'all_of',children:[{op:'predicate',element_id:'p'},{op:'predicate',element_id:'i'}]},issues:[]}]};}
+  if(payload.step==='extract_elements'){const q=payload.payload.question,source=q.sources.find(s=>s.input_kind==='research_question');answer={questions:[{question_id:q.question_id,review_topic:'This review examines exercise in older patients.',framework_candidates:[{framework_id:'pico',basis:'SIMULATED'}],elements:[['p','population','older patients'],['i','intervention','exercise'],['x','study_design','animal studies'],['age','population.age','The minimum age will be confirmed']].map(([id,dimension,quote])=>({candidate_id:id,dimension_id:dimension,normalized_text:quote,structured_value:null,source_refs:[{source_id:source.source_id,source_revision:source.revision,quote}],semantic_role:'eligibility_condition',information_status:id==='age'?'ambiguous':'explicit',scope_status:'restricted',disposition:id==='x'?'exclude':'include'})),logic:{op:'all_of',children:[{op:'predicate',element_id:'p'},{op:'predicate',element_id:'i'}]},issues:[{reason_code:'AMBIGUOUS_MEANING',question_text:'Which minimum age applies?',scope_impact:'Defines eligibility.',element_candidate_ids:['age']}]}]};}
   else if(payload.step==='review_normalization')answer={items:payload.payload.items.map(item=>({id:item.id,status:'supported',reason:'SIMULATED',issue_type:'none',information_status:item.information_status,semantic_role:item.semantic_role,scope_status:item.scope_status,disposition:item.disposition}))};
   else throw Error('Unexpected call '+payload.step);
   return {ok:true,json:async()=>({message:{content:JSON.stringify(answer)},...(payload.step==='review_normalization'?{provider:'typesafe',review:{policy:'jev-once-v1'}}:{}),model:'SIMULATED'})};
  },'backend');
- t.el('generation-method').value='machine';t.el('generation-method').handlers.change();t.el('question').value='Review exercise in older patients. Exclude animal studies.';
+ t.el('generation-method').value='machine';t.el('generation-method').handlers.change();t.el('question').value='Review exercise in older patients. Exclude animal studies. Exclude studies outside clinics. The minimum age will be confirmed.';
  await t.el('start-machine').handlers.click();let state=t.api.state();assert(state.machineRun,t.el('generation-status').textContent);assert.equal(state.machineRefinement.audit.version,E.VERSION);assert.equal(state.eligibilityV3Snapshot.output_language,'en');assert(state.machineCriteria.some(row=>/animal studies/i.test(row.uncertain)),'Explicit exclusions must remain in Exclusion');
- let markup=t.el('preview').innerHTML;for(const section of ['Review topic:','Inclusion','Exclusion','Description','Author check:'])assert(markup.includes(section),section);
+ let markup=t.el('preview').innerHTML;
+ assert.match(markup,/studies outside clinics/i);
+ assert.match(Buffer.from(t.api.export()).toString(),/studies outside clinics/i);
+ const summary=JSON.parse(t.storage.get('aimstep-eligibility-summary:synthetic-grounding'));
+ assert(summary.exclusions.some(row=>/studies outside clinics/i.test(row.text)));
+ for(const section of ['Review topic:','Inclusion','Exclusion','Description','Author check:'])assert(markup.includes(section),section);
  assert(!/[\u3400-\u9fff]/u.test(markup));assert(!markup.includes('FrameworkRegistry'));assert(!markup.includes('Original source excerpts'));assert(!markup.includes('Automatic check notes'));assert(markup.includes('data-source-answer='));assert(markup.indexOf('Author check:')<markup.indexOf('>Description</h3>'));
  assert.equal(t.el('criteria-timing').hidden,false);assert.equal(t.el('criteria-finished-label').hidden,false);
  let core=JSON.parse(t.storage.get('aimstep-eligibility-v3:synthetic-grounding'));assert.equal(core.status,'needs_clarification');assert.equal(core.output_language,'en');
@@ -42,7 +47,7 @@ assert(!html.includes('AIMSTEPEligibilityWorkspace.mount'));assert(!html.include
  choicePage.ctx.window.AIMSTEPEligibilityBackground=t.ctx.window.AIMSTEPEligibilityBackground;
  choicePage.api.denyModelAccess();
  const options=state.machineRefinement.sourceConfirmations[0].options;
- const retain=options.findIndex(o=>o.option_id==='retain_original');assert(retain>=0);
+ const retain=options.findIndex(o=>o.option_id==='omit');assert(retain>=0);
  const optionButton={dataset:{sourceConfirm:'0',sourceOption:String(retain)},closest:()=>null};
  const choose=()=>choicePage.el('preview').handlers.click({target:{closest:()=>optionButton}});
  assert.deepEqual(await Promise.all([choose(),choose()]),[true,false],'A repeated click saves the first decision once');

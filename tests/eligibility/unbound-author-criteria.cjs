@@ -3,6 +3,7 @@ const test = require('node:test');
 const E = require('../../app/eligibility/engine.js');
 const D = require('../../app/eligibility/domain.js');
 const B = require('../../app/eligibility/background.js');
+const {setup} = require('../../tools/test_eligibility_grounding.cjs');
 
 async function scenario(clarification, options = []) {
   const input = E.save_input(E.create_project('author-new-rule'), {
@@ -59,7 +60,24 @@ test('an explicit rule with no named dimension uses Other and leaves existing pr
   assert.equal(created.disposition,'include');
   assert.equal(created.text,'records with at least 12 weeks of follow-up.');
   assert.deepEqual(stage.project.criteria.filter(c=>c.dimension_id==='population'),project.criteria);
-  assert(stage.classic.rows.some(r=>r.dimension==='Other'&&r.include.some(text=>text.includes(created.text))));
+  const display=stage.classic.frameworkQuestions[0];
+  assert(!display.frameworkSlots.includes('Other'));
+  assert.deepEqual(display.additionalSlots,['Other']);
+  assert.deepEqual(display.rows.find(r=>r.dimension==='Other').include,[created.text.replace(/\.$/u,'')]);
+
+  const page=setup(),workspace=page.api.state(),question=project.questions[0].original_text;
+  const rows=stage.classic.rows.map(row=>({title:row.dimension,condition:row.include.join('\n'),uncertain:row.exclude.join('\n')}));
+  const run={question,reviewType:workspace.reviewType,sourceRevision:0};
+  const {snapshot,...refinement}=stage.classic;
+  Object.assign(workspace,{question,framework:stage.classic.framework,activeGenerator:'machine',generationMethodChoice:'machine',
+   machineRun:run,machineCriteria:rows,eligibilityV3Snapshot:snapshot,
+   machineRefinement:{...refinement,signature:page.api.signature(question,run.reviewType,0,rows)}});
+  page.api.fill();
+  const restriction=/records with at least 12 weeks of follow-up/i;
+  assert.match(page.el('preview').innerHTML,restriction);
+  assert.match(Buffer.from(page.api.export()).toString(),restriction);
+  const summary=JSON.parse(page.storage.get('aimstep-eligibility-summary:synthetic-grounding'));
+  assert(summary.includes.some(rule=>restriction.test(rule.text)));
 });
 
 test('reporting choices and ordinary project notes never create eligibility predicates', async () => {

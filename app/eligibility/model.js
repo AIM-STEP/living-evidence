@@ -1109,12 +1109,13 @@ function exclusionSubject(text){
 const studyDesignExclusion=/^(?:case reports|case series|cross[-‐‑– ]?over (?:studies|trials)|病例报告|病例系列)$/iu;
 function retainStudyExclusions(state,result,questionId,ranges,sources,onLesson){
  const authorSources=new Set(sources.filter(s=>['research_question','additional_requirement'].includes(s.input_kind)).map(s=>s.source_id));
+ const reviewSources=new Set(sources.filter(s=>['original_document','legacy_original_document'].includes(s.input_kind)).map(s=>s.source_id));
  const used=new Set(result.elements.map(e=>e.candidate_id));
  const words=value=>value.toLowerCase().trim().replace(/[.]+$/,'');
  const confirmed=state.elements.filter(e=>e.active!==false&&e.question_id===questionId&&e.decision_status==='confirmed_by_user').flatMap(e=>e.source_refs||[]);
  const aliases=new Map(),linked=new Set(result.issues.flatMap(i=>i.element_candidate_ids||[]));
  let serial=0;
- for(const span of ranges.filter(span=>authorSources.has(span.id))){
+ for(const span of ranges.filter(span=>authorSources.has(span.id)||reviewSources.has(span.id))){
   for(const {list,bodyAt,sentenceAt,heading} of explicitStudyExclusions(span)){
    if(/[\u3400-\u9fff]/u.test(list)&&!/(?:研究|试验|队列|病例|报告|系列|文献|摘要|综述|患者|婴儿|孕妇|儿童|新生儿|成人|参与者|受试者|人群|样本|者)$/u.test(list))continue;
    if(/\b(?:except|unless|if|when|depending|provided|including|such as|for example|but|whereas|although|rather than|(?:from|for|in) (?:the |our |this )?(?:primary |secondary |sensitivity |subgroup |pooled |quantitative )*(?:(?:meta[- ]?)?analys[ie]s|synthesis|comparison|pooling)|(?:and|or) (?:did|will|we|retained|included))\b|如果|若|除非|除外|但|仅当|例外|敏感性分析|亚组分析|合并分析|定量分析|[()（）“”"]/i.test(list))continue;
@@ -1157,8 +1158,9 @@ function retainStudyExclusions(state,result,questionId,ranges,sources,onLesson){
      if(value.length<4||!rule.includes(value)&&e.disposition!=='exclude')return false;
      return e.source_refs.every(r=>(r.start>=ref.start&&r.end<=ref.end)||(r.start<=ref.start&&r.end>=ref.end&&(rule.includes(value)||units.length===1&&e.disposition==='exclude')));
     })||equivalent[0];
-    const population=/^(?:studies|trials|reports) (?:of|in|involving|enrolling) (?:infants|neonates|newborns|children|adolescents|adults|patients|participants|people|women|men)\b/i.test(wording);
+    const population=/^(?:studies|trials|reports) (?:of|in|involving|enrolling) (?:infants|neonates|newborns|children|adolescents|adults|patients|participants|people|women|men|twins|singletons)\b/i.test(wording);
     if(existing&&(existing.information_status!=='explicit'||existing.source_occurrence_alternatives?.length||existing.scope_conditions?.length||existing.exceptions?.length||existing.structured_value))continue;
+    if(!existing&&!authorSources.has(span.id))continue;
     let candidate=existing;
     if(!candidate){
      let id;do{id='source_exclusion_'+(++serial);}while(used.has(id));
@@ -1173,6 +1175,7 @@ function retainStudyExclusions(state,result,questionId,ranges,sources,onLesson){
     const text=translated?existing.normalized_text:wording;
     const corrected=!existing||existing.disposition!=='exclude'||existing.semantic_role!=='eligibility_condition'||existing.normalized_text!==text;
     Object.assign(candidate,{normalized_text:text,source_refs:heading?[ref,heading]:[ref],semantic_role:'eligibility_condition',scope_status:'restricted',information_status:'explicit',disposition:'exclude'});
+    candidate.source_study_exclusion=true;
     if(translate&&!translated)candidate.source_wording_needs_translation=true;
     if(setting)candidate.dimension_id='context';
     else if(population)candidate.dimension_id='population';
@@ -1236,6 +1239,7 @@ function fragmentConnector(left,right){
  return null;
 }
 function fragmentParticipant(e){
+ if(e[eligibilityInLogic]&&(!e.semantic_review||e.review_pending||e.review_rejected))return true;
  return e.disposition==='include'&&e.semantic_role==='eligibility_condition'&&e.information_status!=='missing'&&e.scope_status!=='unrestricted';
 }
 function combineFragmentTrees(left,right,relation){
@@ -1360,6 +1364,7 @@ function alignVerbatimValue(e){
 }
 // Keep source-only alternatives from becoming standalone rules when their
 // neighbouring predicate falls outside the selected framework.
+const eligibilityInLogic=Symbol('source candidate used in eligibility logic');
 function restrictToFramework(question,original,savedQuestion,env,trees){
  question.eligibility_policy='framework-only-v1';
  const {framework_mapping:mapping,sparse_dimension}=E.resolve_review_context(savedQuestion,question,env);
@@ -1368,6 +1373,7 @@ function restrictToFramework(question,original,savedQuestion,env,trees){
   {framework_id:frame.framework_id,basis:mapping.basis}
  ];
  const slots=new Set(frame?.slots.map(slot=>slot.slot_id));
+ const referenced=new Set([question.logic,...trees.map(part=>part.tree)].flatMap(D.walkLeaves));
  const sourceRanges=original.sources.map(s=>({source_id:s.source_id,source_revision:s.revision,start:s.start_codepoint||0,quote:s.original_text}));
  for(const e of question.elements)e.raw_text=D.quoteText(e.source_refs,'\n');
  if(slots.has('comparator'))Methods.normalizeComparators(question.elements,sourceRanges);
@@ -1381,7 +1387,7 @@ function restrictToFramework(question,original,savedQuestion,env,trees){
   if(e.information_status==='missing'||!e.source_refs?.length)continue;
   if(!slots.has(e.dimension_id)&&e.dimension_id==='study_design'&&slots.has('design'))e.dimension_id='design';
   else if(!slots.has(e.dimension_id)&&e.dimension_id==='design'&&slots.has('study_design'))e.dimension_id='study_design';
-  if(frame&&!env.frameworks.map(e.dimension_id,frame).length)continue;
+  if(frame&&!env.frameworks.map(e.dimension_id,frame).length&&!E.additionalEligibility(e))continue;
   if(Methods.classifyAnalysis(e,questionText))continue;
   const evidence=e[reviewCitations]||e.source_refs;
   const citedText=evidence.map(r=>(r.heading?.quote||'')+' '+(r.context||r.quote)).join(' ');
@@ -1407,8 +1413,10 @@ function restrictToFramework(question,original,savedQuestion,env,trees){
    if(!gate&&(e.semantic_role==='review_focus'||declaredInterest&&statedInterest))continue;
    if(gate&&e.semantic_role==='review_focus'){e.semantic_role='eligibility_condition';e.disposition=/\b(?:exclude[ds]?|ineligible)\b|排除/i.test(citedText)?'exclude':'include';e.scope_status='restricted';}
   }
-  if(e.semantic_role==='background_information'||e.semantic_role==='review_focus')continue;
-  if(!['include','exclude'].includes(e.disposition)&&e.semantic_role!=='undecided'&&e.scope_status!=='unrestricted')continue;
+  if(e.semantic_role==='review_focus'&&e.dimension_id.split('.')[0]!=='outcome'&&referenced.has(e.candidate_id))
+   e[eligibilityInLogic]=true;
+  if(e.semantic_role==='background_information'||e.semantic_role==='review_focus'&&!e[eligibilityInLogic])continue;
+  if(!['include','exclude'].includes(e.disposition)&&e.semantic_role!=='undecided'&&e.scope_status!=='unrestricted'&&!e[eligibilityInLogic])continue;
   if(frame)alignVerbatimValue(e);
   byId.set(e.candidate_id,e);
   if(!frame)pending(e,'Confirm the framework and the wording for this source condition.');
@@ -1475,6 +1483,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
    if(!Array.isArray(answer.questions[0].elements)||!Array.isArray(answer.questions[0].issues)||!Array.isArray(answer.questions[0].framework_candidates))D.fail('MODEL_SCHEMA_ERROR','extract_elements','Required extraction arrays are missing.');
    for(const e of answer.questions[0].elements){
     delete e.source_wording_needs_translation;
+    delete e.source_study_exclusion;
     delete e.treatment_name;delete e.title_population;
     D.validate_candidate_element(e);
    }
@@ -1585,6 +1594,11 @@ async function extract_elements(state,env,adapter,options={},review=null){
   if(trees.length>1&&options.fragmentPlans){
    const kept=new Map(merged.elements.map(e=>[e.candidate_id,e.candidate_id]));
    for(const part of trees){part.ids=part.ids.filter(id=>kept.has(id));if(part.tree)part.tree=D.mapExpression(part.tree,kept,'element_id');}
+   if(merged.elements.some(e=>e[eligibilityInLogic])){
+    // Hold dependent branches while Jev checks the role of a referenced item.
+    merged.logic=null;delete merged.unresolved_fragment_logic;
+    mergeFragmentLogic(merged,trees,q);
+   }
    options.fragmentPlans.push({merged,trees,q,participants:merged.elements.map(fragmentParticipant)});
   }
   return merged;
@@ -1752,7 +1766,8 @@ function sourceReview(state,adapter,options,env){
    const frame=env.frameworks.get(mapping.framework_id);
    if(frame)framework={id:frame.framework_id,fields:frame.slots.map(slot=>slot.slot_id)};
   }
-  const explicitDeferral=/\b(?:to be (?:confirmed|clarified|specified|decided|determined|defined)|undecided|pending|tbd|tbc)\b|待定|待确认|待明确|尚未确定/iu.test(original);
+  const deferral=/\b(?:(?:to|will) be (?:confirmed|clarified|specified|decided|determined|defined)|undecided|pending|tbd|tbc)\b|待定|待确认|待明确|尚未确定/iu;
+  const explicitDeferral=deferral.test(original);
   for(const e of q.elements){
    let corroborated=false;
    if(q.eligibility_policy==='framework-only-v1'){
@@ -1775,8 +1790,10 @@ function sourceReview(state,adapter,options,env){
        !/\b(?:to be (?:confirmed|clarified|specified|decided|determined|defined)|undecided|unclear|pending|possibly|tbd|tbc)\b|待定|可能|待确认|待明确|尚未确定/iu.test(original+' '+e.normalized_text))){
      e.information_status='explicit';
     }
-    if(e.source_occurrence_alternatives?.length||e.information_status!=='explicit'||e.semantic_role==='undecided'){
-     const issue=q.issues.find(issue=>issue.element_candidate_ids?.includes(e.candidate_id));
+    const issue=q.issues.find(issue=>issue.element_candidate_ids?.includes(e.candidate_id));
+    const deferredScope=['AMBIGUOUS_MEANING','CONFLICTING_REQUIREMENTS'].includes(issue?.reason_code)&&
+     (e[reviewCitations]||e.source_refs).some(ref=>deferral.test(ref.context||ref.quote));
+    if(e.source_occurrence_alternatives?.length||e.information_status!=='explicit'||e.semantic_role==='undecided'||deferredScope){
      const reason=issue?.question_text||'The source leaves the eligibility wording or its direction uncertain.';
      e.semantic_review={status:'uncertain',issue_type:'ambiguous_source',reason};
      if(!e.source_occurrence_alternatives?.length)e.review_pending={reason,original_dimension:e.dimension_id,original_role:e.semantic_role,original_disposition:e.disposition};
@@ -1788,6 +1805,7 @@ function sourceReview(state,adapter,options,env){
     id,question_id:q.question_id,dimension_id:e.dimension_id,normalized_text:e.normalized_text,
     structured_value:e.structured_value,semantic_role:e.semantic_role,information_status:e.information_status,
     scope_status:e.scope_status,disposition:e.disposition,source_quotes:e[reviewCitations]||e.source_refs,
+    ...(e[eligibilityInLogic]&&{semantic_role:'eligibility_condition',scope_status:'restricted',disposition:e.disposition||'include'}),
     ...(e.source_occurrence_alternatives?.length?{source_occurrence_pending:true}:{}),
     scope_conditions:e.scope_conditions,exceptions:e.exceptions,...(e.outcome_use?{outcome_use:e.outcome_use}:{})
    };

@@ -1,6 +1,8 @@
 /* Regression checks with simulated model replies and the real frontend/engine. */
 const assert=require('node:assert/strict'),E=require('../../app/eligibility/engine.js'),B=require('../../app/eligibility/background.js'),{setup}=require('../../tools/test_eligibility_grounding.cjs');
 const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('../../config/eligibility-frameworks.json'),profiles=require('../../config/eligibility-review-profiles.json');
+const riskSource='The assessment of nutritional risk is to be confirmed';
+const ageSource='The age boundary for older people is to be confirmed';
 (async()=>{
  const t=setup();t.ctx.window.AIMSTEPEligibilityEngine=E;t.ctx.window.AIMSTEPEligibilityBackground={...B,create:options=>B.create({...options,baseURL:'http://localhost/',frameworkConfig:frameworks,profileConfig:profiles})};
  t.api.transport(async(url,options)=>{
@@ -10,34 +12,34 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
    const make=(candidate_id,dimension_id,quote,normalized_text=quote)=>({candidate_id,dimension_id,normalized_text,structured_value:null,source_refs:[{source_id:source.source_id,source_revision:source.revision,quote}],semantic_role:'eligibility_condition',information_status:'explicit',scope_status:'restricted',disposition:'include'});
    result={questions:[{question_id:q.question_id,review_topic:'Nutritional interventions in hospitalised older people.',framework_candidates:[{framework_id:'pico',basis:'Simulated'}],elements:[
     make('p','population','hospitalised older people at risk of or with established malnutrition'),make('i','intervention','various nutritional interventions','nutritional interventions'),
-    make('c1','other',fixture.research_question,'standard care or placebo.'),make('c2','comparison_group','each other','nutritional interventions'),{...make('o','outcome','patient-relevant outcomes'),semantic_role:'review_focus',scope_status:'unspecified',disposition:null}],
-    issues:[{reason_code:'AMBIGUOUS_MEANING',question_text:'Which assessment defines nutritional risk?',scope_impact:'Defines the intended population.',element_candidate_ids:['p']}],
+    make('c1','other',fixture.research_question,'standard care or placebo.'),make('c2','comparison_group','each other','nutritional interventions'),{...make('o','outcome','patient-relevant outcomes'),semantic_role:'review_focus',scope_status:'unspecified',disposition:null},make('risk','population.risk',riskSource),make('age','population.age',ageSource)],
+    issues:[{reason_code:'AMBIGUOUS_MEANING',question_text:'Which assessment defines nutritional risk?',scope_impact:'Defines the intended population.',element_candidate_ids:['risk']},{reason_code:'AMBIGUOUS_MEANING',question_text:'Which age boundary applies?',scope_impact:'Defines the intended population.',element_candidate_ids:['age']}],
     logic:{op:'all_of',children:[{op:'predicate',element_id:'p'},{op:'predicate',element_id:'i'},{op:'any_of',children:[{op:'predicate',element_id:'c1'},{op:'predicate',element_id:'c2'}]}]}}]};
   }else if(envelope.step==='review_normalization')result={items:payload.items.map(item=>({id:item.id,status:'supported',reason:'Simulated source review',issue_type:'none',information_status:item.information_status,semantic_role:item.semantic_role,scope_status:item.scope_status,disposition:item.disposition}))};
   else throw Error('Unexpected step');
   return {ok:true,json:async()=>({message:{content:JSON.stringify(result)},...(envelope.step==='review_normalization'?{provider:'typesafe',review:{policy:'jev-once-v1'}}:{}),model:'Simulated'})};
  },'backend');
- t.el('generation-method').value='machine';t.el('generation-method').handlers.change();t.el('question').value=fixture.research_question;await t.el('start-machine').handlers.click();
+ t.el('generation-method').value='machine';t.el('generation-method').handlers.change();t.el('question').value=fixture.research_question+' '+riskSource+'. '+ageSource+'.';await t.el('start-machine').handlers.click();
  let state=t.api.state();assert(state.machineRun,t.el('generation-status').textContent);const rows=state.machineRefinement.rows;
  assert(!rows.some(r=>r.dimension==='Other'));assert(rows.find(r=>r.dimension==='Comparison').include.join(' ').includes('another nutritional intervention'));
  const checks=state.machineRefinement.sourceConfirmations;assert(checks.some(c=>c.text.includes('Which assessment defines nutritional risk?')),'Actual source questions must reach the user');
  assert(!checks.some(c=>['Intervention','Comparison','Outcomes','Analysis plan','Data plan'].includes(c.domain)),'Broad, clearly stated scope is accepted directly');
- const preview=t.el('preview').innerHTML;assert(!preview.includes('Review focus and analysis plan'));assert(preview.includes('patient-relevant outcomes'));assert(preview.includes('individual participant data'));
+ const preview=t.el('preview').innerHTML;assert(!preview.includes('Review focus and analysis plan'));assert(preview.includes('patient-relevant outcomes'));assert(!preview.includes('individual participant data'));
  const exported=Buffer.from(t.api.export()).toString('utf8');assert(!exported.includes('Review focus and analysis plan'));assert(!exported.includes('Author checks pending'));assert(exported.includes('patient-relevant outcomes'));
- assert(state.machineRefinement.focusRows.length);assert(!Object.hasOwn(t.api.normalized(),'focusRows'));
  const risk='Which assessment defines nutritional risk?';
  const populationRow=rows.find(r=>r.dimension==='Population');
- assert(checks.filter(c=>c.domain==='Population').every(c=>c.locations.some(l=>l.rule===populationRow.include[0])),'Both the age subelement and risk issue belong on the source population rule');
- assert(preview.indexOf(risk)>preview.indexOf('data-criteria-row="0"'));assert(preview.indexOf(risk)<preview.indexOf('data-criteria-row="1"'));
- assert(preview.slice(preview.lastIndexOf('aria-label="Description"')).endsWith('</span></p></section></div>'),'Description ends the preview');
+ assert(checks.every(c=>c.domain==='Population'&&c.locations.some(l=>l.section==='include')&&c.evidence.length),'Both decisions point to the relevant source under Population');
+ assert(preview.indexOf(risk)>preview.indexOf('>Population:</strong>'));
+ assert(preview.indexOf(risk)<preview.indexOf('>Intervention:</strong>'));
+ assert(preview.lastIndexOf('>Description</h3>')>preview.lastIndexOf('>Exclusion</h3>'));
  const xml=exported.slice(exported.indexOf('<w:document'),exported.indexOf('</w:document>'));
  assert(xml.indexOf(risk)<xml.indexOf('>Intervention<'),'Word places the question inside the affected row');
  assert(xml.lastIndexOf('</w:p>')>xml.indexOf('>Description<'));assert.equal(xml.slice(xml.indexOf('>Description<')).match(/<w:p>/g).length,1,'Only the Description paragraph follows its heading');
  const savedChecks=state.machineRefinement.sourceConfirmations;
  const targets=[{id:'p',label:'Population & setting'},{id:'o',label:'Outcomes'}];
  const placed=structuredClone(savedChecks[0]);placed.text='Linked question';placed.answerTargets=targets;placed.locations=[
-  {domain:'Framework',section:'framework'},{domain:'Outcomes',section:'focus',subject:'outcome of interest',targetId:'o'},
-  {domain:'Unused group',section:'exclude',subject:'Source eligibility wording',targetId:'p'}];
+  {domain:'Framework',section:'framework'},{domain:'Population',section:'include',subject:'Source population wording',targetId:'o'},
+  {domain:'Intervention',section:'exclude',subject:'Source eligibility wording',targetId:'p'}];
  const sameDomain=structuredClone(savedChecks[0]);sameDomain.text='Second rule question';
  populationRow.include.push('Second population rule.');
  sameDomain.locations=[{domain:'Population',section:'include',rule:'Second population rule.'}];
@@ -52,7 +54,7 @@ const fixture=require('./fixtures/nutrition-ipd-nma.json'),frameworks=require('.
  assert.equal(scopes.filter(scope=>scope.includes('value="o" selected')).length,1);
  assert(routed.indexOf('>Framework:</strong>')<routed.indexOf('Linked question',routed.indexOf('>Framework:</strong>'))&&routed.indexOf('Linked question',routed.indexOf('>Framework:</strong>'))<routed.indexOf('>Inclusion</h3>'));
  assert(routed.indexOf('Second population rule.')<routed.indexOf('Second rule question')&&routed.indexOf('Second rule question')<routed.indexOf('>Intervention:</strong>'));
- assert(routed.indexOf('>Exclusion</h3>')<routed.indexOf('Unused group'));assert(!routed.includes('Outcomes · Review focus'));assert(routed.includes('outcome of interest')&&routed.indexOf('outcome of interest')<routed.indexOf('>Framework:</strong>'));
+ assert(routed.indexOf('>Exclusion</h3>')<routed.indexOf('Source eligibility wording'));
  state.machineRefinement.sourceConfirmations=savedChecks;populationRow.include.pop();t.api.fill();
  assert(checks.some(c=>c.text.includes('age boundary')));assert(t.el('preview').innerHTML.includes('data-source-answer='),'Unresolved questions need a working answer field');
  t.api.denyModelAccess();
