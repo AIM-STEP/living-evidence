@@ -164,7 +164,86 @@ test('authentication failures cannot publish recovered comparative rules', async
   }), error => error === denied);
 });
 
-test('the client budgets four and a half minutes for each extraction batch', () => {
-  assert.equal(M.requestTimeoutMs('extract_elements'), 270_000);
+test('the client gives the initial extraction and the shorter recovery separate deadlines', () => {
+  assert.equal(M.requestTimeoutMs('extract_elements'), 180_000);
+  assert.equal(M.requestTimeoutMs('extract_elements', {extraction_recovery: true}), 120_000);
   assert.equal(M.requestTimeoutMs('review_normalization'), 600_000);
+});
+
+test('an exhausted extraction batch is retried in smaller source blocks with bounded replies', async () => {
+  const question = 'Identify the eligible patient population from the attached protocol.';
+  const patients = 'Adults with chronic insomnia';
+  const document = 'Background. '.repeat(165) + 'Inclusion criteria:\nPopulation: ' + patients + '.';
+  const service = await B.create({projectId: 'split-after-timeout', storage: {getItem: () => null},
+    frameworkConfig, profileConfig, baseURL: 'http://localhost/'});
+  const initial = [], retries = [];
+  const stage = await service.generate({question, legacy: {}, reviewType: 'Systematic Review',
+    sources: [{name: 'Protocol.txt', text: document}],
+    modelClient: {async request(step, state, payload, schema) {
+      if (step === 'review_normalization') return supported(payload.items);
+      const source = payload.question.sources.find(item => item.original_text.includes(patients));
+      const fields = schema.properties.questions.items.properties;
+      assert.equal(fields.review_topic.maxLength, 180);
+      assert.equal(fields.elements.maxItems, 24);
+      const count = payload.question.sources.length;
+      if (!payload.extraction_recovery) {
+        initial.push(count);
+        throw Object.assign(new Error('The first source request exceeded its deadline.'), {code: 'MODEL_TIMEOUT'});
+      }
+      retries.push(count);
+      assert.equal(payload.extraction_encoding, 'compact-elements-v2');
+      if (source) return extraction(payload.question, source, patients);
+      return {questions: [{question_id: payload.question.question_id, framework_candidates: [], elements: [], issues: [], logic: null}]};
+    }}});
+  assert.deepEqual(initial, [3]);
+  assert.deepEqual(retries.sort(), [1, 2]);
+  const row = stage.project.criteria.find(rule => rule.text === patients);
+  assert(row);
+  assert.equal(stage.project.status, 'final');
+  const element = stage.project.elements.find(item => row.source_element_ids.includes(item.element_id));
+  assert.equal(element.source_refs[0].start, document.indexOf(patients));
+});
+
+test('only source-defined verified fields survive a second timeout', async () => {
+  const question = 'Which patients are eligible?\nPopulation: Adults with asthma.\nResults:\nPopulation: Ten adults reported nausea.';
+  const timeout = Object.assign(new Error('Timed out'), {code: 'MODEL_TIMEOUT'});
+  const sourcesChecked = [];
+  const calls = [];
+  const service = await B.create({projectId: 'keep-verified', storage: {getItem: () => null},
+    frameworkConfig, profileConfig, baseURL: 'http://localhost/'});
+  const stage = await service.generate({question, reviewType: 'Systematic Review', manualFramework: 'PICO', legacy: {},
+    modelClient: {async request(step, state, payload) {
+      calls.push(step);
+      if (step === 'extract_elements') throw timeout;
+      sourcesChecked.push(...payload.items.flatMap(item => item.source_quotes.map(ref => ref.quote)));
+      return supported(payload.items);
+    }}});
+  assert.equal(calls.filter(step => step === 'extract_elements').length, 2);
+  assert(sourcesChecked.some(text => text.includes('Adults with asthma')));
+  assert(!sourcesChecked.some(text => text.includes('nausea')));
+  assert.equal(stage.project.status, 'incomplete');
+  assert.deepEqual(stage.project.criteria.map(rule => rule.text), ['Adults with asthma']);
+  assert.match(Library.criteriaHandoffBlock({
+    activeGenerator: 'machine', machineRun: {}, eligibilityV3Snapshot: stage.project
+  }), /incomplete/i);
+});
+
+test('a wrong quote in the shorter retry preserves source-defined verified criteria without author approval', async () => {
+  const sourceText = 'Population: Adults with asthma.';
+  const service = await B.create({projectId: 'retry-wrong-quote', storage: {getItem: () => null},
+    frameworkConfig, profileConfig, baseURL: 'http://localhost/'});
+  const quotes = [];
+  const stage = await service.generate({question: sourceText, reviewType: 'Systematic Review', manualFramework: 'PICO', legacy: {},
+    modelClient: {async request(step, state, payload) {
+      if (step === 'review_normalization') {
+        quotes.push(...payload.items.flatMap(item => item.source_quotes.map(ref => ref.quote)));
+        return supported(payload.items);
+      }
+      if (!payload.extraction_recovery) throw Object.assign(new Error('Timed out'), {code: 'MODEL_TIMEOUT'});
+      return extraction(payload.question, payload.question.sources[0], 'an invented diagnosis');
+    }}});
+  assert.deepEqual(stage.project.criteria.map(rule => rule.text), ['Adults with asthma']);
+  assert.equal(stage.project.status, 'incomplete');
+  assert(quotes.every(quote => sourceText.includes(quote)));
+  assert(!stage.project.issues.some(issue => issue.blocking));
 });

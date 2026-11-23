@@ -109,7 +109,7 @@ def render(output):
          ('每次 Generate 都重新读取输入和附件，并记录来源。',))
     card(96, 632, 1648, 152, '提取候选条件并标准化框架要素',
          ('程序记录原文条款和位置，本地模型按来源提取、标准化，漏项定向补提。',
-          '推理和自动修复共用时限。保留阈值、单位、时点、例外和适用条件。'))
+          '提取超时自动缩小批次重试。可确定的候选先交 Jev 核对。'))
     card(96, 820, 1648, 149, 'TypeSafe Jev 逐条独立核对',
          ('核对每条的框架字段、纳排方向和规则含义。',
           '每生成一条候选就核对一条，其他来源可以继续提取。'))
@@ -152,7 +152,7 @@ def render(output):
 
     draw.line((96, 2260, 1744, 2260), fill=RULE, width=2)
     text(96, 2285, 'AIM-STEP', 26, BODY, bold=True)
-    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 56', 25, BODY, width=608)
+    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 57', 25, BODY, width=608)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, optimize=True)

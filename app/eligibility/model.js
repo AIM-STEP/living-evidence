@@ -71,7 +71,11 @@ function httpError(status,detail,step){
  const error=new D.EligibilityError(code,step,(stages[step]||'Criteria generation')+' (HTTP '+status+'). '+message);
  error.status=status;return error;
 }
-function requestTimeoutMs(step){return step==='extract_elements'?270000:600000;}
+function requestTimeoutMs(step,payload){
+ if(step==='extract_elements')return payload?.extraction_recovery?120000:180000;
+ if(step==='repair_candidate_wording')return 150000;
+ return 600000;
+}
 function client(options={}){
  let base=options.base||null,model=options.model||null;const exchanges=[];
  const fetcher=options.fetch||((url,init)=>{if(typeof window==='object'&&window.AIMSTEPOnlineModel?.online)return window.AIMSTEPOnlineModel.request(url,init);return fetch(url,/^http:\/\/(?:127\.0\.0\.1|localhost)/.test(url)?{...init,targetAddressSpace:'loopback'}:init);});
@@ -82,7 +86,7 @@ function client(options={}){
   D.fail('MODEL_UNAVAILABLE','connection','无法连接模型。请运行 python3 tools/local_model_server.py，或连接项目已有的在线模型网关。');
  }
  async function request(step,state,payload,schema,instruction,signal){
-  const endpoint=await discover(signal),controller=new AbortController(),abort=()=>controller.abort(signal?.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(()=>controller.abort(),options.timeout_ms||requestTimeoutMs(step));
+  const endpoint=await discover(signal),controller=new AbortController(),abort=()=>controller.abort(signal?.reason);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();const timer=setTimeout(()=>controller.abort(),options.timeout_ms||requestTimeoutMs(step,payload));
   const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',workflow:'eligibility-criteria',messages,format:schema,...backendTask(step)};
   try{
    const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let detail;try{detail=await r.json();}catch(_){}throw httpError(r.status,detail,step);}
@@ -137,6 +141,29 @@ function sourceBatches(q){
   }
  }
  const groups=[];let part=[],size=0;for(const source of fragments){if(part.length&&size+source.original_text.length>5500){groups.push(part);part=[];size=0;}part.push(source);size+=source.original_text.length;}if(part.length)groups.push(part);return groups;
+}
+function extractionResponseSchema(questionId,detectLanguage){
+ const schema=D.clone(extractionSchema);
+ const question=schema.properties.questions;
+ question.minItems=question.maxItems=1;
+ const fields=question.items.properties;
+ question.items.required.push('review_topic');
+ fields.question_id={type:'string',enum:[questionId]};
+ fields.review_topic={type:'string',maxLength:180};
+ fields.framework_candidates.maxItems=3;
+ fields.framework_candidates.items.properties.basis={type:'string',maxLength:200};
+ fields.elements.maxItems=24;
+ fields.elements.items.properties.candidate_id={type:'string',maxLength:80};
+ fields.elements.items.properties.normalized_text={type:'string',maxLength:1400};
+ fields.elements.items.properties.source_refs.maxItems=8;
+ fields.issues.maxItems=12;
+ fields.issues.items.properties.question_text={type:'string',maxLength:320};
+ fields.issues.items.properties.scope_impact={type:'string',maxLength:240};
+ if(detectLanguage){
+  schema.properties.source_language={type:'string',maxLength:24};
+  schema.required.push('source_language');
+ }
+ return schema;
 }
 function prefixLogic(node,prefix){return node?.op==='predicate'?{...node,element_id:prefix+node.element_id}:node?{...node,children:(node.children||[]).map(n=>prefixLogic(n,prefix))}:null;}
 function orderExtractedElements(item,sourceOrder){
@@ -324,7 +351,7 @@ const explicitFields={
  'inclusion criteria':'include','纳入标准':'include','exclusion criteria':'exclude','排除标准':'exclude',
  'conditions and exceptions':'qualifier','条件与例外':'qualifier'
 };
-function readSourcePassages(state,ranges){
+function readSourcePassages(state,ranges,{includeLabelledDocumentFields=false}={}){
  const passages=[];
  for(const span of ranges){
   const source=D.sourceAt(state,{source_id:span.id,source_revision:span.revision});
@@ -358,7 +385,9 @@ function readSourcePassages(state,ranges){
    const coverage=completeStart&&completeEnd&&sourceScope&&kindHint!=='reported_information'&&
     (direct?'direct':inherited||field?'section':null);
    const record={id:passages.length+1,kind:kindHint,ref,coverage,section:inherited,field,body};
-   if(safe&&['research_question','additional_requirement'].includes(source.input_kind)&&body.trim()&&body.length<=1200&&
+   const headedCriterion=includeLabelledDocumentFields&&coverage==='section'&&inherited==='include'&&field&&
+    !['include','exclude','qualifier'].includes(field);
+   if(safe&&(direct||headedCriterion)&&body.trim()&&body.length<=1200&&
     (kind==='include'||(field||inherited)&&!['exclude','comparison_clause','analysis_objective'].includes(kind))){
     const value=body.replace(/[.。]+$/u,'').trim();
     // Eligibility that consists of a conditional, coordinated or negated
@@ -613,6 +642,7 @@ function recoverLabelCitations(elements,ranges,passages){
   const matched=inclusions.map(p=>comparisonEligibilityFields(p,own,source)).filter(Boolean);
   const fields=matched.length===1?matched[0]:null;
   const matches=[];
+  for(const p of own.filter(p=>p.labelled&&p.dimension===e.dimension_id&&p.value&&key(p.value)===wording))matches.push([p.ref]);
   for(const f of fields||[]){
    const refs=f.refs||[f.ref];
    if(f.dimension==='study_design'&&refs.length>1&&['study_design','outcome','follow_up','duration'].includes(e.dimension_id)&&
@@ -1025,7 +1055,8 @@ function checkExtractedSources(state,candidate,questionId,ranges){
  }
  const entries=[...originals.values()].map(ref=>{
   const hits=citationHits(ref,ranges);
-  if(!hits.length)D.fail('QUOTE_NOT_FOUND','provenance','Candidate '+candidate.candidate_id+' must quote the exact text from a source ID and revision supplied in this batch.');
+  if(!hits.length)D.fail('QUOTE_NOT_FOUND','provenance','Candidate '+candidate.candidate_id+' must quote the exact text from a source ID and revision supplied in this batch.',
+   {outsideBatch:!ranges.some(range=>range.id===ref.source_id&&range.revision===ref.source_revision)});
   const located=locatedHit(state,ref,hits);
   if(!located&&(ref.start!=null||ref.end!=null)&&hits.some(h=>h.ref.quote!==ref.quote))
    D.fail('QUOTE_OFFSET_MISMATCH','provenance','The supplied citation offsets do not identify its original wording.');
@@ -1779,17 +1810,22 @@ function preserveComparativeFields(state,result,comparison,requirements,question
 }
 async function extract_elements(state,env,adapter,options={},review=null){
  adapter=guidedRequests(adapter,options);
- const payload=E.extraction_payload(state,env),plans=payload.questions.map(sourceBatches),jobs=plans.flatMap((batches,qi)=>batches.map((sources,bi)=>({qi,bi,sources}))),total=jobs.length,frameworks=compactFrames(payload.frameworks);
+ const payload=E.extraction_payload(state,env),plans=payload.questions.map(sourceBatches),jobs=plans.flatMap((batches,qi)=>batches.map((sources,bi)=>({qi,bi,sources}))),frameworks=compactFrames(payload.frameworks);
  const profiles=payload.questions.map(q=>profileContext(env.profiles.resolve(q.context.review_methods)));
  const originals=new Map(state.questions.map(q=>[q.question_id,q]));
  const parts=plans.map(batches=>new Array(batches.length)),remaining=plans.map(batches=>batches.length),questions=new Array(plans.length);
  const sourceOrder=payload.questions.map(q=>new Map(q.sources.map((source,index)=>[source.source_id,index])));
- let completed=0;
+ let completed=0,total=jobs.length;
  const failures=[];
- const tasks=jobs.map(({qi,bi,sources},index)=>async(signal,enqueue)=>{
+ const tasks=jobs.map((job,index)=>(signal,enqueue)=>runBatch(job,index,null,signal,enqueue));
+
+ async function runBatch({qi,bi,sources},index,fragment,signal,enqueue){
+  const retryPart=fragment!==null;
+  const partId=retryPart?bi+'f'+fragment:bi;
+  const detectLanguage=index===0&&fragment!==1&&options.languageSample;
   const q=payload.questions[qi],batches=plans[qi];
   const ranges=citedRanges(sources);
-  const passages=readSourcePassages(state,ranges);
+  const passages=readSourcePassages(state,ranges,{includeLabelledDocumentFields:retryPart});
   options.onProgress?.('Extracting source conditions ('+(index+1)+'/'+total+')…',{phase:'extract',completed,total,waiting:true});
   const {document_input_only,original_text,...question}=q;
   const questionInBatch=sources.filter(s=>s.input_kind==='research_question').map(s=>s.original_text).join('')===original_text;
@@ -1804,33 +1840,37 @@ async function extract_elements(state,env,adapter,options={},review=null){
   const comparativeSlots=comparison.fields;
   const requirements=sourceRequirements(ranges,passages,comparison);
   const canRestoreComparative=comparativeSlots.length&&!q.confirmed_elements.length&&!comparison.unparsed.length&&ranges.length===1;
-  const questionContext=batches.length>1&&!document_input_only&&!questionInBatch?original_text:undefined;
+  const splitQuestion=batches.length>1||retryPart;
+  const questionContext=splitQuestion&&!retryPart&&!document_input_only&&!questionInBatch?original_text.slice(0,1400):undefined;
   const {registration,...sourceContext}=question.context;
   const briefRegistration=!comparativeSlots.length&&original_text.length<=180&&batches.length===1&&sources.length===1&&questionInBatch?registration:null;
-  const request={question:{...question,context:{...sourceContext,...(briefRegistration&&{registration:briefRegistration})},sources,original_text:questionContext},frameworks,review_profiles:profiles[qi],source_passages:passageIndex(passages),part_index:bi,part_count:batches.length,extraction_encoding:'compact-elements-v3'};
+  const request={question:{...question,context:{...sourceContext,...(briefRegistration&&{registration:briefRegistration})},sources,original_text:questionContext},frameworks,review_profiles:profiles[qi],source_passages:passageIndex(passages),part_index:bi,part_count:batches.length+Number(retryPart),extraction_encoding:retryPart?'compact-elements-v2':'compact-elements-v3'};
+  if(retryPart)request.extraction_recovery=true;
   if(comparativeSlots.length)request.source_defined_fields=comparativeSlots.map(({dimension,side,source,qualification})=>({
    dimension,disposition:side,quote:source.quote,...(qualification&&{conditional_inclusion:qualification.source.quote})}));
   if(requirements.length)request.source_requirements=requirements.map(({dimension,side,source_refs})=>({dimension,disposition:side,source_refs}));
   const coverageInstruction=requirements.length?' Account for each source_requirements entry independently. Some have no fixed direction; interpret their conditional or exception within the question, keeping all linked passages and the direction they govern. Use complete exact quotations for each scope requirement.':'';
   const comparativeInstruction=comparativeSlots.length?' Cover every source_defined_fields entry independently, quoting its complete wording and keeping its supplied dimension and direction. Keep mandatory intervention components and all comparison alternatives in the same fields. Quote a supplied conditional_inclusion as a second citation for the same framework field. Preserve what triggers the rule and the criterion required under that condition. A mixed population can be eligible conditionally if data for the exact target subgroup can be extracted separately. Preserve the entire exclusion, including its quantifier. An outcome with null disposition is the measure of interest; name it without expressing a required treatment effect or eligibility gate.':'';
-  const detectLanguage=index===0&&options.languageSample;
   if(detectLanguage)request.question_language_sample=options.languageSample;
   const languageInstruction=detectLanguage?' Return source_language as the BCP 47 code (such as en, fr, or zh-Hant) for the main natural language of question_language_sample. Ignore formatting, acronyms, borrowed technical terms and other sources. Choose the main research question language for mixed input. If there is no identifiable language, return und. Keep all extracted wording and the topic in English, even when the source is in a different language.':'';
   const briefInstruction=briefRegistration?' If the source is a short phrase supplying only one framework field, extract that field with exact source evidence. A field heading such as Comparison, Exposure or Study design identifies the role of its value. Retain an outcome alone as a review interest unless the source explicitly requires measurement or reporting for eligibility. Use registration to interpret the scope and framework. Extract no criteria from the registered title.':'';
-  const responseSchema=D.clone(extractionSchema);responseSchema.properties.questions.items.required.push('review_topic');responseSchema.properties.questions.minItems=1;responseSchema.properties.questions.maxItems=1;responseSchema.properties.questions.items.properties.question_id={type:'string',enum:[q.question_id]};
-  if(detectLanguage){
-   responseSchema.properties.source_language=str;
-   responseSchema.required.push('source_language');
-  }
-  let answer,repairableAnswer,failedSource,attempt=0;
+  const responseSchema=extractionResponseSchema(q.question_id,detectLanguage);
+  const batchScope=splitQuestion?' Extract only from the cited part. question.original_text, when supplied, is context for the full question. Preserve its within-part logic.':'';
+  const formatInstruction=' Use concise field values and exact short citations. Include a single framework candidate and omit optional properties that have no source evidence.';
+  const recoveryInstruction='Extract only source-backed eligibility conditions, limits and outcomes from question.sources. Preserve direction, uncertainty, conditions, alternatives and Boolean relations. Leave elements empty if no condition appears in this part. For each citation use an exact original quotation, never a source ID as its quote. Use null for a structured value unless the citation states a numerical condition. Keep genuine uncertainties linked to their candidates. Use brief English clinical wording and return compact JSON.';
+  let answer,repairableAnswer,failedSource,attempt=retryPart?options.retries??1:0,retryingUnavailable=retryPart;
+  const emptyExtraction=()=>({question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null});
   return extractBatch(signal,enqueue);
 
   async function extractBatch(signal,enqueue){
    for(;attempt<=(options.retries??1);attempt++)try{
-    answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+briefInstruction+languageInstruction+comparativeInstruction+coverageInstruction+(batches.length>1?' Extract only from sources in this part. If supplied, question.original_text is whole-question context, not another source for this part. Preserve the within-part logic of all eligibility conditions.':'')+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
+    const instruction=(retryingUnavailable?recoveryInstruction:extractionInstruction)+formatInstruction+briefInstruction+languageInstruction+comparativeInstruction+coverageInstruction+batchScope;
+    answer=await adapter.request('extract_elements',state,request,responseSchema,instruction+(attempt&&!retryingUnavailable?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
     if(!Array.isArray(answer?.questions)||answer.questions.length!==1||answer.questions[0]?.question_id!==q.question_id)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The model omitted or changed the question ID.');
     const topic=answer.questions[0].review_topic;answer.questions[0].review_topic=typeof topic==='string'?topic.trim().slice(0,1000):'';
     if(!Array.isArray(answer.questions[0].elements)||!Array.isArray(answer.questions[0].issues)||!Array.isArray(answer.questions[0].framework_candidates))D.fail('MODEL_SCHEMA_ERROR','extract_elements','Required extraction arrays are missing.');
+    if(answer.questions[0].elements.length>=responseSchema.properties.questions.items.properties.elements.maxItems)
+     D.fail('MODEL_OUTPUT_LIMIT','extract_elements','The extracted result reached the maximum number of conditions for this source part.');
     if(canRestoreComparative){
      retainComparativeQuestion(state,answer.questions[0],comparativeSlots,q.question_id,ranges,options.onLesson);
      break;
@@ -1909,9 +1949,9 @@ async function extract_elements(state,env,adapter,options={},review=null){
      repairableAnswer=answer;
      setLanguage(answer);
      if(review){
-      const preview=batchPart(result,qi,bi,requirements);
+      const preview=batchPart(result,qi,partId,requirements);
       restrictToFramework(preview,q,originals.get(q.question_id),env,[]);
-      review.add(preview,enqueue,false,bi);
+      review.add(preview,enqueue,false,partId);
      }
      request.source_requirements=missingRequirements.map(({dimension,side,source_refs})=>({dimension,disposition:side,source_refs}));
      request.validation_feedback={code:'SOURCE_COVERAGE',message:'Return the complete structured result, preserving its existing criteria and restoring the listed source_requirements with complete quotations and qualifiers.'};
@@ -1928,14 +1968,36 @@ async function extract_elements(state,env,adapter,options={},review=null){
    }catch(error){
     if(signal.aborted)throw error;
     const malformed=retryableResponse(error)||error.step==='provenance';
-    const unavailable=reviewUnavailable(error);
+    const unavailable=reviewUnavailable(error)||error.code==='MODEL_OUTPUT_LIMIT';
     if(repairableAnswer&&(unavailable||malformed)){answer=repairableAnswer;break;}
     if(canRestoreComparative&&review&&unavailable){
-     const item={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null};
+     const item=emptyExtraction();
      retainComparativeQuestion(state,item,comparativeSlots,q.question_id,ranges,options.onLesson);
      options.onLesson?.('service_availability');
      answer={questions:[item]};
      break;
+    }
+    if(review&&attempt<(options.retries??1)&&['MODEL_TIMEOUT','MODEL_INVALID_JSON','MODEL_EMPTY_RESPONSE','MODEL_UPSTREAM_ERROR','MODEL_OUTPUT_LIMIT'].includes(error.code)){
+     // A new concise request gives the model a different constrained generation path.
+     retryingUnavailable=true;
+     request.extraction_recovery=true;
+     request.extraction_encoding='compact-elements-v2';
+     options.onLesson?.('service_availability');
+     const preview=batchPart(recoverCitedFields(),qi,partId,requirements);
+     restrictToFramework(preview,q,originals.get(q.question_id),env,[]);
+     review.add(preview,enqueue,false,partId);
+     if(sources.length>1){
+      total++;
+      remaining[qi]++;
+      const middle=Math.ceil(sources.length/2);
+      for(const [fragment,split] of [sources.slice(0,middle),sources.slice(middle)].entries())
+       enqueue((signal,enqueue)=>runBatch({qi,bi,sources:split},index,fragment,signal,enqueue));
+     }else{
+      attempt++;
+      enqueue(extractBatch);
+     }
+     options.onProgress?.('Retrying source extraction with a shorter request…',{phase:'extract',completed,total,waiting:true});
+     return;
     }
     if(malformed&&!unavailable&&attempt<(options.retries??1)){
      // The full schema is a different extraction attempt, not another repair of the same reply.
@@ -1944,7 +2006,9 @@ async function extract_elements(state,env,adapter,options={},review=null){
      options.onProgress?.('Correcting the extraction against the original source…',{phase:'extract',completed,total,waiting:true});
      continue;
     }
-    if(!review||!unavailable)throw error;
+    const unreadableRetry=error.code==='MODEL_SCHEMA_ERROR'&&!/question ID|question identifier/i.test(error.message)||
+     error.code==='QUOTE_NOT_FOUND'&&error.details?.outsideBatch===false||error.code==='QUOTE_OFFSET_MISMATCH';
+    if(!review||!(unavailable||retryingUnavailable&&unreadableRetry))throw error;
     failures.push(error);
     options.onLesson?.('service_availability');
     failedSource=ranges.flatMap(range=>{
@@ -1952,7 +2016,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
      return quote.trim()?[{source_id:range.id,source_revision:range.revision,start:range.start,
       end:range.start+Array.from(quote).length,quote}]:[];
     });
-    answer={questions:[{question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null}]};
+    answer={questions:[recoverCitedFields()]};
     break;
    }
    setLanguage(answer);
@@ -1960,13 +2024,13 @@ async function extract_elements(state,env,adapter,options={},review=null){
    options.onProgress?.((failedSource?'Source part unprocessed (':'Source parts processed (')+completed+'/'+total+').',{phase:'extract',completed,total,waiting:completed<total});
    const item=answer.questions[0];
    if(!state.decisions.length)orderExtractedElements(item,sourceOrder[qi]);
-   const part=batchPart(item,qi,bi,requirements);
+   const part=batchPart(item,qi,partId,requirements);
    if(failedSource)part.failed_source_refs=failedSource;
    if(questionRange&&Array.from(questionRange.text).length>=45&&/[?？]/u.test(questionRange.text)){
     const {id,revision,start,end,text:quote}=questionRange;
     part.question_evidence={source_id:id,source_revision:revision,start,end,quote};
    }
-   parts[qi][bi]=part;
+   (parts[qi][bi]??=[])[fragment??0]=part;
    remaining[qi]--;
    if(remaining[qi]===0){
     const merged=questions[qi]=mergeQuestion(q,qi);
@@ -1976,8 +2040,17 @@ async function extract_elements(state,env,adapter,options={},review=null){
     // being extracted. Final assembly can reuse a verdict with the same evidence.
     const preview={...part,elements:part.elements.map(e=>({...e,source_refs:[...e.source_refs]}))};
     restrictToFramework(preview,q,originals.get(q.question_id),env,[]);
-    review.add(preview,enqueue,false,bi);
+    review.add(preview,enqueue,false,partId);
    }
+  }
+
+  function recoverCitedFields(){
+   const result=emptyExtraction();
+   result.eligibility_policy='framework-only-v1';
+   retainUncitedPassages(state,result,q.question_id,ranges,readSourcePassages(state,ranges,{includeLabelledDocumentFields:true}),options.onLesson);
+   retainStudyExclusions(state,result,q.question_id,ranges,sources,options.onLesson);
+   if(!q.confirmed_elements.length)preserveComparativeFields(state,result,comparison,requirements,q.question_id,ranges,options.onLesson);
+   return result;
   }
 
   function setLanguage(answer){
@@ -1985,12 +2058,13 @@ async function extract_elements(state,env,adapter,options={},review=null){
    const language=sourceLanguage(answer.source_language,options.languageSample);
    options.onSourceLanguage?.(chineseComparison&&!language?.startsWith('zh')?'zh':language);
   }
- });
+ }
  for(let qi=0;qi<plans.length;qi++)if(!remaining[qi]){
   questions[qi]=mergeQuestion(payload.questions[qi],qi);
  }
  await runModelTasks(tasks,options);
- if(failures.length&&failures.length===jobs.length)throw failures[0];
+ if(failures.length&&failures.length===total&&
+    !questions.some(q=>q.elements.some(e=>e.semantic_review?.status==='supported'&&!e.review_pending)))throw failures[0];
  return {questions};
  function batchPart(item,qi,bi,requirements){
   const prefix='q'+qi+'b'+bi+'_';
@@ -2000,7 +2074,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
  }
  function mergeQuestion(q,qi){
   const merged={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],source_requirements:[],logic:null},trees=[];
-  for(const item of parts[qi]){
+  for(const item of parts[qi].flat()){
    merged.elements.push(...item.elements);merged.issues.push(...item.issues);merged.source_requirements.push(...item.source_requirements);
    if(item.question_evidence)merged.question_evidence=item.question_evidence;
    if(item.failed_source_refs?.length)(merged.failed_source_refs??=[]).push(...item.failed_source_refs);

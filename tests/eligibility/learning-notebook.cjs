@@ -63,7 +63,10 @@ test('failed and recovered extractions leave only whitelisted codes, influence l
  await run(good);
  let reject,started;
  const begin=new Promise(resolve=>{started=resolve;});
- const slow=run({request:async()=>{started();return new Promise((resolve,rejectRequest)=>{reject=rejectRequest;});}});
+ const slow=run({request:async(step,state,payload)=>{
+  if(payload.extraction_recovery)throw Object.assign(Error('simulated upstream failure'),{code:'MODEL_UPSTREAM_ERROR'});
+  started();return new Promise((resolve,rejectRequest)=>{reject=rejectRequest;});
+ }});
  await begin;
  const epoch=B.resetProject(storage,id,{question});
  assert.equal(storage.getItem(svc.keys.lessons),null);
