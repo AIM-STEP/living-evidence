@@ -19,6 +19,15 @@ const cases=[
  {id:'community-fall-prevention',input:{research_question:'对于居住在社区、过去一年内至少跌倒过一次的老年人，与常规照护或单纯健康教育相比，以平衡训练为必备内容的居家运动计划能否降低随访期间至少跌倒一次的风险？仅纳入随机对照试验，排除所有训练均在医疗机构内完成的项目。',output_language:'en'},
   expected:{coverage:true,eligibility_dimensions:['population','comparator','intervention','study_design'],comparator:/usual care.+or.+health education/i,outcome:/at least once/i,exclude:/all.+healthcare facilit/i}},
 
+ {id:'community-falls-randomisation',input:{research_question:'对于居住在社区的 65 岁及以上老年人，与常规照护相比，居家平衡训练能否降低 12 个月内至少跌倒一次的风险？仅纳入随机对照试验，允许按个人或社区随机分组。既往是否跌倒过均不影响纳入。',output_language:'en'},
+  expected:{coverage:true,eligibility_dimensions:['population','comparator','intervention','study_design'],comparator:/usual care/i,
+   outcome:/at least (?:once|one fall) within 12 months/i,intervention:/home-based balance training/i,
+   studyDesign:/individually randomised or community-randomised controlled trials/i,
+   populationCondition:/65 years or older.+regardless of (?:prior )?fall history/i,
+   title:/home-based balance training in community-dwelling older adults/i,bilingual:'zh',
+   chinesePopulation:/65.*(?:跌倒史不限|无论.{0,12}跌倒|不论.{0,12}跌倒|是否.{0,12}跌倒)|(?:无论|不论).{0,15}跌倒.*65/u,
+   chineseDesign:/个[人体].{0,20}社区|社区.{0,20}个[人体]/u}},
+
  {id:'neonatal-resuscitation',input:{research_question:neonatal.question,review_method:'systematic_review',question_type:'intervention_effect',output_language:'en'},expected:{neonatal:true}},
  {id:'nutrition-ipd-nma',input:{research_question:require('../tests/eligibility/fixtures/nutrition-ipd-nma.json').research_question,question_framework:'PICO',review_method:'systematic_review',output_language:'en'},expected:{framework:'pico',no_rct_default:true,eligibility_dimensions:['population','intervention','comparator'],nutrition_scope:true}},
  {id:'strict-age',input:{research_question:'Include people aged >18 years.',question_framework:'PICO',output_language:'en'},expected:{strict_bound:'gt',value:18,no_rct_default:true}},
@@ -70,16 +79,21 @@ async function run(def){
    const outcome=es.find(e=>e.dimension_id==='outcome'&&e.semantic_role==='review_focus')?.normalized_text||'';
    if(!def.expected.outcome.test(outcome))errors.push('Outcome and its source qualifiers were not retained as review focus.');
    if(def.expected.qualifier&&!state.criteria.some(c=>c.dimension_id==='intervention'&&def.expected.qualifier.test(c.text)))errors.push('Matched co-intervention clause missing.');
-   if(def.expected.populationCondition&&!state.criteria.some(c=>c.dimension_id==='population'&&def.expected.populationCondition.test(c.text)))errors.push('The mixed-cohort data-separability condition is missing.');
+   if(def.expected.populationCondition&&!state.criteria.some(c=>c.dimension_id==='population'&&def.expected.populationCondition.test(c.text)))errors.push('The explicit population qualification is missing.');
+   if(def.expected.intervention&&!state.criteria.some(c=>c.dimension_id==='intervention'&&def.expected.intervention.test(c.text)))errors.push('The stated intervention is missing.');
+   if(def.expected.studyDesign&&!state.criteria.some(c=>c.dimension_id==='study_design'&&def.expected.studyDesign.test(c.text)))errors.push('The allowed randomisation units were lost.');
    if(def.expected.bilingual){
     const view=require('../app/eligibility/background.js').projectToClassic(state);
     const phrases=['Eligibility criteria','Population','Intervention','Comparison','Outcomes','Study design','Description',
      view.reviewTopic,view.manuscriptParagraph,outcome,...view.rows.flatMap(row=>row.include)];
     if(phrases.some(text=>M.needsSourceTranslation(text,'en')))errors.push('The English output contains untranslated source text.');
     const population=view.rows.find(row=>row.dimension==='Population')?.include[0];
-    const plan=M.translationPlan(def.expected.bilingual,['Eligibility criteria',population,outcome]);
+    const studyDesign=view.rows.find(row=>row.dimension==='Study design')?.include[0];
+    if(def.expected.title&&!def.expected.title.test(view.reviewTopic))errors.push('The title lost the intervention or population.');
+    const plan=M.translationPlan(def.expected.bilingual,['Eligibility criteria',population,outcome,studyDesign,view.reviewTopic,view.manuscriptParagraph]);
     const bilingual=await M.translateCriteria(plan,(payload,schema,instruction,signal)=>adapter.request('translate_criteria',state,payload,schema,instruction,signal));
-    if(!/单独|分别|独立/u.test(bilingual.texts[population]||''))errors.push('The original-language population loses the separate-data condition.');
+    if(!(def.expected.chinesePopulation||/单独|分别|独立/u).test(bilingual.texts[population]||''))errors.push('The original-language population lost its explicit qualification.');
+    if(def.expected.chineseDesign&&!def.expected.chineseDesign.test(bilingual.texts[studyDesign]||''))errors.push('The original-language study design lost the randomisation units.');
     result.bilingual=bilingual;
    }
    if(def.expected.exclude&&!state.criteria.some(c=>c.disposition==='exclude'&&def.expected.exclude.test(c.text)))errors.push('Explicit intervention exclusion missing.');

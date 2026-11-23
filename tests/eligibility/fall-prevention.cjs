@@ -138,3 +138,99 @@ test('copied original-language conditions get a repair after the first wording i
  const passed=state.eligibilityV3Snapshot.questions[0].include.find(row=>row.dimension_id==='comparator');
  assert.match(passed?.text,/Usual care or health education without exercise training/);
 });
+
+const Model=require('../../app/eligibility/model.js');
+const preventionQuestion='对于居住在社区的 65 岁及以上老年人，与常规照护相比，居家平衡训练能否降低 12 个月内至少跌倒一次的风险？仅纳入随机对照试验，允许按个人或社区随机分组。既往是否跌倒过均不影响纳入。';
+const needsWaiver='既往是否跌倒过均不影响纳入';
+const randomisation='允许按个人或社区随机分组';
+const fallPopulation='Community-dwelling older adults aged 65 years or older, regardless of prior fall history';
+const fallDesign='Individually randomised or community-randomised controlled trials';
+const fallOutcome='Risk of falling at least once within 12 months';
+const fallTitle='Home-based balance training in community-dwelling older adults';
+
+test('community fall prevention retains the intervention, permitted trial designs and neutral fall history in both languages',async()=>{
+ const page=setup(),reviews=[];
+ Object.assign(page.ctx.window,{AIMSTEPEligibilityEngine:Engine,AIMSTEPEligibilityBackground:{...Background,create:args=>Background.create({...args,...config})}});
+ page.api.transport(async(url,options)=>{
+  const {step,payload}=JSON.parse(JSON.parse(options.body).messages[1].content);
+  let response;
+  if(step==='extract_elements'){
+   const q=payload.question,source=q.sources[0];
+   const elements=[
+    extracted(source,['population','include','居住在社区的 65 岁及以上老年人','Community-dwelling older adults aged 65 years and above'],0),
+    extracted(source,['study_design','include','随机对照试验','Randomised controlled trials'],1),
+   ];
+   assert.deepEqual(payload.source_defined_fields.filter(field=>field.qualification).map(field=>field.qualification),[needsWaiver,randomisation]);
+   response={source_language:'zh',questions:[{question_id:q.question_id,review_topic:'Community-dwelling older adults and above',framework_candidates:['picos'],elements,issues:[],logic:null}]};
+  }else if(step==='review_normalization'){
+   const [item]=payload.items;
+   assert.equal(payload.items.length,1);
+   reviews.push(item);
+   const lowConfidence=item.dimension_id==='intervention';
+   response={items:[{...item,status:lowConfidence?'uncertain':'supported',
+    issue_type:lowConfidence?'ambiguous_source':'none',reason:'Faithful to the original wording.',
+    reviewer:lowConfidence?{provider:'typesafe',verdict:'low_confidence',original_verdict:'supported',confidence:.67,choice_probability:.71}:
+     {provider:'typesafe',verdict:'supported',confidence:.97,choice_probability:.99}}]};
+  }else{
+   assert.equal(step,'translate_criteria');
+   const wording=new Map([
+    [fallPopulation.toLowerCase(),'65 岁及以上的社区居住老年人，既往跌倒史不限'],
+    [fallDesign.toLowerCase(),'按个人或社区随机分组的随机对照试验'],
+    [fallOutcome.toLowerCase(),'12 个月内至少跌倒一次的风险'],
+    [fallTitle.toLowerCase(),'社区老年人的居家平衡训练'],
+    ['home-based balance training','居家平衡训练'],['usual care','常规照护'],
+   ]);
+   response={items:payload.items.map(({id,text})=>({id,text:listLabels.get(text)||
+    wording.get(text.trim().replace(/\.$/,'').toLowerCase())||(text.startsWith('We will include')?
+     '我们将纳入比较居家平衡训练与常规照护的随机对照试验，允许按个人或社区随机分组。对象为 65 岁及以上的社区居住老年人，既往跌倒史不限。研究结局为 12 个月内至少跌倒一次的风险。':text)}))};
+  }
+  return {ok:true,json:async()=>({message:{content:JSON.stringify(response)},
+   ...(step==='review_normalization'&&{provider:'typesafe',review:{policy:'jev-once-v1'}})})};
+ },'backend');
+ const choice=page.el('generation-method');
+ choice.value='machine';choice.handlers.change();
+ page.el('question').value=preventionQuestion;
+ await page.el('start-machine').handlers.click();
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(page.el('generation-status').textContent,'');
+ const state=page.api.state(),snapshot=state.eligibilityV3Snapshot,q=snapshot.questions[0],preview=page.el('preview').innerHTML;
+ assert.equal(snapshot.status,'final');
+ assert.equal(snapshot.validation.completeness.eligibility.incomplete,false);
+ assert.equal(state.machineRefinement.reviewTopic,fallTitle);
+ assert.equal(reviews.length,5);
+ assert.match(q.elements.find(e=>e.dimension_id==='intervention').semantic_review.reason,/complete source field/);
+ for(const [dimension,quote] of [['population',needsWaiver],['study_design',randomisation]]){
+  assert(reviews.find(item=>item.dimension_id===dimension).source_quotes.some(ref=>ref.quote===quote));
+ }
+ assert.deepEqual(q.include.map(c=>c.dimension_id).sort(),['comparator','intervention','population','study_design']);
+ assert.equal(q.include.find(c=>c.dimension_id==='population').text,fallPopulation);
+ assert.equal(q.include.find(c=>c.dimension_id==='study_design').text,fallDesign);
+ assert.equal(q.focus[0].normalized_text,fallOutcome);
+ assert.equal(q.exclude.length,0);
+ assert.match(state.machineRefinement.manuscriptParagraph,/individually randomised or community-randomised controlled trials/i);
+ assert.match(state.machineRefinement.manuscriptParagraph,/regardless of prior fall history/i);
+ assert.match(preview,/Home-based balance training[\s\S]*lang="zh"[\s\S]*居家平衡训练/);
+ assert.match(preview,/65 岁及以上的社区居住老年人，既往跌倒史不限/);
+ assert.match(preview,/按个人或社区随机分组的随机对照试验/);
+ assert.match(preview,/12 个月内至少跌倒一次的风险[\s\S]*>无。</);
+ assert.doesNotMatch(preview,/Generation incomplete|生成不完整|and above/);
+ const word=Buffer.from(page.api.export()).toString('utf8');
+ assert.match(word,/community-randomised controlled trials[\s\S]*按个人或社区随机分组/);
+});
+
+test('paraphrased Chinese eligibility preserves the actual age, period and named randomisation units',async()=>{
+ const source=preventionQuestion.replace('65 岁及以上','70岁以上').replace('12 个月','６个月')
+  .replace(randomisation,'允许以个体或学校为单位进行随机分配').replace(needsWaiver,'不论既往有无跌倒史，均可纳入');
+ const env=Engine.environment(),original=Engine.save_input(Engine.create_project('fall-variation'),{research_question:source,output_language:'en'}, {},env).state;
+ const model={async request(step,state,payload){
+  if(step==='extract_elements')return {questions:[{question_id:payload.question.question_id,framework_candidates:[],elements:[],issues:[],logic:null}]};
+  assert.equal(step,'review_normalization');
+  return {items:payload.items.map(item=>({...item,status:'supported',issue_type:'none',reason:'Supported.'}))};
+ }};
+ const {candidates}=await Model.analyze(original,env,model,{languageSample:source});
+ const result=Engine.ingest_candidates(original,candidates,{},env).state;
+ assert.equal(result.status,'final');
+ assert(result.criteria.some(c=>c.dimension_id==='population'&&c.text.includes('70 years or older, regardless of prior fall history')));
+ assert(result.criteria.some(c=>c.dimension_id==='study_design'&&/individually randomised or school-randomised/i.test(c.text)));
+ assert(result.elements.some(e=>e.semantic_role==='review_focus'&&e.normalized_text.includes('within 6 months')));
+});

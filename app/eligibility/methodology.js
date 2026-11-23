@@ -25,7 +25,7 @@ function sharedTreatmentDuration(criteria,expression,elementById){
   intervention:pair[0].text.slice(0,-suffix.length),comparison:pair[1].text.slice(0,-suffix.length)}:null;
 }
 function phrase(text){return String(text||'').trim().replace(/[.。]+$/,'').replace(/^(?:include\s+)?studies\s+(?:involving|evaluating|of|in)\s+/i,'').replace(/^various\s+/i,'');}
-function lower(text){return String(text||'').replace(/^(?:Hospitali[sz]ed|Older|Adults?|Patients?|People|Exercise|Nutritional|Insulin-treated|Real-time|Standard|Placebo|Another|Various)\b/,s=>s.toLowerCase());}
+function lower(text){return String(text||'').replace(/^(?:Hospitali[sz]ed|Community-dwelling|Home-based|Individually randomised|Older|Adults?|Patients?|People|Exercise|Nutritional|Insulin-treated|Real-time|Standard|Placebo|Another|Various)\b/,s=>s.toLowerCase());}
 function dataGate(text){const t=norm(text),data='(?:IPD|individual\\s+(?:participant|patient)\\s+data(?:\\s*\\(IPD\\))?)';return new RegExp('(?:only\\s+(?:include\\s+)?(?:studies|trials|reports)|include\\s+only\\s+(?:studies|trials|reports)|eligibility\\s+(?:requires|depends))[\\s\\S]{0,100}(?:with|providing|for which|available|availability|access)[\\s\\S]{0,80}'+data,'i').test(t)||new RegExp('(?:only\\s+include\\s+(?:studies|trials|reports)|studies\\s+must|trials\\s+must)[\\s\\S]{0,100}'+data+'[\\s\\S]{0,40}(?:available|provided|obtained)','i').test(t)||new RegExp(data+'\\s+(?:must\\s+be\\s+available|availability\\s+is\\s+required)','i').test(t)||new RegExp('exclude\\s+(?:studies|trials)\\s+without\\s+'+data,'i').test(t);}
 
 function plan(original){const text=norm(original),nma=original.match(/network\s+meta[-– ]analysis(?:\s*\(NMA\))?|\bNMA\b/i),ipd=original.match(/individual\s+(?:participant|patient)\s+data(?:\s*\(IPD\))?|\bIPD\b/i);const analysis=/\b(?:using|conduct|perform|based\s+on|analyse|analyze)\b[\s\S]{0,160}(?:network\s+meta[- ]analysis|\bNMA\b|individual\s+(?:participant|patient)\s+data|\bIPD\b)|(?:network\s+meta[- ]analysis|\bNMA\b)[\s\S]{0,100}\bbased\s+on\b/i.test(text);return {nma:analysis&&nma?nma[0]:null,ipd:analysis&&ipd?ipd[0]:null,rank:analysis&&/\brank(?:ing)?\b/i.test(text)?original.match(/\brank(?:ing)?\b[^.!?;]*?(?=\s+using\b|\s+by\b|[.!?;]|$)/i)?.[0]:null};}
@@ -330,7 +330,7 @@ function compactTitle(value,maxWords=14,maxLength=105){
 }
 function populationTitleHead(value){
  return value.split(/[,;]\s+|\s+(?:who (?:were|are|have|had|received)|experiencing|recruited|enrolled|followed up|participating in)\s+/iu)[0]
-  .replace(/\s+aged\s+(?:(?:at least|at most|between|over|under)\s+)?[<>≥≤=\s]*\d+(?:[.\d]*)(?:\s*(?:to|and|[-–])\s*\d+(?:[.\d]*))?\s+(?:days?|weeks?|months?|years?)(?:\s+or (?:older|younger))?(?=$|\s)/iu,'')
+  .replace(/\s+aged\s+(?:(?:at least|at most|between|over|under)\s+)?[<>≥≤=\s]*\d+(?:[.\d]*)(?:\s*(?:to|and|[-–])\s*\d+(?:[.\d]*))?\s+(?:days?|weeks?|months?|years?)(?:\s+(?:or|and) (?:older|younger|above|below|over|under|up))?(?=$|\s)/iu,'')
   .replace(/\s*\((?:[≥≤<>˂˃=]\s*)?\d+(?:\.\d+)?\s+weeks?'? gestation\)/giu,'')
   .replace(/\s+who required [^,;]+$/iu,'')
   .replace(/^(?:term and preterm|preterm and term) (infants|neonates)\b/iu,'$1')
