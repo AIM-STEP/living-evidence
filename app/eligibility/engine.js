@@ -257,6 +257,7 @@ function ingest_candidates(original,response,options={},env=environment()){
    const source_refs=D.validate_provenance(state,requirement.source_refs,q.question_id);
    return {...requirement,source_refs,id:D.stableId('requirement',JSON.stringify(source_refs.map(r=>[r.source_id,r.source_revision,r.start,r.end])))};
   });
+  if(candidate.source_requirements)q.failed_source_refs=D.validate_provenance(state,candidate.failed_source_refs||[],q.question_id,{allowEmpty:true});
   if(candidate.question_evidence)q.question_evidence=D.validate_provenance(state,[candidate.question_evidence],q.question_id)[0];
   else if(candidate.source_requirements)delete q.question_evidence;
   const resolved=resolve_review_context(q,candidate,env);q.context=resolved.context;q.framework_mapping=resolved.framework_mapping;q.sparse_dimension=resolved.sparse_dimension;delete q.sparse_input;q.review_topic=normalizeTopic(candidate.review_topic,q.original_text,state.output_language);
@@ -776,16 +777,21 @@ function checkSourceCoverage(state){
    ...e,dimension_id:e.review_pending.original_dimension,semantic_role:e.review_pending.original_role,disposition:e.review_pending.original_disposition
   }:e);
   const requirements=q.source_requirements||[];
-  if(!requirements.length&&q.question_evidence&&!verified.length&&!pending.length){
+  if(!requirements.length&&!q.failed_source_refs?.length&&q.question_evidence&&!verified.length&&!pending.length){
    const ref=q.question_evidence;
    return [{id:D.stableId('requirement',q.question_id+':question'),question_id:q.question_id,
     source_refs:[ref],status:'unresolved'}];
   }
-  return requirements.map(requirement=>({
+  const coverage=requirements.map(requirement=>({
    ...requirement,question_id:q.question_id,
    status:sourceRequirementCovered(requirement,verified)?'covered':
     sourceRequirementCovered(requirement,[...verified,...pending])?'awaiting_author':'unresolved'
   }));
+  for(const ref of q.failed_source_refs||[]){
+   coverage.push({id:D.stableId('requirement',JSON.stringify([ref.source_id,ref.source_revision,ref.start,'unprocessed'])),
+    question_id:q.question_id,source_refs:[ref],status:'unresolved',unprocessed:true});
+  }
+  return coverage;
  });
 }
 function validate_criteria(state){

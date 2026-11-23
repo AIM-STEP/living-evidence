@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const B = require('../../app/eligibility/background.js');
 const M = require('../../app/eligibility/model.js');
+const Library = require('../../app/eligibility-library.js');
 const frameworkConfig = require('../../config/eligibility-frameworks.json');
 const profileConfig = require('../../config/eligibility-review-profiles.json');
 
@@ -108,4 +109,57 @@ test('model HTTP errors preserve their safe category and the stage that failed',
     assert(error.message.includes('HTTP ' + status));
     assert(!error.message.includes('private upstream text'));
   }
+});
+
+test('a comparative question with a timed-out extraction is recovered only through source verification', async () => {
+  const question = 'In older adults, compared with usual care, does home exercise lower the risk of falling? Include only randomized controlled trials.';
+  const reviewed = [];
+  const stage = await generate(question, 'Systematic Review', async (step, state, payload) => {
+    if (step === 'extract_elements') {
+      assert.equal(payload.validation_feedback, undefined);
+      throw Object.assign(new Error('Timed out'), {code: 'MODEL_TIMEOUT'});
+    }
+    assert.equal(step, 'review_normalization');
+    reviewed.push(...payload.items);
+    return supported(payload.items);
+  });
+  assert.equal(stage.project.status, 'final');
+  assert.deepEqual(new Set(reviewed.map(item => item.dimension_id)),
+    new Set(['population', 'comparator', 'intervention', 'outcome', 'study_design']));
+  assert(stage.classic.rows.some(item => item.include.includes('usual care')));
+});
+
+test('a failed source batch is visible and blocks screening while verified criteria are retained', async () => {
+  const service = await B.create({projectId: 'partial-source', storage: {getItem: () => null},
+    frameworkConfig, profileConfig, baseURL: 'http://localhost/'});
+  const sources = [
+    {name: 'Population.txt', text: 'Study population: Adults. ' + 'Context. '.repeat(460)},
+    {name: 'Design.txt', text: 'Design: Randomized controlled trials. ' + 'Background. '.repeat(380)}
+  ];
+  const error = Object.assign(new Error('Timed out'), {code: 'MODEL_TIMEOUT'});
+  let available = true;
+  const modelClient = {async request(step, state, payload) {
+    if (step === 'review_normalization') return supported(payload.items);
+    const source = payload.question.sources.find(item => item.name === 'Population.txt');
+    if (!available || !source?.original_text.includes('Adults')) throw error;
+    return extraction(payload.question, source, 'Adults');
+  }};
+  const input = {question: 'What was the study population?', sources, legacy: {}, reviewType: 'Systematic Review', modelClient};
+  const stage = await service.generate(input);
+  assert.equal(stage.project.status, 'incomplete');
+  assert(stage.project.criteria.some(item => item.text === 'Adults'));
+  const unresolved = stage.project.validation.completeness.eligibility.source_coverage;
+  assert(unresolved.some(item => item.unprocessed && item.source_refs[0].quote.startsWith('Design: Randomized controlled trials.')));
+  assert.match(Library.criteriaHandoffBlock({activeGenerator: 'machine', machineRun: {}, eligibilityV3Snapshot: stage.project}), /incomplete|unverified/i);
+  available = false;
+  await assert.rejects(service.generate(input), value => value === error);
+});
+
+test('authentication failures cannot publish recovered comparative rules', async () => {
+  const question = 'In older adults, compared with usual care, does home exercise lower the risk of falling? Include only randomized controlled trials.';
+  const denied = Object.assign(new Error('Sign in'), {status: 401});
+  await assert.rejects(generate(question, 'Systematic Review', async step => {
+    assert.equal(step, 'extract_elements');
+    throw denied;
+  }), error => error === denied);
 });

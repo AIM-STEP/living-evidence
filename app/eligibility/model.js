@@ -85,14 +85,16 @@ function client(options={}){
   const envelope=requestEnvelope(step,state,payload,schema),messages=[{role:'system',content:instruction+serializationInstruction},{role:'user',content:JSON.stringify({...envelope,schema:undefined})}],body={provider:'local',workflow:'eligibility-criteria',messages,format:schema,...backendTask(step)};
   try{
    const r=await fetcher(endpoint+'/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});if(!r.ok){let detail;try{detail=await r.json();}catch(_){}throw httpError(r.status,detail,step);}
-   const data=await r.json(),raw=data.message?.content||data.choices?.[0]?.message?.content;if(typeof raw!=='string')D.fail('MODEL_EMPTY_RESPONSE',step,'模型返回空内容。');
+   let data;try{data=await r.json();}catch(error){if(!(error instanceof SyntaxError))throw error;D.fail('MODEL_INVALID_JSON',step,'The model returned an unreadable response.');}
+   const raw=data?.message?.content||data?.choices?.[0]?.message?.content;
+   if(typeof raw!=='string'||!raw.trim())D.fail('MODEL_EMPTY_RESPONSE',step,'The model returned an empty response.');
    const log={request_id:D.id('model'),step,base_revision:state.revision,at:D.now(),model:data.model||model||'configured',provider:data.provider||'configured backend',prompt_sha256:await G.hashText(JSON.stringify(messages)),response_sha256:await G.hashText(raw),actual_sampling:'not_reported',...(data.review?{hybrid_review:data.review}:{}),...(data.transport?{transport:data.transport}:{})};exchanges.push(log);options.onExchange?.({...log,input:envelope,raw_output:raw});
    try{return decodeReply(raw,step,data,payload);}catch(_){D.fail('MODEL_INVALID_JSON',step,'模型返回非法JSON；已有状态未更改。');}
   }catch(error){if(controller.signal.aborted&&!signal?.aborted)D.fail('MODEL_TIMEOUT',step,'模型请求超时；已有状态未更改。');throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
  }
  return {request,exchanges,discover};
 }
-const retryableResponse=error=>['MODEL_SCHEMA_ERROR','MODEL_INVALID_JSON','INVALID_STRUCTURE','INVALID_ENUM','INVALID_LOGIC_NODE','INVALID_LOGIC_REFERENCE','INCOMPLETE_LOGIC','ANSWER_INTENT_MISMATCH','ANSWER_SCOPE_MISMATCH'].includes(error.code);
+const retryableResponse=error=>['MODEL_SCHEMA_ERROR','MODEL_INVALID_JSON','MODEL_EMPTY_RESPONSE','INVALID_STRUCTURE','INVALID_ENUM','INVALID_LOGIC_NODE','INVALID_LOGIC_REFERENCE','INCOMPLETE_LOGIC','ANSWER_INTENT_MISMATCH','ANSWER_SCOPE_MISMATCH'].includes(error.code);
 function compactFrames(frameworks){
  const definitions=new Map();
  return frameworks.map(f=>{
@@ -1782,6 +1784,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
  const parts=plans.map(batches=>new Array(batches.length)),remaining=plans.map(batches=>batches.length),questions=new Array(plans.length);
  const sourceOrder=payload.questions.map(q=>new Map(q.sources.map((source,index)=>[source.source_id,index])));
  let completed=0;
+ const failures=[];
  const tasks=jobs.map(({qi,bi,sources},index)=>async(signal,enqueue)=>{
   const q=payload.questions[qi],batches=plans[qi];
   const ranges=citedRanges(sources);
@@ -1818,7 +1821,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
    responseSchema.properties.source_language=str;
    responseSchema.required.push('source_language');
   }
-  let answer,repairableAnswer,attempt=0;
+  let answer,repairableAnswer,failedSource,attempt=0;
   return extractBatch(signal,enqueue);
 
   async function extractBatch(signal,enqueue){
@@ -1923,20 +1926,41 @@ async function extract_elements(state,env,adapter,options={},review=null){
     break;
    }catch(error){
     if(signal.aborted)throw error;
-    if(repairableAnswer){answer=repairableAnswer;break;}
-    if((!retryableResponse(error)&&error.step!=='provenance')||attempt===(options.retries??1))throw error;
-    // Use the existing correction attempt with the full schema if the shorter
-    // representation could not express a complete, source-grounded answer.
-    delete request.extraction_encoding;
-    request.validation_feedback={code:error.code,message:error.message};
-    options.onProgress?.('Correcting the extraction against the original source…',{phase:'extract',completed,total,waiting:true});
+    const malformed=retryableResponse(error)||error.step==='provenance';
+    const unavailable=reviewUnavailable(error);
+    if(repairableAnswer&&(unavailable||malformed)){answer=repairableAnswer;break;}
+    if(canRestoreComparative&&review&&unavailable){
+     const item={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null};
+     retainComparativeQuestion(state,item,comparativeSlots,q.question_id,ranges,options.onLesson);
+     options.onLesson?.('service_availability');
+     answer={questions:[item]};
+     break;
+    }
+    if(malformed&&!unavailable&&attempt<(options.retries??1)){
+     // The full schema is a different extraction attempt, not another repair of the same reply.
+     delete request.extraction_encoding;
+     request.validation_feedback={code:error.code,message:error.message};
+     options.onProgress?.('Correcting the extraction against the original source…',{phase:'extract',completed,total,waiting:true});
+     continue;
+    }
+    if(!review||!unavailable)throw error;
+    failures.push(error);
+    options.onLesson?.('service_availability');
+    failedSource=ranges.flatMap(range=>{
+     const quote=Array.from(range.text).slice(0,160).join('');
+     return quote.trim()?[{source_id:range.id,source_revision:range.revision,start:range.start,
+      end:range.start+Array.from(quote).length,quote}]:[];
+    });
+    answer={questions:[{question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null}]};
+    break;
    }
    setLanguage(answer);
    completed++;
-   options.onProgress?.('Source conditions extracted ('+completed+'/'+total+').',{phase:'extract',completed,total,waiting:completed<total});
+   options.onProgress?.((failedSource?'Source part unprocessed (':'Source parts processed (')+completed+'/'+total+').',{phase:'extract',completed,total,waiting:completed<total});
    const item=answer.questions[0];
    if(!state.decisions.length)orderExtractedElements(item,sourceOrder[qi]);
    const part=batchPart(item,qi,bi,requirements);
+   if(failedSource)part.failed_source_refs=failedSource;
    if(questionRange&&Array.from(questionRange.text).length>=45&&/[?？]/u.test(questionRange.text)){
     const {id,revision,start,end,text:quote}=questionRange;
     part.question_evidence={source_id:id,source_revision:revision,start,end,quote};
@@ -1965,6 +1989,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
   questions[qi]=mergeQuestion(payload.questions[qi],qi);
  }
  await runModelTasks(tasks,options);
+ if(failures.length&&failures.length===jobs.length)throw failures[0];
  return {questions};
  function batchPart(item,qi,bi,requirements){
   const prefix='q'+qi+'b'+bi+'_';
@@ -1977,6 +2002,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
   for(const item of parts[qi]){
    merged.elements.push(...item.elements);merged.issues.push(...item.issues);merged.source_requirements.push(...item.source_requirements);
    if(item.question_evidence)merged.question_evidence=item.question_evidence;
+   if(item.failed_source_refs?.length)(merged.failed_source_refs??=[]).push(...item.failed_source_refs);
    trees.push({tree:item.logic,ids:item.elements.map(e=>e.candidate_id)});if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;
    for(const field of ['question_types','review_methods','evidence_units'])merged[field]=[...new Set([...(merged[field]||[]),...(item[field]||[])])];
   }

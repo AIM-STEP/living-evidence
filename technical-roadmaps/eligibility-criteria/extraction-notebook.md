@@ -35,6 +35,7 @@
 | 人工确认门槛 | Jev 支持分数达到 0.85 时可采用，明确反对的判定门槛为 0.95。仅由 Jev 提出的歧义，需要置信度和该判定的概率均达到 0.98 才交作者。较弱的支持判定须经完整原文、字段和方向佐证。证据仍不足时重试该条一次，仍无充分判定则略过。原文明示的冲突、待定条件和影响筛选的组合关系照常交作者。 | [Jev 判定](../../tools/test_eligibility_hybrid_review.py) · [转人工阈值与原文佐证](../../tests/eligibility/source-corroboration.cjs) |
 | `progress_display` | 工作期间进度停在 0% 或 15%，用户无法判断是否仍在运行。工作期间在 Criteria 下实时显示用时，成功后保存并显示本次耗时。 | [用时显示](../../tests/eligibility/wait-progress.cjs) |
 | `service_availability` | 上游服务超时或缺少判定时，曾为每个未核对条目生成一个作者任务。Jev 缺少判定时，只重试该条一次。仍缺则略过该条，记录服务异常并继续写入已通过的规则。 | [生成、略过与计数](../../tests/eligibility/manual-generation.cjs) · [服务端记录本](../../tools/test_eligibility_notebook.py) |
+| 提取请求超时 | 本地模型连续尝试提取、修复格式及重生成，答复出炉前页面已断开。每个请求共用 240 秒时限并最多自动修复一次。局部失败时保留通过核对的条目并标明未处理的原文，暂停筛选交接。 | [请求时限](../../tools/test_eligibility_model_budget.py) · [部分结果与失败保护](../../tests/eligibility/extraction-bridge.cjs) |
 | `residual_validation` | 程序发现尚未归入具体技巧的校验错误。累计发生运行次数，待可复现后分配更具体的记录代码。 | [校验不变量](../../tests/eligibility/invariants.cjs) |
 | 下游交接 | 草稿等待作者选择或输入改变时，下游可能提前读取旧规则。标题摘要页也可能用空记录覆盖全文筛选的原有交接。 | 下游读取同一份验证状态，受阻时保留已有记录。全文筛选阶段的签名必须对应当前标准。 | [发布边界回归](../../tests/eligibility/release-boundaries.cjs) |
 | 旧版手填编辑 | 首次保存时才建立空白补充限制字段，导致保存前后的输入签名变化，重开时文字描述消失。 | 初始化时统一空值，让笔记、旧规则和签名同步保存。 | [保存与重载](../../tools/test_eligibility_preview_edit.cjs) |

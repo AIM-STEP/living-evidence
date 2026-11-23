@@ -85,6 +85,8 @@ ROLES = {"system", "user", "assistant"}
 NUM_CTX = 16384                     # the page caps sources at 24,000 characters
 NUM_PREDICT = 4096                  # synthesis returns criteria plus a Methods paragraph
 TIMEOUT = 600                       # the page itself gives up after 10 minutes
+CRITERIA_STEP_TIMEOUT = 240          # includes any automatic model recovery
+CRITERIA_PREDICT = 2048              # structured Criteria replies are compact
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]", "::1"}
 DEFAULT_ALLOWED_ORIGINS = ("https://aimsetp.com", "http://aimsetp.com",
@@ -131,8 +133,8 @@ def clean_format(payload):
     return "json"
 
 
-def ollama_body(model, messages, temperature=0, fmt="json", seed=None):
-    options = {"temperature": temperature, "num_ctx": NUM_CTX, "num_predict": NUM_PREDICT}
+def ollama_body(model, messages, temperature=0, fmt="json", seed=None, num_predict=NUM_PREDICT):
+    options = {"temperature": temperature, "num_ctx": NUM_CTX, "num_predict": num_predict}
     if seed is not None:
         options["seed"] = seed
     return {
@@ -190,7 +192,7 @@ def _content(reply):
     return ((reply or {}).get("message") or {}).get("content", "")
 
 
-def chat(ollama, model, messages, post=post_json, attempts=None, fmt="json", seed=None):
+def chat(ollama, model, messages, post=post_json, attempts=None, fmt="json", seed=None, *, criteria=False):
     """Return a reply whose content is a JSON object, trying in order:
 
       1. the reply as generated;
@@ -203,22 +205,52 @@ def chat(ollama, model, messages, post=post_json, attempts=None, fmt="json", see
     `attempts`, if given, is filled with what happened, for the log.
     """
     log = attempts if attempts is not None else []
-    reply = post(ollama + "/api/chat", ollama_body(model, messages, fmt=fmt, seed=seed))
+    limit = CRITERIA_PREDICT if criteria else NUM_PREDICT
+
+    def infer(input_messages, *, temperature=0, response_format=fmt):
+        return post(ollama + "/api/chat", ollama_body(
+            model, input_messages, temperature=temperature, fmt=response_format,
+            seed=seed, num_predict=limit))
+
+    reply = infer(messages)
     content = _content(reply)
     if is_json_object(content):
         log.append("ok")
         return reply
     log.append("invalid")
-    if content.strip():
-        repaired = post(ollama + "/api/chat", ollama_body(model, [
-            {"role": "system", "content": REPAIR_PROMPT}, {"role": "user", "content": content}], seed=seed))
+    # A reply cut off by the token limit is missing data. Reconstruct it
+    # from the original input instead of inviting the repair model to guess.
+    short_syntax_error = reply.get('done_reason') != 'length' and len(content) <= 3500
+    if content.strip() and (not criteria or short_syntax_error):
+        repaired = infer([
+            {"role": "system", "content": REPAIR_PROMPT}, {"role": "user", "content": content}],
+            response_format="json")
         if is_json_object(_content(repaired)):
             log.append("model-repair")
             return repaired
         log.append("model-repair-failed")
+        if criteria:
+            raise ValueError("Criteria reply was unreadable after format repair.")
     # Temperature 0 repeats a degenerate path exactly; a little noise leaves it.
     log.append("regenerate")
-    return post(ollama + "/api/chat", ollama_body(model, messages, temperature=0.3, fmt=fmt, seed=seed))
+    regenerated = infer(messages, temperature=0.3)
+    if criteria and not is_json_object(_content(regenerated)):
+        raise ValueError("Criteria reply was unreadable after regeneration.")
+    return regenerated
+
+
+def deadline_post(seconds, post=None, *, clock=time.monotonic):
+    """Allow all inference attempts together only the time the caller can wait."""
+    deadline = clock() + seconds
+    send = post_json if post is None else post
+
+    def request(url, body):
+        remaining = deadline - clock()
+        if remaining <= 0:
+            raise TimeoutError('The criteria inference deadline expired.')
+        return send(url, body, timeout=remaining)
+
+    return request
 
 
 def clean_embed(payload):
@@ -307,8 +339,11 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
         self._cors_headers()
-        self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.end_headers()
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # The caller cancelled or timed out while inference was running.
 
     def do_OPTIONS(self):
         # CORS preflight from the published site; anything else gets nothing.
@@ -344,6 +379,7 @@ class Handler(SimpleHTTPRequestHandler):
                 "service": SERVICE if ok else SERVICE + "-unavailable",
                 "model": self.model, "ollama": self.ollama, "status": msg,
                 "eligibilityNotebook": self.notebook_dir is not None,
+                "eligibilityStepTimeoutSeconds": CRITERIA_STEP_TIMEOUT,
                 "embedModel": self.embed_model if embed_ok else "",
                 "typesafe": {"available": True, "configured": typesafe_model.configured(), "version": typesafe_model.VERSION,
                              "eligibilityReview": eligibility_hybrid_review.VERSION,
@@ -413,10 +449,16 @@ class Handler(SimpleHTTPRequestHandler):
         started = time.time()
         attempts = []
         seed = 42 if criteria else None
-        local_chat = lambda subset, selected_format=fmt: eligibility_transport.chat(subset, self.model, selected_format,
-            lambda wire: chat(self.ollama, self.model, wire, attempts=attempts, fmt=selected_format, seed=seed),
-            invoke_with_schema=lambda wire, wire_format: chat(self.ollama, self.model, wire, attempts=attempts, fmt=wire_format, seed=seed),
-            criteria_workflow=payload.get('workflow') == 'eligibility-criteria')
+        post = deadline_post(CRITERIA_STEP_TIMEOUT) if criteria else post_json
+
+        def infer(wire, wire_format):
+            return chat(self.ollama, self.model, wire, post=post, attempts=attempts,
+                        fmt=wire_format, seed=seed, criteria=criteria)
+
+        def local_chat(subset, selected_format=fmt):
+            return eligibility_transport.chat(subset, self.model, selected_format,
+                lambda wire: infer(wire, selected_format), invoke_with_schema=infer,
+                criteria_workflow=payload.get('workflow') == 'eligibility-criteria')
         try:
             if provider == "local" and payload.get("task") == eligibility_hybrid_review.TASK:
                 reply = eligibility_hybrid_review.review(messages,
