@@ -90,7 +90,8 @@ function savedManualCriteria(){
  try{
   if(projectDeleted(target))return empty;
   const raw=JSON.parse(localStorage.getItem('aimstep-eligibility:'+target)||'null');
-  if(!raw||Object.hasOwn(raw,'generationMethodChoice')&&!raw.generationMethodChoice)return empty;
+  if(!raw||Object.hasOwn(raw,'generationMethodChoice')&&!raw.generationMethodChoice||
+     globalThis.AimstepEligibilityLibrary?.criteriaHandoffBlock(raw))return empty;
   const rows=(raw.activeGenerator==='machine'?raw.machineCriteria:raw.criteria)||[];
   if(!Array.isArray(rows)||!rows.some(row=>['condition','uncertain','definition'].some(field=>String(row[field]||'').trim())))return empty;
   let hash=2166136261;for(const c of JSON.stringify(rows.map(row=>[String(row.title||''),String(row.condition||''),String(row.uncertain||''),String(row.definition||'')])))hash=Math.imul(hash^c.charCodeAt(0),16777619);

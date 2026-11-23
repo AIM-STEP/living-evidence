@@ -5,6 +5,9 @@ const chosen=arg('--case','all'),base=arg('--base',process.env.AIMSTEP_ELIGIBILI
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 const neonatal=require('../tests/eligibility/fixtures/neonatal-resuscitation.cjs');
 const cases=[
+ {id:'stroke-balance-training',input:{research_question:'In adults recovering from stroke, compared with usual rehabilitation or an education booklet, does supervised home balance training reduce falls within 12 weeks? Include only randomised controlled trials.',output_language:'en'},
+  expected:{coverage:true,eligibility_dimensions:['population','comparator','intervention','study_design'],comparator:/usual rehabilitation or an education booklet/i,outcome:/falls within 12 weeks/i}},
+
  {id:'mixed-diabetes-cohort',input:{research_question:'对于使用胰岛素的成年 2 型糖尿病患者，与指尖血糖监测相比，实时连续血糖监测能否降低 6 个月时的糖化血红蛋白（HbA1c）水平？仅纳入随机对照试验。若试验同时纳入 1 型和 2 型糖尿病患者，仅在能够单独提取使用胰岛素的成年 2 型糖尿病患者的数据时纳入。',output_language:'en'},
   expected:{coverage:true,eligibility_dimensions:['population','comparator','intervention','study_design'],comparator:/fingerstick blood glucose monitoring/i,
    outcome:/HbA1c.+at 6 months/i,populationCondition:/eligible only if data for insulin-treated adults with type 2 diabetes can be extracted separately/i,bilingual:'zh'}},

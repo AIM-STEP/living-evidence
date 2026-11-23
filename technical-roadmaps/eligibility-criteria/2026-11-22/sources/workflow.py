@@ -147,12 +147,12 @@ def render(output):
          ('问题为非英语时按相同结构生成原语言版。两版均可编辑、保存和导出。',
           '未核对的原文条款及生成不完整状态随预览和 Word 保留。'))
     card(96, 2056, 1648, 155, '什么会进入筛选？',
-         ('原文条款核对完成后，才交接已生效的规则、组合关系及例外。',
+         ('当前输入通过核对与验证后，才交接生效的规则、组合关系及例外。',
           '原文明确要求测量或报告的结局可用于筛选，其他结局保留在说明中。'))
 
     draw.line((96, 2260, 1744, 2260), fill=RULE, width=2)
     text(96, 2285, 'AIM-STEP', 26, BODY, bold=True)
-    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 53', 25, BODY, width=608)
+    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 54', 25, BODY, width=608)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, optimize=True)

@@ -1486,6 +1486,8 @@ function mixedPopulationCondition(clause,target){
  return match[1];
 }
 function conditionalField(text){
+ if(/\b(?:both|mixed|broader|different|other)\b.{0,40}\b(?:populations?|patients?|participants?|types?|age groups?)\b|\b(?:subgroup|separate(?:ly)? extractable data|data (?:can|could|must) be (?:extracted|reported) separately)\b/iu.test(text))return 'population';
+ if(/\b(?:co.interventions?|combined with|in combination with)\b/iu.test(text))return 'intervention';
  if(/(?:数据|结果)(?:时|的情况下).{0,8}纳入|(?:试验|研究)(?:中)?(?:也|同时|既|混合)?(?:纳入|招募|包括|包含).{1,70}(?:人群|患者|受试者|参与者)|(?:人群|年龄|患者|受试者).{0,20}(?:亚组|单独|分别)/u.test(text))return 'population';
  if(/(?:联合|合并|同时)(?:实施|开展|使用)|(?:合并|联合).{1,35}(?:访视|干预|治疗)/u.test(text))return 'intervention';
 }
@@ -1542,6 +1544,41 @@ function comparativeQuestionSlots(source){
  return {unparsed,objective:citation(0,head[0].length),fields:slots.map(({dimension,side,start,end,context,qualification})=>({dimension,side,source:citation(start,end),
   ...(context&&{context:source.text.slice(...context),context_start:sourceOffset(source,context[0])}),...(qualification&&{qualification})}))};
 }
+function englishComparativeQuestionSlots(source){
+ const head=source.text.match(/^\s*(?:In|Among|For) ([^.!?;\n]{3,200}?),\s*((?:compared (?:with|to)|versus) ([^.!?,;\n]{1,150})),\s*(?:can|does|do|will|would) ([^.!?,;\n]+?)\s+(?:reduce|increase|improve|affect|lower|raise|prevent|delay|shorten|prolong|change)\s+([^.!?;\n]+)\?/diu);
+ if(!head||/\b(?:either|unless|uncertain|tbc|tbd|to be decided)\b/iu.test(head[0]))return {fields:[],unparsed:[]};
+ const citation=(start,end)=>({source_id:source.id,source_revision:source.revision,start:sourceOffset(source,start),
+  end:sourceOffset(source,end),quote:source.text.slice(start,end)});
+ const fields=['population','comparator','intervention','outcome'].map((dimension,index)=>{
+  const side=dimension==='outcome'?null:'include';
+  const [start,end]=head.indices[[1,3,4,5][index]];
+  const contextStart=index===1?head.indices[2][0]:0;
+  const contextEnd=index===1?head.indices[2][1]:head[0].length;
+  return {dimension,side,source:citation(start,end),context:source.text.slice(contextStart,contextEnd),
+   context_start:sourceOffset(source,contextStart),verbatim:true};
+ });
+ // Keep the measured outcome separate from explicit eligibility language.
+ // Trailing directives and their dependencies go through normal extraction.
+ const unparsed=[];
+ for(const sentence of source.text.slice(head[0].length).matchAll(/[^.!?;\r\n]+/gu)){
+  const text=sentence[0].trim();
+  if(!text)continue;
+  const start=head[0].length+sentence.index+sentence[0].indexOf(text);
+  const match=text.match(/^(?:(?:we (?:will )?)?(?:only include|include only)|only)\s+((?:randomi[sz]ed|cluster-randomi[sz]ed)[- a-z]* trials)$/diu);
+  if(match){
+   const [from,to]=match.indices[1];
+   fields.push({dimension:'study_design',side:'include',source:citation(start+from,start+to),verbatim:true});
+   continue;
+  }
+  const conditional=/^(?:if|when|only if|unless|provided that)\b/iu.test(text);
+  const scope=/\b(?:eligible|eligibility|includ(?:e|ed|ing)|exclud(?:e|ed|ing)|must|only)\b/iu.test(text);
+  const dimension=conditional&&scope?conditionalField(text):undefined;
+  const side=/^(?:we (?:will )?)?(?:exclude|do not include)\b/iu.test(text)?'exclude':
+   /^(?:we (?:will )?)?(?:include|only include|only studies)\b/iu.test(text)?'include':null;
+  unparsed.push(scope?{dimension,side,source_refs:[citation(start,start+text.length)]}:null);
+ }
+ return {fields,unparsed,objective:citation(0,head[0].length)};
+}
 // Record the source clauses independently of what extraction happens to return.
 function sourceRequirements(ranges,passages,comparison){
  const dependent=comparison.unparsed.filter(item=>item?.dimension);
@@ -1568,7 +1605,11 @@ function sourceRequirements(ranges,passages,comparison){
    requirements.push({dimension:field,side:null,source_refs:[subref(ref,labelledText)]});
    continue;
   }
-  if(labelled&&dimension!=='outcome'){
+  if(labelledText&&section==='include'&&!['include','exclude','qualifier','outcome'].includes(field)){
+   requirements.push({dimension:field,side:'include',source_refs:[subref(ref,labelledText)]});
+   continue;
+  }
+  if(dimension!=='outcome'&&(labelled||kind==='include'&&['population','study_design'].includes(dimension))){
    requirements.push({dimension,side:'include',source_refs:[subref(ref,value)]});
    continue;
   }
@@ -1642,7 +1683,7 @@ function comparativeElements(state,result,slots,questionId,ranges,onLesson){
   e.dimension_id==='design'?'study_design':e.dimension_id;
  let recovered=false;
  const allocated=new Set(result.elements.map(e=>e.candidate_id));
- const elements=slots.map(({dimension,side,source,context,context_start,qualification},index)=>{
+ const elements=slots.map(({dimension,side,source,context,context_start,qualification,verbatim},index)=>{
   const refs=qualification?[source,qualification.source]:[source];
   const candidate=result.elements.find(e=>dimensionOf(e)===dimension&&e.disposition===side&&
    e.information_status==='explicit'&&!e.structured_value&&!e.scope_conditions?.length&&!e.exceptions?.length&&
@@ -1650,7 +1691,7 @@ function comparativeElements(state,result,slots,questionId,ranges,onLesson){
    !needsSourceTranslation(e.normalized_text,state.output_language)&&e.source_refs?.length===refs.length&&
    refs.every(ref=>e.source_refs.some(c=>c.source_id===ref.source_id&&c.source_revision===ref.source_revision&&c.quote===ref.quote)));
   if(!candidate)recovered=true;
-  const exactEnglish=state.output_language.startsWith('en')?comparativeSourceWording(dimension,side,source.quote,qualification):null;
+  const exactEnglish=state.output_language.startsWith('en')?(verbatim?source.quote:comparativeSourceWording(dimension,side,source.quote,qualification)):null;
   const original=refs.map(ref=>ref.quote).join('。');
   let id='source_slot_'+index;
   while(allocated.has(id))id+='_';
@@ -1750,8 +1791,12 @@ async function extract_elements(state,env,adapter,options={},review=null){
   const questionInBatch=sources.filter(s=>s.input_kind==='research_question').map(s=>s.original_text).join('')===original_text;
   const questionSource=questionInBatch&&sources.find(source=>source.input_kind==='research_question');
   const questionRange=questionSource&&ranges.find(range=>range.id===questionSource.source_id);
-  const comparison=questionRange&&(!q.context.framework_requested||['pico','picos'].includes(q.context.framework_requested.toLowerCase()))?
-   comparativeQuestionSlots(questionRange):{fields:[],unparsed:[]};
+  let comparison={fields:[],unparsed:[]};
+  if(questionRange&&(!q.context.framework_requested||['pico','picos'].includes(q.context.framework_requested.toLowerCase()))){
+   comparison=comparativeQuestionSlots(questionRange);
+   if(!comparison.fields.length)comparison=englishComparativeQuestionSlots(questionRange);
+  }
+  const chineseComparison=comparison.fields.length&&!comparison.fields[0].verbatim;
   const comparativeSlots=comparison.fields;
   const requirements=sourceRequirements(ranges,passages,comparison);
   const canRestoreComparative=comparativeSlots.length&&!q.confirmed_elements.length&&!comparison.unparsed.length&&ranges.length===1;
@@ -1913,7 +1958,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
   function setLanguage(answer){
    if(!detectLanguage)return;
    const language=sourceLanguage(answer.source_language,options.languageSample);
-   options.onSourceLanguage?.(comparativeSlots.length&&!language?.startsWith('zh')?'zh':language);
+   options.onSourceLanguage?.(chineseComparison&&!language?.startsWith('zh')?'zh':language);
   }
  });
  for(let qi=0;qi<plans.length;qi++)if(!remaining[qi]){
@@ -1982,7 +2027,9 @@ async function assessWording(state,adapter,questions,item,signal,corroboratable)
  const instruction=reviewInstruction+' Check each item against its own cited source and the original question. Keep each reason to one short sentence.'+
   (item.source_comparative_slot?' The exact attached clause determines this field’s role. A comparator introduced by 与…相比 or 和…相比 describes the eligible control arms. An exclusion introduced by 排除 applies only to its stated subject and quantifier. Match the wording across languages.':'')+
   (item.source_comparative_slot&&item.dimension_id==='intervention'?
-   ' In the cited comparison, the noun phrase between the comparator introduced by 与…相比 and the question verb 能否 or 是否 is the intervention under evaluation. A monitoring strategy can be the intervention when participants are assigned to it. The clinical endpoint follows the question verb.':'')+
+   (nonEnglishScript.test(item.source_quotes[0]?.quote||'')?
+    ' In the cited comparison, the noun phrase between the comparator introduced by 与…相比 and the question verb 能否 or 是否 is the intervention under evaluation. A monitoring strategy can be the intervention when participants are assigned to it. The clinical endpoint follows the question verb.':
+    ' The subject of the effect question is the intervention being evaluated. In a Chinese question it follows 与…相比 and precedes 能否 or 是否. A monitoring strategy can be the intervention when participants are assigned to it. The clinical endpoint is the measure the question asks whether that strategy affects.'):'')+
   (item.source_comparative_slot&&item.dimension_id==='outcome'?
    ' The endpoint in the research question is the outcome of interest. Preserve its measurement time. The question asks about an effect; it does not require an effect for study eligibility.':'')+
   (item.separable_population?' The population citation names the intended study subgroup. The second citation controls whether a trial with mixed participants is eligible. Preserve the ages, treatment status and diagnosis of the subgroup whose data must be separately extractable. This is a population eligibility condition.':'');

@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261123-criteria-release-53"></script>
-<script src="app/secure-origin.js?v=20261123-criteria-release-53"></script>
+<script src="app/eligibility-release.js?v=20261123-criteria-release-54"></script>
+<script src="app/secure-origin.js?v=20261123-criteria-release-54"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -403,7 +403,7 @@ th{background:#f4f4f4}
 <script src="app/screening-calibration.js?v=ai-first-20261006"></script>
 <script src="app/fulltext-browser.js?v=20261006-queue1"></script>
 <script src="app/fulltext-assistant.js?v=20261006-queue1"></script>
-<script src="app/eligibility-reset.js?v=20261123-criteria-release-53"></script><script src="app/eligibility-library.js?v=20261123-criteria-release-53"></script><script src="app/search-criteria-editor.js?v=20261119-clear-criteria-1"></script><script src="app/screening-criteria-dialog.js?v=20261123-criteria-release-53"></script><script>
+<script src="app/eligibility-reset.js?v=20261123-criteria-release-54"></script><script src="app/eligibility-library.js?v=20261123-criteria-release-54"></script><script src="app/search-criteria-editor.js?v=20261119-clear-criteria-1"></script><script src="app/screening-criteria-dialog.js?v=20261123-criteria-release-54"></script><script>
 window.AIMSTEPProjectAccess?.run(function(){
 
 'use strict';
@@ -750,9 +750,11 @@ function save(){
 const docKey=uid=>scope+'|'+uid;
 async function loadDoc(uid){if(docCache.has(uid))return docCache.get(uid);const d=await getKey(docStore,docKey(uid));if(d){docCache.set(uid,d);if(workspace.docs[uid]&&!workspace.docs[uid].hash)workspace.docs[uid].hash=fingerprint(d.chunks);}return d}
 async function saveDoc(doc){docCache.set(doc.uid,doc);await putProject(docStore,{...doc,id:docKey(doc.uid)})}
-function screeningStagesReady(){return !globalThis.AimstepEligibilityLibrary?.hasIncompleteCriteria(localStorage,scope)&&AimstepScreeningStages.valid(workspace?.screeningStages,workspace?.criteria,workspace?.criteriaSig)}
+function screeningStagesReady(){return !globalThis.AimstepEligibilityLibrary?.savedCriteriaHandoffBlock(localStorage,scope)&&AimstepScreeningStages.valid(workspace?.screeningStages,workspace?.criteria,workspace?.criteriaSig)}
 function screeningStageSig(){return AimstepScreeningStages.signature(workspace?.screeningStages)}
-function activeScreeningCriteria(){return AimstepScreeningStages.active(workspace?.criteria,workspace?.screeningStages)}
+function activeScreeningCriteria(){
+  return screeningStagesReady()?AimstepScreeningStages.active(workspace.criteria,workspace.screeningStages):{rows:[]};
+}
 const criteriaRows=()=>activeScreeningCriteria().rows||[];
 // Exclusion reasons are recorded in this order (Cochrane Handbook §4.6.4:
 // assess criteria in order of importance; the first "no" is the reason).
@@ -998,10 +1000,12 @@ async function updateStudyLinks(){
   catch(e){console.warn('Study links could not be updated. Reports and assessments are retained.',e);}
 }
 async function importFromScreening(){
-  if(!workspace||busy||syncingSource||workspace.sourceCleared||window.screeningCriteriaDialog?.active)return;
+  if(!workspace||busy||syncingSource||workspace.sourceCleared||window.screeningCriteriaDialog?.active||
+    globalThis.AimstepEligibilityLibrary?.savedCriteriaHandoffBlock(localStorage,scope))return;
   syncingSource=true;let changed=false;
   try{
-    const next=await readHandoff();if(!next||busy||workspace.sourceCleared)return;
+    const next=await readHandoff();
+    if(!next||busy||workspace.sourceCleared||globalThis.AimstepEligibilityLibrary?.savedCriteriaHandoffBlock(localStorage,scope))return;
     handoff=next;
     const signature=handoffSig(next),previous=workspace.sourceHandoffSig||handoffSig({criteriaSig:workspace.upstreamCriteriaSig||workspace.criteriaSig,records:workspace.records});
     if(signature===previous){if(globalThis.AimstepStudyLinks)await updateStudyLinks();return;}
@@ -1799,7 +1803,10 @@ function renderSource(){
 }
 function renderPilot(){
   const p=workspace.pilot,last=p.rounds.length-1;if(pilotView<0||pilotView>last)pilotView=last;
-  if(globalThis.AimstepEligibilityLibrary?.hasIncompleteCriteria(localStorage,scope))showNotice('source-notice',AimstepEligibilityLibrary.incompleteMessage,'warning');
+  const blocked=globalThis.AimstepEligibilityLibrary?.savedCriteriaHandoffBlock(localStorage,scope);
+  if(blocked)showNotice('source-notice',blocked,'warning');
+  else if($('source-notice').dataset.criteriaBlocked)showNotice('source-notice','');
+  $('source-notice').dataset.criteriaBlocked=blocked?'true':'';
   const st=roundState(pilotView),lastSt=roundState(last),ready=screeningStagesReady()&&workspace.records.some(r=>hasDoc(r.uid));
   $('rounds').innerHTML=p.rounds.map((r,i)=>{const state=roundState(i),complete=state.revealed&&!state.ids.some(id=>pilotReviewDrafts.has(id))&&!pilotReviewSaving;return '<button class="round'+(i===pilotView?' current':'')+(complete?' done':'')+'" type="button" data-round="'+i+'" aria-pressed="'+(i===pilotView)+'"><b>Round '+(i+1)+(complete?' Reviewed':'')+(p.approved?.round===i?' ✓':'')+'</b><span>'+(complete?'AI accuracy '+pct(pilotMetrics(state.ids).accuracy):'In progress')+'</span></button>';}).join('');
   $('rounds').hidden=!p.rounds.length;$('sample-size').value=p.size;

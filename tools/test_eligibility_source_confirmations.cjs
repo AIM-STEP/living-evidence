@@ -1,75 +1,72 @@
-const assert=require('node:assert/strict'),fs=require('node:fs');
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const Engine=require('../app/eligibility/engine.js');
+const Background=require('../app/eligibility/background.js');
+const Library=require('../app/eligibility-library.js');
 const {setup}=require('./test_eligibility_grounding.cjs');
-const grounding=require('../app/criteria-grounding.js');
-const question='Review exercise in adults with fibromyalgia. Exclude animal studies; randomized trials may be eligible.';
-const topic='Exercise in adults with fibromyalgia';
-function wordXml(api){
- const bytes=Buffer.from(api.export());let at=0;
- while(bytes.readUInt32LE(at)===0x04034b50){const size=bytes.readUInt32LE(at+18),n=bytes.readUInt16LE(at+26),extra=bytes.readUInt16LE(at+28),start=at+30+n+extra;if(bytes.subarray(at+30,at+30+n).toString()==='word/document.xml')return bytes.subarray(start,start+size).toString();at=start+size;}
- throw Error('Missing Word document');
+
+const project='synthetic-grounding',key='aimstep-eligibility:'+project;
+const question='Exercise in adults with fibromyalgia. Whether cluster randomised trials are eligible is to be decided.';
+const design='cluster randomised trials';
+const config={frameworkConfig:require('../config/eligibility-frameworks.json'),
+ profileConfig:require('../config/eligibility-review-profiles.json'),baseURL:'http://localhost/'};
+function open(storage){
+ const page=setup(storage);
+ Object.assign(page.ctx.window,{AIMSTEPEligibilityEngine:Engine,
+  AIMSTEPEligibilityBackground:{...Background,create:args=>Background.create({...args,...config})},AimstepEligibilityLibrary:Library});
+ page.api.fill();
+ return page;
 }
-async function generated(onlyAmbiguous=false){
- const test=setup();
- test.api.transport(async(url,options)=>{
-  const body=JSON.parse(options.body),system=body.messages[0].content,payload=JSON.parse(body.messages[1].content);let answer;
-  if(system.startsWith('Organize'))answer={framework:'PICO',reviewTopic:topic,criteria:[],questions:[],suggestions:[]};
-  else if(system.startsWith('Extract atomic')){
-   const facts=onlyAmbiguous?[]:[['Population','required','Adults with fibromyalgia.'],['Intervention','required','Exercise.'],['Study design','prohibited','Animal studies.']];
-   facts.push(['Study design','uncertain','Randomized trials.']);
-   answer={items:facts.map(([dimension,logic,proposition])=>({dimension,logic,proposition,sourceId:payload.segments[0].id,sourceSentence:payload.segments[0].text,attribute:'Eligibility',value:'',entityType:dimension,temporality:'',modifier:''})),uncertainties:[]};
-  }else if(system.startsWith('Independently'))answer={items:payload.items.map(item=>item.rule==='Randomized trials.'?{id:item.id,status:'uncertain',issueType:'ambiguous_source',reason:'The source leaves the eligibility of randomized trials undecided.',alternatives:[{text:'Randomized trials.',side:'include'},{text:'Randomized trials.',side:'exclude'}]}:{id:item.id,status:'supported',issueType:'none'})};
-  else if(system.startsWith('You are a systematic review methods editor'))answer={criteria:payload.atoms.map(atom=>({dimension:atom.dimension,include:atom.logic==='required'?[{text:atom.proposition,evidenceIds:[atom.id]}]:[],exclude:atom.logic==='prohibited'?[{text:atom.proposition,evidenceIds:[atom.id]}]:[]})),uncertainties:[]};
-  else throw Error('Unexpected model call');
-  return {ok:true,json:async()=>({message:{content:JSON.stringify(answer)}})};
- });
- test.el('generation-method').value='machine';test.el('generation-method').handlers.change();test.el('question').value=question;
- await test.el('start-machine').handlers.click();assert(test.api.state().machineRun,test.el('generation-status').textContent);
- return test;
+
+async function generate(){
+ const page=open();
+ page.api.transport((url,options)=>{
+  const {step,payload}=JSON.parse(JSON.parse(options.body).messages[1].content);
+  let reply;
+  if(step==='extract_elements'){
+   const q=payload.question,source=q.sources[0];
+   const element=(candidate_id,dimension_id,quote,certainty='explicit')=>({candidate_id,dimension_id,normalized_text:quote,structured_value:null,
+    source_refs:[{source_id:source.source_id,source_revision:source.revision,quote}],
+    semantic_role:'eligibility_condition',scope_status:'restricted',information_status:certainty,disposition:'include'});
+   const elements=[element('p','population','adults with fibromyalgia'),element('i','intervention','Exercise'),element('s','study_design',design,'ambiguous')];
+   reply={questions:[{question_id:q.question_id,review_topic:'Exercise in adults with fibromyalgia',framework_candidates:['picos'],elements,issues:[],logic:null}]};
+  }else {
+   assert.equal(step,'review_normalization');
+   reply={items:payload.items.map(item=>({...item,status:'supported',issue_type:'none',reason:'Supported by the source.'}))};
+  }
+  return Promise.resolve({ok:true,json:async()=>({message:{content:JSON.stringify(reply)},
+   ...(step==='review_normalization'?{provider:'typesafe',review:{policy:'jev-once-v1'}}:{})})});
+ },'backend');
+ page.el('generation-method').value='machine';page.el('generation-method').handlers.change();
+ page.el('question').value=question;
+ await page.el('start-machine').handlers.click();
+ assert.equal(page.el('generation-status').textContent,'');
+ return page;
 }
-(async()=>{
- const {api}=setup(),rows=[{label:'Population',include:['Participants must be adults with fibromyalgia.']},{label:'Intervention',include:['The intervention must be exercise.']},{label:'Comparison',include:['Usual care.']},{label:'Outcomes',include:['Pain.']}];
- assert.equal(api.topic(rows,'PICO'),'Exercise and pain in adults with fibromyalgia');
- assert.equal(api.topic([{label:'Population',include:['Adults.']},{label:'Phenomenon of Interest',include:['Lived experience of recovery.']}],'PICo'),'Lived experience of recovery in adults');
- assert(api.topic([{label:'Population',include:['Adults.']},{label:'Intervention',include:['CBT.']}],'PICO').includes('CBT in adults'));
- assert(!api.topic(rows,'PCC').includes('P:'));assert(!api.topic(rows,'Other').includes('To be defined'));
- assert.equal(api.validTopic(topic,question),topic);assert.equal(api.validTopic('P: Adults · I: Exercise'), '');
- assert.equal(api.validTopic('This review examines adults aged 18 years.',question),'');
- assert.equal(api.validTopic('This review examines exercise. It examines pain.'),'');
- const atom={dimension:'Study design',logic:'uncertain',proposition:'Randomized trials.',sourceSentence:'Randomized trials may be eligible.'};
- assert.equal(api.sourceConfirmation(atom,{status:'uncertain',issueType:'unsupported_rewrite'}),null,'Internal rewrite failures must not become human tasks');
- const safe=api.sourceConfirmation(atom,{status:'uncertain',issueType:'ambiguous_source',alternatives:[{text:'Studies with at least 18 participants.',side:'include'}]});
- assert(safe.options.every(option=>!option.text.includes('18')),'Unspecified numeric cutoffs cannot become confirmation options');
- const review=grounding.reviewMap({items:[{id:'A1',status:'uncertain',issueType:'ambiguous_source',alternatives:[{text:'Randomized trials.',side:'exclude'}]}]},['A1']);assert.equal(review.get('A1').alternatives[0].side,'exclude');
- for(const choice of [0,1]){
-  const test=await generated(),state=test.api.state(),refinement=state.machineRefinement;
-  assert.equal(test.api.normalized().topic,topic);assert.equal(refinement.sourceConfirmations.length,1);
-  assert(state.machineCriteria.some(row=>row.title==='Population'&&row.condition.includes('Adults')));
-  assert(state.machineCriteria.some(row=>row.uncertain.includes('Animal studies')));
-  assert(!JSON.stringify(state.machineCriteria).includes('Randomized trials'),'Ambiguous content remains outside active criteria');
-  const markup=test.el('preview').innerHTML;assert(markup.includes('data-source-confirm='));assert(!markup.includes('<input'));assert(!markup.includes('Original source excerpts'));assert(!markup.includes('Automatic check notes'));assert(!markup.includes('The source leaves'));
-  const before=JSON.stringify(state),persisted=test.storage.get('aimstep-eligibility:synthetic-grounding'),write=test.ctx.localStorage.setItem;
-  test.ctx.localStorage.setItem=()=>{throw Error('Synthetic storage failure')};
-  assert.equal(test.api.confirm(0,choice),false);assert.equal(JSON.stringify(test.api.state()),before);assert.equal(test.storage.get('aimstep-eligibility:synthetic-grounding'),persisted);
-  test.ctx.localStorage.setItem=write;
-  test.el('preview').handlers.click({target:{closest:selector=>selector==='[data-source-confirm]'?{dataset:{sourceConfirm:'0',sourceOption:String(choice)},closest:()=>null}:null}});
-  const active=test.api.state(),rule=active.machineCriteria.find(row=>row.title==='Study design'),side=choice===0?'condition':'uncertain',opposite=choice===0?'uncertain':'condition';
-  assert(rule[side].includes('Randomized trials'));assert(!rule[opposite].includes('Randomized trials'));assert(rule.uncertain.includes('Animal studies'));
-  assert.match(active.machineRefinement.manuscriptParagraph,/randomized trials/i);assert(!test.el('preview').innerHTML.includes('data-source-confirm='));
-  assert.equal(test.api.confirm(0,choice),false,'Repeated confirmation must not duplicate a rule');
-  const shared=JSON.parse(test.storage.get('aimstep-eligibility-summary:synthetic-grounding'));assert(!('trace' in shared));assert(choice===0?shared.includes.some(row=>row.text.includes('Randomized trials')):shared.exclusions.some(row=>row.text.includes('Randomized trials')));
-  const saved=JSON.parse(test.storage.get('aimstep-eligibility:synthetic-grounding'));assert(saved.machineRefinement.trace.length);assert.equal(saved.machineRefinement.audit.sources[0].text,question);assert(saved.machineRefinement.sourceConfirmations[0].evidence[0].quote.includes('may be eligible'));
-  const reloaded=setup(test.storage);assert.equal(reloaded.api.state().machineRefinement.sourceConfirmations[0].status,'confirmed');assert(reloaded.el('preview').innerHTML.includes('Randomized trials'));
-  const xml=wordXml(reloaded.api);assert(xml.includes('Randomized trials'));assert(!xml.includes('Source evidence'));assert(!xml.includes(question));
- }
- const only=await generated(true);assert(only.el('preview').innerHTML.includes('data-source-confirm='));assert(only.el('download').hidden);assert.equal(only.api.state().machineCriteria.length,0);assert(only.api.confirm(0,1));assert(only.api.state().machineCriteria[0].uncertain.includes('Randomized trials'));assert(!only.el('download').hidden);
- const opposite=await generated(),oppositeState=opposite.api.state(),design=oppositeState.machineCriteria.find(row=>row.title==='Study design');
- design.condition='Randomized trials.';oppositeState.machineRefinement.rows.find(row=>row.dimension==='Study design').include=['Randomized trials.'];oppositeState.machineRefinement.signature=opposite.api.signature(oppositeState.machineRun.question,oppositeState.machineRun.reviewType,0,oppositeState.machineCriteria);
- assert(opposite.api.confirm(0,1));assert(!opposite.api.state().machineCriteria.find(row=>row.title==='Study design').condition.includes('Randomized trials'));assert(opposite.api.state().machineCriteria.find(row=>row.title==='Study design').uncertain.includes('Animal studies'));
- const stale=await generated();stale.api.state().machineCriteria[0].condition='Changed source rule.';stale.api.fill();const changed=JSON.stringify(stale.api.state());assert.equal(stale.api.confirm(0,0),false);assert.equal(JSON.stringify(stale.api.state()),changed);assert(!stale.el('preview').innerHTML.includes('data-source-confirm='),'Stale confirmations must not overwrite newer rules');
- const legacy=await generated(),legacyState=legacy.api.state();delete legacyState.machineRefinement.sourceConfirmations;legacyState.machineRefinement.reviewTopic='P: Adults with fibromyalgia · I: Exercise';
- legacyState.machineRefinement.trace.push({id:'A099',dimension:'Study design',logic:'uncertain',proposition:'Randomized trials.',sourceSentence:'Randomized trials may be eligible.',review:{status:'supported'}});
- legacy.storage.set('aimstep-eligibility:synthetic-grounding',JSON.stringify(legacyState));const restored=setup(legacy.storage);
- assert(restored.el('preview').innerHTML.includes('data-source-confirm='));assert.equal(restored.api.state().machineRefinement.sourceConfirmations.length,1);assert.equal(restored.api.normalized().topic,topic);assert(!restored.api.normalized().topic.includes('P:'));assert(restored.api.confirm(0,0),'Saved source ambiguities can be confirmed without another model run');
- for(const page of ['eligibility.html','title-abstract-screening.html','full-text-screening.html'])assert(!fs.readFileSync(page,'utf8').includes('${traceHtml}'),'Audit excerpts must not render in shared previews');
- console.log('PASS: concise topic, explicit include/exclude, source-only ambiguity confirmation without blanks, immediate chosen-side updates, persistence/rollback, empty-draft confirmation and audit-only excerpts/notes.');
-})().catch(error=>{console.error(error);process.exitCode=1});
+
+test('a genuine open design decision survives reload and remains outside shared rules',async()=>{
+ const page=await generate();
+ const before=JSON.parse(page.storage.get(key));
+ const check=before.machineRefinement.sourceConfirmations.find(item=>item.domain==='Study design');
+ assert(check);
+ assert.equal(before.eligibilityV3Snapshot.questions[0].include.some(rule=>rule.dimension_id==='study_design'),false);
+ const reopened=open(page.storage);
+ assert.match(reopened.el('preview').innerHTML,/cluster randomised trials/i);
+ assert.match(Library.criteriaHandoffBlock(before),/unresolved author checks/);
+ assert(!page.storage.has('aimstep-eligibility-summary:'+project));
+ const details=reopened.api.state().machineRefinement.sourceConfirmations;
+ const index=details.findIndex(item=>item.domain==='Study design');
+ const choice=details[index].options.findIndex(option=>option.option_id==='use_proposed');
+ assert(choice>=0);
+ const write=reopened.ctx.localStorage.setItem;
+ reopened.ctx.localStorage.setItem=()=>{throw Error('Synthetic quota failure')};
+ assert.equal(await reopened.api.confirm(index,choice),false);
+ assert.deepEqual(JSON.parse(page.storage.get(key)),before);
+ reopened.ctx.localStorage.setItem=write;
+ reopened.api.denyModelAccess();
+ assert(await reopened.api.confirm(index,choice));
+ const updated=JSON.parse(page.storage.get(key));
+ assert(updated.eligibilityV3Snapshot.questions[0].include.some(rule=>rule.text.includes(design)));
+ assert.match(Buffer.from(reopened.api.export()).toString(),/cluster randomised trials/);
+ assert.equal(Library.criteriaHandoffBlock(updated),'');
+});

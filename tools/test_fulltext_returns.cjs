@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../title-abstract-screening.html'),'utf8');
-const helpers=html.slice(html.indexOf('async function pendingFulltextReturns(){'),html.indexOf('async function loadSource(){'));
+const helpers=html.slice(html.indexOf('async function pendingFulltextReturns(){'),html.indexOf('async function loadSource('));
 const records=html.slice(html.indexOf('function cleanRecord('),html.indexOf('const databaseNames='));
 const rec={uid:'r',title:'Synthetic returned report',doi:'10.1234/return',pmid:'',year:'2024',authors:[],provenance:[]};
 const entry={id:'return-1',at:'2026-10-06',record:rec};
@@ -20,7 +20,7 @@ vm.createContext(ctx);vm.runInContext(records+helpers,ctx);
  ctx.workspace=make();fail=true;await assert.rejects(ctx.applyFulltextReturns([entry]),/quota/);assert(ctx.workspace.full.human.r);assert(!ctx.workspace.appliedFulltextReturns);fail=false;await ctx.applyFulltextReturns([entry]);assert.equal(ctx.workspace.appliedFulltextReturns.length,1);
  // Publishing includes the return token only when a new forward decision exists.
  let publish;
- Object.assign(ctx,{handoffTimer:null,criteriaOrigin:null,clearTimeout(){},setTimeout(fn){publish=fn;return 1},summary:()=>({pending:1,completed:false}),forward:v=>['yes','maybe'].includes(v),finalDecision:()=>'',sourceDatabases:()=>[],decisionSource:()=> 'Synthetic reviewer'});
+ Object.assign(ctx,{handoffTimer:null,screeningStagesReady:()=>false,criteriaOrigin:null,clearTimeout(){},setTimeout(fn){publish=fn;return 1},summary:()=>({pending:1,completed:false}),forward:v=>['yes','maybe'].includes(v),finalDecision:()=>'',sourceDatabases:()=>[],decisionSource:()=> 'Synthetic reviewer'});
  vm.runInContext(html.slice(html.indexOf('function publishForFullText(){'),html.indexOf('function publishSummary(){')),ctx);
  ctx.publishForFullText();await publish();assert.equal(persisted.records.length,0);
  ctx.finalDecision=()=> 'yes';ctx.publishForFullText();await publish();assert.equal(persisted.records[0].returnId,'return-1');

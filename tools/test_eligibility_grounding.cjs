@@ -2,13 +2,14 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const root=path.resolve(__dirname,'..'),grounding=require('../app/criteria-grounding.js');
 const html=fs.readFileSync(path.join(root,'eligibility.html'),'utf8');
 const source=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(s=>s.includes('const params='));
-function setup(initialStorage=new Map()){
+function setup(initialStorage=new Map(),{embedded='',windowOverrides={}}={}){
  const elements=new Map(),storage=initialStorage;
  function el(id){if(!elements.has(id))elements.set(id,{value:'',hidden:false,textContent:'',innerHTML:'',disabled:false,handlers:{},options:id==='generation-method'?['','machine','manual'].map(value=>({value})):[],style:{setProperty(){}},classList:{add(){},remove(){},toggle(){}},dataset:{},addEventListener(type,handler){this.handlers[type]=handler},setAttribute(){},removeAttribute(){},getAttribute(){return null},querySelectorAll(){return []},querySelector(){return {textContent:''}},focus(){}});return elements.get(id);}
+ const search='?projectId=synthetic-grounding'+(embedded?'&embedded='+embedded:'');
  const ctx={console,URL,URLSearchParams,AbortController,structuredClone,TextEncoder,Blob,Map,crypto:crypto.webcrypto,setTimeout(){},clearTimeout(){},navigator:{},
   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},sessionStorage:{getItem(){return null}},
-  location:{search:'?projectId=synthetic-grounding',href:'http://localhost/eligibility.html?projectId=synthetic-grounding',pathname:'/eligibility.html'},
-  document:{getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{AIMSTEPEligibilityDocument:require('../app/eligibility/document.js'),AIMSTEPEligibilityMethodology:require('../app/eligibility/methodology.js'),AIMSTEPEligibilityModel:require('../app/eligibility/model.js'),AIMSTEPCriteriaGrounding:grounding,AIMSTEPProjectAccess:{run:fn=>fn()},addEventListener(){}}};
+  location:{search,href:'http://localhost/eligibility.html'+search,pathname:'/eligibility.html'},
+  document:{documentElement:{classList:{add(){}}},getElementById:el,querySelectorAll(){return []},addEventListener(){}},window:{AIMSTEPEligibilityDocument:require('../app/eligibility/document.js'),AIMSTEPEligibilityMethodology:require('../app/eligibility/methodology.js'),AIMSTEPEligibilityModel:require('../app/eligibility/model.js'),AIMSTEPCriteriaGrounding:grounding,AIMSTEPProjectAccess:{run:fn=>fn()},addEventListener(){},...windowOverrides}};
  const code=source.replace('// Reuse this exact manual editor',`globalThis.testAPI={progressClient:backgroundModelClient,validate:validateAcademicDraft,extract:processExtracts,segments:sourceSegments,pipeline:autoCriteriaPipeline,state:()=>state,fill,pending:currentPending,normalized:standardizedCriteria,signature:machineSourceSignature,confirm:confirmSourceRule,sourceConfirmation,mergeConfirmations:mergeSourceConfirmations,topic:summaryTopic,validTopic:validatedReviewTopic,suggest:applyScopeSuggestion,normalizeSuggestions:normalizeScopeSuggestions,export:criteriaWordFile,sourceImages:originalMachineSources,navigate:saveBeforeToolNavigation,
   transport(fn,provider='ollama'){localFetch=fn;resolveLocalModel=async()=>({name:'Synthetic model',provider,base:'http://synthetic.invalid',slot:'synthetic'});},
   manualInput(input){prepareSources=async()=>input;},

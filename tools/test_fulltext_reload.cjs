@@ -5,10 +5,10 @@ const disk=new Map(),reads=[];
 function session(){
  const elements=new Map();
  function el(id){if(!elements.has(id))elements.set(id,{value:'',textContent:'',innerHTML:'',hidden:false,style:{},dataset:{},classList:{toggle(){}},setAttribute(){},querySelector(){return {textContent:''}},querySelectorAll(){return []},closest(){return {classList:{toggle(){}}}},addEventListener(){}});return elements.get(id);}
- const sandbox={console,URL,URLSearchParams,AbortController,DOMException,structuredClone,Blob,Map,Set,performance,
+ const sandbox={AIMScreeningCriteriaDialog:()=>({}),AimstepScreeningStages:require('../app/screening-stages.js'),console,URL,URLSearchParams,AbortController,DOMException,structuredClone,Blob,Map,Set,performance,
   setTimeout(){return 1},clearTimeout(){},setInterval(){return 1},localStorage:{getItem(){return null},setItem(){}},navigator:{},
   location:{href:'https://aimsetp.com/full-text-screening.html?projectId=synthetic-reload',search:'?projectId=synthetic-reload',hostname:'aimsetp.com'},
-  document:{addEventListener(){},getElementById:el,querySelectorAll(){return []},body:{dataset:{}}},window:{addEventListener(){}},
+  document:{addEventListener(){},getElementById:el,querySelectorAll(){return []},body:{dataset:{}}},window:{addEventListener(){},AIMSTEPProjectAccess:{run:fn=>fn()}},
   read(db,key){reads.push([db,key]);return structuredClone(disk.get(db+'|'+key)||null)},write(db,value){disk.set(db+'|'+value.id,structuredClone(value))}};
  const expose=`
  openDB=async name=>name;
@@ -34,7 +34,7 @@ function session(){
  disk.set('aimstep-fulltext|synthetic-reload',{id:'synthetic-reload',state});
  for(let cycle=0;cycle<2;cycle++){
   const s=cycle===0?first:session();await s.ft.init();
-  assert.equal(s.document.body.dataset.ready,'true');
+  assert.equal(s.document.body.dataset.ready,'true',s.ft.el('storage-notice').textContent);
   assert.equal(s.ft.get().records.length,35);
   assert.match(s.ft.el('source-counts').innerHTML,/With PDF 34/);
   assert.equal(s.ft.hasOriginalPdf('r34'),true,'Restore PDFs beyond the first 30 displayed records');

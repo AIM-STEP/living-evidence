@@ -14,6 +14,35 @@ function hasIncompleteCriteria(storage,id,source){
  try{return incompleteCriteria(JSON.parse(storage.getItem('aimstep-eligibility:'+id)||'null'));}
  catch{return false;}
 }
+function manualInputSignature(value){
+ return JSON.stringify({framework:value.manualFramework||value.framework,reviewType:value.reviewType,
+  criteria:(value.criteria||[]).map(({title,condition,uncertain,definition})=>({title,condition,uncertain,definition})),
+  dateRange:value.dateRange,language:value.language,limitsOther:value.limitsOther});
+}
+function criteriaHandoffBlock(value){
+ if(value?.activeGenerator!=='machine')return '';
+ const run=value.machineRun,snapshot=value.eligibilityV3Snapshot;
+ if(!run)return value.generationMethodChoice?'Generate Eligibility criteria from the current input before using them here.':'';
+ const question=String(value.question||'').trim();
+ const stale=value.generationMethodChoice==='manual'&&run.inputMode==='manual'?
+  typeof run.manualSignature==='string'&&run.manualSignature!==manualInputSignature(value):
+  typeof run.question==='string'&&run.question!==question||
+   (run.sourceRevision??0)!==(Number(value.machineSourceRevision)||0)||
+   !!(run.reviewType&&value.reviewType&&run.reviewType!==value.reviewType);
+ if(stale)return 'Eligibility input has changed. Generate criteria from the current input before using them here.';
+ if(incompleteCriteria(value))return incompleteMessage;
+ if(snapshot?.status==='validation_error')return 'Eligibility criteria could not be validated. Open Eligibility criteria and generate again.';
+ const required=value.machineRefinement?.sourceConfirmations?.some(item=>item.status==='suggested'&&!item.reviewOnly&&!item.methodAdvice);
+ if(snapshot?.status==='needs_clarification'||snapshot?.validation?.blocking_issues?.length||
+    snapshot?.issues?.some(issue=>issue.blocking&&issue.status==='open')||required)
+  return 'Eligibility criteria have unresolved author checks. Resolve them in Eligibility criteria before using these rules.';
+ return '';
+}
+function savedCriteriaHandoffBlock(storage,id,source){
+ if(source==='upload'||source==='removed')return '';
+ try{return criteriaHandoffBlock(JSON.parse(storage.getItem('aimstep-eligibility:'+id)||'null'));}
+ catch{return 'The saved eligibility criteria could not be read.';}
+}
 function blankWorkspace(previous={}){
  const inputFields=['reviewType','generationMethodChoice','generationMode','activeGenerator','criteria_epoch'];
  const inputs=Object.fromEntries(inputFields.filter(field=>previous[field]!==undefined).map(field=>[field,previous[field]]));
@@ -84,12 +113,12 @@ function plan(storage,id,value,options={}){
  else if(!entry)entry=library.entries.find(entry=>kind(entry.snapshot)===kind(value)&&rowKey(entry.snapshot)===rowKey(value));
  const now=new Date().toISOString();
  if(!entry){const date=options.createdAt||value.machineRun?.generatedAt||value.protocolSource?.date;entry={id:root.crypto?.randomUUID?.()||'criteria-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),createdAt:date&&!Number.isNaN(Date.parse(date))?new Date(date).toISOString():now,title:String(value.question||'').trim()||String(value.reviewType||'Review')+' criteria',method:kind(value),snapshot:snapshot(value)};library.entries.push(entry);}
- else if(options.updateEntry||rowKey(entry.snapshot)!==rowKey(value)||incompleteCriteria(entry.snapshot)!==incompleteCriteria(value)){entry.snapshot=snapshot(value);entry.title=String(value.question||'').trim()||entry.title;entry.updatedAt=now;}
+ else if(options.updateEntry||rowKey(entry.snapshot)!==rowKey(value)||criteriaHandoffBlock(entry.snapshot)!==criteriaHandoffBlock(value)){entry.snapshot=snapshot(value);entry.title=String(value.question||'').trim()||entry.title;entry.updatedAt=now;}
  library.activeId=entry.id;next.criteriaLibraryId=entry.id;
  library.entries.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));return {state:next,library};
 }
 function write(storage,values){const before=values.map(([key])=>storage.getItem(key));try{for(const [key,value]of values)value===null?storage.removeItem(key):storage.setItem(key,JSON.stringify(value));}catch(error){values.forEach(([key],index)=>{try{before[index]===null?storage.removeItem(key):storage.setItem(key,before[index]);}catch(_){}});throw error;}}
 function commit(storage,id,value,options={}){const result=plan(storage,id,value,options);write(storage,[[key(id),result.library],['aimstep-eligibility:'+id,result.state]]);return result.state;}
 function remove(storage,id,entryId,value){assertCurrent(storage,id,value);const library=read(storage,id),active=library.activeId===entryId||value.criteriaLibraryId===entryId;library.entries=library.entries.filter(entry=>entry.id!==entryId);let state=value;if(active){library.activeId=null;state={...value,criteriaLibraryId:null,criteria:[],machineCriteria:[],machineRun:null,manualRefinement:null,machineRefinement:null,finalCriteria:null,pendingDecisions:{},resolvedPending:[],visibleDescription:null,confirmed:false};if(state.protocolSource)state.protocolSource={...state.protocolSource,sharedCriteria:false};}const values=[[key(id),library]];if(active)values.push(['aimstep-eligibility:'+id,state],['aimstep-eligibility-summary:'+id,null]);write(storage,values);return {state,active};}
-const api={key,read,incompleteCriteria,hasIncompleteCriteria,incompleteMessage,hasRules,plan,commit,remove,blankWorkspace,stripLinkedSearchCriteria,clearChanges};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepEligibilityLibrary=api;
+const api={key,read,manualInputSignature,criteriaHandoffBlock,savedCriteriaHandoffBlock,incompleteCriteria,hasIncompleteCriteria,incompleteMessage,hasRules,plan,commit,remove,blankWorkspace,stripLinkedSearchCriteria,clearChanges};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepEligibilityLibrary=api;
 })(globalThis);

@@ -2,10 +2,11 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const html=fs.readFileSync(require('node:path').join(__dirname,'../full-text-screening.html'),'utf8');
 const elements=new Map();
 function el(id){if(!elements.has(id))elements.set(id,{value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,style:{},dataset:{},handlers:{},parentElement:{classList:{toggle(){}}},classList:{toggle(){}},setAttribute(){},removeAttribute(name){delete this[name]},querySelector(){return {textContent:''}},querySelectorAll(){return []},closest(){return {classList:{toggle(){}}}},addEventListener(k,fn){this.handlers[k]=fn},replaceChildren(){},showModal(){},close(){},checkValidity(){return true}});return elements.get(id);}
-const sandbox={console:{...console,error(e){throw e;}},URL,URLSearchParams,AbortController,DOMException,structuredClone,TextEncoder,Blob,Map,Set,performance,
+const sandbox={AIMScreeningCriteriaDialog:()=>({}),AimstepScreeningStages:require('../app/screening-stages.js'),console:{...console,error(e){throw e;}},URL,URLSearchParams,AbortController,DOMException,structuredClone,TextEncoder,Blob,Map,Set,performance,
  setTimeout(){return 1},clearTimeout(){},localStorage:{getItem(){return null},setItem(){}},navigator:{},location:{href:'http://127.0.0.1:8765/full-text-screening.html',search:'',hostname:'127.0.0.1'},document:{addEventListener(){},getElementById:el,querySelectorAll(){return []},body:{dataset:{}}},window:{addEventListener(){}},confirm(){return true},AimstepCalibration:require('../app/screening-calibration.js')};
 let code=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(x=>x[1]).find(x=>x.includes('const FT_PROMPT'));
 code=code.replace(/\ninit\(\);/,`\nglobalThis.ft={ready(){manualEditorReady=true},set(w){workspace=w;indexRecords();},get(){return workspace},defaults,renderSource,pdfDownloadState(){return {running:pdfDownloading,busy}},removeSourceRecord,isLocalSourceRecord,allowedReturnedRecord,downloadFulltextPdfs,realRetrieveReadable:retrieveReadable,bindTransport(fn){localFetch=fn},parseCriteriaFile,importLocalCriteria,closeCriteriaEditor,importFile,mergeLocalRecords,openFulltextManager,closeFulltextManager,saveManagedLink,uploadManagedPdf,removeManagedItem,manageOperation,safeFulltextLink,realStoreText:storeText,bindManagerStorage(){storeText=this.realStoreText;loadDoc=async id=>docCache.get(id)||null;saveDoc=async d=>docCache.set(d.uid,d);deleteKey=async()=>{};},bindPdf(fn){pdfPages=fn;},manager(){return {id:manageId,busy,working:manageWorking}},bindSave(fn){save=fn},newPilot,newFull,ftDecision,aiPair,finalOf,needsCheck,approvalsValid,currentCalibration,ftPrompt,evidenceChunks,chunkParagraphs,savePilotReview,fullDecide,pilotReviewSignature,validPilotReview,approvePilot,readReport,saveCriteria,archiveRun,checkCalibration,setHuman,exportResults,render,renderPilot,renderFull,summary,firstAuthorGivenName,openReader,releaseReaderPdf,fulltextPrimaryBadge,sourceRecordCard,sourceDetailsOpen,findOpenAccess,retrieveReadable,retrievalDue,importFromScreening,clearSource,restoreSource,bindRetrieval(fn){findTypesafeBackend=async()=>'/backend';retrieveReadable=fn;storeText=async(id,got)=>{workspace.docs[id]={kind:got.kind,source:got.source};};},bindHandoff(h){readHandoff=async()=>h;},setBusy(v){busy=v;},\n stub(){save=async()=>{};render=()=>{};log=()=>{};showNotice=()=>{};toast=()=>{};},setDoc(id,d){docCache.set(id,d)},setReason(id,s){reasonDrafts.set(id,s)},view(i){pilotView=i},bindModel(fn){pilotModelJSON=fn;resolvePilotModel=async()=>({name:'test',provider:'backend'});evidenceFor=async id=>docCache.get(id)},downloads(fn){download=fn}};`);
+sandbox.window.AIMSTEPProjectAccess={run:fn=>fn()};
 vm.runInNewContext(code,sandbox);const ft=sandbox.ft;ft.stub();
 let editorSnapshot;
 el('crit-manual-frame').contentWindow={aimstepManualEditor:{load(s){editorSnapshot=s},read(){return structuredClone(editorSnapshot)},stop(){}}};
@@ -13,11 +14,11 @@ function editRows(rows){editorSnapshot={rows};ft.ready();}
 
 const rec={uid:'r',title:'Example report',abstract:'Participants received treatment.',authors:['Reviewer'],doi:'10.1234/test'};
 const doc={fullText:'All participants were children. The design was randomized.',chunks:[{id:'C1',text:'All participants were children.',section:'Methods',page:2},{id:'C2',text:'The design was randomized.',section:'Methods',page:3}],evidence:{method:'test',byCriterion:{Population:[{id:'C1',score:-1}],Design:[{id:'C2',score:1}]}}};
-function setup(){const w=ft.defaults();w.records=[rec];w.criteria={rows:[{title:'Population',condition:'Adults'},{title:'Design',condition:'Randomized trials'}]};w.criteriaSig='criteria';w.docs.r={kind:'pdf',hash:'doc'};ft.set(w);ft.setDoc('r',doc);return w;}
+function setup(){const w=ft.defaults();w.records=[rec];w.criteria={rows:[{title:'Population',condition:'Adults'},{title:'Design',condition:'Randomized trials'}]};w.criteriaSig='criteria';w.screeningStages={version:2,sourceSig:w.criteriaSig,elements:sandbox.AimstepScreeningStages.seed(w.criteria)};w.docs.r={kind:'pdf',hash:'doc'};ft.set(w);ft.setDoc('r',doc);return w;}
 function value(criteria){return ft.ftDecision({criteria},doc)}
 const unmet={dimension:'Population',judgment:'not met',passage:'C1',quote:'All participants were children.'};
 let w=setup();ft.render();assert.equal(value([unmet]).decision,'exclude');assert.equal(value([{...unmet,passage:'C2'}]).decision,'unclear');assert.equal(value([{...unmet,quote:'Invented'}]).decision,'unclear');assert.equal(value([{...unmet,dimension:'Invented'}]).decision,'unclear');assert.equal(value([unmet,{...unmet,judgment:'met'}]).decision,'unclear');
-const result=(criteria)=>({...value(criteria),criteriaSig:'criteria',documentHash:'doc',calibrationHash:'hash',prompt:'fulltext-v2-calibrated'});
+const result=(criteria)=>({...value(criteria),criteriaSig:'criteria',stageSig:sandbox.AimstepScreeningStages.signature(w.screeningStages),documentHash:'doc',calibrationHash:'hash',prompt:'fulltext-v2-calibrated'});
 w.pilot.approved={calibration:{hash:'hash'}};w.full.ai.r=result([unmet]);w.full.ai2.r=result([{dimension:'Population',judgment:'unclear'}]);assert.equal(ft.aiPair('r'),'exclude');assert.equal(ft.needsCheck('r'),false);assert.match(ft.finalOf('r').reason,/children/);
 w.full.ai2.r=result([{dimension:'Population',judgment:'met'}]);assert.equal(ft.aiPair('r'),'conflict');assert.equal(ft.needsCheck('r'),true);assert.equal(ft.finalOf('r').decision,'');
 w.full.ai2.r=result([{dimension:'Population',judgment:'unclear'}]);w.full.check='all';assert.equal(ft.needsCheck('r'),true);w.full.check='sample';assert.equal(ft.needsCheck('r'),true);w.full.check='unresolved';
@@ -95,11 +96,15 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  w=setup();w.docs.r={kind:'pdf',filename:'Original full title 2026.pdf'};ft.setDoc('r',{...doc,pdf:new Blob(['%PDF synthetic'])});assert(ft.sourceRecordCard(rec,0).includes('Original full title 2026.pdf'));
  delete w.docs.r.filename;ft.setDoc('r',{...doc,pdf:{name:'Legacy original name.pdf'}});assert(ft.sourceRecordCard(rec,0).includes('Legacy original name.pdf'));
  w.docs.r={kind:'xml'};ft.setDoc('r',{...doc,pdf:null});card=ft.sourceRecordCard(rec,0);assert(!card.includes('Full text (XML)'));assert(!card.includes('data-original-pdf='));assert(card.includes('No PDF saved yet.'));
- // The entire import dialog and parser block match the preceding page.
+ // Both import dialogs expose equivalent inputs and compatible file formats.
  const ta=fs.readFileSync(require('node:path').join(__dirname,'../title-abstract-screening.html'),'utf8');
  const between=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));
- assert.equal(between(html,'<dialog id="import-dialog"','</dialog>'),between(ta,'<dialog id="import-dialog"','</dialog>'));
- assert.equal(between(html,'function csvRows(','// Keep local records').trim(),between(ta,'function csvRows(','async function importFile(').trim());
+ const dialog=page=>between(page,'<dialog id="import-dialog"','</dialog>');
+ const extensions=page=>dialog(page).match(/id="import-file"[^>]*accept="([^"]+)"/)[1].split(',').sort();
+ assert.deepEqual(extensions(html),extensions(ta));
+ for(const page of [html,ta])for(const control of ['import-database','import-file','confirm-import','close-import','import-message']){
+  assert(dialog(page).includes('id="'+control+'"'));
+ }
  assert(html.indexOf('id="open-import"')<html.indexOf('id="clear-source"'));
  const file=(name,contents)=>({name,size:contents.length,text:async()=>contents});
  const fixtures=[['ris','TY  - JOUR\nTI  - Synthetic RIS\nAB  - Synthetic abstract\nER  -'],['nbib','PMID- 123456\nTI  - Synthetic NBIB\nAB  - Synthetic abstract\n'],['csv','Title,Abstract,DOI\n"Synthetic, CSV","Two lines\nof abstract",10.1234/csv'],['tsv','Title\tAbstract\nSynthetic TSV\tSynthetic abstract'],['json',JSON.stringify({source:{records:[{title:'Synthetic JSON',abstract:'Synthetic abstract'}]}})],['txt','%0 Journal Article\n%T Synthetic EndNote\n%X Synthetic abstract\n'],['ciw','FN Clarivate\nPT J\nTI Synthetic WoS\nAB Synthetic abstract\nER\nEF']];
@@ -226,11 +231,15 @@ w=setup();w.pilot.rounds=[{ids:['r'],criteriaSig:'criteria',revealedAt:'done',pr
  ft.bindSave(async()=>{savedCriteriaState=structuredClone(ft.get())});
  await el('crit-save').handlers.click();assert.equal(savedCriteriaState.criteriaEdited,true);assert.equal(savedCriteriaState.criteria.rows[0].condition,'Adults aged 21 or older');assert.equal(el('crit-error').hidden,true);
  w=structuredClone(savedCriteriaState);ft.set(w);ft.bindHandoff({records:[rec],criteria:upstreamCriteria,criteriaSig:'upstream-changed',updatedAt:'after-save'});await ft.importFromScreening();assert.equal(w.criteria.rows[0].condition,'Adults aged 21 or older','Upstream sync must not replace edited criteria');
+ assert.equal(JSON.parse(ft.ftPrompt(rec,doc,0)).criteria.length,0,'Editing criteria invalidates the previously saved screening stages');
+ w.screeningStages={version:2,sourceSig:w.criteriaSig,elements:sandbox.AimstepScreeningStages.seed(w.criteria)};
  assert.equal(JSON.parse(ft.ftPrompt(rec,doc,0)).criteria[0].inclusionRule,'Adults aged 21 or older');
  ft.ready();formRow['.crit-condition']='';formRow['.crit-uncertain']='Children under 21';await el('crit-save').handlers.click();assert.equal(ft.get().criteria.rows[0].uncertain,'Children under 21','An exclusion-only criterion is valid');
  // Saved limits must reach the actual model request alongside domain rules.
  el('crit-manual-frame').contentWindow.aimstepManualEditor.read=()=>({framework:'PICO',rows:[{title:'Population',condition:'Adults',uncertain:'',definition:''},{title:'Limits',condition:'Language: English\nPublication date: From 2020-01-01',uncertain:'',definition:''}],manualEditor:{language:'English'}});ft.ready();
- await ft.saveCriteria();assert.equal(JSON.parse(ft.ftPrompt(rec,doc,0)).criteria[1].inclusionRule,'Language: English\nPublication date: From 2020-01-01');assert.equal(ft.get().criteria.manualEditor.language,'English');
+ await ft.saveCriteria();
+ w.screeningStages={version:2,sourceSig:w.criteriaSig,elements:sandbox.AimstepScreeningStages.seed(w.criteria)};
+ assert.equal(JSON.parse(ft.ftPrompt(rec,doc,0)).criteria[1].inclusionRule,'Language: English\nPublication date: From 2020-01-01');assert.equal(ft.get().criteria.manualEditor.language,'English');
  const known=new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));for(const id of elements.keys())assert(known.has(id),'Missing UI element: '+id);
  console.log('PASS: full-text startup bindings, evidence validation, criterion conflicts, review scopes, five exports, calibration, snapshots, model requests, reason gating and bounded retrieval');
 })().catch(e=>{console.error(e);process.exitCode=1});
