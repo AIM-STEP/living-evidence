@@ -31,7 +31,7 @@
 | 目标与纳入条件 | 原文含排版连字并将研究目的、纳入段、剂量定义和关键结局分开时，模型曾把整段目的填入 Population 和 Outcomes。用明确的纳入段恢复人群和试验设计，按声明逐条展示关键结局。保留辐照度的严格不等号、单位和带宽条件，并识别独立的交叉试验排除。 | [光疗回归](../../tests/eligibility/phototherapy.cjs) |
 | `clear_project` | 旧草稿或来源污染新任务。清除项目标准、旧记录和反馈，保留有独立清除键的研究问题，拒绝清除前发出的旧请求回写。 | [Clear 与并发保护](../../tests/eligibility/clear-project.cjs) |
 | `author_decision` | 确认项离开对应要素，作者明确回答后仍要等待再次推理。把确认定位到规则，并直接应用作者决定。 | [作者决定路由](../../tests/eligibility/author-answer-routing.cjs) · [确认目标](../../tests/eligibility/author-targets.cjs) |
-| 人工确认门槛 | 旧规则会把 JEV 已倾向支持的明确条目交给作者。支持达到 0.85 可采用，异议达到 0.95 才视为明确异议。较弱异议只有在程序已核实完整原文、字段和方向时才能直接处理。保留真实范围冲突、明确待定的条件和无法核实的规则。 | [JEV 阈值](../../tools/test_eligibility_hybrid_review.py) · [证据核对与作者决定](../../tests/eligibility/semantic-repair.cjs) |
+| 人工确认门槛 | Jev 支持分数达到 0.85 时可采用，明确反对的判定门槛为 0.95。仅由 Jev 提出的歧义，需要置信度和该判定的概率均达到 0.98 才交作者。较弱的支持判定须经完整原文、字段和方向佐证。证据仍不足时重试该条一次，仍无充分判定则略过。原文明示的冲突、待定条件和影响筛选的组合关系照常交作者。 | [Jev 判定](../../tools/test_eligibility_hybrid_review.py) · [转人工阈值与原文佐证](../../tests/eligibility/source-corroboration.cjs) |
 | `progress_display` | 工作期间进度停在 0% 或 15%，用户无法判断是否仍在运行。工作期间在 Criteria 下实时显示用时，成功后保存并显示本次耗时。 | [用时显示](../../tests/eligibility/wait-progress.cjs) |
 | `service_availability` | 上游服务超时或缺少判定时，曾为每个未核对条目生成一个作者任务。Jev 缺少判定时，只重试该条一次。仍缺则略过该条，记录服务异常并继续写入已通过的规则。 | [生成、略过与计数](../../tests/eligibility/manual-generation.cjs) · [服务端记录本](../../tools/test_eligibility_notebook.py) |
 | `residual_validation` | 程序发现尚未归入具体技巧的校验错误。累计发生运行次数，待可复现后分配更具体的记录代码。 | [校验不变量](../../tests/eligibility/invariants.cjs) |

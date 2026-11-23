@@ -60,7 +60,8 @@ function scenario(mode) {
         {...assessment,status:'uncertain',issue_type:'ambiguous_source',reviewer:{provider:'typesafe',verdict:'unavailable'}}:assessment;
       return {...assessment, status: mode === 'contradicted' ? 'contradicted' : 'uncertain',
         issue_type: ambiguous ? 'ambiguous_source' : 'unsupported_rewrite', reason: rejection,
-        reviewer:{provider:'typesafe',verdict:mode === 'field'?'wrong_field':ambiguous?'ambiguous':'wording_or_scope'}};
+        reviewer:{provider:'typesafe',verdict:mode === 'field'?'wrong_field':ambiguous?'ambiguous':'wording_or_scope',
+          confidence:.99,choice_probability:.99}};
     })};
   }};
   if (mode === 'field') question.elements[1].dimension_id='comparator';

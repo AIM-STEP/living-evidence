@@ -119,14 +119,14 @@ def render(output):
           '研究关注内容保留在说明中。'),
          fill=TEAL_PALE, outline='#b9d6ce', title_size=36, body_size=27)
     card(660, 1080, 520, 246, '需要人工核对',
-         ('原文有歧义、冲突或语境未定。',
-          '框架或纳排方向尚未确定。',
-          '「或」关系或例外的范围未定。',
+         ('原文有歧义、冲突或明确待定。',
+          '框架、纳排方向或组合范围未定。',
+          'Jev 歧义，两项评分 ≥0.98。',
           '待确认的条目暂缓用于筛选。'),
          fill=AMBER_PALE, outline='#e1c394', heading=AMBER, title_size=36, body_size=27)
     card(1224, 1080, 520, 246, '略过该条',
          ('原文明确不支持该候选。',
-          '缺少判定时，仅重试该条一次。',
+          '判定不充分时，只重试该条一次。',
           '仍无判定则略过，继续核对。'),
          fill=SLATE_PALE, outline='#cfdbdf', heading=SLATE, title_size=36, body_size=27)
 
@@ -149,7 +149,7 @@ def render(output):
 
     draw.line((96, 2221, 1744, 2221), fill=RULE, width=2)
     text(96, 2246, 'AIM-STEP', 26, BODY, bold=True)
-    text(1136, 2246, '2026-11-23  /  Eligibility Criteria release 43', 25, BODY, width=608)
+    text(1136, 2246, '2026-11-23  /  Eligibility Criteria release 45', 25, BODY, width=608)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, optimize=True)

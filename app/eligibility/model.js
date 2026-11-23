@@ -1618,45 +1618,54 @@ function reviewUnavailable(error){
  return ['MODEL_TIMEOUT','MODEL_BUSY','MODEL_UNAVAILABLE','MODEL_UPSTREAM_ERROR','MODEL_REVIEW_INCOMPLETE','MODEL_INVALID_JSON','MODEL_EMPTY_RESPONSE'].includes(error.code)||
   error instanceof TypeError&&/fetch|network|load failed/i.test(error.message)||error.status>=500;
 }
-async function assessWording(state,adapter,questions,items,signal){
+const minAuthorReviewConfidence=.98;
+function tentativeJevReview(assessment,corroboratable){
+ const reviewer=assessment.reviewer;
+ if(reviewer?.provider!=='typesafe'||assessment.status!=='uncertain')return false;
+ if(reviewer.verdict==='low_confidence')return !(corroboratable&&reviewer.original_verdict==='supported');
+ return reviewer.verdict==='ambiguous'&&
+  !(Math.min(reviewer.confidence,reviewer.choice_probability)>=minAuthorReviewConfidence);
+}
+async function assessWording(state,adapter,questions,item,signal,corroboratable){
  const instruction=reviewInstruction+' Check each item against its own cited source and the original question. Keep each reason to one short sentence.';
- const byId=new Map();
- let pending=items;
- for(let attempt=0;attempt<2&&pending.length;attempt++){
+ const items=[item];
+ let assessment,tentative=false;
+ for(let attempt=0;attempt<2;attempt++){
   signal?.throwIfAborted();
   try{
-   const result=await adapter.request('review_normalization',state,{questions,items:pending,review_policy:'jev-once-v1'},reviewSchema,instruction,signal);
-   for(const [id,assessment] of indexReviewReplies(result,pending)){
-    if(assessment.reviewer?.verdict!=='unavailable')byId.set(id,assessment);
+   const retry=tentative?' On this retry, reserve an ambiguous verdict for a genuinely unresolved interpretation of the original passage that changes study eligibility.': '';
+   const result=await adapter.request('review_normalization',state,{questions,items,review_policy:'jev-once-v1'},reviewSchema,instruction+retry,signal);
+   const reply=indexReviewReplies(result,items).get(item.id);
+   if(reply.reviewer?.verdict==='unavailable')continue;
+   if(tentativeJevReview(reply,corroboratable)){
+    tentative=true;continue;
    }
+   assessment=reply;
+   break;
   }catch(error){
    if(signal?.aborted||error.code!=='MODEL_SCHEMA_ERROR'&&!reviewUnavailable(error))throw error;
   }
-  // A missing service verdict is a technical failure. Retry only the missing
-  // items and keep actual semantic disagreements for the ordinary review path.
-  pending=pending.filter(item=>!byId.has(item.id));
  }
- if(pending.length)D.fail('MODEL_REVIEW_INCOMPLETE','review_normalization','Jev could not finish checking the source. Please try Generate again.');
- for(const item of items){
-  const a=byId.get(item.id);
-  // Older compatible providers may return a verdict without reclassifying the input.
-  if(a.information_status===undefined)a.information_status=item.information_status;
-  if(a.issue_type===undefined)a.issue_type='none';
-  if(!['supported','uncertain','contradicted'].includes(a.status)||!['none','ambiguous_source','unsupported_rewrite'].includes(a.issue_type)||
-     !D.ENUMS.information_status.includes(a.information_status)||!D.ENUMS.semantic_role.includes(a.semantic_role)||
-     !D.ENUMS.scope_status.includes(a.scope_status)||!['include','exclude',null].includes(a.disposition)){
-   D.fail('MODEL_SCHEMA_ERROR','review_normalization','Invalid semantic assessment fields.');
-  }
-  // Even a verbatim quote can be the wrong unit: an objective assigning two
-  // treatments cannot itself be the treatment assigned to either arm.
-  if(a.status==='supported'&&a.disposition!=='exclude'&&['intervention','comparator','comparison','comparison_group'].includes(item.dimension_id)&&
-     /^(?:to (?:assess|evaluate|examine|determine|compare)\b|studies comparing\b)/i.test(item.normalized_text.trim())&&
-     /\b(?:compared (?:with|to)|versus|comparing .+? with|to compare .+? with)\b/i.test(item.normalized_text)){
-   a.status='contradicted';a.issue_type='unsupported_rewrite';
-   a.reason='The wording describes a comparison of treatments. State only the source-defined '+item.dimension_id+' arm, retaining its qualifiers.';
-  }
+ if(!assessment){
+  if(tentative)return null;
+  D.fail('MODEL_REVIEW_INCOMPLETE','review_normalization','Jev could not finish checking the source. Please try Generate again.');
  }
- return byId;
+ // Older compatible providers may return a verdict without reclassifying the input.
+ if(assessment.information_status===undefined)assessment.information_status=item.information_status;
+ if(assessment.issue_type===undefined)assessment.issue_type='none';
+ if(!['supported','uncertain','contradicted'].includes(assessment.status)||!['none','ambiguous_source','unsupported_rewrite'].includes(assessment.issue_type)||
+    !D.ENUMS.information_status.includes(assessment.information_status)||!D.ENUMS.semantic_role.includes(assessment.semantic_role)||
+    !D.ENUMS.scope_status.includes(assessment.scope_status)||!['include','exclude',null].includes(assessment.disposition)){
+  D.fail('MODEL_SCHEMA_ERROR','review_normalization','Invalid semantic assessment fields.');
+ }
+ // An objective assigning two treatments cannot be the treatment of either arm.
+ if(assessment.status==='supported'&&assessment.disposition!=='exclude'&&['intervention','comparator','comparison','comparison_group'].includes(item.dimension_id)&&
+    /^(?:to (?:assess|evaluate|examine|determine|compare)\b|studies comparing\b)/i.test(item.normalized_text.trim())&&
+    /\b(?:compared (?:with|to)|versus|comparing .+? with|to compare .+? with)\b/i.test(item.normalized_text)){
+  assessment.status='contradicted';assessment.issue_type='unsupported_rewrite';
+  assessment.reason='The wording describes a comparison of treatments. State only the source-defined '+item.dimension_id+' arm, retaining its qualifiers.';
+ }
+ return assessment;
 }
 function retainReviewedBounds(candidate){
  const contexts=candidate[locatedContexts];
@@ -1820,14 +1829,16 @@ function sourceReview(state,adapter,options,env){
   options.onProgress?.('Source checks complete ('+completed+'/'+total+').',{phase:'review',completed,total,waiting:completed<total});
  }
  function queue(item,context,target,enqueue){
-  const {element,part}=target;
-  const key=JSON.stringify([item,context,!!element.source_wording_needs_translation]);
+  const {element,part,corroborated}=target;
+  const translate=!!element.source_wording_needs_translation;
+  const corroboratable=corroborated&&!translate&&element[literalField]?.wording===item.normalized_text;
+  const key=JSON.stringify([item,context,translate,corroboratable]);
   let job=jobs.get(key);
   if(!job){
    job={targets:[],outcome:null};
    jobs.set(key,job);
    enqueue(async signal=>{
-    job.outcome=await check(item,context,element.source_wording_needs_translation,signal);
+    job.outcome=await check(item,context,translate,corroboratable,signal);
     for(const target of job.targets)settle(target,job.outcome);
     job.targets.length=0;
    });
@@ -1837,7 +1848,7 @@ function sourceReview(state,adapter,options,env){
   if(job.outcome)settle(target,job.outcome);
   else job.targets.push(target);
  }
- async function check(item,context,translate,signal){
+ async function check(item,context,translate,corroboratable,signal){
   const questions=[context];
   let translated=null;
   try{
@@ -1846,8 +1857,9 @@ function sourceReview(state,adapter,options,env){
     if(needsSourceTranslation(translated.normalized_text,state.output_language)&&translated.previous_wording===translated.normalized_text)return {assessment:null};
     item={...item,normalized_text:translated.normalized_text,structured_value:translated.structured_value};
    }
-   const assessments=await assessWording(state,adapter,questions,[item],signal);
-   return {assessment:assessments.get(item.id),translated};
+   const assessment=await assessWording(state,adapter,questions,item,signal,corroboratable);
+   if(!assessment)options.onLesson?.('source_fidelity');
+   return {assessment,translated};
   }catch(error){
    if(signal.aborted||!['MODEL_REVIEW_INCOMPLETE','MODEL_SCHEMA_ERROR','SEMANTIC_REVIEW_FAILED'].includes(error.code)&&
       !(translate&&(reviewUnavailable(error)||error.step==='provenance')))throw error;
