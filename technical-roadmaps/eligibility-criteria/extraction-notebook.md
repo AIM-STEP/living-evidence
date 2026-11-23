@@ -22,6 +22,7 @@
 | `topic_wording` | 标题只说“某人群的干预”，或重复整句研究目的。 | 用原文支持的最简名称概括干预，如 supervised cycling。仅给出干预类别时保留该类别，如 nutritional interventions。按需补充临床用途和关键人群。对照组在 Comparison 和 Description 中交代。首次使用含义明确的缩写时写出全称，Description 单独处理首次使用。[标题](../../tests/eligibility/concise-topic.cjs) · [各要素描述](../../tests/eligibility/neonatal-clinical-prose.cjs) |
 | 混合人群的纳入条件 | 胰岛素治疗的成年 2 型糖尿病问题中，附加条件无法归类时，已识别的字段被退回通用提取。结果丢失干预、对照和结局，且整句原题被当成人群。 | 人群与混合组数据可单独提取的条件共用一条规则，两处原文一起核对。其他字段独立保留。英文规则必须完成英文标准化。 [糖尿病回归测试](../../tests/eligibility/mixed-diabetes-cohort.cjs) |
 | 随机分组单位与跌倒史 | 社区老年人问题曾漏掉干预、允许的随机分组方式以及既往跌倒史不限的规定。居家平衡训练这一原文干预单独送 Jev 核对。允许按个人或社区分组的条款随试验设计保留，跌倒史不限的条款随人群保留。随访期间的跌倒风险作为研究结局。 | [中英文与导出回归](../../tests/eligibility/fall-prevention.cjs) |
+| 完整性核对 | 有明确的报告要求、允许的备选项和豁免未登记，或者条款已引用但标准省略了数字、时点和适用范围。运行时独立登记这些原文，检查成稿是否表达其含义。补提只返回独立漏项时保留其他条款。仍缺的条款标为不完整，筛选交接暂缓。 | [跨题型、来源、措辞和反例](../../tests/eligibility/requirement-completeness.cjs) |
 
 ## 生成流程中已发生的其他问题
 

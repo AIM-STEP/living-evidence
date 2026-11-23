@@ -28,6 +28,9 @@ const cases=[
    chinesePopulation:/65.*(?:跌倒史不限|无论.{0,12}跌倒|不论.{0,12}跌倒|是否.{0,12}跌倒)|(?:无论|不论).{0,15}跌倒.*65/u,
    chineseDesign:/个[人体].{0,20}社区|社区.{0,20}个[人体]/u}},
 
+ {id:'peco-reporting-gate',input:{research_question:'Population: Urban adults with hypertension. Exposure: Long-term exposure to ambient air pollution. Comparison: Low exposure. Eligible studies must report stroke within 90 days after discharge. We will examine whether associations differ by neighbourhood.',question_framework:'PECO',output_language:'en'},
+  expected:{framework:'peco',eligibility_dimensions:['population','exposure','comparator','outcome'],
+   verifiedReportingRequirement:/report stroke within 90 days after discharge/i}},
  {id:'neonatal-resuscitation',input:{research_question:neonatal.question,review_method:'systematic_review',question_type:'intervention_effect',output_language:'en'},expected:{neonatal:true}},
  {id:'nutrition-ipd-nma',input:{research_question:require('../tests/eligibility/fixtures/nutrition-ipd-nma.json').research_question,question_framework:'PICO',review_method:'systematic_review',output_language:'en'},expected:{framework:'pico',no_rct_default:true,eligibility_dimensions:['population','intervention','comparator'],nutrition_scope:true}},
  {id:'strict-age',input:{research_question:'Include people aged >18 years.',question_framework:'PICO',output_language:'en'},expected:{strict_bound:'gt',value:18,no_rct_default:true}},
@@ -49,6 +52,11 @@ async function run(def){
  try{
   const extracted=await M.analyze(state,E.environment(),adapter,{retries:Number(arg('--retries','1')),...(def.expected.bilingual&&{languageSample:def.input.research_question}),onProgress:message=>console.log(def.id,message)});state=E.ingest_candidates(state,extracted.candidates,{base_revision:extracted.base_revision}).state;result.stage_one_status=state.status;result.metadata_corrections=state.elements.flatMap(e=>e.metadata_corrections||[]);result.raw_model_clean=!result.metadata_corrections.length;result.stage_one_elements=D.clone(state.elements.filter(e=>e.active!==false&&e.information_status!=='missing'));result.stage_one_issues=D.clone(state.issues.filter(i=>i.status==='open'));
   const es=state.elements.filter(e=>e.active!==false),errors=[];
+  if(def.expected.verifiedReportingRequirement){
+   const reporting=state.criteria.find(rule=>rule.dimension_id==='outcome'&&rule.disposition==='include');
+   if(state.status!=='final'||!def.expected.verifiedReportingRequirement.test(reporting?.text||''))errors.push('The explicit reporting criterion did not survive to screening.');
+   if(state.criteria.some(rule=>/differ by neighbourhood/i.test(rule.text)))errors.push('An analysis objective became a screening requirement.');
+  }
   if(def.expected.neonatal){
    const view=require('../app/eligibility/background.js').projectToClassic(state);
    result.classic_output=view;

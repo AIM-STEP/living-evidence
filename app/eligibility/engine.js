@@ -218,7 +218,7 @@ function elementFromCandidate(state,q,c,env){
  delete e.confidence;e.decision_status=c.information_status==='explicit'&&c.semantic_review?.status==='supported'?(sources.some(s=>s.legacy_decision_id)?'confirmed_by_user':sources.some(s=>s.source_type==='authorized_rule')?'accepted_by_authorized_rule':'accepted_from_input'):'pending';
  if(e.semantic_role==='eligibility_condition'&&e.scope_status==='unspecified'&&e.information_status!=='missing'&&refs.length){e.initial_scope_status=e.scope_status;e.scope_status='restricted';e.metadata_corrections=[...(e.metadata_corrections||[]),{field:'scope_status',from:'unspecified',to:'restricted',basis:'A present source-backed eligibility condition is a restriction; its unresolved boundaries remain separate.'}];}
  if(c.information_status==='missing'){e.scope_status='unspecified';e.decision_status='proposed';}
- if(e.scope_status==='unrestricted'&&!/不限|不限制|无限制|any language|no .{0,20}restriction|unrestricted|all (?:languages|designs)/i.test(e.raw_text)){
+ if(e.scope_status==='unrestricted'&&!D.explicitWaiver(e.raw_text)&&!/无限制|any language|no .{0,20}restriction|all (?:languages|designs)/i.test(e.raw_text)){
   // Repair an unsupported metadata label from the already verified source, without
   // a model retry or a new author decision. Never infer an explicit waiver.
   const scope=e.semantic_role==='eligibility_condition'&&e.information_status!=='missing'&&refs.length?'restricted':'unspecified';
@@ -460,8 +460,8 @@ function unrepresentedSourceOr(elements){
      }
     }
     let start=source.start,end=source.end;
-    const verifiedField=owner.source_comparative_slot&&owner.decision_status==='accepted_from_input'&&
-     owner.semantic_review?.status==='supported'&&!owner.explicit_revision;
+    const verifiedField=(owner.source_comparative_slot||owner.source_refs.length===1&&D.permittedAlternatives(source.quote))&&
+     owner.decision_status==='accepted_from_input'&&owner.semantic_review?.status==='supported'&&!owner.explicit_revision;
     if(!verifiedField&&!wording.includes(sourceText)){
      const span=alternativeSpan(source.quote,owner.normalized_text);
      if(!span)continue;
@@ -743,7 +743,7 @@ function coverageDimension(id){
  if(['comparison','comparison_group','control','control_group'].includes(field))return 'comparator';
  return field==='design'?'study_design':field;
 }
-function sourceRequirementCovered(requirement,elements){
+function sourceRequirementCovered(requirement,elements,{checkWording=true}={}){
  const dimension=coverageDimension(requirement.dimension),{side,source_refs}=requirement;
  const matchesRole=e=>(!dimension||coverageDimension(e.dimension_id)===dimension)&&
   (side?e.semantic_role==='eligibility_condition'&&e.disposition===side:
@@ -763,15 +763,18 @@ function sourceRequirementCovered(requirement,elements){
  const eligible=elements.filter(e=>matchesRole(e)&&e.source_refs?.length);
  // Multiple independent criteria may split a field. A dependent clause
  // requires all its citations on the same reviewed criterion.
- if(source_refs.length>1)return eligible.some(e=>source_refs.every(ref=>covers(ref,e.source_refs)));
- return covers(source_refs[0],eligible.flatMap(e=>e.source_refs));
+ const relevant=eligible.filter(e=>e.source_refs.some(ref=>source_refs.some(required=>
+  ref.source_id===required.source_id&&ref.source_revision===required.source_revision&&ref.start<required.end&&ref.end>required.start)));
+ const preserves=group=>!checkWording||D.sourceConditionsPreserved(source_refs,group);
+ if(source_refs.length>1)return relevant.some(e=>source_refs.every(ref=>covers(ref,e.source_refs))&&preserves([e]));
+ return covers(source_refs[0],relevant.flatMap(e=>e.source_refs))&&preserves(relevant);
 }
 function checkSourceCoverage(state){
  const published=new Set(state.criteria.flatMap(c=>c.source_element_ids));
  return state.questions.filter(active).flatMap(q=>{
   const elements=state.elements.filter(e=>e.question_id===q.question_id);
   const verified=elements.filter(e=>e.author_omission_id||
-   accepted(e)&&(published.has(e.element_id)||e.semantic_role==='review_focus'));
+   accepted(e)&&(published.has(e.element_id)||e.semantic_role==='review_focus'||e.scope_status==='unrestricted'&&withinEligibilityFramework(q,e)));
   const pendingIds=new Set(state.issues.filter(i=>i.status==='open'&&i.blocking).flatMap(i=>i.element_ids));
   const pending=elements.filter(e=>active(e)&&pendingIds.has(e.element_id)).map(e=>e.review_pending?{
    ...e,dimension_id:e.review_pending.original_dimension,semantic_role:e.review_pending.original_role,disposition:e.review_pending.original_disposition

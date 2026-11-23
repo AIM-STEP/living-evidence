@@ -108,6 +108,27 @@ function check_semantics(element,refs,{human=false}={}){
  if(element.semantic_review?.status==='contradicted'&&!human)fail('SEMANTIC_MISMATCH','semantic_review','The semantic review rejected the normalized meaning.',{element_id:element.element_id,reason:element.semantic_review.reason});
  return true;
 }
+function explicitWaiver(text){
+ return /\b(?:regardless of|irrespective of|whether or not|with (?:or|and) without|no (?:eligibility )?restrictions? (?:on|by|for|apply)|unrestricted|does not affect eligibility)\b|不限|不设限制|不作限制|不限制|不影响(?:纳入|入选)|不作为(?:纳入|入选)条件|(?:无论|不论|不管).{0,55}(?:纳入|入选)/iu.test(text);
+}
+function permittedAlternatives(text){
+ return !explicitWaiver(text)&&hasOr(text)&&
+  /\b(?:(?:is|are) (?:eligible|permitted|acceptable|allowed)|may be included|are accepted|(?:eligible|included) (?:studies|trials) may|permit (?:either|both))\b|(?:允许|接受|可按|可以采用|均可纳入)/iu.test(text);
+}
+function sourceConditionsPreserved(refs,elements){
+ if(elements.some(element=>element.author_omission_id))return true;
+ const wording=elements.map(element=>[
+  element.normalized_text,...[...array(element.scope_conditions),...array(element.exceptions)].map(condition=>
+   typeof condition==='string'?condition:condition?.text||condition?.description||condition?.condition||condition?.quote||'')
+ ].join(' ')).join('\n');
+ const visible=grounding.constraints(wording);
+ const source=refs.flatMap(ref=>grounding.constraints(ref.quote));
+ if(source.some(bound=>!visible.some(candidate=>sameConstraint(candidate,bound)&&
+    grounding.temporalAnchor(candidate.anchor)===grounding.temporalAnchor(bound.anchor))))return false;
+ if(elements.length===1&&refs.some(ref=>permittedAlternatives(ref.quote))&&!hasOr(wording))return false;
+ return !refs.some(ref=>explicitWaiver(ref.quote))||explicitWaiver(wording)||
+  elements.some(element=>element.scope_status==='unrestricted');
+}
 function hasOr(text){return /或者|或是|或(?=[\u3400-\u9fff])|\bor\b/i.test(String(text).replace(/\bor (?:older|younger|more|less|above|below|greater)\b/gi,''));}
 function hasAnd(text){return /联合|同时|并且|以及|\band\b|combined with|in combination/i.test(text);}
 function treeHas(node,op){return !!node&&(node.op===op||(node.children||[]).some(n=>treeHas(n,op)));}
@@ -129,5 +150,5 @@ function validate_candidate_element(candidate){
  if(candidate.semantic_review&&!['supported','uncertain','contradicted'].includes(candidate.semantic_review.status))fail('INVALID_ENUM','semantic_review','Invalid semantic review status.');
  return candidate;
 }
-return {clone,array,ENUMS,EligibilityError,fail,id,stableId,now,key,object,text,enumValue,sourceAt,locate,quoteText,occurrenceClause,validate_provenance,sourceDifferences:grounding.differences,sourceConstraints:grounding.constraints,canonical,sameConstraint,structuredConstraints,decimalDigits,check_semantics,hasOr,hasAnd,treeHas,validate_expression,mapExpression,walkLeaves,validate_candidate_element};
+return {clone,array,ENUMS,EligibilityError,fail,id,stableId,now,key,object,text,enumValue,sourceAt,locate,quoteText,occurrenceClause,validate_provenance,sourceDifferences:grounding.differences,sourceConstraints:grounding.constraints,canonical,sameConstraint,structuredConstraints,decimalDigits,check_semantics,explicitWaiver,permittedAlternatives,sourceConditionsPreserved,hasOr,hasAnd,treeHas,validate_expression,mapExpression,walkLeaves,validate_candidate_element};
 });
