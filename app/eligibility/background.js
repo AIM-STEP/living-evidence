@@ -145,8 +145,10 @@ function projectToClassic(project,registry,editBindings){
   }
   const original=questionById.get(q.question_id);
   const outcomes=fields.has('outcome')?clone(original?.author_outcome_groups??Methods.outcomeGroups(q.research_question)):[];
-  if(fields.has('outcome')&&!original?.author_outcome_groups&&!outcomes.length&&original?.sparse_dimension==='outcome'){
-   const items=project.elements.filter(e=>e.question_id===q.question_id&&e.active!==false&&e.dimension_id.split('.')[0]==='outcome'&&e.semantic_role==='review_focus')
+  if(fields.has('outcome')&&!original?.author_outcome_groups&&!outcomes.length){
+   const focus=original?.sparse_dimension==='outcome'?project.elements.filter(e=>
+    e.question_id===q.question_id&&e.active!==false&&e.semantic_role==='review_focus'):q.focus.filter(e=>e.source_objective_outcome&&E.accepted(e));
+   const items=focus.filter(e=>e.dimension_id.split('.')[0]==='outcome')
     .map(e=>E.accepted(e)?e.normalized_text:e.raw_text).filter(Boolean);
    if(items.length)outcomes.push({label:'',items:[...new Set(items)]});
   }
