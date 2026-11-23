@@ -960,7 +960,11 @@ function description(rows,context={}){
   for(const rule of row.include||[]){
    if(linkedFields.has(JSON.stringify([dimension,rule])))continue;
    const value=prosePhrase(rule);
-   if(sourceSentence.test(value))sourceRules.push(sentence(value));
+   const qualification=dimension==='Intervention'&&value.match(/^(.+?)\s+\(((?:if|when)\b[^()]+?\b(?:eligible only if|eligible only when|must)\b[^()]+?\b(?:control|comparison|comparator)\b[^()]*)\)$/iu);
+   if(qualification){
+    phrases.push(qualification[1].replace(/^Nurse-led\b/u,'nurse-led'));
+    sourceRules.push(sentence(qualification[2]));
+   }else if(sourceSentence.test(value))sourceRules.push(sentence(value));
    else if(value)phrases.push(value);
   }
   if(phrases.length)groups.set(dimension,[...new Set([...(groups.get(dimension)||[]),...phrases])]);
