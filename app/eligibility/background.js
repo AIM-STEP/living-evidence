@@ -382,6 +382,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    requireEpoch(storage,projectId,saved.criteria_epoch);
    onProgress?.('Validating eligibility criteria…',{phase:'validate'});
    project=E.ingest_candidates(project,result.candidates,{base_revision:result.base_revision},env).state;
+   if(project.validation.completeness.eligibility.incomplete)observed.add('source_coverage');
    for(const code of Lessons?.correctedLessons(project.elements)||[])observed.add(code);
    project.model_calls.push(...result.model_calls);
    project.presentation_version=presentationVersion;

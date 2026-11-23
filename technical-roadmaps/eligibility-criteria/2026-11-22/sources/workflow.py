@@ -88,6 +88,7 @@ def render(output):
     draw.ellipse((913, 1009, 927, 1023), fill=TEAL_LINE)
     connector([(356, 1326), (356, 1638)])
     connector([(920, 1326), (920, 1638)], AMBER_LINE)
+    connector([(1484, 1326), (1484, 1370), (1185, 1370), (1185, 1638)], SLATE_LINE)
 
     # A sparse input can produce optional advice alongside the review result.
     connector([(1744, 706), (1785, 706), (1785, 1484), (1744, 1484)], VIOLET_LINE)
@@ -107,8 +108,8 @@ def render(output):
     card(96, 464, 1648, 132, '准备原始材料',
          ('每次 Generate 都重新读取输入和附件，并记录来源。',))
     card(96, 632, 1648, 152, '提取候选条件并标准化框架要素',
-         ('本地模型按来源分批提取并规范措辞，程序按明确原文补回遗漏的框架字段。',
-          '程序定位原文，核对阈值、单位、时点、例外和联合干预条件。'))
+         ('程序记录原文条款和位置，本地模型按来源提取、标准化，漏项定向补提。',
+          '保留阈值、单位、时点、例外和联合干预条件。'))
     card(96, 820, 1648, 149, 'TypeSafe Jev 逐条独立核对',
          ('核对每条的框架字段、纳排方向和规则含义。',
           '每生成一条候选就核对一条，其他来源可以继续提取。'))
@@ -124,10 +125,11 @@ def render(output):
           'Jev 歧义，两项评分 ≥0.98。',
           '待确认的条目暂缓用于筛选。'),
          fill=AMBER_PALE, outline='#e1c394', heading=AMBER, title_size=36, body_size=27)
-    card(1224, 1080, 520, 246, '略过该条',
+    card(1224, 1080, 520, 246, '略过 · 保留缺项',
          ('原文明确不支持该候选。',
           '判定不充分时，只重试该条一次。',
-          '仍无判定则略过，继续核对。'),
+          '仍无判定则略过，继续核对。',
+          '明示条款缺项留在草稿中。'),
          fill=SLATE_PALE, outline='#cfdbdf', heading=SLATE, title_size=36, body_size=27)
 
     card(1224, 1370, 520, 228, '短问题 · 可选补充建议',
@@ -139,18 +141,18 @@ def render(output):
 
     card(96, 1638, 1648, 171, 'Criteria 预览与作者确认',
          ('Review topic  ·  Framework  ·  Inclusion  ·  Exclusion  ·  Description',
-          '生成期间显示已通过的规则。生成结束后，作者可确认、改写或舍弃待核对条目。'),
+          '生成期间显示已通过的规则。原文仍有未覆盖条款时，保存草稿并标出缺项。'),
          fill=TEAL_PALE, outline='#b9d6ce')
     card(96, 1847, 1648, 171, '保存、双语呈现与导出',
-         ('英文标准保存并交接检索。问题为非英语时，依据已通过的标准生成原语言版。',
-          '原语言版沿用英文版的组成。可在任一版本编辑，统一保存并导出。'))
+         ('问题为非英语时按相同结构生成原语言版。两版均可编辑、保存和导出。',
+          '未核对的原文条款及生成不完整状态随预览和 Word 保留。'))
     card(96, 2056, 1648, 155, '什么会进入筛选？',
-         ('应用已生效的纳入和排除规则，保留条件之间的关系及例外。',
+         ('原文条款核对完成后，才交接已生效的规则、组合关系及例外。',
           '原文明确要求测量或报告的结局可用于筛选，其他结局保留在说明中。'))
 
     draw.line((96, 2260, 1744, 2260), fill=RULE, width=2)
     text(96, 2285, 'AIM-STEP', 26, BODY, bold=True)
-    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 51', 25, BODY, width=608)
+    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 52', 25, BODY, width=608)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, optimize=True)

@@ -5,6 +5,13 @@ const chosen=arg('--case','all'),base=arg('--base',process.env.AIMSTEP_ELIGIBILI
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 const neonatal=require('../tests/eligibility/fixtures/neonatal-resuscitation.cjs');
 const cases=[
+ {id:'heart-failure-discharge',input:{research_question:'对于出院回家的成年心力衰竭患者，与常规出院随访相比，护士主导的电话随访能否降低出院后 90 天内的全因再入院风险？仅考虑随机对照试验。若电话随访与家庭访视联合实施，仅在对照组也接受相同家庭访视时纳入。',output_language:'en'},
+  expected:{coverage:true,eligibility_dimensions:['population','comparator','intervention','study_design'],comparator:/usual.+follow.up/i,outcome:/90 days.+discharge/i,qualifier:/control.+(?:same|identical|matched).+home visits/i}},
+ {id:'heart-failure-alternate-design',input:{research_question:'对于出院回家的成年心力衰竭患者，与常规出院随访相比，护士主导的电话随访能否降低出院后 90 天内的全因再入院风险？研究设计仅限随机对照试验。若电话随访与家庭访视联合实施，仅在对照组也接受相同家庭访视时纳入。',output_language:'en'},
+  expected:{coverage:true,eligibility_dimensions:['population','comparator','intervention','study_design'],comparator:/usual.+follow.up/i,outcome:/90 days.+discharge/i,qualifier:/control.+(?:same|identical|matched).+home visits/i}},
+ {id:'community-fall-prevention',input:{research_question:'对于居住在社区、过去一年内至少跌倒过一次的老年人，与常规照护或单纯健康教育相比，以平衡训练为必备内容的居家运动计划能否降低随访期间至少跌倒一次的风险？仅纳入随机对照试验，排除所有训练均在医疗机构内完成的项目。',output_language:'en'},
+  expected:{coverage:true,eligibility_dimensions:['population','comparator','intervention','study_design'],comparator:/usual care.+or.+health education/i,outcome:/at least once/i,exclude:/all.+healthcare facilit/i}},
+
  {id:'neonatal-resuscitation',input:{research_question:neonatal.question,review_method:'systematic_review',question_type:'intervention_effect',output_language:'en'},expected:{neonatal:true}},
  {id:'nutrition-ipd-nma',input:{research_question:require('../tests/eligibility/fixtures/nutrition-ipd-nma.json').research_question,question_framework:'PICO',review_method:'systematic_review',output_language:'en'},expected:{framework:'pico',no_rct_default:true,eligibility_dimensions:['population','intervention','comparator'],nutrition_scope:true}},
  {id:'strict-age',input:{research_question:'Include people aged >18 years.',question_framework:'PICO',output_language:'en'},expected:{strict_bound:'gt',value:18,no_rct_default:true}},
@@ -21,7 +28,7 @@ async function run(def){
   else {if(fs.existsSync(requestFile)&&fs.existsSync(responseFile)){if(hash(fs.readFileSync(requestFile,'utf8'))!==hash(raw))throw Error('Cached request changed; use a fresh exchange directory.');}else{fs.writeFileSync(requestFile,raw);fs.writeFileSync(path.join(target,'url-'+index+'.txt'),url);console.log('EXCHANGE_REQUEST',def.id,index,requestFile,responseFile);const start=Date.now();while(!fs.existsSync(responseFile)){if(Date.now()-start>590000)throw Error('External exchange timed out.');await new Promise(r=>setTimeout(r,200));}}}
   const response=JSON.parse(fs.readFileSync(responseFile,'utf8'));records.push({request:JSON.parse(raw),response});return {ok:!response.error,status:response.error?502:200,json:async()=>response,text:async()=>JSON.stringify(response)};
  }:undefined,onExchange:record=>{fs.writeFileSync(path.join(dir,'exchange-'+(adapter.exchanges.length)+'.json'),JSON.stringify(record,null,2));}});
- let result={case_id:def.id,evaluation_type:replay?'RECORDED_REAL_OUTPUT_REPLAY':'REAL_LLM_CALLS',input:def.input,expected:def.expected,expectation_basis:'User technical specification; developer-authored, not independently expert-adjudicated',independent_holdout:false,passed:false};
+ let result={case_id:def.id,evaluation_type:replay?'RECORDED_REAL_OUTPUT_REPLAY':'REAL_LLM_CALLS',input:def.input,expected:Object.fromEntries(Object.entries(def.expected).map(([key,value])=>[key,value instanceof RegExp?value.source:value])),expectation_basis:'User technical specification; developer-authored, not independently expert-adjudicated',independent_holdout:false,passed:false};
  const started=Date.now();
  try{
   const extracted=await M.analyze(state,E.environment(),adapter,{retries:Number(arg('--retries','1')),onProgress:message=>console.log(def.id,message)});state=E.ingest_candidates(state,extracted.candidates,{base_revision:extracted.base_revision}).state;result.stage_one_status=state.status;result.metadata_corrections=state.elements.flatMap(e=>e.metadata_corrections||[]);result.raw_model_clean=!result.metadata_corrections.length;result.stage_one_elements=D.clone(state.elements.filter(e=>e.active!==false&&e.information_status!=='missing'));result.stage_one_issues=D.clone(state.issues.filter(i=>i.status==='open'));
@@ -48,6 +55,17 @@ async function run(def){
   for(const dimension of def.expected.dimensions||[def.expected.dimension].filter(Boolean))if(!es.some(e=>e.dimension_id===dimension||e.dimension_id.startsWith(dimension+'.')))errors.push('Missing dimension '+dimension);
   for(const dimension of def.expected.eligibility_dimensions||[])if(!state.criteria.some(c=>c.dimension_id===dimension&&c.disposition==='include'))errors.push('No source-backed inclusion criterion for '+dimension);
   if(!state.criteria.length)errors.push('No usable eligibility clauses generated.');
+  if(def.expected.coverage){
+   const {source_coverage,incomplete}=state.validation.completeness.eligibility;
+   if(state.status!=='final'||incomplete||source_coverage.length<5||source_coverage.some(item=>item.status!=='covered'))errors.push('Explicit source clauses did not all reach a verified final result.');
+   const comparator=state.criteria.find(c=>c.dimension_id==='comparator'&&c.disposition==='include')?.text||'';
+   if(!def.expected.comparator.test(comparator))errors.push('Incorrect comparator wording.');
+   const outcome=es.find(e=>e.dimension_id==='outcome'&&e.semantic_role==='review_focus')?.normalized_text||'';
+   if(!def.expected.outcome.test(outcome))errors.push('Outcome and its source qualifiers were not retained as review focus.');
+   if(def.expected.qualifier&&!state.criteria.some(c=>c.dimension_id==='intervention'&&def.expected.qualifier.test(c.text)))errors.push('Matched co-intervention clause missing.');
+   if(def.expected.exclude&&!state.criteria.some(c=>c.disposition==='exclude'&&def.expected.exclude.test(c.text)))errors.push('Explicit intervention exclusion missing.');
+  }
+
   if(def.expected.no_required_comparator&&state.issues.some(i=>i.status==='open'&&i.blocking&&/comparat|对照/i.test(i.question_text)))errors.push('An unprovided comparator was made mandatory.');
   if(def.expected.nutrition_scope){const classic=require('../app/eligibility/background.js').projectToClassic(state);result.classic_output=classic;if(!classic.rows.some(r=>r.dimension==='Population'&&/older/i.test(r.include.join(' '))))errors.push('Older population qualifier lost.');if(classic.rows.some(r=>r.dimension==='Other'))errors.push('Within-comparator alternatives flattened the whole PICO into Other.');if(state.criteria.some(c=>/IPD|individual participant data|network meta.analysis/i.test(c.text)))errors.push('Analysis/data plan became an unprovided study eligibility condition.');if(!/nutrition/i.test(classic.reviewTopic)||!/older/i.test(classic.reviewTopic))errors.push('Review topic omitted the intervention or clinical population.');if(/rank the|network meta.analysis|individual participant data/i.test(classic.manuscriptParagraph))errors.push('Description contains the analysis plan.');}
   if(def.expected.study_exclusions){

@@ -318,7 +318,8 @@ const explicitFields={
  comparison:'comparator',comparator:'comparator',comparators:'comparator',对照:'comparator',对照组:'comparator',
  exposure:'exposure',暴露:'exposure',outcome:'outcome',outcomes:'outcome',结局:'outcome',结局指标:'outcome',
  'study design':'study_design','study designs':'study_design',研究设计:'study_design',
- 'inclusion criteria':'include','纳入标准':'include','exclusion criteria':'exclude','排除标准':'exclude'
+ 'inclusion criteria':'include','纳入标准':'include','exclusion criteria':'exclude','排除标准':'exclude',
+ 'conditions and exceptions':'qualifier','条件与例外':'qualifier'
 };
 function readSourcePassages(state,ranges){
  const passages=[];
@@ -335,7 +336,7 @@ function readSourcePassages(state,ranges){
     (/^(?:to |we (?:aim(?:ed)? to )?)(?:assess|examine|investigate|determine|evaluate) whether\b|^亚组分析/u.test(text.toLowerCase())?'analysis_objective':null)||
     (/^(?:(?:our|the) outcomes of interest (?:were|are)|(?:(?:our|the) )?(?:primary|secondary|critical) outcomes? (?:were|are))\b/i.test(text)?'outcome':null)||
     (/\b(?:compared (?:with|to)|versus|comparing .+? with)\b/i.test(text)?'comparison_clause':null)||inherited;
-   if(!kind)continue;
+   if(!kind&&!/^(?:(?:study design|eligible designs?)[:\s]*|研究设计[：:\s]*)?(?:(?:we (?:will )?)?only\b|limited to\b|(?:仅|只)(?:考虑|纳入|包括|限))/iu.test(text))continue;
    const ref={source_id:span.id,source_revision:span.revision,start:sourceOffset(span,line.start),end:sourceOffset(span,line.end),quote};
    // Index partial statements for reading, but never turn a truncated
    // requirement at a fragment boundary into an independent candidate.
@@ -346,10 +347,14 @@ function readSourcePassages(state,ranges){
    // A heading controls its descendants. A field within an exclusion list is
    // a reading hint, never an independent inclusion requirement.
    const reportedCount=/^(?:(?:a total of|a further|all)\s+)?(?:[\d,]+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|several)\s+(?:(?:eligible|randomi[sz]ed|controlled|cluster|observational|cohort|clinical|adult)\s+)*(?:studies|trials?|reports?|participants?|patients?|infants?|records?|publications?|reviews?)\b|^(?:了)?\s*(?:共计|总计|共)?\s*[\d一二两三四五六七八九十百千万,，]+\s*(?:项|例|名|篇|个)/iu.test(body);
-   const safe=!reportedCount&&completeStart&&completeEnd&&!['exclude','analysis_objective'].includes(inherited)&&
+   const safe=!reportedCount&&completeStart&&completeEnd&&!['exclude','qualifier','analysis_objective'].includes(inherited)&&
     !(head&&!inherited)&&!/[;；]|\b(?:except|unless|depending|instead|alternatively|not restricted|no restrictions?|unrestricted|sensitivity analys[ie]s|subgroup analys[ie]s)\b|除非|不限|无限制/u.test(body.toLowerCase());
    const kindHint=reportedCount||/^(?:results|findings|discussion|background|conclusions?|结果|背景|讨论|结论)$/iu.test(head||'')?'reported_information':kind;
-   const record={id:passages.length+1,kind:kindHint,ref};
+   const direct=['research_question','additional_requirement'].includes(source.input_kind);
+   const sourceScope=!head||!!inherited;
+   const coverage=completeStart&&completeEnd&&sourceScope&&kindHint!=='reported_information'&&
+    (direct?'direct':inherited||field?'section':null);
+   const record={id:passages.length+1,kind:kindHint,ref,coverage,section:inherited,field,body};
    if(safe&&['research_question','additional_requirement'].includes(source.input_kind)&&body.trim()&&body.length<=1200&&
     (kind==='include'||(field||inherited)&&!['exclude','comparison_clause','analysis_objective'].includes(kind))){
     const value=body.replace(/[.。]+$/u,'').trim();
@@ -1477,7 +1482,7 @@ function restrictToFramework(question,original,savedQuestion,env,trees){
 // clause. Use exact spans so an omitted clause can still reach source review.
 function comparativeQuestionSlots(source){
  const head=source.text.match(/^\s*(?:对于|针对)([^。？！?!；;\n]+?)[，,]\s*((?:与|和)([^。？！?!；;\n，,]+?)(?:相比较|相比))[，,]\s*([^。？！?!；;\n]+?)(?:能否|是否能够|是否可以|是否能|可否|是否)(降低|减少|提高|增加|改善|影响|延长|缩短|改变|预防|避免|延缓|促进|抑制)([^。？！?!；;\n]+)[？?]/du);
- if(!head||/(?:待定|待确认|待明确|尚未确定|尚不明确|或许|拟考虑|除非|作为例外|但也可)/u.test(source.text))return [];
+ if(!head||/(?:待定|待确认|待明确|尚未确定|尚不明确|或许|拟考虑|除非|作为例外|但也可)/u.test(head[0]))return {fields:[],unparsed:[]};
  const fields=['population','comparator','intervention','outcome'];
  const slots=fields.map((dimension,index)=>{
   const [start,end]=head.indices[[1,3,4,5][index]];
@@ -1488,7 +1493,7 @@ function comparativeQuestionSlots(source){
   start:sourceOffset(source,start),end:sourceOffset(source,end),quote:source.text.slice(start,end)});
  const intervention=slots.find(slot=>slot.dimension==='intervention');
  const interventionText=source.text.slice(intervention.start,intervention.end);
- const tail=source.text.slice(head[0].length);
+ const tail=source.text.slice(head[0].length),unparsed=[];
  for(const sentence of tail.matchAll(/[^。；;\r\n]+/gu)){
   const offset=head[0].length+sentence.index;
   // A comma inside an if/only-if rule links its two halves. Review the
@@ -1501,17 +1506,76 @@ function comparativeQuestionSlots(source){
     intervention.qualification={source:citation(at,at+text.length),treatment:matched[1],additional:matched[2]};
     continue;
    }
-   const design=text.match(/^(?:仅|只)(?:纳入|包括|考虑|限于)([^，,]*(?:随机对照|随机化对照|随机分组对照|平行组对照)试验)$/u);
+   const design=text.match(/^(?:研究设计[：:\s]*)?(?:仅|只)(?:纳入|包括|考虑|限(?:于)?)([^，,]*(?:随机对照|随机化对照|随机分组对照|平行组对照)试验)$/u);
    const exclusion=text.match(/^排除([^，,]*(?:训练|锻炼|运动|治疗|干预)[^，,]*(?:项目|方案|计划))$/u);
-   if(!design&&!exclusion)return [];
+   if(!design&&!exclusion){
+    if(/^(?:若|如果|当|只有|仅当|除非|但是|但|不纳入|排除|纳入|只|仅|必须|研究设计)|才(?:纳入|排除)|不(?:得|可)纳入/u.test(text)){
+     const side=/^(?:排除|不纳入)/u.test(text)?'exclude':/^(?:纳入|仅纳入|只纳入|研究设计)/u.test(text)?'include':null;
+     unparsed.push({side,source_refs:[citation(at,at+text.length)]});
+    }else unparsed.push(null);
+    continue;
+   }
    const quote=(design||exclusion)[1];
    const start=at+text.indexOf(quote);
    slots.push({dimension:design?'study_design':'intervention',side:design?'include':'exclude',start,end:start+quote.length,context:[at,start+quote.length]});
   }
  }
- if(!slots.some(slot=>slot.dimension==='study_design'))return [];
- return slots.map(({dimension,side,start,end,context,qualification})=>({dimension,side,source:citation(start,end),
-  ...(context&&{context:source.text.slice(...context),context_start:sourceOffset(source,context[0])}),...(qualification&&{qualification})}));
+ return {unparsed,fields:slots.map(({dimension,side,start,end,context,qualification})=>({dimension,side,source:citation(start,end),
+  ...(context&&{context:source.text.slice(...context),context_start:sourceOffset(source,context[0])}),...(qualification&&{qualification})}))};
+}
+// Record the source clauses independently of what extraction happens to return.
+function sourceRequirements(ranges,passages,comparison){
+ const requirements=comparison.fields.map(({dimension,side,source,qualification})=>({
+  dimension,side,source_refs:qualification?[source,qualification.source]:[source]
+ }));
+ requirements.push(...comparison.unparsed.filter(Boolean));
+ const subref=(ref,value)=>{
+  const at=ref.quote.indexOf(value);
+  const start=ref.start+Array.from(ref.quote.slice(0,at)).length;
+  return {...ref,start,end:start+Array.from(value).length,quote:value};
+ };
+ for(const passage of passages){
+  const {ref,kind,value,dimension,labelled,coverage,section,field,body:fieldBody}=passage;
+  if(!coverage||requirements.some(item=>item.source_refs.some(r=>r.source_id===ref.source_id&&
+     r.source_revision===ref.source_revision&&r.start>=ref.start&&r.end<=ref.end)))continue;
+  const labelledText=field&&fieldBody.replace(/[。.!?！？\s]+$/u,'').trim();
+  if(labelledText&&section==='exclude'&&!['exclude','include'].includes(field)){
+   requirements.push({dimension:field,side:'exclude',source_refs:[subref(ref,labelledText)]});
+   continue;
+  }
+  if(labelledText&&section==='qualifier'&&/\b(?:only if|only when|provided that|unless|except)\b|仅当|除非|例外|只有.+才/iu.test(labelledText)){
+   requirements.push({dimension:field,side:null,source_refs:[subref(ref,labelledText)]});
+   continue;
+  }
+  if(labelled&&dimension!=='outcome'){
+   requirements.push({dimension,side:'include',source_refs:[subref(ref,value)]});
+   continue;
+  }
+  const body=ref.quote.replace(/^[\s*#•-]*(?:\d+[.)]\s*)?/u,'').replace(/[。.！？!?\s]+$/u,'');
+  const design=body.match(/^(?:(?:study design|eligible designs?)[:\s]*|研究设计[：:\s]*)?(?:(?:we (?:will )?)?only (?:include|consider|accept)|(?:only|limited to)(?=\s)|(?:仅|只)(?:纳入|包括|考虑|限(?:于)?))\s*((?:randomi[sz]ed|cluster-randomi[sz]ed|RCTs?\b|随机|整群随机)[^,，;；]+)$/iu);
+  if(design){
+   requirements.push({dimension:'study_design',side:'include',source_refs:[subref(ref,design[1])]});
+   continue;
+  }
+  if(coverage==='direct'&&kind==='exclude'){
+   const excluded=body.replace(/^(?:(?:we (?:will )?)?exclude\s+|do not include\s+|(?:排除|不纳入)[：:\s]*)/iu,'');
+   if(excluded&&excluded!==body&&!/^(?:the following|as follows|below|以下|如下)$/iu.test(excluded)&&
+      !/\b(?:from|for|in) (?:the |our )?(?:primary |secondary |sensitivity |subgroup |pooled )*(?:analysis|analyses|synthesis)\b/iu.test(excluded))
+    requirements.push({side:'exclude',source_refs:[subref(ref,excluded)]});
+  }
+ }
+ // A one-sentence English comparative question can be too sparse in the
+ // model output even though its comparator is explicitly named.
+ if(!comparison.fields.length)for(const source of ranges){
+  const match=source.text.match(/^\s*(?:In|Among|For|Given) [^?\n]+?,\s*(?:compared (?:with|to)|versus) ([^,?\n]+),[^?\n]+\?/diu);
+  if(!match)continue;
+  const [start,end]=match.indices[1];
+  requirements.push({dimension:'comparator',side:'include',source_refs:[{
+   source_id:source.id,source_revision:source.revision,start:sourceOffset(source,start),
+   end:sourceOffset(source,end),quote:match[1]
+  }]});
+ }
+ return requirements;
 }
 const comparisonTerms=new Map([['常规照护','usual care'],['常规护理','routine nursing care'],['常规治疗','usual treatment'],
  ['常规出院随访','usual post-discharge follow-up'],['单纯健康教育','health education alone'],['仅接受健康教育','health education alone'],['健康教育','health education'],['安慰剂','placebo']]);
@@ -1594,15 +1658,21 @@ async function extract_elements(state,env,adapter,options={},review=null){
   options.onProgress?.('Extracting source conditions ('+(index+1)+'/'+total+')…',{phase:'extract',completed,total,waiting:true});
   const {document_input_only,original_text,...question}=q;
   const questionInBatch=sources.filter(s=>s.input_kind==='research_question').map(s=>s.original_text).join('')===original_text;
-  const comparativeSlots=questionInBatch&&ranges.length===1&&batches.length===1&&
-   !q.confirmed_elements.length&&(!q.context.framework_requested||q.context.framework_requested.toLowerCase()==='picos')?
-   comparativeQuestionSlots(ranges[0]):[];
+  const questionSource=questionInBatch&&sources.find(source=>source.input_kind==='research_question');
+  const questionRange=questionSource&&ranges.find(range=>range.id===questionSource.source_id);
+  const comparison=questionRange&&(!q.context.framework_requested||['pico','picos'].includes(q.context.framework_requested.toLowerCase()))?
+   comparativeQuestionSlots(questionRange):{fields:[],unparsed:[]};
+  const comparativeSlots=comparison.fields;
+  const requirements=sourceRequirements(ranges,passages,comparison);
+  const canRestoreComparative=comparativeSlots.length&&!q.confirmed_elements.length&&!comparison.unparsed.length&&ranges.length===1;
   const questionContext=batches.length>1&&!document_input_only&&!questionInBatch?original_text:undefined;
   const {registration,...sourceContext}=question.context;
   const briefRegistration=!comparativeSlots.length&&original_text.length<=180&&batches.length===1&&sources.length===1&&questionInBatch?registration:null;
   const request={question:{...question,context:{...sourceContext,...(briefRegistration&&{registration:briefRegistration})},sources,original_text:questionContext},frameworks,review_profiles:profiles[qi],source_passages:passageIndex(passages),part_index:bi,part_count:batches.length,extraction_encoding:'compact-elements-v3'};
   if(comparativeSlots.length)request.source_defined_fields=comparativeSlots.map(({dimension,side,source,qualification})=>({
    dimension,disposition:side,quote:source.quote,...(qualification&&{conditional_inclusion:qualification.source.quote})}));
+  if(requirements.length)request.source_requirements=requirements.map(({dimension,side,source_refs})=>({dimension,disposition:side,source_refs}));
+  const coverageInstruction=requirements.length?' Account for each source_requirements entry independently. Some have no fixed direction; interpret their conditional or exception within the question, keeping all linked passages and the direction they govern. Use complete exact quotations for each scope requirement.':'';
   const comparativeInstruction=comparativeSlots.length?' Cover every source_defined_fields entry independently, quoting its complete wording and keeping its supplied dimension and direction. Keep mandatory intervention components and all comparison alternatives in the same fields. Quote a supplied conditional_inclusion as a second citation for the same intervention, keeping the condition and the matching requirement. Preserve the entire exclusion, including its quantifier. An outcome with null disposition is the measure of interest; name it without expressing a required treatment effect or eligibility gate.':'';
   const detectLanguage=index===0&&options.languageSample;
   if(detectLanguage)request.question_language_sample=options.languageSample;
@@ -1613,112 +1683,145 @@ async function extract_elements(state,env,adapter,options={},review=null){
    responseSchema.properties.source_language=str;
    responseSchema.required.push('source_language');
   }
-  let answer;for(let attempt=0;attempt<=(options.retries??1);attempt++)try{
-   answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+briefInstruction+languageInstruction+comparativeInstruction+(batches.length>1?' Extract only from sources in this part. If supplied, question.original_text is whole-question context, not another source for this part. Preserve the within-part logic of all eligibility conditions.':'')+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
-   if(!Array.isArray(answer?.questions)||answer.questions.length!==1||answer.questions[0]?.question_id!==q.question_id)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The model omitted or changed the question ID.');
-   const topic=answer.questions[0].review_topic;answer.questions[0].review_topic=typeof topic==='string'?topic.trim().slice(0,1000):'';
-   if(!Array.isArray(answer.questions[0].elements)||!Array.isArray(answer.questions[0].issues)||!Array.isArray(answer.questions[0].framework_candidates))D.fail('MODEL_SCHEMA_ERROR','extract_elements','Required extraction arrays are missing.');
-   if(comparativeSlots.length){
-    retainComparativeQuestion(state,answer.questions[0],comparativeSlots,q.question_id,ranges,options.onLesson);
+  let answer,repairableAnswer,attempt=0;
+  return extractBatch(signal,enqueue);
+
+  async function extractBatch(signal,enqueue){
+   for(;attempt<=(options.retries??1);attempt++)try{
+    answer=await adapter.request('extract_elements',state,request,responseSchema,extractionInstruction+briefInstruction+languageInstruction+comparativeInstruction+coverageInstruction+(batches.length>1?' Extract only from sources in this part. If supplied, question.original_text is whole-question context, not another source for this part. Preserve the within-part logic of all eligibility conditions.':'')+(attempt?' Previous response failed structure validation. Return the complete requested JSON schema.':''),signal);
+    if(!Array.isArray(answer?.questions)||answer.questions.length!==1||answer.questions[0]?.question_id!==q.question_id)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The model omitted or changed the question ID.');
+    const topic=answer.questions[0].review_topic;answer.questions[0].review_topic=typeof topic==='string'?topic.trim().slice(0,1000):'';
+    if(!Array.isArray(answer.questions[0].elements)||!Array.isArray(answer.questions[0].issues)||!Array.isArray(answer.questions[0].framework_candidates))D.fail('MODEL_SCHEMA_ERROR','extract_elements','Required extraction arrays are missing.');
+    if(canRestoreComparative){
+     retainComparativeQuestion(state,answer.questions[0],comparativeSlots,q.question_id,ranges,options.onLesson);
+     break;
+    }
+    for(const e of answer.questions[0].elements){
+     delete e.source_wording_needs_translation;
+     delete e.source_objective_outcome;
+     delete e.source_comparative_slot;
+     delete e.matched_cointervention;
+     delete e.source_language;
+     delete e.source_study_exclusion;
+     delete e.treatment_name;delete e.title_population;
+     D.validate_candidate_element(e);
+    }
+    recoverLabelCitations(answer.questions[0].elements,ranges,passages);
+    for(const e of answer.questions[0].elements)checkExtractedSources(state,e,q.question_id,ranges);
+    retainStudyExclusions(state,answer.questions[0],q.question_id,ranges,sources,options.onLesson);
+    for(const e of answer.questions[0].elements){
+     if(Methods.normalizeExcludedIntervention(e))options.onLesson?.('excluded_intervention');
+    }
+    const armSources=ranges.map(r=>({source_id:r.id,source_revision:r.revision,start:r.start,end:r.end,quote:r.text}));
+    for(const {element,literalDimension} of Methods.normalizeComparisonArms(answer.questions[0].elements,armSources)){
+     delete element[reviewCitations];delete element[locatedContexts];
+     checkExtractedSources(state,element,q.question_id,ranges);
+     if(literalDimension&&sources.every(source=>source.input_kind==='research_question'))markLiteralField(element,literalDimension,'include',element.normalized_text);
+    }
+    const result=answer.questions[0];
+    classifyDeclaredOutcomes(result,ranges);
+    classifyFollowUpGroups(result.elements);
+    result.eligibility_policy='framework-only-v1';
+    const frameId=E.resolve_review_context(originals.get(q.question_id),result,env).framework_mapping.framework_id;
+    if(batches.length===1)reconcileEligibilityFields(state,result,q,ranges,passages,options.onLesson,frameId);
+    retainIrradianceDefinitions(state,result,q,ranges,frameId);
+    for(const e of result.elements){
+     if(!['study_design','design'].includes(e.dimension_id)||e.explicit_revision||e.decision_status==='confirmed_by_user')continue;
+     const wording=Methods.studyDesignWording(e.normalized_text);
+     if(wording===e.normalized_text||!e.source_refs.some(ref=>literalWording(Methods.studyDesignWording(ref.quote))===literalWording(wording)))continue;
+     e.normalized_text=wording;
+    }
+    // A review objective can name its treatment without spelling out a binary
+    // comparison. Bind a copied objective to the actual governed noun phrase.
+    // Leave the original scope, eligibility direction and treatment duration intact.
+    for(const e of result.elements){
+     if(e.dimension_id!=='intervention'||e.disposition==='exclude'||e.explicit_revision||e.decision_status==='confirmed_by_user'||
+        e.scope_conditions?.length||e.exceptions?.length||e.source_occurrence_alternatives?.length||e.source_refs.length!==1)continue;
+     const cited=e.source_refs[0],aim=Methods.treatmentObjective(cited.quote);
+     if(!aim||literalWording(e.normalized_text)!==literalWording(aim.primary))continue;
+     const ref=quotedField(cited,aim.arm);
+     if(!ref)continue;
+     e.normalized_text=aim.arm;e.source_refs=[ref];e.treatment_name=aim.name;
+     delete e[reviewCitations];delete e[locatedContexts];
+     checkExtractedSources(state,e,q.question_id,ranges);
+    }
+    retainUncitedPassages(state,answer.questions[0],q.question_id,ranges,passages,options.onLesson);
+    if(answer.questions[0].logic)D.validate_expression(answer.questions[0].logic,new Set(answer.questions[0].elements.map(e=>e.candidate_id)));
+    bindLabelledInclusions(answer.questions[0],q,passages,options.onLesson);
+    const pico=['pico','picos'].includes(frameId);
+    if(pico&&batches.length===1&&!requirements.length){
+     const original=String(q.original_text||'').normalize('NFKC');
+     const grounded=result.elements.filter(e=>e.information_status!=='missing'&&e.source_refs.length&&e.normalized_text.trim());
+     // Use the same source-based comparator mapping as the published criteria.
+     // A valid comparator returned under Other should not rerun full extraction.
+     const mapped=grounded.map(e=>({...e,raw_text:D.quoteText(e.source_refs,'\n')}));
+     Methods.normalizeComparators(mapped,armSources);
+     const present=dimensions=>mapped.some(e=>dimensions.includes(e.dimension_id.split('.')[0]));
+     const coverage=[[/\b(?:interventions?|therapies|treatments?)\b/i,['intervention'],'intervention'],[/\b(?:compared (?:with|to)|control group|placebo|each other)\b/i,['comparator','comparison','comparison_group','control'],'comparison']];
+     const missing=coverage.filter(([pattern,dimensions])=>pattern.test(original)&&!present(dimensions)).map(([, ,name])=>name);
+     const comparisons=mapped.filter(e=>coverage[1][1].includes(e.dimension_id.split('.')[0]));
+     missing.push(...missingComparatorAlternatives(original,comparisons));
+     if(missing.length)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The original question explicitly names '+missing.join(', ')+' information, but no source-linked element preserves it. Restore the missing source-defined eligibility elements of this framework.');
+    }
+    const missingRequirements=requirements.filter(requirement=>!E.sourceRequirementCovered(requirement,result.elements));
+    if(missingRequirements.length&&attempt<(options.retries??1)){
+     repairableAnswer=answer;
+     setLanguage(answer);
+     if(review){
+      const preview=batchPart(result,qi,bi,requirements);
+      restrictToFramework(preview,q,originals.get(q.question_id),env,[]);
+      review.add(preview,enqueue,false,bi);
+     }
+     request.source_requirements=missingRequirements.map(({dimension,side,source_refs})=>({dimension,disposition:side,source_refs}));
+     request.validation_feedback={code:'SOURCE_COVERAGE',message:'Return the complete structured result, preserving its existing criteria and restoring the listed source_requirements with complete quotations and qualifiers.'};
+     attempt++;
+     enqueue(extractBatch);
+     return;
+    }
+    if(repairableAnswer){
+     const count=entry=>requirements.filter(requirement=>E.sourceRequirementCovered(requirement,entry.questions[0].elements)).length;
+     const improved=count(answer)>count(repairableAnswer);
+     if(!improved||answer.questions[0].elements.length<repairableAnswer.questions[0].elements.length)answer=repairableAnswer;
+    }
     break;
+   }catch(error){
+    if(signal.aborted)throw error;
+    if(repairableAnswer){answer=repairableAnswer;break;}
+    if((!retryableResponse(error)&&error.step!=='provenance')||attempt===(options.retries??1))throw error;
+    // Use the existing correction attempt with the full schema if the shorter
+    // representation could not express a complete, source-grounded answer.
+    delete request.extraction_encoding;
+    request.validation_feedback={code:error.code,message:error.message};
+    options.onProgress?.('Correcting the extraction against the original source…',{phase:'extract',completed,total,waiting:true});
    }
-   for(const e of answer.questions[0].elements){
-    delete e.source_wording_needs_translation;
-    delete e.source_objective_outcome;
-    delete e.source_comparative_slot;
-    delete e.matched_cointervention;
-    delete e.source_language;
-    delete e.source_study_exclusion;
-    delete e.treatment_name;delete e.title_population;
-    D.validate_candidate_element(e);
+   setLanguage(answer);
+   completed++;
+   options.onProgress?.('Source conditions extracted ('+completed+'/'+total+').',{phase:'extract',completed,total,waiting:completed<total});
+   const item=answer.questions[0];
+   if(!state.decisions.length)orderExtractedElements(item,sourceOrder[qi]);
+   const part=batchPart(item,qi,bi,requirements);
+   if(questionRange&&Array.from(questionRange.text).length>=45&&/[?？]/u.test(questionRange.text)){
+    const {id,revision,start,end,text:quote}=questionRange;
+    part.question_evidence={source_id:id,source_revision:revision,start,end,quote};
    }
-   recoverLabelCitations(answer.questions[0].elements,ranges,passages);
-   for(const e of answer.questions[0].elements)checkExtractedSources(state,e,q.question_id,ranges);
-   retainStudyExclusions(state,answer.questions[0],q.question_id,ranges,sources,options.onLesson);
-   for(const e of answer.questions[0].elements){
-    if(Methods.normalizeExcludedIntervention(e))options.onLesson?.('excluded_intervention');
+   parts[qi][bi]=part;
+   remaining[qi]--;
+   if(remaining[qi]===0){
+    const merged=questions[qi]=mergeQuestion(q,qi);
+    review?.add(merged,enqueue,completed===total);
+   }else if(review){
+    // An independently checkable part can start while other sources are still
+    // being extracted. Final assembly can reuse a verdict with the same evidence.
+    const preview={...part,elements:part.elements.map(e=>({...e,source_refs:[...e.source_refs]}))};
+    restrictToFramework(preview,q,originals.get(q.question_id),env,[]);
+    review.add(preview,enqueue,false,bi);
    }
-   const armSources=ranges.map(r=>({source_id:r.id,source_revision:r.revision,start:r.start,end:r.end,quote:r.text}));
-   for(const {element,literalDimension} of Methods.normalizeComparisonArms(answer.questions[0].elements,armSources)){
-    delete element[reviewCitations];delete element[locatedContexts];
-    checkExtractedSources(state,element,q.question_id,ranges);
-    if(literalDimension&&sources.every(source=>source.input_kind==='research_question'))markLiteralField(element,literalDimension,'include',element.normalized_text);
-   }
-   const result=answer.questions[0];
-   classifyDeclaredOutcomes(result,ranges);
-   classifyFollowUpGroups(result.elements);
-   result.eligibility_policy='framework-only-v1';
-   const frameId=E.resolve_review_context(originals.get(q.question_id),result,env).framework_mapping.framework_id;
-   if(batches.length===1)reconcileEligibilityFields(state,result,q,ranges,passages,options.onLesson,frameId);
-   retainIrradianceDefinitions(state,result,q,ranges,frameId);
-   for(const e of result.elements){
-    if(!['study_design','design'].includes(e.dimension_id)||e.explicit_revision||e.decision_status==='confirmed_by_user')continue;
-    const wording=Methods.studyDesignWording(e.normalized_text);
-    if(wording===e.normalized_text||!e.source_refs.some(ref=>literalWording(Methods.studyDesignWording(ref.quote))===literalWording(wording)))continue;
-    e.normalized_text=wording;
-   }
-   // A review objective can name its treatment without spelling out a binary
-   // comparison. Bind a copied objective to the actual governed noun phrase.
-   // Leave the original scope, eligibility direction and treatment duration intact.
-   for(const e of result.elements){
-    if(e.dimension_id!=='intervention'||e.disposition==='exclude'||e.explicit_revision||e.decision_status==='confirmed_by_user'||
-       e.scope_conditions?.length||e.exceptions?.length||e.source_occurrence_alternatives?.length||e.source_refs.length!==1)continue;
-    const cited=e.source_refs[0],aim=Methods.treatmentObjective(cited.quote);
-    if(!aim||literalWording(e.normalized_text)!==literalWording(aim.primary))continue;
-    const ref=quotedField(cited,aim.arm);
-    if(!ref)continue;
-    e.normalized_text=aim.arm;e.source_refs=[ref];e.treatment_name=aim.name;
-    delete e[reviewCitations];delete e[locatedContexts];
-    checkExtractedSources(state,e,q.question_id,ranges);
-   }
-   retainUncitedPassages(state,answer.questions[0],q.question_id,ranges,passages,options.onLesson);
-   if(answer.questions[0].logic)D.validate_expression(answer.questions[0].logic,new Set(answer.questions[0].elements.map(e=>e.candidate_id)));
-   bindLabelledInclusions(answer.questions[0],q,passages,options.onLesson);
-   const pico=['pico','picos'].includes(frameId);
-   if(pico&&batches.length===1){
-    const original=String(q.original_text||'').normalize('NFKC');
-    const grounded=result.elements.filter(e=>e.information_status!=='missing'&&e.source_refs.length&&e.normalized_text.trim());
-    // Use the same source-based comparator mapping as the published criteria.
-    // A valid comparator returned under Other should not rerun full extraction.
-    const mapped=grounded.map(e=>({...e,raw_text:D.quoteText(e.source_refs,'\n')}));
-    Methods.normalizeComparators(mapped,armSources);
-    const present=dimensions=>mapped.some(e=>dimensions.includes(e.dimension_id.split('.')[0]));
-    const coverage=[[/\b(?:interventions?|therapies|treatments?)\b/i,['intervention'],'intervention'],[/\b(?:compared (?:with|to)|control group|placebo|each other)\b/i,['comparator','comparison','comparison_group','control'],'comparison']];
-    const missing=coverage.filter(([pattern,dimensions])=>pattern.test(original)&&!present(dimensions)).map(([, ,name])=>name);
-    const comparisons=mapped.filter(e=>coverage[1][1].includes(e.dimension_id.split('.')[0]));
-    missing.push(...missingComparatorAlternatives(original,comparisons));
-    if(missing.length)D.fail('MODEL_SCHEMA_ERROR','extract_elements','The original question explicitly names '+missing.join(', ')+' information, but no source-linked element preserves it. Restore the missing source-defined eligibility elements of this framework.');
-   }
-   break;
-  }catch(error){
-   if(signal.aborted||(!retryableResponse(error)&&error.step!=='provenance')||attempt===(options.retries??1))throw error;
-   // Use the existing correction attempt with the full schema if the shorter
-   // representation could not express a complete, source-grounded answer.
-   delete request.extraction_encoding;
-   request.validation_feedback={code:error.code,message:error.message};
-   options.onProgress?.('Correcting the extraction against the original source…',{phase:'extract',completed,total,waiting:true});
   }
-  if(detectLanguage){
+
+  function setLanguage(answer){
+   if(!detectLanguage)return;
    const language=sourceLanguage(answer.source_language,options.languageSample);
    options.onSourceLanguage?.(comparativeSlots.length&&!language?.startsWith('zh')?'zh':language);
-  }
-  completed++;
-  options.onProgress?.('Source conditions extracted ('+completed+'/'+total+').',{phase:'extract',completed,total,waiting:completed<total});
-  const item=answer.questions[0],prefix='q'+qi+'b'+bi+'_';
-  if(!state.decisions.length)orderExtractedElements(item,sourceOrder[qi]);
-  const part={...item,logic:prefixLogic(item.logic,prefix),elements:item.elements.map(e=>({...e,candidate_id:prefix+e.candidate_id})),
-   issues:item.issues.map(issue=>({...issue,element_candidate_ids:(issue.element_candidate_ids||[]).map(id=>prefix+id)}))};
-  parts[qi][bi]=part;
-  remaining[qi]--;
-  if(remaining[qi]===0){
-   const merged=questions[qi]=mergeQuestion(q,qi);
-   review?.add(merged,enqueue,completed===total);
-  }else if(review){
-   // An independently checkable part can start while other sources are still
-   // being extracted. Final assembly can reuse a verdict with the same evidence.
-   const preview={...part,elements:part.elements.map(e=>({...e,source_refs:[...e.source_refs]}))};
-   restrictToFramework(preview,q,originals.get(q.question_id),env,[]);
-   review.add(preview,enqueue,false,bi);
   }
  });
  for(let qi=0;qi<plans.length;qi++)if(!remaining[qi]){
@@ -1726,10 +1829,17 @@ async function extract_elements(state,env,adapter,options={},review=null){
  }
  await runModelTasks(tasks,options);
  return {questions};
+ function batchPart(item,qi,bi,requirements){
+  const prefix='q'+qi+'b'+bi+'_';
+  return {...item,source_requirements:requirements,logic:prefixLogic(item.logic,prefix),
+   elements:item.elements.map(e=>({...e,source_refs:[...e.source_refs],candidate_id:prefix+e.candidate_id})),
+   issues:item.issues.map(issue=>({...issue,element_candidate_ids:(issue.element_candidate_ids||[]).map(id=>prefix+id)}))};
+ }
  function mergeQuestion(q,qi){
-  const merged={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],logic:null},trees=[];
+  const merged={question_id:q.question_id,framework_candidates:[],elements:[],issues:[],source_requirements:[],logic:null},trees=[];
   for(const item of parts[qi]){
-   merged.elements.push(...item.elements);merged.issues.push(...item.issues);
+   merged.elements.push(...item.elements);merged.issues.push(...item.issues);merged.source_requirements.push(...item.source_requirements);
+   if(item.question_evidence)merged.question_evidence=item.question_evidence;
    trees.push({tree:item.logic,ids:item.elements.map(e=>e.candidate_id)});if(!merged.framework_candidates.length)merged.framework_candidates=item.framework_candidates;if(!merged.review_topic&&item.review_topic)merged.review_topic=item.review_topic;
    for(const field of ['question_types','review_methods','evidence_units'])merged[field]=[...new Set([...(merged[field]||[]),...(item[field]||[])])];
   }

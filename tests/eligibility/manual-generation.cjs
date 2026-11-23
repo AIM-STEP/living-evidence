@@ -130,11 +130,15 @@ for(const mode of ['unavailable','rejected']){
   assert.equal(reviews.filter(item=>item.disposition==='exclude').length,mode==='unavailable'?2:1);
   assert.equal(reviews.filter(item=>item.disposition==='include').length,3);
   assert.equal(page.el('manual-refine-status').textContent,'');
-  assert.match(page.el('preview').innerHTML,/Adults with chronic pain/);
-  assert.doesNotMatch(page.el('preview').innerHTML,/Case reports/);
+  const preview=page.el('preview').innerHTML;
+  assert.match(preview,/Adults with chronic pain/);
+  assert.match(preview,/Generation incomplete[\s\S]*<li dir="auto">Case reports<\/li>/);
+  assert.doesNotMatch(preview.split('data-criteria-document')[1],/Case reports/);
+  assert.equal(page.api.state().eligibilityV3Snapshot.status,'incomplete');
   const word=Buffer.from(page.api.export()).toString();
   assert.match(word,/Randomised trials/);
-  assert.doesNotMatch(word,/Case reports/);
+  assert.match(word,/Generation incomplete[\s\S]*Case reports/);
+  assert.match(word,/Some source clauses could not be verified\./);
   assert.deepEqual(page.api.state().criteria,drafts);
   if(mode==='unavailable'){
    const keys=Reset.projectKeys(projectId);
@@ -208,7 +212,10 @@ for(const mode of ['manual','machine'])test(mode+' saves an approved item while 
  }
  assert.equal(page.storage.has(keys.draft),false);
  assert.match(page.el('preview').innerHTML,/Randomised trials/i);
- assert.doesNotMatch(page.el('preview').innerHTML,/Case reports/);
+ const preview=page.el('preview').innerHTML;
+ assert.match(preview,/Generation incomplete[\s\S]*<li dir="auto">Case reports<\/li>/);
+ assert.doesNotMatch(preview.split('data-criteria-document')[1],/Case reports/);
+ assert.equal(page.api.state().eligibilityV3Snapshot.status,'incomplete');
 
  const firstRun=calls.map(call=>call.step);
  await button.handlers.click();

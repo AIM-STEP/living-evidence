@@ -1,7 +1,11 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
 const Engine=require('../../app/eligibility/engine.js');
 const Background=require('../../app/eligibility/background.js');
+const Model=require('../../app/eligibility/model.js');
+const Library=require('../../app/eligibility-library.js');
 const {setup}=require('../../tools/test_eligibility_grounding.cjs');
 
 const question='对于出院回家的成年心力衰竭患者，与常规出院随访相比，护士主导的电话随访能否降低出院后 90 天内的全因再入院风险？仅考虑随机对照试验。若电话随访与家庭访视联合实施，仅在对照组也接受相同家庭访视时纳入。';
@@ -26,7 +30,7 @@ const config={
  profileConfig:require('../../config/eligibility-review-profiles.json'),baseURL:'http://localhost/',
 };
 
-async function generate(input,{repair,review}={}){
+async function generate(input,{repair,review,extract}={}){
  const page=setup(),calls=[];
  Object.assign(page.ctx.window,{AIMSTEPEligibilityEngine:Engine,AIMSTEPEligibilityBackground:{...Background,create:args=>Background.create({...args,...config})}});
  page.api.transport(async(url,options)=>{
@@ -36,7 +40,7 @@ async function generate(input,{repair,review}={}){
   if(step==='extract_elements'){
    // The model returns no candidates, reproducing the previous blank result.
    response={source_language:'en',questions:[{question_id:payload.question.question_id,review_topic:'Review population and scope',
-    framework_candidates:['picos'],elements:[],issues:[],logic:null}]};
+    framework_candidates:['picos'],elements:extract?.(payload)||[],issues:[],logic:null}]};
   }else if(step==='repair_candidate_wording'){
    response={items:payload.items.map(item=>({id:item.id,normalized_text:repair?.(item)||clinicalWording.get(item.source_quotes[0].quote),structured_value:null}))};
   }else if(step==='review_normalization'){
@@ -93,7 +97,7 @@ test('a blank extraction recovers the complete discharge question and preserves 
 const otherCondition=question.replaceAll('家庭访视','药师指导');
 for(const incomplete of [false,true]){
  test('a co-intervention qualifier is '+(incomplete?'never silently omitted after a failed repair':'retained after a correction'),async()=>{
-  const {calls,state}=await generate(otherCondition,{repair(item){
+  const {page,calls,state,preview}=await generate(otherCondition,{repair(item){
    if(item.dimension_id!=='intervention')return;
    return !item.review_feedback||incomplete?intervention:matched('pharmacist counselling');
   }});
@@ -102,5 +106,86 @@ for(const incomplete of [false,true]){
   assert.match(attempts[1].payload.items[0].review_feedback,/conditional requirement/);
   const rule=state.eligibilityV3Snapshot.questions[0].include.find(c=>c.dimension_id==='intervention');
   assert.equal(rule?.text,incomplete?undefined:matched('pharmacist counselling'));
+  const coverage=state.eligibilityV3Snapshot.validation.completeness.eligibility;
+  assert.equal(coverage.incomplete,incomplete);
+  assert.equal(Library.incompleteCriteria(state),incomplete);
+  assert.equal(state.machineRefinement.sourceConfirmations.length,0);
+  if(incomplete){
+   assert.equal(state.eligibilityV3Snapshot.status,'incomplete');
+   assert.deepEqual(state.eligibilityV3Snapshot.questions[0].include.map(c=>c.dimension_id).sort(),['comparator','population','study_design']);
+   assert.match(preview,/Generation incomplete[\s\S]*药师指导/);
+   assert.match(preview,/lang="zh"[\s\S]*生成不完整/);
+   assert.equal(page.storage.has('aimstep-eligibility-summary:synthetic-grounding'),false);
+   const scope='synthetic-grounding',localStorage=page.ctx.localStorage;
+   assert(Library.hasIncompleteCriteria(localStorage,scope));
+   assert(!Library.hasIncompleteCriteria(localStorage,scope,'upload'));
+   for(const file of ['title-abstract-screening.html','full-text-screening.html']){
+    const html=fs.readFileSync(file,'utf8');
+    const guard=html.match(/^function screeningStagesReady\(\)\{.+\}$/m)[0];
+    const context={scope,localStorage,workspace:{},source:{},AimstepEligibilityLibrary:Library,
+     AimstepScreeningStages:{valid:()=>true}};
+    assert.equal(vm.runInNewContext(guard+';screeningStagesReady()',context),false,file);
+    assert.equal(vm.runInNewContext(guard+';screeningStagesReady()',{
+     ...context,localStorage:{getItem:()=>null}
+    }),true,file);
+   }
+   assert.match(Buffer.from(page.api.export()).toString(),/Generation incomplete[\s\S]*药师指导[\s\S]*生成不完整/);
+  }
  });
 }
+
+
+test('design paraphrase retains all fields and the independent home-visit qualifier',async()=>{
+ const {calls,state}=await generate(question.replace('仅考虑随机对照试验','研究设计仅限随机对照试验'));
+ const result=state.eligibilityV3Snapshot;
+ assert.equal(result.status,'final');
+ assert.equal(result.validation.valid,true);
+ assert.equal(result.validation.completeness.eligibility.source_coverage.length,5);
+ assert.equal(calls.filter(call=>call.step==='review_normalization').length,5);
+ assert.deepEqual(result.questions[0].include.map(c=>c.dimension_id).sort(),['comparator','intervention','population','study_design']);
+ assert.equal(result.questions[0].include.find(c=>c.dimension_id==='intervention').text,matched());
+ assert.equal(result.questions[0].focus[0].normalized_text,outcome);
+});
+
+test('known fields are checked before retrying a missed clause, and a poorer retry does not erase them',async()=>{
+ const input=question.replace(/若电话.*$/u,'除非两组都提供同等家庭访视，否则排除合并家庭访视的试验。');
+ const {calls,state}=await generate(input,{extract(payload){
+  if(payload.validation_feedback?.code==='SOURCE_COVERAGE'){
+   assert(payload.source_requirements.some(item=>item.source_refs[0].quote.includes('除非')));
+   assert(!payload.source_requirements.some(item=>item.dimension==='population'));
+   return [];
+  }
+  const source=payload.question.sources[0];
+  return [{candidate_id:'p',dimension_id:'population',normalized_text:population,structured_value:null,
+   source_refs:[{source_id:source.source_id,source_revision:source.revision,quote:'出院回家的成年心力衰竭患者'}],
+   semantic_role:'eligibility_condition',information_status:'explicit',scope_status:'restricted',disposition:'include'}];
+ }});
+ const target=calls.findIndex(call=>call.payload.validation_feedback?.code==='SOURCE_COVERAGE');
+ assert(target>calls.findIndex(call=>call.step==='review_normalization'));
+ const result=state.eligibilityV3Snapshot;
+ assert.equal(result.status,'incomplete');
+ assert.equal(result.validation.valid,false);
+ assert.equal(result.validation.completeness.eligibility.all_scope_information_accounted_for,false);
+ assert.equal(result.questions[0].include[0].text,population);
+ assert.equal(result.questions[0].exclude.length,0);
+});
+
+test('an attached protocol contributes explicit exclusions but its results do not become criteria',async()=>{
+ const env=Engine.environment();
+ const state=Engine.save_input(Engine.create_project('coverage-attachment'),{research_question:'Exercise'}).state;
+ const q=state.questions[0],source=Engine.addSource(state,'user_input',
+  'Exclusion criteria:\nStudy design: Case reports.\nResults:\nPopulation: Ten participants.',
+  [q.question_id],'protocol',{input_kind:'original_document'});
+ q.imported_source_refs.push(Engine.ref(source));
+ const mock={request:async(step,project,payload)=>{
+  if(step==='extract_elements')return {questions:[{question_id:q.question_id,review_topic:'Exercise',
+   framework_candidates:['picos'],elements:[],issues:[],logic:null}]};
+  assert.fail('Nothing should reach review');
+ }};
+ const {candidates}=await Model.analyze(state,env,mock,{retries:0});
+ const project=Engine.ingest_candidates(state,candidates,{},env).state;
+ assert.equal(project.status,'incomplete');
+ assert.deepEqual(project.validation.completeness.eligibility.source_coverage.map(item=>[
+  item.dimension,item.side,item.source_refs[0].quote,item.status]),[['study_design','exclude','Case reports','unresolved']]);
+ assert.equal(project.criteria.length,0);
+});

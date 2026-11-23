@@ -4,6 +4,16 @@
 const fields=['criteria_epoch','eligibilityV3Snapshot','eligibility_v3_revision','framework','manualFramework','question','reviewType','activeGenerator','generationMethodChoice','generationMode','generationMethod','criteria','machineCriteria','machineRun','machineSourceRevision','manualRefinement','machineRefinement','finalCriteria','resolvedPending','pendingDecisions','visibleDescription','dateRange','language','limitsOther','years','dateEnd','reportType','reportTypeOther','limitsReason','outcomeGate','outcomeReason','protocolSource','confirmed'];
 const clone=value=>JSON.parse(JSON.stringify(value));
 const key=id=>'aimstep-eligibility-library:'+id;
+const incompleteMessage='Eligibility criteria generation is incomplete. Open Eligibility criteria to review the unresolved source clauses and generate again.';
+function incompleteCriteria(value){
+ return !!(value?.activeGenerator==='machine'&&value.machineRun&&
+  value.eligibilityV3Snapshot?.validation?.completeness?.eligibility?.incomplete);
+}
+function hasIncompleteCriteria(storage,id,source){
+ if(source==='upload'||source==='removed')return false;
+ try{return incompleteCriteria(JSON.parse(storage.getItem('aimstep-eligibility:'+id)||'null'));}
+ catch{return false;}
+}
 function blankWorkspace(previous={}){
  const inputFields=['reviewType','generationMethodChoice','generationMode','activeGenerator','criteria_epoch'];
  const inputs=Object.fromEntries(inputFields.filter(field=>previous[field]!==undefined).map(field=>[field,previous[field]]));
@@ -74,12 +84,12 @@ function plan(storage,id,value,options={}){
  else if(!entry)entry=library.entries.find(entry=>kind(entry.snapshot)===kind(value)&&rowKey(entry.snapshot)===rowKey(value));
  const now=new Date().toISOString();
  if(!entry){const date=options.createdAt||value.machineRun?.generatedAt||value.protocolSource?.date;entry={id:root.crypto?.randomUUID?.()||'criteria-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),createdAt:date&&!Number.isNaN(Date.parse(date))?new Date(date).toISOString():now,title:String(value.question||'').trim()||String(value.reviewType||'Review')+' criteria',method:kind(value),snapshot:snapshot(value)};library.entries.push(entry);}
- else if(options.updateEntry||rowKey(entry.snapshot)!==rowKey(value)){entry.snapshot=snapshot(value);entry.title=String(value.question||'').trim()||entry.title;entry.updatedAt=now;}
+ else if(options.updateEntry||rowKey(entry.snapshot)!==rowKey(value)||incompleteCriteria(entry.snapshot)!==incompleteCriteria(value)){entry.snapshot=snapshot(value);entry.title=String(value.question||'').trim()||entry.title;entry.updatedAt=now;}
  library.activeId=entry.id;next.criteriaLibraryId=entry.id;
  library.entries.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));return {state:next,library};
 }
 function write(storage,values){const before=values.map(([key])=>storage.getItem(key));try{for(const [key,value]of values)value===null?storage.removeItem(key):storage.setItem(key,JSON.stringify(value));}catch(error){values.forEach(([key],index)=>{try{before[index]===null?storage.removeItem(key):storage.setItem(key,before[index]);}catch(_){}});throw error;}}
 function commit(storage,id,value,options={}){const result=plan(storage,id,value,options);write(storage,[[key(id),result.library],['aimstep-eligibility:'+id,result.state]]);return result.state;}
 function remove(storage,id,entryId,value){assertCurrent(storage,id,value);const library=read(storage,id),active=library.activeId===entryId||value.criteriaLibraryId===entryId;library.entries=library.entries.filter(entry=>entry.id!==entryId);let state=value;if(active){library.activeId=null;state={...value,criteriaLibraryId:null,criteria:[],machineCriteria:[],machineRun:null,manualRefinement:null,machineRefinement:null,finalCriteria:null,pendingDecisions:{},resolvedPending:[],visibleDescription:null,confirmed:false};if(state.protocolSource)state.protocolSource={...state.protocolSource,sharedCriteria:false};}const values=[[key(id),library]];if(active)values.push(['aimstep-eligibility:'+id,state],['aimstep-eligibility-summary:'+id,null]);write(storage,values);return {state,active};}
-const api={key,read,hasRules,plan,commit,remove,blankWorkspace,stripLinkedSearchCriteria,clearChanges};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepEligibilityLibrary=api;
+const api={key,read,incompleteCriteria,hasIncompleteCriteria,incompleteMessage,hasRules,plan,commit,remove,blankWorkspace,stripLinkedSearchCriteria,clearChanges};if(typeof module==='object'&&module.exports)module.exports=api;else root.AimstepEligibilityLibrary=api;
 })(globalThis);
