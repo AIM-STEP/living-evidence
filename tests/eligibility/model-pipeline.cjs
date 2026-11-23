@@ -136,7 +136,7 @@ test('a completed source part can be checked before the rest of the same questio
   }).state;
   let release;
   const gate=new Promise(resolve=>{release=resolve;});
-  const calls=[];
+  const calls=[],published=[];
   const adapter={async request(step,project,payload){
     calls.push({step,payload});
     if(step==='review_normalization'){
@@ -152,10 +152,13 @@ test('a completed source part can be checked before the rest of the same questio
       disposition:'include',source_refs:[E.ref(source,'Adults receiving care')]}]:[];
     return {questions:[{question_id:q.question_id,framework_candidates:[],elements,issues:[],logic:null}]};
   }};
-  const run=M.analyze(state,env,adapter);
+  const run=M.analyze(state,env,adapter,{onReviewed(question,part){
+    if(question.elements.some(e=>e.semantic_review?.status==='supported'))published.push(part);
+  }});
   try{
     await tick();
     assert.equal(calls.filter(call=>call.step==='review_normalization').length,1);
+    assert.deepEqual(published,[0],'A verified source part reaches the draft before later extraction finishes.');
   }finally{release();}
   const {candidates}=await run;
   assert.equal(calls.filter(call=>call.step==='review_normalization').length,1,'Final assembly reuses the identical assessment.');

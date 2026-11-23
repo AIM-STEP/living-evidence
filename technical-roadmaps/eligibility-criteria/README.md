@@ -24,5 +24,6 @@
 | --- | --- |
 | 技术流程、执行技能、通用错误与反馈记录 | 仓库的 `technical-roadmaps/eligibility-criteria/`。流程及源文件保存在 `2026-11-22/`，执行技能在 `skills/`，通用记录本为 `extraction-notebook.md`。 |
 | 项目的标准、原文引用及作者决定 | 按项目保存到当前浏览器的 `aimstep-eligibility-v3:<projectId>` 和 Criteria 工作记录。 |
+| 本次生成中逐条核对通过的规则 | 浏览器的 `aimstep-eligibility-generation-draft:<projectId>`，供 Criteria 预览。完成后的标准通过原有项目记录交接。Criteria Clear 一并清除。 |
 | 项目执行反馈 | 浏览器的 `aimstep-eligibility-lessons:<projectId>`，仅保存固定错误类别和计数。Criteria Clear 一并清除。 |
 | 服务端运行记录 | 服务器私有的 `private/eligibility-criteria/notebook/`，站点目录之外。按 UTC 日期归档，字段为时间、阶段、错误代码和数量。模型服务请求次数和浏览器生成次数分别统计。 |

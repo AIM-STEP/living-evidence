@@ -5,8 +5,6 @@ const clone=D.clone;
 const {currentEpoch,requireEpoch,projectKeys,resetProject}=Reset;
 const eligibilityPolicy='framework-only-v1';
 const presentationVersion='framework-display-v12';
-// Bump when eligibility semantics change. Presentation updates can use the saved evidence.
-const generationVersion='20261122-criteria-release-41';
 const labels={population:'Population',sample:'Sample',intervention:'Intervention',exposure:'Exposure',comparator:'Comparison',outcome:'Outcomes',concept:'Concept',context:'Context',phenomenon_of_interest:'Phenomenon of Interest',condition:'Condition',index_test:'Index test',reference_test:'Reference test',target_condition:'Target condition',design:'Study design',study_design:'Study design',research_type:'Research type',evaluation:'Evaluation',language:'Language',publication_date:'Publication date',evidence_source:'Evidence source',core_scope:'Review scope',analysis_method:'Analysis plan',analysis_data_unit:'Data plan',analysis_objective:'Analysis objectives'};
 const label=dimension=>labels[String(dimension||'').split('.')[0]]||String(dimension||'Other').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 function signature(value){
@@ -15,6 +13,19 @@ function signature(value){
  const view={question:value.question,framework:value.framework,rows:machine?value.machineCriteria:value.criteria,refinement:machine?value.machineRefinement:value.manualRefinement};
  if(value.generationMethodChoice==='manual')view.manualInput=[value.manualFramework,value.criteria,value.dateRange,value.language,value.limitsOther,value.reviewType];
  return D.stableId('legacy',JSON.stringify(view));
+}
+function draftSignature(value){
+ return D.stableId('draft',JSON.stringify([signature(value),value?.generationMethodChoice,value?.machineSourceRevision,value?.reviewType]));
+}
+function readGenerationDraft(storage,projectId,legacy){
+ if(!projectId)return null;
+ const keys=projectKeys(projectId);
+ try{
+  const draft=JSON.parse(storage.getItem(keys.draft)||'null');
+  const saved=JSON.parse(storage.getItem(keys.project)||'null');
+  return draft?.rows?.length&&draft.epoch===currentEpoch(storage,projectId)&&
+   draft.revision===(saved?.revision??0)&&draft.input===draftSignature(legacy)?draft:null;
+ }catch{return null;}
 }
 function optionLabel(option){
  if(!option)return 'Confirm';
@@ -189,7 +200,6 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
  const base=baseURL||new URL('.',root.location.href).href,version='20261119-framework-description-1';
  const configs=await Promise.all([frameworkConfig||root.fetch(new URL('config/eligibility-frameworks.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load framework definitions.');return r.json();}),profileConfig||root.fetch(new URL('config/eligibility-review-profiles.json?v='+version,base)).then(r=>{if(!r.ok)throw Error('Could not load review profiles.');return r.json();})]);
  const registry=E.environment(...configs).frameworks;
- const configKey=D.stableId('config',JSON.stringify(configs));
  const projectView=project=>projectToClassic(project,registry);
  const keys=projectKeys(projectId);
  const read=key=>JSON.parse(storage.getItem(key)||'null');
@@ -202,44 +212,17 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   return project;
  }
  function staged(project,expectedRevision,expectedSignature,classic=projectView(project)){return {project,expectedRevision,expectedSignature,classic};}
- function inputKey({question,reviewType,questionType,registration,modelSettings,manualFramework},material){
-  const parts=[generationVersion,configKey,question||'',reviewType||'',questionType||'',registration||null,modelSettings||null,material];
-  if(manualFramework)parts.push(manualFramework);
-  return D.stableId('input',JSON.stringify(parts));
- }
- function sourceKey(input,sources){
-  const passages=sources.filter(s=>s.name!=='Question / voice input'||s.text!==input.question)
-   .map(s=>[s.name,s.page??null,s.text,s.verification||'original-text']);
-  return inputKey(input,passages);
- }
  function requireCurrentView(legacy){
   const stored=read(keys.legacy);
   if(stored?.eligibility_v3_revision!=null&&legacy?.eligibility_v3_revision!==stored.eligibility_v3_revision)
    D.fail('VERSION_CONFLICT','background','The criteria changed in another session. Reload the current criteria before generating.');
  }
- function matchesPublished(input,project,key,field){
-  if(!key||project[field]!==key)return false;
-  const legacy=input.legacy,stored=read(keys.legacy),expected=signature(stored);
-  if(!stored||project.last_published_legacy_signature!==expected||signature(legacy)!==expected)return false;
-  if(legacy.activeGenerator!=='machine'||!legacy.machineRefinement||legacy.eligibility_v3_revision!==project.revision)return false;
-  if(['final','needs_clarification'].includes(project.status))return project.validation?.errors?.length===0;
-  const edit=project.decisions.at(-1)?.changes?.[0];
-  return project.status==='input_saved'&&project.decisions.at(-1)?.action==='classic_author_revision'&&
-   edit?.old?.question===edit?.new?.question&&JSON.stringify(edit?.old?.rows)!==JSON.stringify(edit?.new?.rows);
+ function validate(stage){
+  requireEpoch(storage,projectId,stage.project.criteria_epoch);
+  if((read(keys.project)?.revision??0)!==stage.expectedRevision||signature(read(keys.legacy))!==stage.expectedSignature||
+     stage.runId&&read(keys.draft)?.id!==stage.runId)
+   D.fail('VERSION_CONFLICT','background','The criteria changed while this request was running. Your newer edits have been kept.');
  }
- // Only the currently published result is eligible. Clear removes both keys with the project.
- function publishedGeneration(input,fileDigests){
-  requireEpoch(storage,projectId,input.legacy?.criteria_epoch);
-  requireCurrentView(input.legacy);
-  if(!Array.isArray(fileDigests))return null;
-  const saved=current();
-  return matchesPublished(input,saved,inputKey(input,fileDigests),'generation_files_key')?
-   publishedStage(saved,input.legacy):null;
- }
- function publishedStage(saved,legacy){
-  return {...staged(saved,saved.revision,signature(legacy),{...legacy.machineRefinement,snapshot:legacy.eligibilityV3Snapshot}),reused:true};
- }
- function validate(stage){requireEpoch(storage,projectId,stage.project.criteria_epoch);const saved=read(keys.project);if((saved?.revision??0)!==stage.expectedRevision||signature(read(keys.legacy))!==stage.expectedSignature)D.fail('VERSION_CONFLICT','background','The criteria changed while this request was running. Your newer edits have been kept.');}
  function transaction(stage,writeLegacy){
   validate(stage);
   const names=Object.values(keys),before=names.map(key=>storage.getItem(key));
@@ -247,7 +230,9 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    const result=writeLegacy();
    requireEpoch(storage,projectId,stage.project.criteria_epoch);
    stage.project.last_published_legacy_signature=signature(read(keys.legacy));
-   storage.setItem(keys.project,JSON.stringify(stage.project));return result;
+   storage.setItem(keys.project,JSON.stringify(stage.project));
+   if(stage.runId)storage.removeItem(keys.draft);
+   return result;
   }catch(error){
    // A reset that superseded this stage must never be undone by an old rollback.
    if(currentEpoch(storage,projectId)===(stage.project.criteria_epoch??null)){
@@ -300,14 +285,10 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_criteria_presentation',at:project.updated_at,changes:[]});
   return staged(project,saved.revision,signature(read(keys.legacy)));
  }
- async function generate({legacy,question,reviewType,questionType,registration,sources=[],fileDigests,modelSettings,manualFramework,modelClient,signal,onProgress}){
+ async function generate({legacy,question,reviewType,questionType,registration,sources=[],manualFramework,modelClient,signal,onProgress,onDraft}){
   requireEpoch(storage,projectId,legacy?.criteria_epoch);
   requireCurrentView(legacy);
   const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs);
-  const input={legacy,question,reviewType,questionType,registration,modelSettings,manualFramework},key=sourceKey(input,sources);
-  if((!Array.isArray(fileDigests)||saved.generation_files_key===inputKey(input,fileDigests))&&matchesPublished(input,saved,key,'generation_source_key')){
-   return publishedStage(saved,legacy);
-  }
   const methods={'Systematic Review':'systematic_review','Scoping Review':'scoping_review','Rapid Review':'rapid_review',
    'Umbrella Review':'umbrella_review','Narrative Literature Review':'narrative_literature_review',
    'Integrative Review':'integrative_review','Other Review':'other_review'};
@@ -344,9 +325,50 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    }
   }
   if(saved.classic_author_source_ref){const ref=saved.classic_author_source_ref;for(const q of project.questions.filter(q=>q.active!==false))if(!q.additional_source_refs.some(r=>r.source_id===ref.source_id&&r.source_revision===ref.source_revision))q.additional_source_refs.push(clone(ref));}
+  signal?.throwIfAborted();
+  const draft=onDraft?{id:D.id('generation'),epoch:saved.criteria_epoch??null,revision,input:draftSignature(legacy),rows:[]}:null;
+  const guard={project,expectedRevision:revision,expectedSignature:expected};
+  if(draft){
+   validate(guard);
+   guard.runId=draft.id;
+   storage.setItem(keys.draft,JSON.stringify(draft));
+   onDraft(draft.id);
+  }
+  const partsByQuestion=new Map(activeQuestions.map(q=>[q.question_id,new Map()]));
+  function publishDraft(candidate,part){
+   signal?.throwIfAborted();
+   validate(guard);
+   const questionState=activeQuestions.find(q=>q.question_id===candidate.question_id);
+   const parts=partsByQuestion.get(candidate.question_id);
+   if(part===null)parts.clear();
+   let rows=[];
+   if(candidate.elements.some(e=>e.semantic_review?.status==='supported'&&!e.review_pending)){
+    // Use the final rules projection for each available fragment. It holds an
+    // OR or exception branch until its dependent elements can be applied.
+    const source={...E.create_project(projectId,{output_language:project.output_language}),questions:[questionState],
+     review_methods:project.review_methods,custom_frameworks:project.custom_frameworks,sources:project.sources};
+    try{
+     const accepted=E.ingest_candidates(source,{questions:[candidate]}, {},env).state;
+     rows=projectView(accepted).rows.map(row=>({...row,...(activeQuestions.length>1&&{question:questionState.display_number})}));
+    }catch(error){if(!(error instanceof D.EligibilityError))throw error;}
+   }
+   parts.set(part,rows);
+   const grouped=new Map();
+   for(const fragments of partsByQuestion.values())for(const rows of fragments.values())for(const row of rows){
+    const key=JSON.stringify([row.question,row.dimension]);
+    if(!grouped.has(key))grouped.set(key,{...row,include:[],exclude:[]});
+    const target=grouped.get(key);
+    for(const side of ['include','exclude'])for(const rule of row[side])if(!target[side].includes(rule))target[side].push(rule);
+   }
+   const verified=[...grouped.values()];
+   if(JSON.stringify(verified)===JSON.stringify(draft.rows))return;
+   draft.rows=verified;
+   storage.setItem(keys.draft,JSON.stringify(draft));
+   onDraft(draft.id);
+  }
   const observed=new Set(),lessonCounts=Lessons?.readCounts(storage,keys.lessons)||{};
   try{
-   const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress,lessonCounts,onLesson:code=>observed.add(code)});
+   const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress,onReviewed:draft?publishDraft:undefined,lessonCounts,onLesson:code=>observed.add(code)});
    if(result.incomplete_review)observed.add('service_availability');
    requireEpoch(storage,projectId,saved.criteria_epoch);
    onProgress?.('Validating eligibility criteria…',{phase:'validate'});
@@ -356,11 +378,10 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    project.presentation_version=presentationVersion;
    const visible=projectView(project);
    if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');
-   const verified=!result.incomplete_review&&['final','needs_clarification'].includes(project.status)&&project.validation?.errors?.length===0;
-   project.generation_source_key=verified?key:null;
-   project.generation_files_key=verified&&Array.isArray(fileDigests)?inputKey(input,fileDigests):null;
+   delete project.generation_source_key;
+   delete project.generation_files_key;
    onProgress?.('Saving eligibility criteria…',{phase:'ready'});
-   return staged(project,revision,expected,visible);
+   return {...staged(project,revision,expected,visible),...(draft&&{runId:draft.id})};
   }catch(error){
    const code=Lessons?.errorLesson(error);if(code)observed.add(code);
    throw error;
@@ -432,7 +453,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   project.criteria=[];project.logic={questions:{},relation:project.question_relation};project.issues=[];project.elements.forEach(e=>e.active=false);next.eligibility_v3_revision=project.revision;next.eligibilityV3Snapshot={...next.eligibilityV3Snapshot,status:'input_saved',revision:project.revision,validation:clone(project.validation)};
   return {project,expectedRevision:saved.revision,expectedSignature:signature(previous)};
  }
- return {generate,publishedGeneration,decide,validate,transaction,recordEdit,refreshPresentation,current,projectToClassic:projectView,keys};
+ return {generate,decide,validate,transaction,recordEdit,refreshPresentation,current,projectToClassic:projectView,keys};
 }
-return {create,resetProject,currentEpoch,projectToClassic,signature,issueText,optionLabel,renderDescription:Methods.description};
+return {create,resetProject,currentEpoch,readGenerationDraft,projectToClassic,signature,issueText,optionLabel,renderDescription:Methods.description};
 });

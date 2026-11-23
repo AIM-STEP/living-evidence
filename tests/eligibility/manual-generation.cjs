@@ -32,7 +32,7 @@ function choose(page,mode){
  const select=page.el('generation-method');
  select.value=mode;select.handlers.change();
 }
-function stubBackend(page,calls,{unavailable=false,ambiguous=false,rejected=false}={}){
+function stubBackend(page,calls,{unavailable=false,ambiguous=false,rejected=false,beforeReview,logic,terms=fields}={}){
  page.api.transport(async(url,options)=>{
   const request=JSON.parse(JSON.parse(options.body).messages[1].content);
   calls.push(request);
@@ -40,17 +40,18 @@ function stubBackend(page,calls,{unavailable=false,ambiguous=false,rejected=fals
   let answer;
   if(request.step==='extract_elements'){
    const q=payload.question,source=q.sources.find(item=>item.input_kind==='research_question');
-   const elements=fields.filter(([, ,quote])=>source.original_text.includes(quote)).map(([id,dimension,quote,side])=>({
+   const elements=terms.filter(([, ,quote])=>source.original_text.includes(quote)).map(([id,dimension,quote,side])=>({
     candidate_id:id,dimension_id:dimension,normalized_text:quote,structured_value:null,
     source_refs:[{source_id:source.source_id,source_revision:source.revision,quote}],
     information_status:'explicit',semantic_role:'eligibility_condition',scope_status:'restricted',disposition:side,
    }));
    answer={questions:[{question_id:q.question_id,review_topic:'Exercise in adults with chronic pain',
-    framework_candidates:['picos'],elements,issues:[]}]};
+    framework_candidates:['picos'],elements,issues:[],logic}]};
   }else{
    assert.equal(request.step,'review_normalization');
    assert.equal(payload.review_policy,'jev-once-v1');
    assert.equal(payload.items.length,1);
+   await beforeReview?.(payload.items[0]);
    answer={items:payload.items.map(item=>{
     const exclusion=item.dimension_id==='study_design'&&item.disposition==='exclude';
     if(ambiguous&&exclusion){
@@ -137,8 +138,7 @@ for(const mode of ['unavailable','rejected']){
   assert.deepEqual(page.api.state().criteria,drafts);
   if(mode==='unavailable'){
    const keys=Reset.projectKeys(projectId);
-   const project=JSON.parse(page.storage.get(keys.project));
-   assert.equal(project.generation_source_key,null);
+   assert.equal(page.storage.get(keys.draft),undefined);
    assert.equal(JSON.parse(page.storage.get(keys.lessons)).counts.service_availability,1);
   }
  });
@@ -163,4 +163,93 @@ test('author confirmation applies to the shared result without changing the manu
  assert.equal(page.api.state().machineRun.inputMode,'manual');
  assert.deepEqual(page.api.state().criteria,drafts);
  assert.match(Buffer.from(page.api.export()).toString(),/Case reports/);
+});
+
+function startGeneration(page,mode){
+ choose(page,mode);
+ if(mode==='manual'){
+  page.api.state().framework='PICOS';
+  page.api.state().criteria=structuredClone(drafts);
+  page.api.fill();
+ }else page.el('question').value='Adults with chronic pain. Exercise. Randomised trials. Exclude Case reports.';
+ return page.el(mode==='manual'?'refine-manual':'start-machine');
+}
+
+async function until(check){
+ for(let attempts=0;attempts<50;attempts++){
+  if(check())return;
+  await new Promise(resolve=>setImmediate(resolve));
+ }
+ assert.fail('The expected review progress did not arrive.');
+}
+
+for(const mode of ['manual','machine'])test(mode+' saves an approved item while the other items are still under review',async()=>{
+ const page=open(),calls=[],button=startGeneration(page,mode),keys=Reset.projectKeys(projectId);
+ let release;
+ const pending=new Promise(resolve=>{release=resolve;});
+ stubBackend(page,calls,{rejected:true,beforeReview:item=>item.dimension_id!=='population'?pending:undefined});
+ const running=button.handlers.click();
+ try{
+  await until(()=>page.el('preview').innerHTML.includes('Verified so far'));
+  const draft=JSON.parse(page.storage.get(keys.draft));
+  assert.equal(draft.rows.length,1);
+  assert.match(page.el('preview').innerHTML,/Adults with chronic pain/);
+  assert.doesNotMatch(page.el('preview').innerHTML,/Exercise|Case reports|Randomised trials/i);
+  assert.equal(page.el('download').hidden,true);
+  assert.equal(page.storage.has(keys.project),false);
+  assert.equal(page.api.state().machineRefinement,null);
+  const reopened=open(new Map(page.storage));
+  reopened.api.fill();
+  assert.match(reopened.el('preview').innerHTML,/Verified draft from an unfinished run/);
+  assert.match(reopened.el('preview').innerHTML,/Adults with chronic pain/);
+ }finally{
+  release();
+  await running;
+ }
+ assert.equal(page.storage.has(keys.draft),false);
+ assert.match(page.el('preview').innerHTML,/Randomised trials/i);
+ assert.doesNotMatch(page.el('preview').innerHTML,/Case reports/);
+
+ const firstRun=calls.map(call=>call.step);
+ await button.handlers.click();
+ assert.deepEqual(calls.map(call=>call.step),[...firstRun,...firstRun]);
+});
+
+test('an incomplete OR is held while independent verified rules can enter the draft',async()=>{
+ const page=open(),button=startGeneration(page,'machine'),calls=[];
+ page.el('question').value='Include Adults with chronic pain or Exercise. Only Randomised trials. Exclude Case reports.';
+ const predicate=element_id=>({op:'predicate',element_id});
+ const logic={op:'all_of',children:[{op:'any_of',children:['p','i'].map(predicate)},predicate('s')]};
+ let release;
+ const pending=new Promise(resolve=>{release=resolve;});
+ const terms=fields.map(([id,dimension,quote,side])=>[id,dimension,quote.replace(/\.$/,''),side]);
+ stubBackend(page,calls,{logic,terms,beforeReview:item=>item.dimension_id==='intervention'?pending:undefined});
+ const running=button.handlers.click();
+ try{
+  await until(()=>page.el('preview').innerHTML.includes('Randomised trials'));
+  assert.match(page.el('preview').innerHTML,/Verified so far/);
+  assert.doesNotMatch(page.el('preview').innerHTML,/Adults with chronic pain|Exercise/i);
+ }finally{
+  release();
+  await running;
+ }
+ assert.match(page.el('preview').innerHTML,/Adults with chronic pain/);
+ assert.match(page.el('preview').innerHTML,/Exercise/i);
+});
+
+test('Clear removes the verified draft and an earlier review cannot write it back',async()=>{
+ const page=open(),button=startGeneration(page,'machine'),calls=[],keys=Reset.projectKeys(projectId);
+ let release;
+ const pending=new Promise(resolve=>{release=resolve;});
+ stubBackend(page,calls,{beforeReview:item=>item.dimension_id!=='population'?pending:undefined});
+ const running=button.handlers.click();
+ try{
+  await until(()=>page.el('preview').innerHTML.includes('Verified so far'));
+  Reset.resetProject(page.ctx.localStorage,projectId,{question:page.el('question').value});
+ }finally{
+  release();
+  await running;
+ }
+ assert.equal(page.storage.has(keys.draft),false);
+ assert.equal(page.storage.has(keys.project),false);
 });

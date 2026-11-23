@@ -1560,7 +1560,7 @@ async function extract_elements(state,env,adapter,options={},review=null){
    // being extracted. Final assembly can reuse a verdict with the same evidence.
    const preview={...part,elements:part.elements.map(e=>({...e,source_refs:[...e.source_refs]}))};
    restrictToFramework(preview,q,originals.get(q.question_id),env,[]);
-   review.add(preview,enqueue,false,true);
+   review.add(preview,enqueue,false,bi);
   }
  });
  for(let qi=0;qi<plans.length;qi++)if(!remaining[qi]){
@@ -1728,6 +1728,7 @@ function sourceReview(state,adapter,options,env){
  adapter=guidedRequests(adapter,options);
  const originals=new Map(state.questions.map(q=>[q.question_id,q]));
  const jobs=new Map();
+ const assembled=new Set();
  let total=0,completed=0,closed=false;
  function relevantLogic(node,id){
   if(!node||node.op==='predicate'||!D.walkLeaves(node).includes(id))return null;
@@ -1736,7 +1737,14 @@ function sourceReview(state,adapter,options,env){
   // An exception belongs to the whole conjunction it qualifies.
   return node.children.some(branch=>branch.op==='not')?node:relevantLogic(child,id);
  }
- function add(q,enqueue,last,preview=false){
+ function notify(q,part){
+  if(!options.onReviewed||part!==null&&assembled.has(q.question_id))return;
+  const snapshot=D.clone(q);
+  discardRejected(snapshot);
+  options.onReviewed(snapshot,part);
+ }
+ function add(q,enqueue,last,part=null){
+  if(part===null)assembled.add(q.question_id);
   const sourceQuestion=originals.get(q.question_id),original=sourceQuestion?.original_text||'';
   let framework;
   if(env){
@@ -1785,14 +1793,16 @@ function sourceReview(state,adapter,options,env){
    };
    const context={question_id:q.question_id,original_question:original.length<3500?original:null,
     logic:relevantLogic(q.logic,e.candidate_id),...(framework&&{framework})};
-   queue(item,context,e,corroborated,preview,enqueue);
+   queue(item,context,{element:e,corroborated,q,part},enqueue);
   }
+  if(part===null)notify(q,part);
   if(last){closed=true;if(completed)progress();}
  }
  function progress(){
   options.onProgress?.('Source checks complete ('+completed+'/'+total+').',{phase:'review',completed,total,waiting:completed<total});
  }
- function queue(item,context,element,corroborated,preview,enqueue){
+ function queue(item,context,target,enqueue){
+  const {element,part}=target;
   const key=JSON.stringify([item,context,!!element.source_wording_needs_translation]);
   let job=jobs.get(key);
   if(!job){
@@ -1804,9 +1814,8 @@ function sourceReview(state,adapter,options,env){
     job.targets.length=0;
    });
   }
-  if(preview)return;
-  total++;
-  const target={element,corroborated};
+  if(part!==null&&!options.onReviewed)return;
+  if(part===null)total++;
   if(job.outcome)settle(target,job.outcome);
   else job.targets.push(target);
  }
@@ -1827,8 +1836,10 @@ function sourceReview(state,adapter,options,env){
    return {assessment:null,unavailable:true};
   }
  }
- function settle({element,corroborated},{assessment,translated,unavailable}){
+ function settle({element,corroborated,q,part},{assessment,translated,unavailable}){
   apply(element,corroborated,assessment&&D.clone(assessment),translated,unavailable);
+  notify(q,part);
+  if(part!==null)return;
   completed++;
   if(closed)progress();
  }

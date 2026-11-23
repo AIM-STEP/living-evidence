@@ -105,7 +105,7 @@ def render(output):
          fill=BLUE_PALE, outline='#bed0e6', heading=BLUE, body_size=29)
 
     card(96, 464, 1648, 132, '准备原始材料',
-         ('保留问题及手填内容，读取附件和扫描件并记录来源。',))
+         ('每次 Generate 都重新读取输入和附件，并记录来源。',))
     card(96, 632, 1648, 152, '提取候选条件并标准化框架要素',
          ('本地模型按来源分批提取，归入框架字段并规范措辞。',
           '程序定位原文，校验阈值、单位、时点和例外。'))
@@ -114,7 +114,8 @@ def render(output):
           '每生成一条候选就核对一条，其他来源可以继续提取。'))
 
     card(96, 1080, 520, 246, '通过 · 写入标准',
-         ('核对通过的纳排规则直接写入。',
+         ('每条通过即写入项目草稿。',
+          'Criteria 预览同步显示。',
           '研究关注内容保留在说明中。'),
          fill=TEAL_PALE, outline='#b9d6ce', title_size=36, body_size=27)
     card(660, 1080, 520, 246, '需要人工核对',
@@ -138,17 +139,17 @@ def render(output):
 
     card(96, 1638, 1648, 171, 'Criteria 预览与作者确认',
          ('Review topic  ·  Framework  ·  Inclusion  ·  Exclusion  ·  Description',
-          '作者可确认、改写或舍弃待核对条目。确认后的规则直接更新标准和预览。'),
+          '生成期间显示已通过的规则。生成结束后，作者可确认、改写或舍弃待核对条目。'),
          fill=TEAL_PALE, outline='#b9d6ce')
     card(96, 1847, 1648, 132, '保存、导出与检索交接',
-         ('按项目保存，支持 Word 导出，并将生效标准交接至 Search strategy。',))
+         ('生成结束后保存本次标准，支持 Word 导出及 Search strategy 交接。',))
     card(96, 2017, 1648, 155, '什么会进入筛选？',
          ('应用已生效的纳入和排除规则，保留条件之间的关系及例外。',
           '原文明确要求测量或报告的结局可用于筛选，其他结局保留在说明中。'))
 
     draw.line((96, 2221, 1744, 2221), fill=RULE, width=2)
     text(96, 2246, 'AIM-STEP', 26, BODY, bold=True)
-    text(1136, 2246, '2026-11-22  /  Eligibility Criteria release 41', 25, BODY, width=608)
+    text(1136, 2246, '2026-11-23  /  Eligibility Criteria release 43', 25, BODY, width=608)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, optimize=True)

@@ -16,7 +16,8 @@ function requireEpoch(storage,projectId,expected){
 }
 function projectKeys(projectId){
  return {project:'aimstep-eligibility-v3:'+projectId,legacy:'aimstep-eligibility:'+projectId,
-  library:'aimstep-eligibility-library:'+projectId,summary:'aimstep-eligibility-summary:'+projectId,lessons:'aimstep-eligibility-lessons:'+projectId};
+  library:'aimstep-eligibility-library:'+projectId,summary:'aimstep-eligibility-summary:'+projectId,lessons:'aimstep-eligibility-lessons:'+projectId,
+  draft:'aimstep-eligibility-generation-draft:'+projectId};
 }
 function resetProject(storage,projectId,cleanState,extraChanges=[]){
  if(!projectId)fail('PROJECT_REQUIRED','Open a registered project first.');
@@ -34,7 +35,7 @@ function resetProject(storage,projectId,cleanState,extraChanges=[]){
   if(cleanState[field]!==undefined)fresh[field]=cleanState[field];
  }
  const changes=[[keys.project,null],[keys.legacy,JSON.stringify(fresh)],
-  [keys.library,JSON.stringify({version:1,entries:[],activeId:null})],[keys.summary,null],[keys.lessons,null],...extraChanges,[epochKey,epoch]];
+  [keys.library,JSON.stringify({version:1,entries:[],activeId:null})],[keys.summary,null],[keys.lessons,null],[keys.draft,null],...extraChanges,[epochKey,epoch]];
  const before=changes.map(([key])=>storage.getItem(key));
  let written=0;
  try{
