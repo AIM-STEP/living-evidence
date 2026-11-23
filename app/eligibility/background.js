@@ -292,7 +292,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   project.changes.push({change_id:D.id('change'),revision:project.revision,operation:'refresh_criteria_presentation',at:project.updated_at,changes:[]});
   return staged(project,saved.revision,signature(read(keys.legacy)));
  }
- async function generate({legacy,question,reviewType,questionType,registration,sources=[],manualFramework,modelClient,signal,onProgress,onDraft}){
+ async function generate({legacy,question,reviewType,questionType,registration,sources=[],manualFramework,languageSample,modelClient,signal,onProgress,onDraft}){
   requireEpoch(storage,projectId,legacy?.criteria_epoch);
   requireCurrentView(legacy);
   const saved=current(),revision=saved.revision,expected=signature(read(keys.legacy)),env=E.environment(...configs);
@@ -375,7 +375,7 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
   }
   const observed=new Set(),lessonCounts=Lessons?.readCounts(storage,keys.lessons)||{};
   try{
-   const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress,onReviewed:draft?publishDraft:undefined,lessonCounts,onLesson:code=>observed.add(code)});
+   const result=await M.analyze(project,env,modelClient,{signal,retries:1,onProgress,languageSample:(languageSample||raw).slice(0,2400),onReviewed:draft?publishDraft:undefined,lessonCounts,onLesson:code=>observed.add(code)});
    if(result.incomplete_review)observed.add('service_availability');
    requireEpoch(storage,projectId,saved.criteria_epoch);
    onProgress?.('Validating eligibility criteria…',{phase:'validate'});
@@ -384,11 +384,11 @@ async function create({projectId,storage=root.localStorage,frameworkConfig,profi
    project.model_calls.push(...result.model_calls);
    project.presentation_version=presentationVersion;
    const visible=projectView(project);
-   if(/[\u3400-\u9fff]/u.test(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' ')))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');
+   if(M.needsSourceTranslation(visible.reviewTopic+' '+visible.rows.flatMap(row=>[...row.include,...row.exclude]).join(' '),'en'))D.fail('MODEL_LANGUAGE_MISMATCH','output','The model did not return the requested English criteria. The previous version has been kept.');
    delete project.generation_source_key;
    delete project.generation_files_key;
    onProgress?.('Saving eligibility criteria…',{phase:'ready'});
-   return {...staged(project,revision,expected,visible),...(draft&&{runId:draft.id})};
+   return {...staged(project,revision,expected,visible),inputLanguage:result.inputLanguage,...(draft&&{runId:draft.id})};
   }catch(error){
    const code=Lessons?.errorLesson(error);if(code)observed.add(code);
    throw error;

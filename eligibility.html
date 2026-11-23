@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <script src="app/project-access.js?v=20261117-projects-1"></script>
-<script src="app/eligibility-release.js?v=20261123-criteria-release-45"></script>
-<script src="app/secure-origin.js?v=20261123-criteria-release-45"></script>
+<script src="app/eligibility-release.js?v=20261123-criteria-release-46"></script>
+<script src="app/secure-origin.js?v=20261123-criteria-release-46"></script>
 <script src="app/online-model.js?v=online-auth-v3"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fff"><meta name="description" content="Define, pilot and confirm transparent eligibility criteria for a living evidence project.">
@@ -61,6 +61,10 @@
 @media(max-width:760px){.eligibility-workspace{grid-template-columns:minmax(0,1fr)}}
 .generation-method-label{display:block;margin:0 0 14px}
 .scope-target{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:7px}.scope-target select{width:auto;max-width:min(100%,32em);min-width:0;padding:3px 7px}
+.criteria-localization{border-top:1px solid var(--line);padding-top:16px}
+.criteria-localization>h3{font-size:14px;color:var(--ink);letter-spacing:normal;text-transform:none}
+.criteria-localization h4{margin:0 0 8px;font-size:12px}
+.criteria-localization ul{margin:3px 0 0;padding-inline-start:20px}
 </style>
 <style>
 .embedded-manual body{background:#fff}
@@ -74,10 +78,10 @@
 .embedded-manual .preview-body,.embedded-manual .criteria-heading{padding-left:0;padding-right:0}
 </style>
 <link rel="stylesheet" href="app/theme.css?v=20261022-3">
-<script src="app/criteria-grounding.js?v=20261123-criteria-release-45"></script>
+<script src="app/criteria-grounding.js?v=20261123-criteria-release-46"></script>
 
 <link rel="stylesheet" href="app/tool-i18n.css?v=20261020-1">
-<script defer src="app/tool-i18n-catalog.js?v=20261118-criteria-actions-1"></script>
+<script defer src="app/tool-i18n-catalog.js?v=20261123-criteria-release-46"></script>
 <script defer src="app/tool-i18n.js?v=20261020-2"></script>
 
 <link rel="stylesheet" href="app/tool-shell.css?v=20261117-eligibility-heading-1">
@@ -96,17 +100,17 @@
 <div class="section" id="manual-generate-panel" hidden><div class="section-head" data-collapse-name="Manual generate"><div class="manual-actions"><button class="btn btn-primary" id="refine-manual" type="button" data-ui-localize>Generate</button><button class="btn" id="stop-manual" type="button" hidden data-ui-localize>Stop</button><button class="btn criteria-action" id="manual-generate" type="button" aria-label="Clear all entered eligibility content" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button><button class="btn" id="add-criterion" type="button" aria-expanded="false" aria-controls="criterion-picker" data-ui-localize>＋ Add criterion</button></div></div><label class="field-label" data-ui-localize>Question framework <span class="framework-help"><button class="framework-help-button" id="framework-help-button" type="button" aria-label="Framework guide" aria-expanded="false" aria-controls="framework-help-popup">ⓘ</button><span class="framework-help-popup" id="framework-help-popup" role="dialog" aria-label="Framework guide" hidden data-ui-localize><strong data-ui-localize>Framework guide</strong>PICO is a starting point for intervention effects; PECO for exposure questions; PCC for scoping reviews; PICo for qualitative experiences. Select the framework that fits your objective.</span></span></label><div class="frameworks" role="group" aria-label="Question framework"><button class="framework selected" data-framework="PICO">PICO</button><button class="framework" data-framework="PICOS">PICOS</button><button class="framework" data-framework="PECO">PECO</button><button class="framework" data-framework="PECOS">PECOS</button><button class="framework" data-framework="PCC">PCC</button><button class="framework" data-framework="PICo">PICo</button><button class="framework" data-framework="Other" data-ui-localize>Other</button></div><div class="criterion-picker" id="criterion-picker" role="group" aria-label="Choose a criterion" hidden></div><div class="criteria-list" id="criteria-list"></div><div class="subheading manual-limits-heading" style="margin-top:18px" data-ui-localize>Limits</div><div class="limits-grid"><div class="limit-range"><div class="field-label" data-ui-localize>Custom range</div><div class="range-date-fields"><div><label class="field-label" for="start-date" data-ui-localize>Start date</label><input id="start-date" class="text-input" type="date"></div><div><label class="field-label" for="end-date" data-ui-localize>End date</label><input id="end-date" class="text-input" type="date"></div></div></div><div><label class="field-label" for="language" data-ui-localize>Language</label><select id="language" class="select"><option value="" data-ui-localize>Select language</option><option value="Chinese" data-ui-localize>Chinese</option><option value="English" data-ui-localize>English</option></select></div><div><label class="field-label" for="limits-other" data-ui-localize>Other</label><input id="limits-other" class="text-input" placeholder="Describe any additional limit"></div></div><div id="description-criteria-list" hidden></div><div class="hint machine-status" id="manual-refine-status" role="status" aria-live="polite" hidden></div></div>
 </section>
 <aside class="right-column"><section class="panel"><div class="criteria-heading"><h2 data-ui-localize>Criteria</h2><div class="criteria-file-actions"><button class="btn criteria-action" id="save-criteria" type="button" hidden data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>Save</button><button class="btn criteria-action" id="download" type="button" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>Export</button><button class="btn criteria-action" id="clear-criteria" type="button" hidden title="Clear current criteria" data-ui-localize><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>Clear</button></div></div><p id="criteria-timing" hidden><span id="criteria-working-label" data-ui-localize>Working</span><span id="criteria-finished-label" data-ui-localize hidden>Elapsed time</span> · <span id="criteria-elapsed" role="timer" aria-label="Elapsed generation time">0:00</span></p><div class="preview-body" id="preview"></div></section></aside></div></main><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="app/eligibility-library.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility/registries.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility/domain.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility/methodology.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility/document.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility/sparse-input.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility/engine.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility/lessons.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility/model.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility-reset.js?v=20261123-criteria-release-45"></script>
-<script src="app/eligibility/background.js?v=20261123-criteria-release-45"></script>
+<script src="app/eligibility-library.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility/registries.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility/domain.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility/methodology.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility/document.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility/sparse-input.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility/engine.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility/lessons.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility/model.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility-reset.js?v=20261123-criteria-release-46"></script>
+<script src="app/eligibility/background.js?v=20261123-criteria-release-46"></script>
 <script>
 window.AIMSTEPProjectAccess?.run(function(){
 
@@ -200,7 +204,7 @@ function backgroundErrorMessage(error){
 }
 function backgroundModelClient(model){return {get exchanges(){return model.auditTrail||[];},async request(step,project,payload,schema,instruction,signal){
   let abort;const cancelled=new Promise((_,reject)=>{abort=()=>{const error=new Error('Generation stopped.');error.name='AbortError';reject(error);};if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true});});
-  try{return await Promise.race([cancelled,Promise.resolve().then(()=>{if(signal?.aborted){const error=new Error('Generation stopped.');error.name='AbortError';throw error;}return callCriteriaJson(model,instruction,{step,project_id:window.AIMSTEPEligibilityModel.modelProjectId(project),base_revision:project.revision,config_versions:project.config_versions,output_language:'en',payload},signal,schema);})]);}
+  try{return await Promise.race([cancelled,Promise.resolve().then(()=>{if(signal?.aborted){const error=new Error('Generation stopped.');error.name='AbortError';throw error;}return callCriteriaJson(model,instruction,{step,project_id:window.AIMSTEPEligibilityModel.modelProjectId(project),base_revision:project.revision,config_versions:project.config_versions,output_language:project.output_language||'en',payload},signal,schema);})]);}
   finally{signal?.removeEventListener('abort',abort);}
 }};}
 
@@ -320,7 +324,7 @@ function setMachineStatus(message,error=false){
     state.generationProgressLog=[...(state.generationProgressLog||[]),{message,error,date:new Date().toISOString()}].slice(-60);
   }
 }
-function stopMachineGeneration(){generationNonce++;if(generationController){generationController.abort();generationController=null}stopCriteriaTiming();$('start-machine').disabled=false;$('start-machine').textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}
+function stopMachineGeneration(){stopCriteriaTranslation();generationNonce++;if(generationController){generationController.abort();generationController=null}stopCriteriaTiming();$('start-machine').disabled=false;$('start-machine').textContent='Generate';$('stop-machine').hidden=true;$('stop-machine').disabled=false}
 const attachedFiles=[];
 let nextAttachmentId=0,voiceRecognition=null,voiceDone=Promise.resolve(),resolveVoiceDone=null,pdfModulePromise=null;
 function renderAttachments(){
@@ -981,7 +985,7 @@ async function generateStructuredCriteria(service,inputs,input,signal,report){
 }
 function saveGeneratedCriteria(stage,runData){
   const elapsedMs=Math.max(0,Date.now()-generationStartedAt);
-  useBackgroundCriteria(stage,{...runData,elapsedMs});
+  useBackgroundCriteria(stage,{...runData,elapsedMs,inputLanguage:stage.inputLanguage});
   document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===manualFramework()));
   return save({fresh:true,createdAt:state.machineRun.generatedAt});
 }
@@ -995,7 +999,8 @@ async function refineManualCriteria(){
   const question=manualQuestion();
   if(!question){setManualStatus('Enter at least one rule before generating.',true);return;}
   if(question.length>24000){setManualStatus('Shorten the manual rules before generating.',true);return;}
-  const inputs={...generationInputs(question,state.reviewType),manualFramework:manualFramework()};
+  const languageSample=state.criteria.flatMap(row=>[row.condition,row.uncertain,row.definition]).filter(Boolean).join('\n');
+  const inputs={...generationInputs(question,state.reviewType),manualFramework:manualFramework(),languageSample};
   stopMachineGeneration();stopManualRefinement();
   const run=++manualRefinementNonce,controller=new AbortController(),signature=manualSourceSignature();
   manualRefinementController=draftController=controller;manualRunSignature=signature;activeDraftRunId=null;
@@ -1724,6 +1729,64 @@ function renderGenerationDraft(area,draft){
   area.innerHTML='<div class="criteria-summary"><p class="summary-muted" data-ui-localize>'+message+'</p>'+
     side('include','Inclusion')+side('exclude','Exclusion')+'</div>';
 }
+let criteriaTranslation=null;
+function stopCriteriaTranslation(){
+  criteriaTranslation?.controller.abort();
+  criteriaTranslation=null;
+}
+function savedTranslation(plan){
+  const copy=state.machineRun?.translation;
+  return plan&&copy?.key===plan.key?copy:null;
+}
+async function translatePreview(plan){
+  const run=state.machineRun;
+  if(embeddedPreview||embeddedManual||savedTranslation(plan)||criteriaTranslation?.key===plan.key&&criteriaTranslation.run===run)return;
+  stopCriteriaTranslation();
+  const job={key:plan.key,run,controller:new AbortController(),failed:false};
+  criteriaTranslation=job;
+  const {signal}=job.controller;
+  try{
+    const model=await resolveLocalModel(false,signal);
+    const request=(payload,schema,instruction)=>backgroundModelClient(model).request('translate_criteria',
+      {project_id:projectId,criteria_epoch:state.criteria_epoch,revision:run.backgroundRevision,
+       config_versions:state.eligibilityV3Snapshot?.config_versions,output_language:plan.language},
+      payload,schema,instruction,signal);
+    const translation=await window.AIMSTEPEligibilityModel.translateCriteria(plan,request,signal);
+    if(signal.aborted||previewDirty||state.machineRun!==run||!hasCurrentMachineResult())return;
+    const saved=JSON.parse(localStorage.getItem(key)||'null');
+    if(!saved||saved.machineRun?.generatedAt!==run.generatedAt||saved.machineRun?.backgroundRevision!==run.backgroundRevision||
+       saved.criteriaLibraryId!==state.criteriaLibraryId||(saved.criteria_epoch??null)!==(state.criteria_epoch??null)||
+       criteriaSignature(saved)!==criteriaSignature(state))return;
+    saved.machineRun.translation=translation;
+    const library=window.AimstepEligibilityLibrary;
+    if(library)library.commit(localStorage,projectId,saved,{updateEntry:true});
+    else localStorage.setItem(key,JSON.stringify(saved));
+    run.translation=translation;
+  }catch(error){
+    if(!signal.aborted)job.failed=true;
+  }finally{
+    if(criteriaTranslation===job&&state.machineRun===run&&hasCurrentMachineResult())renderPreview();
+  }
+}
+function renderLocalizedCriteria(plan){
+  const copy=savedTranslation(plan);
+  if(!copy){
+    if(!plan||embeddedPreview||embeddedManual)return '';
+    const failed=criteriaTranslation?.key===plan.key&&criteriaTranslation.run===state.machineRun&&criteriaTranslation.failed;
+    return '<div class="summary-block" data-criteria-localization role="status">'+(failed?
+      '<p class="summary-muted" data-ui-localize>The original-language criteria could not be generated.</p><button type="button" class="btn" data-retry-criteria-translation data-ui-localize>Retry translation</button>':
+      '<p class="summary-muted" data-ui-localize>Preparing criteria in the question language…</p>')+'</div>';
+  }
+  const section=side=>{
+    const rows=copy.rows.filter(row=>row[side].length).map(row=>{
+      const label=[row.question,row.label].filter(Boolean).join(' · ');
+      return '<div class="summary-inclusion"><strong>'+escapeHtml(label)+'</strong><ul>'+row[side].map(text=>'<li>'+escapeHtml(text)+'</li>').join('')+'</ul></div>';
+    }).join('');
+    return '<div class="summary-block"><h4>'+escapeHtml(copy.labels[side])+'</h4>'+
+      (rows||'<p class="summary-muted">'+escapeHtml(copy.labels[side==='include'?'emptyInclude':'emptyExclude'])+'</p>')+'</div>';
+  };
+  return '<section class="summary-block criteria-localization" data-criteria-localization lang="'+escapeHtml(copy.language)+'" dir="auto"><h3>'+escapeHtml(copy.labels.title)+'</h3>'+section('include')+section('exclude')+'</section>';
+}
 function renderPreview(){
   const area=$('preview');
   renderCriteriaTiming();
@@ -1767,9 +1830,10 @@ function renderPreview(){
   const section=(heading,html)=>html?'<section class="summary-block"><h3 data-ui-localize>'+heading+'</h3>'+html+'</section>':'';
   const prose=paragraph?'<p class="summary-paragraph">'+escapeHtml(paragraph)+'</p>':'';
   const body=section('Inclusion',includes)+section('Exclusion',exclusionHtml)+section('Description',criteriaControls(descriptionChecks)+(prose||'<p><br></p>'));
+  const translation=window.AIMSTEPEligibilityModel?.translationPlan?.(display,state.machineRun?.inputLanguage);
   previewBase={signature:criteriaSignature(state),data:structuredClone(page),fields:documentFields(page,display)};
-  area.innerHTML=`<div class="criteria-summary">${legacyNote}<div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> <span>${escapeHtml(display.reviewTopic)}</span></p>${display.topic.map(sourceConfirmationHtml).join('')}${focusChecks}<p><strong data-ui-localize>Framework:</strong> ${escapeHtml(framework)}</p>${display.framework.map(sourceConfirmationHtml).join('')}</div><div class="criteria-editable criteria-document" data-criteria-document contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="Eligibility criteria text">${body}</div></div>`;
-
+  area.innerHTML=`<div class="criteria-summary">${legacyNote}<div class="summary-intro"><p><strong data-ui-localize>Review topic:</strong> <span>${escapeHtml(display.reviewTopic)}</span></p>${display.topic.map(sourceConfirmationHtml).join('')}${focusChecks}<p><strong data-ui-localize>Framework:</strong> ${escapeHtml(framework)}</p>${display.framework.map(sourceConfirmationHtml).join('')}</div><div class="criteria-editable criteria-document" data-criteria-document contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="Eligibility criteria text">${body}</div>${renderLocalizedCriteria(translation)}</div>`;
+  if(translation)void translatePreview(translation);
 }
 function xmlEscape(value){return String(value==null?'':value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
 function wordParagraph(value,bold){return '<w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r>'+(bold?'<w:rPr><w:b/></w:rPr>':'')+'<w:t xml:space="preserve">'+xmlEscape(value)+'</w:t></w:r></w:p>'}
@@ -1780,8 +1844,19 @@ function wordCell(value,width,bold,span=1){
 function crc32(bytes){let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let bit=0;bit<8;bit++)crc=(crc>>>1)^((crc&1)?0xedb88320:0)}return(crc^0xffffffff)>>>0}
 function concatBytes(parts){const length=parts.reduce((total,part)=>total+part.length,0),result=new Uint8Array(length);let offset=0;for(const part of parts){result.set(part,offset);offset+=part.length}return result}
 function makeStoredZip(files){const encoder=new TextEncoder(),localParts=[],centralParts=[];let offset=0;for(const file of files){const name=encoder.encode(file.name),data=encoder.encode(file.content),crc=crc32(data),local=new Uint8Array(30+name.length),lv=new DataView(local.buffer);lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint32(14,crc,true);lv.setUint32(18,data.length,true);lv.setUint32(22,data.length,true);lv.setUint16(26,name.length,true);local.set(name,30);localParts.push(local,data);const central=new Uint8Array(46+name.length),cv=new DataView(central.buffer);cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint32(16,crc,true);cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);cv.setUint16(28,name.length,true);cv.setUint32(42,offset,true);central.set(name,46);centralParts.push(central);offset+=local.length+data.length}const centralOffset=offset,central=concatBytes(centralParts),end=new Uint8Array(22),ev=new DataView(end.buffer);ev.setUint32(0,0x06054b50,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,central.length,true);ev.setUint32(16,centralOffset,true);return concatBytes([...localParts,central,end])}
+function localizedWordCriteria(display){
+ const plan=window.AIMSTEPEligibilityModel?.translationPlan?.(display,state.machineRun?.inputLanguage);
+ const copy=savedTranslation(plan);
+ if(!copy)return '';
+ return wordParagraph(copy.labels.title,true)+['include','exclude'].map(side=>{
+  const rows=copy.rows.filter(row=>row[side].length).map(row=>
+   wordParagraph([row.question,row.label].filter(Boolean).join(' · '),true)+row[side].map(text=>wordParagraph(text,false)).join('')).join('');
+  return wordParagraph(copy.labels[side],true)+(rows||wordParagraph(copy.labels[side==='include'?'emptyInclude':'emptyExclude'],false));
+ }).join('');
+}
 function criteriaWordFile(){
  const refinement=currentRefinement(),normalized=criteriaForPage(standardizedCriteria(),refinement),display=criteriaDisplay(normalized,refinement,true);
+ const translation=localizedWordCriteria(criteriaDisplay(normalized,refinement));
  const hasExclusion=display.rows.some(row=>row.exclude.length);
  const widths=hasExclusion?[3000,4200,2160]:[3000,6360];
  const headers=hasExclusion?['Domain','Include','Exclude']:['Domain','Include'];
@@ -1810,7 +1885,7 @@ function criteriaWordFile(){
  const frameworkChecks=display.framework.map(check=>wordParagraph(check.domain+' · '+checkText(check),false)).join('');
  const contextualCheck=check=>wordParagraph(checkText(check)+' ('+[check.domain,check.subject].filter(Boolean).join(' · ')+')',false);
  const focusChecks=display.focus.map(contextualCheck).join(''),descriptionChecks=display.description.map(contextualCheck).join('');
- const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>';const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+display.reviewTopic,false)+topicChecks+focusChecks+wordParagraph('Framework: '+normalized.framework,false)+frameworkChecks+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+emptyExclusion+(normalized.paragraph||descriptionChecks?wordParagraph('Description',true)+descriptionChecks+(normalized.paragraph?normalized.paragraph.split(/\r?\n/u).map(line=>line.trim()).filter(Boolean).map(line=>wordParagraph(line,false)).join(''):''):'')+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
+ const border='<w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/>';const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+wordParagraph('Eligibility criteria',true)+wordParagraph('Review topic: '+display.reviewTopic,false)+topicChecks+focusChecks+wordParagraph('Framework: '+normalized.framework,false)+frameworkChecks+'<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>'+border+'</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+widths.map(width=>'<w:gridCol w:w="'+width+'"/>').join('')+'</w:tblGrid>'+tableRows+'</w:tbl>'+emptyExclusion+(normalized.paragraph||descriptionChecks?wordParagraph('Description',true)+descriptionChecks+(normalized.paragraph?normalized.paragraph.split(/\r?\n/u).map(line=>line.trim()).filter(Boolean).map(line=>wordParagraph(line,false)).join(''):''):'')+translation+'<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>',contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',relationships='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';return makeStoredZip([{name:'[Content_Types].xml',content:contentTypes},{name:'_rels/.rels',content:relationships},{name:'word/document.xml',content:documentXml}])}
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function fill(){ $('question').value=state.question||'';$('generation-method').value=state.generationMethodChoice||'';syncGenerationMethodOptions();$('machine-generate-panel').hidden=$('generation-method').value!=='machine';$('manual-generate-panel').hidden=$('generation-method').value!=='manual';state.reviewType=reviewTypeForProject();document.querySelectorAll('.framework').forEach(b=>b.classList.toggle('selected',b.dataset.framework===manualFramework()));const dateRange=state.dateRange||{};$('start-date').value=dateToInput(dateRange.start,'start');$('end-date').value=dateToInput(dateRange.end,'end');const savedLanguage=['No restriction','Specify languages'].includes(state.language)?'':state.language||'';$('language').value=savedLanguage;$('limits-other').value=state.limitsOther||'';renderCards();renderPicker();renderPreview()}
 const helpButton=$('framework-help-button'),helpPopup=$('framework-help-popup');helpButton.addEventListener('click',e=>{e.stopPropagation();const open=helpButton.getAttribute('aria-expanded')!=='true';helpButton.setAttribute('aria-expanded',String(open));helpPopup.hidden=!open});document.addEventListener('click',e=>{if(!e.target.closest('.framework-help')){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){helpPopup.hidden=true;helpButton.setAttribute('aria-expanded','false');helpButton.focus()}});
@@ -2068,6 +2143,9 @@ function confirmSourceRule(index,choice,answerField,targetField){
   return true;
 }
 $('preview').addEventListener('click',event=>{
+  if(event.target?.closest?.('[data-retry-criteria-translation]')?.dataset?.retryCriteriaTranslation!==undefined){
+    stopCriteriaTranslation();renderPreview();return;
+  }
   const confirmation=event.target.closest('[data-source-confirm]');
   if(confirmation){
     const form=confirmation.closest('.source-confirmations');

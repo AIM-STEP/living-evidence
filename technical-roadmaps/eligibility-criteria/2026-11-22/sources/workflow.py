@@ -34,7 +34,7 @@ def font(size, bold=False):
 
 
 def render(output):
-    image = Image.new('RGB', (1840, 2320), PAPER)
+    image = Image.new('RGB', (1840, 2363), PAPER)
     draw = ImageDraw.Draw(image)
 
     def text(x, y, value, size, color=INK, *, bold=False, width=None):
@@ -93,7 +93,7 @@ def render(output):
     connector([(1744, 706), (1785, 706), (1785, 1484), (1744, 1484)], VIOLET_LINE)
     connector([(1484, 1598), (1484, 1638)], VIOLET_LINE)
     connector([(920, 1809), (920, 1847)])
-    connector([(920, 1979), (920, 2017)])
+    connector([(920, 2018), (920, 2056)])
 
     card(96, 270, 798, 148, '机器生成  Machine generate',
          ('一次性提交研究问题，可用文本、语音或附件。',
@@ -141,15 +141,16 @@ def render(output):
          ('Review topic  ·  Framework  ·  Inclusion  ·  Exclusion  ·  Description',
           '生成期间显示已通过的规则。生成结束后，作者可确认、改写或舍弃待核对条目。'),
          fill=TEAL_PALE, outline='#b9d6ce')
-    card(96, 1847, 1648, 132, '保存、导出与检索交接',
-         ('生成结束后保存本次标准，支持 Word 导出及 Search strategy 交接。',))
-    card(96, 2017, 1648, 155, '什么会进入筛选？',
+    card(96, 1847, 1648, 171, '保存、双语呈现与导出',
+         ('英文标准保存并交接检索。问题为非英语时，依据已通过的标准生成原语言版。',
+          '原语言版显示在英文版下方，与英文版一并保存并支持 Word 导出。'))
+    card(96, 2056, 1648, 155, '什么会进入筛选？',
          ('应用已生效的纳入和排除规则，保留条件之间的关系及例外。',
           '原文明确要求测量或报告的结局可用于筛选，其他结局保留在说明中。'))
 
-    draw.line((96, 2221, 1744, 2221), fill=RULE, width=2)
-    text(96, 2246, 'AIM-STEP', 26, BODY, bold=True)
-    text(1136, 2246, '2026-11-23  /  Eligibility Criteria release 45', 25, BODY, width=608)
+    draw.line((96, 2260, 1744, 2260), fill=RULE, width=2)
+    text(96, 2285, 'AIM-STEP', 26, BODY, bold=True)
+    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 46', 25, BODY, width=608)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, optimize=True)

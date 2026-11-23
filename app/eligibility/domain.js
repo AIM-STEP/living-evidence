@@ -68,9 +68,26 @@ function sameConstraint(a,b){
  return x.value===y.value&&x.operator===y.operator&&x.unit===y.unit&&(!x.anchor||!y.anchor||x.anchor===y.anchor)&&(!x.role||!y.role||x.role===y.role);
 }
 function structuredConstraints(value,dimension){if(!value||typeof value!=='object')return [];if(value.operator==='between')return [{value:value.lower,operator:value.lower_inclusive===false?'>':'>=',unit:value.unit||'',role:dimension.includes('age')?'age':''},{value:value.upper,operator:value.upper_inclusive===false?'<':'<=',unit:value.unit||'',role:dimension.includes('age')?'age':''}];if(typeof value.value==='number')return [{value:value.value,operator:numericOperators[value.operator]||value.operator||'=',unit:value.unit||'',anchor:value.anchor||'',role:dimension.includes('age')?'age':''}];return [];}
+function decimalDigits(text){
+ return text.normalize('NFKC').replace(/\p{Nd}/gu,digit=>{
+  if(/^\d$/.test(digit))return digit;
+  const point=digit.codePointAt(0);
+  let start=point;
+  while(/\p{Nd}/u.test(String.fromCodePoint(start-1)))start--;
+  return String((point-start)%10);
+ });
+}
 function check_semantics(element,refs,{human=false}={}){
  const original=quoteText(refs),normalized=element.normalized_text||'';
  const known=refs.flatMap(r=>grounding.constraints(r.quote)),textConstraints=grounding.constraints(normalized),valueConstraints=structuredConstraints(element.structured_value,element.dimension_id);
+ const reviewer=element.semantic_review?.reviewer;
+ const translated=!!element.source_language&&reviewer?.provider==='typesafe'&&reviewer.verdict==='supported'&&element.semantic_review.status==='supported';
+ const sourceNumbers=translated?[...decimalDigits(original).matchAll(/(?<![\d.])[-−]?\d+(?:[.,٫]\d+)?/g)].map(match=>Number(match[0].replace('−','-').replace(/[,٫]/g,'.'))):[];
+ // Jev can verify a translated threshold the local English/Chinese grammar cannot parse.
+ // Exact source values still need to agree, as do all locally recognized bounds.
+ const verifiedTranslation=c=>sourceNumbers.includes(Number(c.value))&&
+   !known.some(k=>Math.abs(Number(k.value))===Math.abs(Number(c.value)));
+
  // A structured scalar may describe just one of several displayed conditions.
  // Bind a direction-only or event-only metadata anchor to that quantity's full wording.
  for(const c of valueConstraints){
@@ -80,10 +97,10 @@ function check_semantics(element,refs,{human=false}={}){
   if(anchors.size===1)c.anchor=[...anchors][0];
   if(textConstraints.length&&!visible.some(t=>sameConstraint(c,t)))fail('TEXT_VALUE_MISMATCH','normalization','The displayed numeric condition disagrees with its structured value.',{dimension_id:element.dimension_id,constraint:c});
  }
- for(const c of textConstraints)if(!known.some(k=>sameConstraint(c,k)&&grounding.temporalAnchor(c.anchor)===grounding.temporalAnchor(k.anchor)))fail('NUMERIC_SCOPE_CHANGE','normalization','A threshold, strict bound, unit or time anchor changed without a matching source.',{dimension_id:element.dimension_id,constraint:c});
- for(const c of valueConstraints)if(!known.some(k=>sameConstraint(c,k)&&(!c.anchor||!!k.anchor)))fail('NUMERIC_SCOPE_CHANGE','normalization','A threshold, strict bound, unit or time anchor changed without a matching source.',{dimension_id:element.dimension_id,constraint:c});
+ for(const c of textConstraints)if(!known.some(k=>sameConstraint(c,k)&&grounding.temporalAnchor(c.anchor)===grounding.temporalAnchor(k.anchor))&&!verifiedTranslation(c))fail('NUMERIC_SCOPE_CHANGE','normalization','A threshold, strict bound, unit or time anchor changed without a matching source.',{dimension_id:element.dimension_id,constraint:c});
+ for(const c of valueConstraints)if(!known.some(k=>sameConstraint(c,k)&&(!c.anchor||!!k.anchor))&&!verifiedTranslation(c))fail('NUMERIC_SCOPE_CHANGE','normalization','A threshold, strict bound, unit or time anchor changed without a matching source.',{dimension_id:element.dimension_id,constraint:c});
  const originalNums=[...grounding.clean(original).matchAll(/\d+(?:\.\d+)?/g)].map(m=>Number(m[0]));
- for(const match of grounding.clean(normalized).matchAll(/\d+(?:\.\d+)?/g))if(!originalNums.includes(Number(match[0]))&&!textConstraints.some(c=>Math.abs(Number(c.value))===Number(match[0])&&known.some(k=>sameConstraint(c,k))))fail('UNSUPPORTED_NUMBER','normalization','A number is absent from the source.',{dimension_id:element.dimension_id,number:match[0]});
+ for(const match of grounding.clean(normalized).matchAll(/\d+(?:\.\d+)?/g))if(!originalNums.includes(Number(match[0]))&&!sourceNumbers.some(number=>Math.abs(number)===Number(match[0]))&&!textConstraints.some(c=>Math.abs(Number(c.value))===Number(match[0])&&known.some(k=>sameConstraint(c,k))))fail('UNSUPPORTED_NUMBER','normalization','A number is absent from the source.',{dimension_id:element.dimension_id,number:match[0]});
  const requiresLead=/护士主导|nurse[- ]led|led by nurses/i.test(original),hasLead=/主导|nurse[- ]led|led by nurses/i.test(normalized);
  if(requiresLead&&!hasLead&&!(human&&element.explicit_revision))fail('IMPLEMENTER_ROLE_CHANGED','normalization','Nurse-led cannot be weakened to nurse participation.');
  const hasException=/除非|除外|例外|但不包括|\bexcept\b|\bunless\b/i.test(original);
@@ -112,5 +129,5 @@ function validate_candidate_element(candidate){
  if(candidate.semantic_review&&!['supported','uncertain','contradicted'].includes(candidate.semantic_review.status))fail('INVALID_ENUM','semantic_review','Invalid semantic review status.');
  return candidate;
 }
-return {clone,array,ENUMS,EligibilityError,fail,id,stableId,now,key,object,text,enumValue,sourceAt,locate,quoteText,occurrenceClause,validate_provenance,sourceDifferences:grounding.differences,sourceConstraints:grounding.constraints,canonical,sameConstraint,structuredConstraints,check_semantics,hasOr,hasAnd,treeHas,validate_expression,mapExpression,walkLeaves,validate_candidate_element};
+return {clone,array,ENUMS,EligibilityError,fail,id,stableId,now,key,object,text,enumValue,sourceAt,locate,quoteText,occurrenceClause,validate_provenance,sourceDifferences:grounding.differences,sourceConstraints:grounding.constraints,canonical,sameConstraint,structuredConstraints,decimalDigits,check_semantics,hasOr,hasAnd,treeHas,validate_expression,mapExpression,walkLeaves,validate_candidate_element};
 });
