@@ -143,14 +143,14 @@ def render(output):
          fill=TEAL_PALE, outline='#b9d6ce')
     card(96, 1847, 1648, 171, '保存、双语呈现与导出',
          ('英文标准保存并交接检索。问题为非英语时，依据已通过的标准生成原语言版。',
-          '原语言版沿用英文版的组成，显示在其下方，一并保存和导出。'))
+          '原语言版沿用英文版的组成。可在任一版本编辑，统一保存并导出。'))
     card(96, 2056, 1648, 155, '什么会进入筛选？',
          ('应用已生效的纳入和排除规则，保留条件之间的关系及例外。',
           '原文明确要求测量或报告的结局可用于筛选，其他结局保留在说明中。'))
 
     draw.line((96, 2260, 1744, 2260), fill=RULE, width=2)
     text(96, 2285, 'AIM-STEP', 26, BODY, bold=True)
-    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 48', 25, BODY, width=608)
+    text(1136, 2285, '2026-11-23  /  Eligibility Criteria release 49', 25, BODY, width=608)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, optimize=True)

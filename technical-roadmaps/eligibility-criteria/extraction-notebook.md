@@ -17,7 +17,7 @@
 | `logical_scope` | 分段后把并列备选条件合并为全部须满足，或把例外附到错误分支。 | 曾将“可纳入三种试验设计”错读为研究设计、人群、干预和对照任选其一。先确定连接词管辖的短语，再按原文重建各字段与共同条件。排除清单、结局关注和亚组分析中的并列选项各自保留在其原有范围。[明确纳入句](../../tests/eligibility/explicit-inclusion-logic.cjs) 若跨段关系确实未交代，保留针对这一关系的确认。[分段逻辑](../../tests/eligibility/fragment-logic.cjs) |
 | `repeated_passage` | 同一短语在不同段落出现时容易选错方向。PDF 中的排版合字也可能使模型引文与原文逐字比较失败。 | 核对来源版本、Unicode 位置、小标题和否定。遇到排版差异，保留原文切片和全部可能的位置。上下文相同的引文可共享依据；相反语义的出现位置须分开。[重复引文与上下文](../../tests/eligibility/repeated-citations.cjs) |
 | 数值与时间 | 起止年龄、小时缩写及时间参照在标准化后被误判为阈值改变。 | 逐条从同一处原文核对范围两端、严格程度、单位和参照事件。仅机器数值属性与完整原文措辞相冲突时，先按原文校正。 |
-| `source_fidelity` | 候选措辞改变了受试人群、干预实施者或条件，出现引用与表述不符。 | 由 Jev 逐条核对候选措辞与对应原文。明确不符合的候选略过。原文含义或适用范围不清时交作者核对，作者答复立即生效。[独立核对与定向修正](../../tests/eligibility/semantic-repair.cjs) |
+| `source_fidelity` | 候选措辞改变了受试人群、干预实施者或条件，出现引用与表述不符。 | 由 Jev 逐条核对候选措辞与对应原文。明确不符合的候选略过。原文含义或适用范围不清时交作者核对，作者答复立即生效。[独立核对与定向修正](../../tests/eligibility/semantic-repair.cjs) 中文对照和排除项补回后，第一次翻译仍可能省略备选项、纳排方向或范围。随条目传递完整支配短语。首版措辞被判不符时只修正该条，再交 Jev 核对。 |
 | `question_identity` | 模型遗漏或更改问题 ID。 | 复用该请求提供的标识；由结构约束绑定问题，检查返回的引用属于当前问题。[问题标识](../../tools/test_eligibility_question_id.cjs) |
 | `topic_wording` | 标题只说“某人群的干预”，或重复整句研究目的。 | 用原文支持的最简名称概括干预，如 supervised cycling。仅给出干预类别时保留该类别，如 nutritional interventions。按需补充临床用途和关键人群。对照组在 Comparison 和 Description 中交代。首次使用含义明确的缩写时写出全称，Description 单独处理首次使用。[标题](../../tests/eligibility/concise-topic.cjs) · [各要素描述](../../tests/eligibility/neonatal-clinical-prose.cjs) |
 

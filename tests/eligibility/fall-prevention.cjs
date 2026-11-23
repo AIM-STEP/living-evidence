@@ -11,14 +11,14 @@ const fields=[
  ['intervention','include','以平衡训练为必备内容的居家运动计划','Home-based exercise programmes with balance training as a required component'],
  ['outcome',null,'降低随访期间至少跌倒一次的风险','Risk of falling at least once during follow-up'],
  ['study_design','include','随机对照试验','Randomised controlled trials'],
- ['intervention','exclude','所有训练均在医疗机构内完成的项目','Programmes in which all training sessions took place in healthcare facilities'],
+ ['intervention','exclude','所有训练均在医疗机构内完成的项目','Programmes in which all training took place in healthcare facilities'],
 ];
 const englishBySource=new Map(fields.map(([, ,quote,text])=>[quote,text]));
 const chineseByEnglish=new Map(fields.map(([, ,quote,text])=>[text.toLowerCase(),quote.replace(/^降低(?=随访)/,'')]));
 const listLabels=new Map([
- ['Eligibility criteria','纳入与排除标准'],['Inclusion','纳入标准'],['Exclusion','排除标准'],
+ ['Eligibility criteria','入选标准'],['Inclusion','纳入标准'],['Exclusion','排除标准'],
  ['Population','人群'],['Intervention','干预'],['Comparison','对照'],['Study design','研究设计'],
- ['Review topic','研究主题'],['Framework','研究框架'],['Outcomes','结局'],['Description','说明'],
+ ['Review topic','综述主题'],['Framework','研究框架'],['Outcomes','结局'],['Description','描述'],
  ['Domain','要素'],['Include','纳入'],['Exclude','排除'],
 ]);
 const config={frameworkConfig:require('../../config/eligibility-frameworks.json'),profileConfig:require('../../config/eligibility-review-profiles.json'),baseURL:'http://localhost/'};
@@ -26,7 +26,7 @@ function extracted(source,[dimension_id,disposition,quote,normalized_text],index
  return {candidate_id:'model'+index,dimension_id,disposition,normalized_text,source_refs:[{source_id:source.source_id,source_revision:source.revision,quote}],
   structured_value:null,semantic_role:disposition?'eligibility_condition':'review_focus',information_status:'explicit',scope_status:disposition?'restricted':'unspecified'};
 }
-function connect(page,calls,{fullButIncomplete=false}={}){
+function connect(page,calls,{fullButIncomplete=false,reviewVerdict,firstWording}={}){
  page.api.transport(async(url,options)=>{
   const {step,payload}=JSON.parse(JSON.parse(options.body).messages[1].content);
   calls.push({step,payload});
@@ -38,21 +38,23 @@ function connect(page,calls,{fullButIncomplete=false}={}){
     framework_candidates:['picos'],elements:responseFields.map((field,index)=>extracted(source,field,index)),issues:[],
     logic:{op:'predicate',element_id:'model0'}}]};
   }else if(step==='repair_candidate_wording'){
-   response={items:payload.items.map(item=>({id:item.id,normalized_text:englishBySource.get(item.source_quotes[0].quote),structured_value:null}))};
+   response={items:payload.items.map(item=>({id:item.id,normalized_text:firstWording?.(item)||
+    englishBySource.get(item.source_quotes[0].quote),structured_value:null}))};
   }else if(step==='review_normalization'){
    assert.equal(payload.items.length,1);
    response={items:payload.items.map(item=>{
     const shortened=fullButIncomplete&&item.normalized_text==='Home-based exercise programmes';
+    const assessment=reviewVerdict?.(item);
     return {...item,status:shortened?'uncertain':'supported',issue_type:shortened?'unsupported_rewrite':'none',
      reason:shortened?'The original requires balance training.':'Matches the original clause.',
-     reviewer:{provider:'typesafe',verdict:shortened?'wording_or_scope':'supported',confidence:.99,choice_probability:.99}};
+     reviewer:{provider:'typesafe',verdict:shortened?'wording_or_scope':'supported',confidence:.99,choice_probability:.99},...assessment};
    })};
   }else{
    assert.equal(step,'translate_criteria');
    response={items:payload.items.map(({id,text})=>{
    const normalized=text.trim().replace(/\.$/,'').toLowerCase();
    let translation=listLabels.get(text)||chineseByEnglish.get(normalized);
-   if(text.startsWith('We will include'))translation='本综述纳入符合条件的随机对照试验，评估随访期间至少跌倒一次的风险。';
+   if(text.startsWith('We will include'))translation='本综述纳入符合条件的随机对照试验，评估随访期间至少跌倒一次的风险。。';
    if(!translation&&normalized.startsWith('home-based exercise programmes')&&normalized.includes('community-dwelling older adults'))translation='社区老年人的居家运动计划。';
    return {id,text:translation||text};
   })};
@@ -82,8 +84,57 @@ for(const fullButIncomplete of [false,true])test('Chinese comparative question r
  assert(!state.eligibilityV3Snapshot.questions[0].include.some(criterion=>criterion.dimension_id==='outcome'));
  assert(state.eligibilityV3Snapshot.questions[0].exclude.some(criterion=>criterion.text.includes('all training')));
  assert.match(state.machineRefinement.manuscriptParagraph,/at least once during follow-up/i);
- assert.match(preview,/lang="zh"[\s\S]*研究主题：[\s\S]*社区老年人的居家运动计划[\s\S]*研究框架：<\/strong> PICOS[\s\S]*纳入标准[\s\S]*以平衡训练为必备内容的居家运动计划[\s\S]*结局：[\s\S]*随访期间至少跌倒一次的风险[\s\S]*排除标准[\s\S]*所有训练均在医疗机构内完成的项目[\s\S]*<h3>说明<\/h3>[\s\S]*本综述纳入/);
+ assert.match(preview,/lang="zh"[\s\S]*研究主题：[\s\S]*社区老年人的居家运动计划[\s\S]*研究框架：<\/strong> PICOS[\s\S]*纳入标准[\s\S]*以平衡训练为必备内容的居家运动计划[\s\S]*结局：[\s\S]*随访期间至少跌倒一次的风险[\s\S]*排除标准[\s\S]*所有训练均在医疗机构内完成的项目[\s\S]*<h3>文字描述<\/h3>[\s\S]*本综述纳入/);
+ assert.match(preview,/<h3>纳排标准<\/h3>/);
+ assert.doesNotMatch(preview,/入选标准|综述主题|风险。。/);
  const word=Buffer.from(page.api.export()).toString('utf8');
- assert.match(word,/纳入与排除标准[\s\S]*研究主题[\s\S]*社区老年人的居家运动计划[\s\S]*研究框架： PICOS[\s\S]*<w:tbl>[\s\S]*所有训练均在医疗机构内完成的项目[\s\S]*随访期间至少跌倒一次的风险[\s\S]*说明/);
+ assert.match(word,/纳排标准[\s\S]*研究主题[\s\S]*社区老年人的居家运动计划[\s\S]*研究框架： PICOS[\s\S]*<w:tbl>[\s\S]*所有训练均在医疗机构内完成的项目[\s\S]*随访期间至少跌倒一次的风险[\s\S]*文字描述/);
  assert.equal(calls.filter(call=>call.step==='review_normalization').length,fullButIncomplete?7:6);
+});
+
+async function buildQuestion(source,options){
+ const page=setup(),calls=[];
+ Object.assign(page.ctx.window,{AIMSTEPEligibilityEngine:Engine,AIMSTEPEligibilityBackground:{...Background,create:args=>Background.create({...args,...config})}});
+ connect(page,calls,options);
+ const choice=page.el('generation-method');
+ choice.value='machine';choice.handlers.change();
+ page.el('question').value=source;
+ await page.el('start-machine').handlers.click();
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(page.el('generation-status').textContent,'');
+ return {state:page.api.state(),page,calls};
+}
+test('exact Chinese comparator and intervention exclusion reach Jev with their governing clauses',async()=>{
+ const {state,page,calls}=await buildQuestion(question,{reviewVerdict(item){
+  if(item.dimension_id!=='comparator'&&item.disposition!=='exclude')return;
+  return {status:'uncertain',issue_type:'ambiguous_source',reviewer:{
+   provider:'typesafe',verdict:'low_confidence',original_verdict:'supported',confidence:.82,choice_probability:.82}};
+ }});
+ const checked=calls.filter(call=>call.step==='review_normalization').map(call=>call.payload.items[0]);
+ const comparison=checked.find(item=>item.dimension_id==='comparator');
+ assert.equal(comparison.normalized_text,'usual care or health education alone');
+ assert.equal(comparison.source_quotes[0].context,'与常规照护或单纯健康教育相比');
+ const exclusion=checked.find(item=>item.disposition==='exclude');
+ assert.equal(exclusion.source_quotes[0].context,'排除所有训练均在医疗机构内完成的项目');
+ const saved=state.eligibilityV3Snapshot.questions[0];
+ assert.match(saved.elements.find(e=>e.dimension_id==='comparator').semantic_review.reason,/complete source field/);
+ assert(saved.include.some(criterion=>criterion.dimension_id==='comparator'&&/usual care or health education alone/.test(criterion.text)));
+ assert(saved.exclude.some(criterion=>/all training/.test(criterion.text)));
+ const preview=page.el('preview').innerHTML;
+ assert.match(preview,/lang="zh"[\s\S]*常规照护或单纯健康教育[\s\S]*所有训练均在医疗机构内完成的项目/);
+});
+test('copied original-language conditions get a repair after the first wording is rejected by Jev',async()=>{
+ const alternative='禁止运动训练的健康教育';
+ const text=question.replace('单纯健康教育',alternative);
+ const {state,calls}=await buildQuestion(text,{
+  firstWording:item=>item.dimension_id==='comparator'?
+   (item.review_feedback?'Usual care or health education without exercise training':'Usual care'):undefined,
+  reviewVerdict:item=>item.dimension_id==='comparator'&&item.normalized_text==='Usual care'?
+   {status:'uncertain',issue_type:'unsupported_rewrite',reason:'The second alternative is missing.'}:undefined,
+ });
+ const repairs=calls.filter(call=>call.step==='repair_candidate_wording'&&call.payload.items[0].dimension_id==='comparator');
+ assert.equal(repairs.length,2);
+ assert.match(repairs[1].payload.items[0].review_feedback,/joined by OR/);
+ const passed=state.eligibilityV3Snapshot.questions[0].include.find(row=>row.dimension_id==='comparator');
+ assert.match(passed?.text,/Usual care or health education without exercise training/);
 });

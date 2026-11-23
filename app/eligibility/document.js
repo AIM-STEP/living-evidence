@@ -11,22 +11,25 @@ function read(editor){
  };
  return Array.from(editor.childNodes,walk).join('').replace(/\u00a0/g,' ').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
-const sections={inclusion:'include','纳入':'include','纳入标准':'include',exclusion:'exclude','排除':'exclude','排除标准':'exclude',description:'description','描述':'description'};
+const sections={inclusion:'include','纳入':'include','纳入标准':'include',exclusion:'exclude','排除':'exclude','排除标准':'exclude',description:'description','描述':'description','文字描述':'description'};
 const normalize=text=>text.replace(/\s+/g,' ').trim();
 const fieldKey=text=>normalize(text).toLowerCase().replace(/\bcomparator\b/g,'comparison').replace(/\boutcome\b/g,'outcomes');
 const rowKey=(side,heading)=>side+'|'+fieldKey(heading);
 const placeholder=/^(?:not reporting|no explicit inclusion rules entered|尚无明确的纳入标准|未报告)[.。]?$/i;
-function parse(text,fields,unlabelled){
+function parse(text,fields,unlabelled,{labels={},empty=[]}={}){
+ const headings=new Map(Object.entries(sections));
+ for(const [section,label] of Object.entries(labels))headings.set(normalize(label).toLowerCase(),section);
+ const placeholders=new Set(empty.map(ruleKey));
  const known=new Map(fields.map(field=>[fieldKey(field.heading),field]));
  const rows=new Map(),description=[];
  let section='',current=null;
  for(const line of text.split(/\r?\n/)){
   const trimmed=line.trim();
   const label=trimmed.match(/^([^:：]+)[:：]\s*(.*)$/u);
-  const sectionName=sections[(label?.[1]||trimmed).trim().toLowerCase()];
+  const sectionName=headings.get(normalize(label?.[1]||trimmed).toLowerCase());
   if(sectionName){section=sectionName;current=null;if(label?.[2]&&section==='description')description.push(label[2]);continue;}
   if(section==='description'||!section){description.push(line);continue;}
-  if(!trimmed||placeholder.test(trimmed))continue;
+  if(!trimmed||placeholder.test(trimmed)||placeholders.has(ruleKey(trimmed)))continue;
   if(label&&known.has(fieldKey(label[1]))){
    const field=known.get(fieldKey(label[1]));
    const key=rowKey(section,field.heading);

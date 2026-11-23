@@ -17,7 +17,7 @@ const frenchTerms=new Map([
  ['Domain','Domaine'],['Include','Inclure'],['Exclude','Exclure'],['Review population and scope','Population et portée de la revue'],
  ['We will include studies of participants aged 18 years or older. We will exclude Case reports.',
   'Nous inclurons les études portant sur des participants de 18 ans ou plus. Nous exclurons les rapports de cas.'],
- ['The author’s first note.','Première note de l’auteur.'],['The author’s second note.','Deuxième note de l’auteur.'],
+ ['Follow-up takes place at home.','Le suivi a lieu à domicile.'],['The author’s first note.','Première note de l’auteur.'],['The author’s second note.','Deuxième note de l’auteur.'],
  ['Author check','Vérification de l’auteur'],['Source','Source'],['Pending','En attente'],
  ['Confirm the proposed setting.','Confirmer le lieu proposé.'],['Community setting','Milieu communautaire'],
  ...english.map((text,index)=>[text,french[index]]),
@@ -61,10 +61,17 @@ function mockModel(page,calls,{language='fr',beforeTranslation,alterTranslation}
     reviewer:{provider:'typesafe',verdict:'supported',confidence:.99,choice_probability:.99}}))};
   }else{
    assert.equal(step,'translate_criteria');
-   assert.equal(payload.target_language,language);
-   assert.equal(output_language,language);
-   await beforeTranslation?.();
-   answer={items:payload.items.map(({id,text})=>({id,text:alterTranslation?.(text)||terms.get(text.replace(/[.]$/u,''))||terms.get(text)||text}))};
+   if(payload.target_language==='en'){
+    assert.equal(output_language,'en');
+    const edits=new Map([['Personnes âgées de 21 ans ou plus.','Adults aged at least 21 years.'],
+     ['Suivi à domicile.','Follow-up takes place at home.']]);
+    answer={items:payload.items.map(({id,text})=>({id,text:edits.get(text)||text}))};
+   }else{
+    assert.equal(payload.target_language,language);
+    assert.equal(output_language,language);
+    await beforeTranslation?.();
+    answer={items:payload.items.map(({id,text})=>({id,text:alterTranslation?.(text)||terms.get(text.replace(/[.]$/u,''))||terms.get(text)||text}))};
+   }
   }
   return {ok:true,json:async()=>({message:{content:JSON.stringify(answer)},...(step==='review_normalization'?{provider:'typesafe',review:{policy:'jev-once-v1'}}:{})})};
  },'backend');
@@ -104,7 +111,7 @@ for(const mode of ['machine','manual'])test(mode+' input saves and exports Engli
  assert.equal(copy.texts['Case reports'],french[1]);
  const localized=area.innerHTML.split('data-criteria-localization lang="fr"')[1];
  assert.match(localized,/<strong>Sujet de la revue:<\/strong>[\s\S]*<strong>Cadre:<\/strong> PICOS[\s\S]*<h3>Inclusion<\/h3>[\s\S]*<h3>Exclusion<\/h3>[\s\S]*<h3>Description<\/h3>[\s\S]*Nous inclurons/);
- assert.doesNotMatch(localized,/contenteditable="plaintext-only"/);
+ assert.match(localized,/data-localized-criteria-document contenteditable="plaintext-only"/);
  assert.match(area.innerHTML,/data-criteria-document[\s\S]*Aged ≥18 years[\s\S]*Case reports[\s\S]*data-criteria-localization lang="fr"[\s\S]*Âgés de ≥18 ans[\s\S]*Rapports de cas/);
  const word=Buffer.from(page.api.export()).toString('utf8');
  assert.match(word,/Aged ≥18 years[\s\S]*Critères d’admissibilité[\s\S]*Sujet de la revue[\s\S]*Cadre: PICOS[\s\S]*<w:tbl>[\s\S]*Domaine[\s\S]*Inclure[\s\S]*Exclure[\s\S]*Âgés de ≥18 ans[\s\S]*Description[\s\S]*Nous inclurons/);
@@ -230,4 +237,28 @@ test('translation of a long description carries all sentences across bounded req
  });
  assert(calls>1);
  assert.equal(result.texts[prose],Array(90).fill(translated).join(' '));
+});
+
+test('author edits made in the original language update one set of screening rules and both outputs',async()=>{
+ const page=open(),area=page.el('preview'),calls=[];
+ mockModel(page,calls);
+ await generate(page,'machine',french);
+ await flush();
+ const editor={childNodes:[{nodeType:3,nodeValue:'Inclusion\nPopulation: Personnes âgées de 21 ans ou plus.\n\nExclusion\nType d’étude: Rapports de cas.\n\nDescription\nSuivi à domicile.'}]};
+ area.querySelector=selector=>selector==='[data-localized-criteria-document]'?editor:null;
+ area.handlers.input({target:{closest:selector=>selector==='[data-localized-criteria-document]'?editor:null}});
+ assert(await page.el('save-criteria').handlers.click());
+ await flush();
+ const state=page.api.state();
+ assert.match(state.machineRefinement.rows.find(row=>row.dimension==='Population').include[0],/21 years/);
+ assert.match(state.eligibilityV3Snapshot.questions[0].include[0].text,/21 years/);
+ assert.equal(state.previewEditHistory.at(-1).sourceLanguage,'fr');
+ assert.match(state.previewEditHistory.at(-1).authorText,/Suivi à domicile/);
+ const [en,fr]=area.innerHTML.split('data-criteria-localization');
+ assert.match(en,/Adults aged at least 21 years[\s\S]*Follow-up takes place at home/);
+ assert.match(fr,/Personnes âgées de 21 ans ou plus[\s\S]*Suivi à domicile/);
+ const reverse=calls.find(call=>call.step==='translate_criteria'&&call.payload.target_language==='en');
+ assert.deepEqual(reverse.payload.items.map(item=>item.text),['Personnes âgées de 21 ans ou plus.','Suivi à domicile.']);
+ const word=Buffer.from(page.api.export()).toString('utf8');
+ assert.match(word,/Adults aged at least 21 years[\s\S]*Personnes âgées de 21 ans ou plus[\s\S]*Suivi à domicile/);
 });
